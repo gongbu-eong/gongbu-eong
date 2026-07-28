@@ -100,7 +100,7 @@ ON CONFLICT (code) DO UPDATE SET
   updated_at = NOW();
 
 INSERT INTO public.diagnosis_question_sets (code, title, version, is_active)
-VALUES ('civil-service-basic-v1', '강점·성향 진단(기본)', 2, TRUE)
+VALUES ('civil-service-basic-v1', '강점·성향 진단(기본)', 4, TRUE)
 ON CONFLICT (code) DO UPDATE SET
   title = EXCLUDED.title,
   version = EXCLUDED.version,
@@ -114,22 +114,22 @@ questions AS (
   SELECT *
   FROM (
     VALUES
-      (1, '정해진 절차와 기준이 있는 환경에서 더 편하게 일한다.', 'stability_axis', FALSE),
-      (2, '익숙하지 않은 방식이라도 더 나은 결과가 기대되면 시도해보고 싶다.', 'stability_axis', TRUE),
-      (3, '결과가 예측 가능한 업무나 공부 방식이 나에게 잘 맞는다.', 'stability_axis', FALSE),
-      (4, '실패 가능성이 있어도 성장할 수 있는 기회라면 도전하는 편이다.', 'stability_axis', TRUE),
-      (5, '사람들과 의견을 나누며 함께 방향을 정하는 과정이 잘 맞는다.', 'teamwork_axis', FALSE),
-      (6, '중요한 일은 다른 사람과 맞추기보다 혼자 집중해서 처리하는 편이다.', 'teamwork_axis', TRUE),
-      (7, '팀 안에서 역할을 나누고 서로 보완할 때 더 좋은 결과가 난다고 느낀다.', 'teamwork_axis', FALSE),
-      (8, '여러 사람의 의견을 조율하는 과정은 에너지가 많이 든다.', 'teamwork_axis', TRUE),
-      (9, '계획이 완벽하지 않아도 우선 시작하면서 방향을 잡는 편이다.', 'execution_axis', FALSE),
-      (10, '시작하기 전에 목표, 순서, 기준을 충분히 정리해야 마음이 놓인다.', 'execution_axis', TRUE),
-      (11, '해야 할 일이 생기면 오래 고민하기보다 바로 행동으로 옮기는 편이다.', 'execution_axis', FALSE),
-      (12, '일을 시작하기 전 자료를 비교하고 가능성을 분석하는 시간이 중요하다.', 'execution_axis', TRUE),
-      (13, '정해진 규칙과 원칙은 가능한 한 정확히 지켜야 한다고 생각한다.', 'principle_axis', FALSE),
-      (14, '상황이 달라지면 기존 기준도 현실에 맞게 조정할 수 있어야 한다.', 'principle_axis', TRUE),
-      (15, '작은 실수나 빠진 조건도 그냥 넘기지 않고 다시 확인하는 편이다.', 'principle_axis', FALSE),
-      (16, '계획대로 되지 않아도 그때그때 대안을 찾으며 움직이는 편이다.', 'principle_axis', TRUE)
+      (1, '정해진 절차와 기준이 있을 때 더 편하게 집중할 수 있다.', 'stability_axis', FALSE),
+      (2, '사람들과 의견을 나누며 방향을 정할 때 더 좋은 결과가 나온다고 느낀다.', 'teamwork_axis', FALSE),
+      (3, '계획이 완벽하지 않아도 우선 시작하면서 방향을 잡는 편이다.', 'execution_axis', FALSE),
+      (4, '정해진 규칙과 원칙은 가능한 한 정확히 지켜야 한다고 생각한다.', 'principle_axis', FALSE),
+      (5, '해야 할 일이 생기면 오래 고민하기보다 먼저 움직이는 편이다.', 'execution_axis', FALSE),
+      (6, '작은 실수나 빠진 조건도 그냥 넘기지 않고 다시 확인하는 편이다.', 'principle_axis', FALSE),
+      (7, '결과가 어느 정도 예측되는 공부 방식이나 업무 방식이 나에게 잘 맞는다.', 'stability_axis', FALSE),
+      (8, '혼자 결정하기보다 주변의 피드백을 듣고 조정하는 과정이 편하다.', 'teamwork_axis', FALSE),
+      (9, '일을 마무리하기 전 세부 조건이 맞는지 꼼꼼히 점검한다.', 'principle_axis', FALSE),
+      (10, '생각만 오래 하기보다 작은 행동으로 확인하는 방식이 나에게 맞다.', 'execution_axis', FALSE),
+      (11, '역할을 나누고 서로 보완하는 방식이 나에게 잘 맞는다.', 'teamwork_axis', FALSE),
+      (12, '새로운 방식을 시도하기 전, 먼저 검증된 방법이 있는지 확인하는 편이다.', 'stability_axis', FALSE),
+      (13, '중요한 일을 할 때도 함께 논의할 사람이 있으면 더 안정감을 느낀다.', 'teamwork_axis', FALSE),
+      (14, '변수가 많은 상황보다 안정적으로 준비할 수 있는 환경이 더 좋다.', 'stability_axis', FALSE),
+      (15, '기준이 명확할수록 더 안정적으로 일할 수 있다.', 'principle_axis', FALSE),
+      (16, '실행하면서 부족한 부분을 수정해 나가는 편이 더 효율적이라고 느낀다.', 'execution_axis', FALSE)
   ) AS q(question_no, question_text, trait_key, reverse_scored)
 )
 INSERT INTO public.diagnosis_questions (

@@ -88,10 +88,10 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
 export async function handleOAuthCallback(provider: OAuthProvider, request: NextRequest) {
   const failureRedirectUrl =
     process.env.OAUTH_FAILURE_REDIRECT_URL ||
-    "http://localhost:3000/ai-tools/diagnosis?login=failed";
+    "http://localhost:3000";
   const successRedirectUrl =
     process.env.OAUTH_SUCCESS_REDIRECT_URL ||
-    "http://localhost:3000/ai-tools/diagnosis?login=success";
+    "http://localhost:3000";
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
   const storedState = request.cookies.get(`${provider}_oauth_state`)?.value;
@@ -122,10 +122,7 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       userAgent: request.headers.get("user-agent") || undefined,
     });
 
-    const redirectUrl = new URL(successRedirectUrl);
-    redirectUrl.searchParams.set("provider", provider);
-
-    const response = NextResponse.redirect(redirectUrl);
+    const response = NextResponse.redirect(successRedirectUrl);
     response.cookies.delete(`${provider}_oauth_state`);
     response.cookies.delete("oauth_entry_source");
     response.cookies.delete("oauth_diagnosis_run_id");
@@ -134,7 +131,7 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 14,
+      maxAge: 60 * 60 * 24 * 365 * 10,
     });
 
     return response;

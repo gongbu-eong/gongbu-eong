@@ -213,3 +213,64 @@ export async function upsertOAuthUser(args: {
     client.release();
   }
 }
+
+export async function findUserBySessionTokenHash(sessionTokenHash: string) {
+  const result = await db.query<{
+    id: string;
+    email: string | null;
+    nickname: string | null;
+    display_name: string | null;
+    avatar_url: string | null;
+    provider: OAuthProvider | null;
+  }>(
+    `
+      SELECT
+        users.id,
+        users.email,
+        users.nickname,
+        users.display_name,
+        users.avatar_url,
+        oauth.provider
+      FROM public.user_sessions sessions
+      JOIN public.users users
+        ON users.id = sessions.user_id
+      LEFT JOIN LATERAL (
+        SELECT provider
+        FROM public.user_oauth_accounts
+        WHERE user_id = users.id
+        ORDER BY last_used_at DESC NULLS LAST, created_at DESC
+        LIMIT 1
+      ) oauth ON TRUE
+      WHERE sessions.session_token_hash = $1
+        AND users.status = 'active'
+      ORDER BY sessions.created_at DESC
+      LIMIT 1
+    `,
+    [sessionTokenHash],
+  );
+
+  const user = result.rows[0];
+
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    email: user.email,
+    nickname: user.nickname,
+    displayName: user.display_name,
+    avatarUrl: user.avatar_url,
+    provider: user.provider,
+  };
+}
+
+export async function deleteSessionByTokenHash(sessionTokenHash: string) {
+  await db.query(
+    `
+      DELETE FROM public.user_sessions
+      WHERE session_token_hash = $1
+    `,
+    [sessionTokenHash],
+  );
+}

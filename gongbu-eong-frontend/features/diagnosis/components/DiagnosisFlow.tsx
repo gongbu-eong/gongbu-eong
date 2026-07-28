@@ -81,6 +81,53 @@ const RESULT_TYPE_DETAILS: Record<
   },
 };
 
+const RESULT_HERO_POSITION: Record<
+  DiagnosisResultResponseDto["typeCode"],
+  { x: number; y: number }
+> = {
+  stability: { x: 80, y: 80 },
+  challenge: { x: 497, y: 80 },
+  teamwork: { x: 914, y: 80 },
+  individual: { x: 1331, y: 80 },
+  execution: { x: 80, y: 406 },
+  planning: { x: 497, y: 406 },
+  principle: { x: 914, y: 406 },
+  flexibility: { x: 1331, y: 406 },
+};
+
+const QUESTION_OWL_BOUNDS: Array<{ x: number; y: number; width: number }> = [
+  { x: 151, y: 372, width: 252 },
+  { x: 622, y: 372, width: 256 },
+  { x: 1107, y: 372, width: 232 },
+  { x: 1582, y: 372, width: 227 },
+  { x: 151, y: 1344, width: 251 },
+  { x: 641, y: 1344, width: 217 },
+  { x: 1106, y: 1344, width: 233 },
+  { x: 1575, y: 1344, width: 241 },
+  { x: 184, y: 2316, width: 185 },
+  { x: 613, y: 2316, width: 273 },
+  { x: 1120, y: 2316, width: 205 },
+  { x: 1590, y: 2316, width: 211 },
+  { x: 170, y: 3288, width: 214 },
+  { x: 651, y: 3288, width: 198 },
+  { x: 1120, y: 3288, width: 205 },
+  { x: 1588, y: 3288, width: 215 },
+];
+
+const POINT_CARD_TITLES: Record<
+  DiagnosisResultResponseDto["typeCode"],
+  [string, string, string, string]
+> = {
+  stability: ["책임감", "꼼꼼함", "지속력", "새로운 시도"],
+  challenge: ["도전성", "추진력", "적응력", "기준 세우기"],
+  teamwork: ["협업감", "조율력", "공감력", "결정력"],
+  individual: ["몰입력", "자기주도", "분석력", "피드백 활용"],
+  execution: ["실행력", "속도감", "현장 대응", "점검 습관"],
+  planning: ["전략성", "분석력", "우선순위", "실행 전환"],
+  principle: ["정확성", "꼼꼼함", "신뢰성", "유연한 대안"],
+  flexibility: ["유연성", "대응력", "조정력", "기준 고정"],
+};
+
 export function DiagnosisFlow() {
   const [state, setState] = useState<FlowState>({ status: "intro" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -88,6 +135,10 @@ export function DiagnosisFlow() {
 
   useEffect(() => {
     let ignore = false;
+    const resultHeroImage = new window.Image();
+    resultHeroImage.src = "/diagnosis-result-heroes.svg";
+    const questionOwlImage = new window.Image();
+    questionOwlImage.src = "/diagnosis-question-owls.svg";
 
     getDiagnosisStats()
       .then((stats) => {
@@ -256,19 +307,82 @@ function DiagnosisIntro({
   participantCount: number | null;
   onStart: () => void;
 }) {
-  const participantText =
-    participantCount === null
-      ? "참여 인원을 불러오는 중이에요."
-      : `지금까지 ${participantCount.toLocaleString("ko-KR")}명이 참여했어요.`;
+  const formattedParticipantCount = participantCount?.toLocaleString("ko-KR");
+  const introTypes = [
+    {
+      label: "안정 추구형",
+      icon: "/diagnosis/intro/asset-1-182x198.png",
+      className: styles.introTypeStability,
+    },
+    {
+      label: "도전 개척형",
+      icon: "/diagnosis/intro/asset-2-142x239.png",
+      className: styles.introTypeChallenge,
+    },
+    {
+      label: "협업 조력형",
+      icon: "/diagnosis/intro/asset-3-222x143.png",
+      className: styles.introTypeTeamwork,
+    },
+    {
+      label: "독립 몰입형",
+      icon: "/diagnosis/intro/asset-4-202x198.png",
+      className: styles.introTypeIndependent,
+    },
+    {
+      label: "실행 추진형",
+      icon: "/diagnosis/intro/asset-5-133x205.png",
+      className: styles.introTypeExecution,
+    },
+    {
+      label: "전략 기획형",
+      icon: "/diagnosis/intro/asset-6-207x205.png",
+      className: styles.introTypePlanning,
+    },
+    {
+      label: "정밀 관리형",
+      icon: "/diagnosis/intro/asset-7-193x195.png",
+      className: styles.introTypePrinciple,
+    },
+    {
+      label: "유연 대응형",
+      icon: "/diagnosis/intro/asset-8-198x189.png",
+      className: styles.introTypeFlexible,
+    },
+  ];
 
   return (
     <div className={styles.page}>
       <section className={styles.landing} aria-label="강점·성향 진단 도입부">
+        <p className={styles.introBrand}>공부엉이</p>
+        <p className={styles.introPill}>3분이면 알 수 있는 나의 취업 강점</p>
+        <h1 className={styles.introTitle} aria-label="나의 강점·성향 유형은?">
+          <span className={styles.introTitleShadow} aria-hidden="true">
+            <span>나의 강점·성향</span>
+            <span>유형은?</span>
+          </span>
+          <span className={styles.introTitleFront} aria-hidden="true">
+            <span>나의 강점·성향</span>
+            <span>유형은?</span>
+          </span>
+        </h1>
+        <div className={styles.introTypeGrid} aria-label="진단 유형 예시">
+          {introTypes.map((type) => (
+            <div
+              key={type.label}
+              className={`${styles.introTypeCard} ${type.className}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={type.icon} alt="" draggable={false} />
+              <span>{type.label}</span>
+            </div>
+          ))}
+        </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/diagnosis-landing-v2.svg"
-          alt="공부엉이 강점·성향 진단 도입 화면"
-          className={styles.landingImage}
+          src="/diagnosis/intro/asset-9-1727x1300.png"
+          alt=""
+          className={styles.introOwl}
           draggable={false}
         />
         <button
@@ -277,7 +391,19 @@ function DiagnosisIntro({
           aria-label="진단 시작하기"
         >
           <span className={styles.startButtonStrong}>진단 시작하기</span>
-          <span className={styles.startButtonSub}>{participantText}</span>
+          <span className={styles.startButtonSub}>
+            {formattedParticipantCount ? (
+              <>
+                지금까지{" "}
+                <span className={styles.participantCount}>
+                  {formattedParticipantCount}
+                </span>
+                명이 참여했어요.
+              </>
+            ) : (
+              "참여 인원을 불러오는 중이에요."
+            )}
+          </span>
         </button>
         <button
           className={styles.shareButton}
@@ -289,7 +415,37 @@ function DiagnosisIntro({
             });
           }}
           aria-label="테스트 공유하기"
-        />
+        >
+          <span aria-hidden="true" className={styles.shareIcon}>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 18 18"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M13.5 6C14.7426 6 15.75 4.99264 15.75 3.75C15.75 2.50736 14.7426 1.5 13.5 1.5C12.2574 1.5 11.25 2.50736 11.25 3.75C11.25 4.99264 12.2574 6 13.5 6Z"
+                fill="currentColor"
+              />
+              <path
+                d="M4.5 11.25C5.74264 11.25 6.75 10.2426 6.75 9C6.75 7.75736 5.74264 6.75 4.5 6.75C3.25736 6.75 2.25 7.75736 2.25 9C2.25 10.2426 3.25736 11.25 4.5 11.25Z"
+                fill="currentColor"
+              />
+              <path
+                d="M13.5 16.5C14.7426 16.5 15.75 15.4926 15.75 14.25C15.75 13.0074 14.7426 12 13.5 12C12.2574 12 11.25 13.0074 11.25 14.25C11.25 15.4926 12.2574 16.5 13.5 16.5Z"
+                fill="currentColor"
+              />
+              <path
+                d="M6.4425 10.1325L11.565 13.1175M11.5575 4.8825L6.4425 7.8675"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          테스트 공유하기
+        </button>
       </section>
     </div>
   );
@@ -310,24 +466,34 @@ function DiagnosisSurvey({
   onBack: () => void;
   onSelect: (optionId: string) => void;
 }) {
-  const progressPercent =
-    questionCount <= 1 ? 0 : (index / (questionCount - 1)) * 100;
+  const progressRatio = questionCount <= 1 ? 0 : index / (questionCount - 1);
+  const stepNo = index + 1;
+  const owlIndex = Math.max(0, Math.min(stepNo - 1, 15));
+  const owlBounds = QUESTION_OWL_BOUNDS[owlIndex];
 
   return (
     <div className={styles.page}>
       <section className={styles.questionScreen} aria-label="강점·성향 진단 문항">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/diagnosis-question.svg"
-          alt=""
-          className={styles.questionImage}
-          draggable={false}
+        <div
+          className={styles.questionOwl}
+          aria-hidden="true"
+          style={
+            {
+              "--question-owl-x": `-${owlBounds.x}px`,
+              "--question-owl-y": `-${owlBounds.y}px`,
+              "--question-owl-width": `${owlBounds.width}px`,
+            } as CSSProperties
+          }
         />
         <div className={styles.progressOverlay} aria-hidden="true">
           <div className={styles.progressTrack}>
             <div
               className={styles.progressBar}
-              style={{ width: `${progressPercent}%` }}
+              style={
+                {
+                  "--progress-ratio": progressRatio,
+                } as CSSProperties
+              }
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -337,7 +503,7 @@ function DiagnosisSurvey({
               draggable={false}
               style={
                 {
-                  "--progress": `${progressPercent}%`,
+                  "--progress-ratio": progressRatio,
                 } as CSSProperties
               }
             />
@@ -350,7 +516,7 @@ function DiagnosisSurvey({
           disabled={index === 0}
           aria-label="이전 문항으로 이동"
         />
-        <div className={styles.questionNo}>{currentQuestion.questionNo}</div>
+        <div className={styles.questionNo}>{stepNo}</div>
         <h1 className={styles.questionTitle}>{currentQuestion.questionText}</h1>
         <div className={styles.optionList}>
           {currentQuestion.options.slice(0, 5).map((option) => (
@@ -389,29 +555,26 @@ function DiagnosisResult({
     anonymousId,
   );
   const typeDetail = RESULT_TYPE_DETAILS[result.typeCode];
+  const heroPosition = RESULT_HERO_POSITION[result.typeCode];
   const pointCards = buildPointCards(result);
 
   return (
     <MobileFrame className={styles.resultFrame} pageClassName={styles.resultPage}>
-      <section className={styles.resultHero} aria-label="강점·성향 진단 결과">
-        <p className={styles.resultEyebrow}>나의 강점·성향 유형은</p>
-        <h1 className={styles.resultTitle}>
-          <span>{result.typeName}</span>
-        </h1>
-        <p className={styles.resultSummary}>{typeDetail.heroSummary}</p>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/diagnosis-result-owl.png"
-          alt=""
-          className={styles.resultHeroOwl}
-          draggable={false}
-        />
-      </section>
+      <section
+        className={styles.resultHero}
+        aria-label={`나의 강점·성향 유형은 ${result.typeName}. ${typeDetail.heroSummary}`}
+        style={
+          {
+            "--result-hero-x": `-${heroPosition.x}px`,
+            "--result-hero-y": `-${heroPosition.y}px`,
+          } as CSSProperties
+        }
+      />
 
       <section className={styles.resultContent}>
         <section className={styles.typeIntro}>
           <h2>
-            <MagnifierIcon />
+            <ResultTitleIcon type="person" />
             <span>{typeDetail.personTitle}</span>
           </h2>
           <p>{typeDetail.personDescription}</p>
@@ -419,7 +582,7 @@ function DiagnosisResult({
 
         <section className={styles.resultSection}>
           <h2 className={styles.resultSectionTitle}>
-            <ChartIcon />
+            <ResultTitleIcon type="chart" />
             <span>나의 성향 분석</span>
           </h2>
           <div className={styles.scoreList}>
@@ -442,7 +605,7 @@ function DiagnosisResult({
 
         <section className={styles.resultSection}>
           <h2 className={styles.resultSectionTitle}>
-            <GrowthIcon />
+            <ResultTitleIcon type="growth" />
             <span>강점과 성장 포인트</span>
           </h2>
           <div className={styles.pointList}>
@@ -465,22 +628,20 @@ function DiagnosisResult({
 
         <section className={styles.resultSection}>
           <h2 className={styles.resultSectionTitle}>
-            <BriefcaseIcon />
+            <ResultTitleIcon type="job" />
             <span>이런 직무 강해요</span>
           </h2>
           <div className={styles.jobChipList}>
-            {result.jobCategories.slice(0, 4).map((job) => (
+            {result.jobCategories.slice(0, 20).map((job) => (
               <span key={job.name} className={styles.jobChip}>
                 {shortenJobName(job.name)}
               </span>
             ))}
           </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/diagnosis-result-pass-banner.svg"
-            alt="합격의 문을 열어드립니다."
+          <div
             className={styles.passBanner}
-            draggable={false}
+            role="img"
+            aria-label="합격의 문을 열어드립니다."
           />
         </section>
 
@@ -535,43 +696,22 @@ function shortenJobName(name: string) {
   return aliases[name] ?? name;
 }
 
-function MagnifierIcon() {
-  return (
-    <svg className={styles.titleIcon} viewBox="0 0 18 18" aria-hidden="true">
-      <circle cx="7.5" cy="7.5" r="5.2" fill="#F7FBFF" stroke="#1A2233" strokeWidth="1.4" />
-      <path d="M11.2 11.2L15.2 15.2" stroke="#1A2233" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M4.7 7.3C5 5.9 6.1 4.9 7.5 4.8" stroke="#9EC8FF" strokeWidth="1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
+function ResultTitleIcon({
+  type,
+}: {
+  type: "person" | "chart" | "growth" | "job";
+}) {
+  const icon = {
+    person: "🔎",
+    chart: "📊",
+    growth: "💪",
+    job: "🎯",
+  }[type];
 
-function ChartIcon() {
   return (
-    <svg className={styles.titleIcon} viewBox="0 0 18 18" aria-hidden="true">
-      <rect x="2" y="8" width="3" height="8" rx="0.8" fill="#2F7FF0" />
-      <rect x="7.5" y="4" width="3" height="12" rx="0.8" fill="#17B26A" />
-      <rect x="13" y="6.5" width="3" height="9.5" rx="0.8" fill="#F59E0B" />
-    </svg>
-  );
-}
-
-function GrowthIcon() {
-  return (
-    <svg className={styles.titleIcon} viewBox="0 0 18 18" aria-hidden="true">
-      <path d="M9 15V9.5" stroke="#23734F" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M8.8 9.2C5.4 9.2 3.6 7.2 3.2 3.7C6.9 3.7 8.8 5.6 8.8 9.2Z" fill="#8FD3A1" />
-      <path d="M9.2 10.2C12.5 10 14.3 8.1 14.7 4.7C11.1 4.7 9.3 6.5 9.2 10.2Z" fill="#66C08C" />
-    </svg>
-  );
-}
-
-function BriefcaseIcon() {
-  return (
-    <svg className={styles.titleIcon} viewBox="0 0 18 18" aria-hidden="true">
-      <rect x="2.2" y="6" width="13.6" height="9" rx="1.7" fill="#F7FBFF" stroke="#1A2233" strokeWidth="1.3" />
-      <path d="M6.5 6V4.5C6.5 3.7 7.1 3.1 7.9 3.1H10.1C10.9 3.1 11.5 3.7 11.5 4.5V6" stroke="#1A2233" strokeWidth="1.3" />
-      <path d="M2.7 9.1H15.3" stroke="#2F7FF0" strokeWidth="1.3" />
-    </svg>
+    <span className={styles.titleIcon} aria-hidden="true">
+      {icon}
+    </span>
   );
 }
 
@@ -624,16 +764,17 @@ function PointIcon({ kind }: { kind: "strength" | "growth" }) {
 function buildPointCards(result: DiagnosisResultResponseDto) {
   const strengths = result.strengths.slice(0, 3);
   const growthPoint = result.growthPoints[0];
+  const titles = POINT_CARD_TITLES[result.typeCode];
 
   return [
-    ...strengths.map((text) => ({
+    ...strengths.map((text, index) => ({
       kind: "strength" as const,
-      title: "강점",
+      title: titles[index],
       text,
     })),
     {
       kind: "growth" as const,
-      title: "성장 포인트",
+      title: titles[3],
       text: growthPoint ?? "지금 강점을 유지하면서 보완할 기준을 하나 정해보세요.",
     },
   ];

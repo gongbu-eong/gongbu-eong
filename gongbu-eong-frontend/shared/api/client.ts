@@ -7,6 +7,8 @@ export async function apiClient<T>(
 ): Promise<T> {
   const response = await fetch(`${backendUrl}${path}`, {
     ...init,
+    cache: "no-store",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...init?.headers,

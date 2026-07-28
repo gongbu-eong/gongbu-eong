@@ -39,15 +39,23 @@ type ResultCopy = {
 
 const EXPECTED_ANSWER_COUNT = 16;
 const TYPE_TIE_BREAK_ORDER: DiagnosisTypeCode[] = [
+  "stability",
+  "challenge",
+  "teamwork",
+  "individual",
+  "execution",
   "planning",
   "principle",
-  "execution",
-  "teamwork",
-  "challenge",
-  "stability",
   "flexibility",
-  "individual",
 ];
+
+const STRAIGHT_LINE_TIE_BREAK: Record<OptionNo, DiagnosisTypeCode> = {
+  1: "challenge",
+  2: "individual",
+  3: "stability",
+  4: "execution",
+  5: "principle",
+};
 
 const AXIS_DEFINITIONS: Record<AxisCode, AxisDefinition> = {
   stability: {
@@ -104,6 +112,8 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
       { name: "총무·자산관리", reason: "조직 운영을 꾸준히 관리하는 업무에 강점이 있습니다." },
       { name: "재무·회계·세무", reason: "반복 점검과 안정적인 처리 역량을 살리기 좋습니다." },
       { name: "의료·보건", reason: "책임감 있게 서비스를 유지하는 역할과 연결됩니다." },
+      { name: "법무·감사·윤리", reason: "원칙과 기준을 꾸준히 확인하는 태도와 어울립니다." },
+      { name: "구매·조달·계약", reason: "정해진 절차와 조건을 안정적으로 관리하는 업무와 맞습니다." },
     ],
   },
   challenge: {
@@ -122,6 +132,10 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
       { name: "고객·민원·사업운영", reason: "현장 상황을 보고 빠르게 조정하는 업무와 맞습니다." },
       { name: "IT·정보화·데이터", reason: "새로운 기술과 디지털 전환 과제에 적응하기 좋습니다." },
       { name: "연구·기술개발(R&D)", reason: "새로운 가능성을 검토하고 실험하는 업무와 연결됩니다." },
+      { name: "경영·기획·전략", reason: "새 과제를 발굴하고 방향을 전환하는 업무와 맞습니다." },
+      { name: "화학·환경·에너지", reason: "변화하는 기술과 정책 환경에 대응하는 분야와 연결됩니다." },
+      { name: "기계·전기·전자", reason: "기술 변화와 문제 해결이 필요한 업무에서 강점을 살릴 수 있습니다." },
+      { name: "토목·건축·시설", reason: "현장 변수에 부딪히며 해결책을 찾는 역할과 어울립니다." },
     ],
   },
   teamwork: {
@@ -140,6 +154,8 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
       { name: "홍보·대외협력", reason: "이해관계자와 소통하며 방향을 맞추는 업무에 강합니다." },
       { name: "고객·민원·사업운영", reason: "사람의 요구를 듣고 조정하는 역할과 연결됩니다." },
       { name: "의료·보건", reason: "팀 기반 서비스와 협업이 중요한 분야와 어울립니다." },
+      { name: "경영·기획·전략", reason: "부서 간 의견을 맞추고 실행 방향을 정리하는 업무와 맞습니다." },
+      { name: "총무·자산관리", reason: "조직 구성원과 운영 흐름을 조율하는 역할과 연결됩니다." },
     ],
   },
   individual: {
@@ -158,6 +174,9 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
       { name: "연구·기술개발(R&D)", reason: "독립적으로 가설을 검토하는 성향을 살릴 수 있습니다." },
       { name: "재무·회계·세무", reason: "혼자 꼼꼼히 확인하는 시간이 중요한 업무와 연결됩니다." },
       { name: "법무·감사·윤리", reason: "근거를 바탕으로 독립적으로 판단하는 역할과 맞습니다." },
+      { name: "구매·조달·계약", reason: "조건과 자료를 독립적으로 비교 검토하는 업무와 어울립니다." },
+      { name: "경영·기획·전략", reason: "자료를 깊게 분석해 판단하는 과제에 강점을 살릴 수 있습니다." },
+      { name: "안전·품질·보건", reason: "독립적인 점검과 기준 확인이 필요한 역할과 연결됩니다." },
     ],
   },
   execution: {
@@ -176,6 +195,9 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
       { name: "토목·건축·시설", reason: "계획을 실제 현장 실행으로 옮기는 역할과 연결됩니다." },
       { name: "기계·전기·전자", reason: "기술 문제를 빠르게 확인하고 처리하는 성향을 살릴 수 있습니다." },
       { name: "홍보·대외협력", reason: "이슈가 생겼을 때 기민하게 움직이는 업무에 강합니다." },
+      { name: "총무·자산관리", reason: "운영 이슈를 빠르게 처리하고 현장을 관리하는 업무와 맞습니다." },
+      { name: "안전·품질·보건", reason: "문제를 발견했을 때 즉시 조치하는 역할과 연결됩니다." },
+      { name: "화학·환경·에너지", reason: "현장 상황에 맞춰 운영과 관리를 수행하는 분야와 어울립니다." },
     ],
   },
   planning: {
@@ -194,6 +216,12 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
       { name: "IT·정보화·데이터", reason: "데이터와 시스템 관점으로 문제를 분석하기 좋습니다." },
       { name: "연구·기술개발(R&D)", reason: "근거를 검토하고 설계하는 성향과 연결됩니다." },
       { name: "구매·조달·계약", reason: "조건 비교와 리스크 검토 역량을 활용하기 좋습니다." },
+      { name: "재무·회계·세무", reason: "수치와 기준을 바탕으로 계획을 세우는 업무와 어울립니다." },
+      { name: "법무·감사·윤리", reason: "근거를 정리하고 판단 기준을 세우는 역할과 맞습니다." },
+      { name: "홍보·대외협력", reason: "메시지와 대응 전략을 설계하는 업무에 강점을 살릴 수 있습니다." },
+      { name: "인사·노무·교육", reason: "제도와 교육 흐름을 기획하는 역할과 연결됩니다." },
+      { name: "고객·민원·사업운영", reason: "사업 운영 방향과 개선 우선순위를 설계하는 업무와 연결됩니다." },
+      { name: "총무·자산관리", reason: "운영 자원과 일정 흐름을 계획적으로 관리하는 역할과 맞습니다." },
     ],
   },
   principle: {
@@ -212,6 +240,10 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
       { name: "재무·회계·세무", reason: "정확한 수치와 조건 확인 역량을 살리기 좋습니다." },
       { name: "안전·품질·보건", reason: "점검과 기준 준수가 중요한 분야와 연결됩니다." },
       { name: "구매·조달·계약", reason: "계약 조건과 절차를 꼼꼼히 확인하는 역할과 맞습니다." },
+      { name: "총무·자산관리", reason: "문서와 자산 기준을 정확히 관리하는 업무와 어울립니다." },
+      { name: "의료·보건", reason: "절차와 확인이 중요한 지원 업무에서 강점이 살아납니다." },
+      { name: "토목·건축·시설", reason: "품질, 기준, 점검이 필요한 현장 관리와 연결됩니다." },
+      { name: "기계·전기·전자", reason: "설비 기준과 점검 절차를 정확히 따르는 업무와 맞습니다." },
     ],
   },
   flexibility: {
@@ -230,6 +262,11 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
       { name: "고객·민원·사업운영", reason: "사람과 상황을 함께 보며 빠르게 조정하는 업무와 맞습니다." },
       { name: "화학·환경·에너지", reason: "기준 관리와 변화 대응을 함께 요구하는 직무입니다." },
       { name: "경영·기획·전략", reason: "환경 변화에 맞춰 전략을 조정하는 역할과 연결됩니다." },
+      { name: "IT·정보화·데이터", reason: "새로운 요구와 시스템 변화에 맞춰 조정하는 업무와 어울립니다." },
+      { name: "인사·노무·교육", reason: "사람과 조직 상황에 맞춰 제도를 조정하는 역할과 연결됩니다." },
+      { name: "총무·자산관리", reason: "운영 중 발생하는 변수를 현실적으로 처리하는 업무와 맞습니다." },
+      { name: "연구·기술개발(R&D)", reason: "실험 결과에 따라 방향을 유연하게 바꾸는 과제와 어울립니다." },
+      { name: "토목·건축·시설", reason: "현장 조건 변화에 맞춰 대안을 찾는 업무와 연결됩니다." },
     ],
   },
 };
@@ -305,12 +342,6 @@ export async function submitDiagnosis(args: {
     throw new Error("Some answers are invalid.");
   }
 
-  if (isStraightLineAnswer(answerScores)) {
-    throw new Error(
-      "모든 문항에 같은 답변이 선택되어 성향을 구분할 수 없어요. 문항별로 가장 가까운 답을 다시 선택해 주세요.",
-    );
-  }
-
   const axisTotals = answerScores.reduce(
     (acc, answer) => {
       const axisCode = toAxisCode(answer.trait_key);
@@ -331,7 +362,11 @@ export async function submitDiagnosis(args: {
   const traitScores = toTraitScores(axisScores);
   const vocationalFitScores = toVocationalFitScores(traitScores);
   const axisResults = toAxisResults(axisScores);
-  const typeCode = resolveTypeCode(traitScores, vocationalFitScores);
+  const typeCode = resolveTypeCode(
+    traitScores,
+    vocationalFitScores,
+    answerScores.map((answer) => answer.raw_score as OptionNo),
+  );
   const personalityType = await findPersonalityType(typeCode);
 
   if (!personalityType) {
@@ -370,7 +405,19 @@ export async function submitDiagnosis(args: {
       typeCode,
       scoring: {
         mode: "ipsative",
-        description: "개인 내 4개 양극 축의 상대 점수로 8가지 강점·성향 유형을 산출합니다.",
+        description:
+          "각 축의 기준 성향 문항 4개를 10~90%로 보정하고, 반대 성향은 100에서 기준 성향 점수를 뺀 값으로 산출합니다.",
+        scale: {
+          minPercent: 10,
+          maxPercent: 90,
+          optionScoreMap: {
+            1: 10,
+            2: 30,
+            3: 50,
+            4: 70,
+            5: 90,
+          },
+        },
         normTableRequired: false,
         normTableNote:
           "학교급·성별 규준표는 표준화 심리검사의 집단 대비 위치 산출에 필요하지만, 이 진단은 집단 평균과 비교하지 않습니다.",
@@ -397,7 +444,14 @@ export async function submitDiagnosis(args: {
 function resolveTypeCode(
   traitScores: TraitScores,
   vocationalFitScores: VocationalFitScores,
+  rawScores: OptionNo[],
 ): DiagnosisTypeCode {
+  const straightLineType = resolveStraightLineType(rawScores);
+
+  if (straightLineType) {
+    return straightLineType;
+  }
+
   const entries = Object.entries(traitScores) as [DiagnosisTypeCode, number][];
 
   const sorted = entries.sort(
@@ -405,19 +459,63 @@ function resolveTypeCode(
       b[1] - a[1] ||
       getTieBreakerScore(b[0], vocationalFitScores) -
         getTieBreakerScore(a[0], vocationalFitScores) ||
-      getTypePriority(a[0]) - getTypePriority(b[0]),
+      getTypePriority(a[0], rawScores) - getTypePriority(b[0], rawScores),
   );
 
   return sorted[0][0];
 }
 
-function isStraightLineAnswer(answers: { raw_score: number }[]) {
-  return answers.length > 0 && new Set(answers.map((answer) => answer.raw_score)).size === 1;
+function resolveStraightLineType(rawScores: OptionNo[]) {
+  if (rawScores.length === 0) {
+    return null;
+  }
+
+  const uniqueScore = new Set(rawScores);
+
+  if (uniqueScore.size !== 1) {
+    return null;
+  }
+
+  return STRAIGHT_LINE_TIE_BREAK[rawScores[0]];
 }
 
-function getTypePriority(typeCode: DiagnosisTypeCode) {
-  const index = TYPE_TIE_BREAK_ORDER.indexOf(typeCode);
-  return index === -1 ? TYPE_TIE_BREAK_ORDER.length : index;
+function getTypePriority(typeCode: DiagnosisTypeCode, rawScores: OptionNo[]) {
+  const order = getContextualTieBreakOrder(rawScores);
+  const index = order.indexOf(typeCode);
+  return index === -1 ? order.length : index;
+}
+
+function getContextualTieBreakOrder(rawScores: OptionNo[]) {
+  const averageRawScore =
+    rawScores.reduce((sum, score) => sum + score, 0) / rawScores.length;
+
+  if (averageRawScore < 3) {
+    return [
+      "challenge",
+      "individual",
+      "flexibility",
+      "planning",
+      "execution",
+      "teamwork",
+      "principle",
+      "stability",
+    ] satisfies DiagnosisTypeCode[];
+  }
+
+  if (averageRawScore > 3) {
+    return [
+      "principle",
+      "execution",
+      "teamwork",
+      "stability",
+      "challenge",
+      "individual",
+      "planning",
+      "flexibility",
+    ] satisfies DiagnosisTypeCode[];
+  }
+
+  return TYPE_TIE_BREAK_ORDER;
 }
 
 function getTieBreakerScore(
@@ -471,7 +569,7 @@ function toAxisCode(traitKey: string): AxisCode | null {
 }
 
 function toLeftAxisPercent(optionNo: OptionNo) {
-  return Math.round(((optionNo - 1) / 4) * 100);
+  return Math.round(10 + ((optionNo - 1) / 4) * 80);
 }
 
 function toAxisScores(axisTotals: Record<AxisCode, { total: number; count: number }>): AxisScores {

@@ -1,0 +1,627 @@
+.page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  background: #ffffff;
+  color: #1a2233;
+}
+
+.mobileFrame {
+  width: min(600px, 100vw);
+  min-height: 100vh;
+  background: #ffffff;
+  overflow: hidden;
+  padding-bottom: 80px;
+}
+
+.header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: #ffffff;
+}
+
+.logoLink {
+  text-decoration: none;
+  color: #2f7ff0;
+  font-weight: 900;
+  font-size: 15px;
+}
+
+.logoAccent {
+  color: #f5b91e;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.iconButton,
+.menuButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #1a2233;
+}
+
+.iconButton {
+  width: 22px;
+  height: 22px;
+}
+
+.menuButton {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.searchBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  margin: 16px 16px 0;
+  padding: 0 13px 0 24px;
+  border: 1px solid #2f7ff0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #9aa4b8;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.searchBar svg {
+  flex: 0 0 auto;
+  color: #2f7ff0;
+}
+
+.resultBanner {
+  position: relative;
+  height: 192px;
+  margin: 16px 16px 28px;
+  padding: 32px 24px 0;
+  border-radius: 10px;
+  background: #2f7ff0;
+  color: #ffffff;
+  overflow: hidden;
+}
+
+.resultBanner p {
+  position: relative;
+  z-index: 1;
+  width: max-content;
+  max-width: 190px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.resultBanner p span {
+  display: inline;
+}
+
+.resultBanner > strong {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 185px;
+  margin-top: 3px;
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.resultLink {
+  position: absolute;
+  z-index: 1;
+  left: 24px;
+  bottom: 51px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 124px;
+  height: 28px;
+  padding: 0;
+  border-radius: 7px;
+  background: #f5b91e;
+  color: #111827;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 6px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.resultLink span {
+  display: inline;
+  max-width: none;
+}
+
+.resultLink b {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.resultBanner::after {
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  width: 208px;
+  height: 150px;
+  background: url("/home/home-main-owl.png") center / 100% 100% no-repeat;
+  content: "";
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 10px;
+}
+
+.resultBanner + .sectionHeader {
+  padding-bottom: 20px;
+}
+
+.sectionHeader h2 {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.sectionHeader h2 span {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.sectionHeader a {
+  color: #2f7ff0;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sectionHeader a::after {
+  content: ">";
+  margin-left: 3px;
+}
+
+.hotList {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px;
+  overflow-x: auto;
+  cursor: grab;
+  scroll-snap-type: x proximity;
+  touch-action: pan-x;
+  user-select: none;
+  scrollbar-width: none;
+}
+
+.hotList a {
+  -webkit-user-drag: none;
+}
+
+.hotList:active {
+  cursor: grabbing;
+}
+
+.hotList::-webkit-scrollbar {
+  display: none;
+}
+
+.hotCard,
+.toolCard,
+.listItem {
+  text-decoration: none;
+  color: #1a2233;
+}
+
+.hotCard {
+  flex: 0 0 159px;
+  height: 118px;
+  padding: 15px;
+  border: 1px solid #e4e8ef;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.hotBadge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #d3f3e5;
+  color: #1fb573;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.hotCard strong,
+.hotCard small,
+.toolCard strong,
+.toolCard small,
+.listItem strong,
+.listItem small {
+  display: block;
+}
+
+.hotCard strong {
+  margin-top: 14px;
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.hotCard small {
+  margin-top: 22px;
+  color: #5a6580;
+  font-size: 11px;
+}
+
+.hotList + .sectionHeader {
+  padding-top: 38px;
+  padding-bottom: 10px;
+}
+
+.toolList {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.toolCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 113px;
+  padding: 16px 15px;
+  border: 1px solid #e4e8ef;
+  border-radius: 10px;
+  background: #f5f7fa;
+  text-align: left;
+}
+
+.toolCopy {
+  display: block;
+  min-width: 0;
+  padding-right: 12px;
+}
+
+.toolCopy em {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin-bottom: 13px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #2f7ff0;
+  color: #ffffff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.toolCard strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.toolCard small {
+  margin-top: 7px;
+  color: #5a6580;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.toolThumb {
+  flex: 0 0 86px;
+  width: 86px;
+  height: 78px;
+  border-radius: 14px;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.toolCard:nth-child(1) .toolThumb {
+  background-image: url("/home/home-tool-match.png");
+}
+
+.toolCard:nth-child(2) .toolThumb {
+  width: 94px;
+  background-image: url("/home/home-tool-diagnosis.png");
+}
+
+.toolCard:nth-child(2) .toolCopy em {
+  background: #1fb573;
+}
+
+.toolCard:nth-child(3) .toolThumb {
+  background-image: url("/home/home-tool-interview.png");
+}
+
+.toolCard:nth-child(3) .toolCopy em {
+  background: #1fb573;
+}
+
+.toolCard:nth-child(4) .toolThumb {
+  height: 80px;
+  background-image: url("/home/home-tool-resume.png");
+}
+
+.contentBand {
+  margin-top: 46px;
+  padding: 24px 0 48px;
+  background: #f5f7fa;
+}
+
+.contentBand .sectionHeader {
+  padding-top: 0;
+}
+
+.contentBand .sectionHeader:not(:first-child) {
+  padding-top: 28px;
+}
+
+.listGroup {
+  display: grid;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.listItem {
+  min-height: 136px;
+  padding: 16px;
+  border: 1px solid #e4e8ef;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.listItem strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.listItem small {
+  margin-top: 6px;
+  color: #5a6580;
+  font-size: 12px;
+}
+
+.footerNav {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  height: 80px;
+  border-top: 1px solid #e4e8ef;
+  background: #ffffff;
+}
+
+.footerNav a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #9aa4b8;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.footerNav .footerActive {
+  color: #2f7ff0;
+}
+
+.menuOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+}
+
+.menuDim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+}
+
+.drawer {
+  position: relative;
+  width: min(314px, calc(100vw - 79px));
+  min-height: 100vh;
+  margin-left: 79px;
+  background: #ffffff;
+  color: #1a2233;
+}
+
+.drawerHeader {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 112px;
+  padding: 0 56px 0 16px;
+  background: #2f7ff0;
+  color: #ffffff;
+}
+
+.drawerAvatar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-right: 18px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  font-size: 32px;
+}
+
+.drawerHeader strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.drawerHeader p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.drawerClose {
+  position: absolute;
+  top: 19px;
+  right: 19px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 24px;
+}
+
+.drawerNav {
+  padding: 22px 0 0;
+}
+
+.drawerSection {
+  display: flex;
+  align-items: flex-start;
+  padding: 0 24px 0 17px;
+}
+
+.drawerIcon {
+  display: flex;
+  flex: 0 0 40px;
+  align-items: flex-start;
+  justify-content: center;
+  color: #2f7ff0;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.drawerSectionBody {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 0 0 18px 0;
+}
+
+.drawerSection:not(:last-child) .drawerSectionBody::before {
+  position: absolute;
+  top: 30px;
+  bottom: 0;
+  left: -21px;
+  width: 1px;
+  background: #e4e8ef;
+  content: "";
+}
+
+.drawerSection h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 13px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.drawerSection ul {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.drawerSection a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #5a6580;
+  text-decoration: none;
+  font-size: 12px;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.drawerLabel {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #ffe15c;
+  color: #f5a400;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.drawerBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #2f7ff0;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.logoutButton {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 43px;
+  height: 46px;
+  border: 1px solid #2f7ff0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2f7ff0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.logoutButton:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
