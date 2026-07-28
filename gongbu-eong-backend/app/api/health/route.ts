@@ -9,18 +9,38 @@ type HealthQueryResult = {
 };
 
 export async function GET(request: NextRequest) {
-  const database = await query<HealthQueryResult>("SELECT NOW() AS now");
+  try {
+    const database = await query<HealthQueryResult>("SELECT NOW() AS now");
 
-  return jsonWithCors(request, {
-    ok: true,
-    service: "gongbu-eong-backend",
-    role: "backend",
-    timestamp: new Date().toISOString(),
-    database: {
-      connected: true,
-      timestamp: database.rows[0].now,
-    },
-  });
+    return jsonWithCors(request, {
+      ok: true,
+      service: "gongbu-eong-backend",
+      role: "backend",
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: true,
+        timestamp: database.rows[0].now,
+      },
+    });
+  } catch (error) {
+    return jsonWithCors(
+      request,
+      {
+        ok: false,
+        service: "gongbu-eong-backend",
+        role: "backend",
+        timestamp: new Date().toISOString(),
+        database: {
+          connected: false,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unknown database connection error",
+        },
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export function OPTIONS(request: NextRequest) {
