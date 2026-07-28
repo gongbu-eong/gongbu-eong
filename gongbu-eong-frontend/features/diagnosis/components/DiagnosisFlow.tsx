@@ -613,7 +613,7 @@ function DiagnosisResult({
 
       <section className={styles.resultContent}>
         <section className={styles.typeIntro}>
-          <h2>
+          <h2 className={styles.resultSectionTitle}>
             <ResultTitleIcon type="person" />
             <span>{typeDetail.personTitle}</span>
           </h2>

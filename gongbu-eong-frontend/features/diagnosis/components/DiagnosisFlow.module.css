@@ -758,18 +758,6 @@
   background: #ffffff;
 }
 
-.typeIntro h2 {
-  margin: 0;
-  color: #172033;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 20px;
-  line-height: 1.25;
-  font-weight: 900;
-  word-break: keep-all;
-}
-
 .typeIntro p {
   margin: 10px 0 0;
   color: #435366;
@@ -955,14 +943,20 @@
   .page {
     padding: 0;
     display: block;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
   }
 
   .landing,
   .questionScreen {
-    width: 100%;
-    height: 100vh;
-    height: 100dvh;
+    --mobile-screen-scale: calc(100vw / 600px);
+    width: 100vw;
+    height: calc(852 / 600 * 100vw);
+    height: max(calc(852 / 600 * 100vw), 100svh);
+    height: max(calc(852 / 600 * 100vw), 100dvh);
+    min-height: 0;
     background-size: 100% 100%;
     box-shadow: none;
   }
@@ -972,11 +966,202 @@
     object-fit: fill;
   }
 
+  .introBrand {
+    top: calc(24 / 852 * 100%);
+    width: calc(120 / 600 * 100vw);
+    font-size: calc(15 / 600 * 100vw);
+    line-height: calc(18 / 600 * 100vw);
+  }
+
+  .introPill {
+    top: calc(47 / 852 * 100%);
+    width: calc(301 / 600 * 100vw);
+    max-width: none;
+    height: calc(45 / 600 * 100vw);
+    font-size: calc(16 / 600 * 100vw);
+  }
+
+  .introTitle {
+    top: calc(103 / 852 * 100%);
+    width: calc(321 / 600 * 100vw);
+    max-width: none;
+    height: calc(120 / 600 * 100vw);
+    font-size: calc(46 / 600 * 100vw);
+    line-height: calc(58 / 600 * 100vw);
+  }
+
+  .introTitleFront,
+  .introTitleShadow {
+    width: calc(315 / 600 * 100vw);
+    height: calc(116 / 600 * 100vw);
+    -webkit-text-stroke-width: calc(2 / 600 * 100vw);
+  }
+
+  .introTitleShadow {
+    left: calc(4 / 600 * 100vw);
+    top: calc(4 / 600 * 100vw);
+  }
+
+  .introTypeGrid {
+    top: calc(241 / 852 * 100%);
+    width: calc(360 / 600 * 100vw);
+    max-width: none;
+    gap: calc(10 / 600 * 100vw);
+  }
+
+  .introTypeCard {
+    height: calc(104 / 600 * 100vw);
+    border-radius: calc(5 / 600 * 100vw);
+    padding: calc(15 / 600 * 100vw) calc(5 / 600 * 100vw) 0;
+  }
+
+  .introTypeCard img {
+    width: calc(48 / 600 * 100vw);
+    height: calc(48 / 600 * 100vw);
+  }
+
+  .introTypeCard span {
+    margin-top: calc(10 / 600 * 100vw);
+    font-size: calc(13 / 600 * 100vw);
+    line-height: calc(14 / 600 * 100vw);
+  }
+
+  .introOwl {
+    top: calc(476 / 852 * 100%);
+    width: calc(325 / 600 * 100vw);
+    max-width: none;
+    height: calc(245 / 600 * 100vw);
+  }
+
+  .startButton {
+    top: calc(716 / 852 * 100%);
+    width: calc(361 / 600 * 100vw);
+    max-width: none;
+    height: calc(72 / 600 * 100vw);
+  }
+
+  .startButtonStrong {
+    font-size: calc(16 / 600 * 100vw);
+  }
+
+  .startButtonSub {
+    margin-top: calc(4 / 600 * 100vw);
+    font-size: calc(14 / 600 * 100vw);
+  }
+
+  .shareButton {
+    top: calc(804 / 852 * 100%);
+    min-width: calc(133 / 600 * 100vw);
+    height: calc(24 / 600 * 100vw);
+    gap: calc(7 / 600 * 100vw);
+    font-size: calc(16 / 600 * 100vw);
+    line-height: calc(19 / 600 * 100vw);
+  }
+
+  .shareIcon {
+    width: calc(18 / 600 * 100vw);
+    height: calc(18 / 600 * 100vw);
+  }
+
+  .backButton {
+    left: calc(119.5 / 600 * 100vw);
+    top: calc(28 / 852 * 100%);
+    width: calc(36 / 600 * 100vw);
+    height: calc(36 / 600 * 100vw);
+  }
+
+  .backButton::before {
+    width: calc(11 / 600 * 100vw);
+    height: calc(11 / 600 * 100vw);
+    border-left-width: calc(2 / 600 * 100vw);
+    border-bottom-width: calc(2 / 600 * 100vw);
+  }
+
+  .progressOverlay {
+    left: calc(163.5 / 600 * 100vw);
+    top: calc(28 / 852 * 100%);
+    width: calc(317 / 600 * 100vw);
+    height: calc(36 / 600 * 100vw);
+  }
+
+  .progressTrack {
+    height: calc(12 / 600 * 100vw);
+  }
+
+  .progressBar {
+    width: calc((20 / 600 * 100vw) + (100% - (40 / 600 * 100vw)) * var(--progress-ratio));
+  }
+
+  .progressOwl {
+    left: calc((28 / 600 * 100vw) + (100% - (56 / 600 * 100vw)) * var(--progress-ratio));
+    width: calc(40 / 600 * 100vw);
+    height: calc(36 / 600 * 100vw);
+  }
+
+  .questionNo {
+    top: calc(94 / 852 * 100%);
+    width: calc(48 / 600 * 100vw);
+    height: calc(48 / 600 * 100vw);
+    font-size: calc(24 / 600 * 100vw);
+    line-height: calc(29 / 600 * 100vw);
+  }
+
+  .questionTitle {
+    top: calc(176 / 852 * 100%);
+    width: calc(306 / 600 * 100vw);
+    font-size: calc(30 / 600 * 100vw);
+    line-height: calc(36 / 600 * 100vw);
+  }
+
+  .questionOwl {
+    top: calc(292 / 852 * 100%);
+    width: var(--question-owl-width);
+    height: 220px;
+    background-position: var(--question-owl-x) var(--question-owl-y);
+    background-size: 1972px 3928px;
+    transform: translateX(-50%) scale(var(--mobile-screen-scale));
+    transform-origin: top center;
+  }
+
+  .optionList {
+    top: calc(536 / 852 * 100%);
+    width: calc(361 / 600 * 100vw);
+    gap: calc(8 / 600 * 100vw);
+  }
+
+  .optionButton {
+    height: calc(44 / 600 * 100vw);
+    border-radius: calc(5 / 600 * 100vw);
+    gap: calc(8 / 600 * 100vw);
+    padding: 0 calc(16 / 600 * 100vw);
+  }
+
+  .optionRadio {
+    width: calc(20 / 600 * 100vw);
+    height: calc(20 / 600 * 100vw);
+  }
+
+  .optionButtonSelected .optionRadio {
+    border-width: calc(6 / 600 * 100vw);
+  }
+
+  .optionText {
+    font-size: calc(14 / 600 * 100vw);
+    line-height: calc(17 / 600 * 100vw);
+  }
+
+  .questionHint {
+    top: calc(792 / 852 * 100%);
+    width: calc(361 / 600 * 100vw);
+    font-size: calc(12 / 600 * 100vw);
+    line-height: calc(14 / 600 * 100vw);
+  }
+
   .mobileFrame {
     width: 100%;
-    height: 100vh;
-    height: 100dvh;
-    min-height: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: auto;
     overflow: hidden;
     box-shadow: none;
   }
@@ -988,48 +1173,5 @@
     height: 100dvh;
     margin: 0 auto;
     overflow-y: auto;
-  }
-}
-
-@media (max-width: 480px) and (max-height: 800px) {
-  .progressOverlay {
-    top: 24px;
-  }
-
-  .backButton {
-    top: 24px;
-  }
-
-  .questionNo {
-    top: 82px;
-    width: 44px;
-    height: 44px;
-    font-size: 22px;
-    line-height: 26px;
-  }
-
-  .questionTitle {
-    top: 148px;
-    width: 306px;
-    font-size: 27px;
-    line-height: 33px;
-  }
-
-  .questionOwl {
-    top: 250px;
-    height: 200px;
-  }
-
-  .optionList {
-    top: 456px;
-    gap: 7px;
-  }
-
-  .optionButton {
-    height: 40px;
-  }
-
-  .questionHint {
-    top: 706px;
   }
 }
