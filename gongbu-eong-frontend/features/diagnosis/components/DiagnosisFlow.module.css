@@ -1,5 +1,6 @@
 .page {
   min-height: 100vh;
+  min-height: 100svh;
   min-height: 100dvh;
   width: 100%;
   display: flex;
@@ -18,9 +19,12 @@
 
 .landing {
   position: relative;
-  width: min(var(--gb-container-pc), 100vw);
-  height: 852px;
-  height: max(852px, 100dvh);
+  width: 100%;
+  max-width: var(--gb-container-pc);
+  min-height: 53.25rem;
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
   overflow: hidden;
   background:
     url("/diagnosis/intro/asset-0-768x1376.png") center / 100% 100% no-repeat,
@@ -47,8 +51,8 @@
   width: 120px;
   margin: 0;
   color: var(--gb-color-text);
-  font-size: 15px;
-  line-height: 18px;
+  font-size: 0.9375rem;
+  line-height: 1.125rem;
   font-weight: 900;
   text-align: center;
   transform: translateX(-50%);
@@ -70,7 +74,7 @@
   background: var(--gb-color-primary);
   color: var(--gb-color-surface);
   font-family: var(--gb-font-rounded);
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1;
   font-weight: 900;
   text-align: center;
@@ -88,8 +92,8 @@
   height: 120px;
   margin: 0;
   font-family: var(--gb-font-rounded);
-  font-size: 46px;
-  line-height: 58px;
+  font-size: 2.875rem;
+  line-height: 3.625rem;
   font-weight: 600;
   letter-spacing: 0;
   text-align: center;
@@ -163,8 +167,8 @@
 .introTypeCard span {
   margin-top: 10px;
   font-family: var(--gb-font-rounded);
-  font-size: 13px;
-  line-height: 14px;
+  font-size: 0.8125rem;
+  line-height: 0.875rem;
   font-weight: 700;
   letter-spacing: 0;
   text-align: center;
@@ -207,7 +211,7 @@
 .introOwl {
   position: absolute;
   left: 50%;
-  top: 476px;
+  bottom: 131px;
   z-index: 2;
   width: 325px;
   max-width: calc(100% - 74px);
@@ -221,9 +225,12 @@
 
 .questionScreen {
   position: relative;
-  width: min(600px, 100vw);
-  height: 852px;
-  height: max(852px, 100dvh);
+  width: 100%;
+  max-width: var(--gb-container-pc);
+  min-height: 53.25rem;
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
   overflow: hidden;
   background:
     url("/diagnosis/intro/asset-0-768x1376.png") center / 100% 100% no-repeat,
@@ -328,8 +335,8 @@
   justify-content: center;
   background: #2f7ff0;
   color: #ffffff;
-  font-size: 24px;
-  line-height: 29px;
+  font-size: 1.5rem;
+  line-height: 1.8125rem;
   font-weight: 700;
   transform: translateX(-50%);
   z-index: 2;
@@ -342,8 +349,8 @@
   width: 306px;
   margin: 0;
   color: #3a6898;
-  font-size: 30px;
-  line-height: 36px;
+  font-size: 1.625rem;
+  line-height: 2rem;
   font-weight: 800;
   text-align: center;
   word-break: keep-all;
@@ -354,7 +361,7 @@
 .optionList {
   position: absolute;
   left: 50%;
-  top: 536px;
+  bottom: 64px;
   width: 361px;
   display: grid;
   gap: 8px;
@@ -365,12 +372,12 @@
 .questionHint {
   position: absolute;
   left: 50%;
-  top: 792px;
+  bottom: 31px;
   width: 361px;
   margin: 0;
   color: #6b7280;
-  font-size: 12px;
-  line-height: 14px;
+  font-size: 0.75rem;
+  line-height: 0.875rem;
   font-weight: 400;
   text-align: left;
   word-break: keep-all;
@@ -430,8 +437,8 @@
 .optionText {
   min-width: 0;
   color: #1a2233;
-  font-size: 14px;
-  line-height: 17px;
+  font-size: 0.875rem;
+  line-height: 1.0625rem;
   font-weight: 600;
   word-break: keep-all;
 }
@@ -439,7 +446,7 @@
 .startButton {
   position: absolute;
   left: 50%;
-  top: 716px;
+  bottom: 64px;
   width: 361px;
   max-width: calc(100% - 32px);
   height: 72px;
@@ -458,7 +465,7 @@
 
 .startButtonStrong {
   display: block;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.18;
   font-weight: 900;
 }
@@ -467,7 +474,7 @@
   display: block;
   margin-top: 4px;
   color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
+  font-size: 0.875rem;
   line-height: 1.2;
   font-weight: 500;
 }
@@ -480,7 +487,7 @@
 .shareButton {
   position: absolute;
   left: 50%;
-  top: 804px;
+  bottom: 24px;
   min-width: 133px;
   height: 24px;
   border: 0;
@@ -491,8 +498,8 @@
   background: transparent;
   color: var(--gb-color-text);
   cursor: pointer;
-  font-size: 16px;
-  line-height: 19px;
+  font-size: 1rem;
+  line-height: 1.1875rem;
   font-weight: 900;
   transform: translateX(-50%);
 }
@@ -512,8 +519,11 @@
 }
 
 .mobileFrame {
-  width: min(600px, 100vw);
-  min-height: 852px;
+  width: 100%;
+  max-width: var(--gb-container-pc);
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
   margin: 0 auto;
   padding: 20px;
   background: #ffffff;
@@ -578,7 +588,7 @@
   align-items: center;
   justify-content: center;
   font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  font-size: 23px;
+  font-size: 1.4375rem;
   line-height: 1;
 }
 
@@ -636,7 +646,7 @@
 
 .resultHeroText p {
   margin: 0;
-  font-size: clamp(14px, 3.3vw, 20px);
+  font-size: 1rem;
   line-height: 1.2;
   font-weight: 500;
 }
@@ -644,7 +654,7 @@
 .resultHeroText h1 {
   margin: 8px 0 0;
   color: #ffffff;
-  font-size: clamp(28px, 6.6vw, 40px);
+  font-size: 2rem;
   line-height: 1.18;
   font-weight: 800;
   letter-spacing: 0;
@@ -662,14 +672,14 @@
   padding: 8px 16px;
   background: rgba(255, 255, 255, 0.3);
   color: #ffffff;
-  font-size: clamp(12px, 2.8vw, 16px);
+  font-size: 0.875rem;
   line-height: 1.2;
   font-weight: 700;
   white-space: nowrap;
 }
 
 .resultContent {
-  padding: 22px 16px 178px;
+  padding: 1.375rem 1rem calc(11.75rem + env(safe-area-inset-bottom));
   background: #ffffff;
 }
 
@@ -685,7 +695,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 20px;
+  font-size: 1.25rem;
   line-height: 1.25;
   font-weight: 900;
   letter-spacing: 0;
@@ -698,7 +708,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 1.0625rem;
   line-height: 1;
 }
 
@@ -717,7 +727,7 @@
   align-items: baseline;
   gap: 12px;
   color: #172033;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.2;
   font-weight: 900;
 }
@@ -735,7 +745,7 @@
 
 .scoreHeader strong {
   color: #2f7ff0;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 900;
 }
 
@@ -761,7 +771,7 @@
 .typeIntro p {
   margin: 10px 0 0;
   color: #435366;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.5;
   font-weight: 500;
   word-break: keep-all;
@@ -807,7 +817,7 @@
 .pointCard strong {
   display: block;
   color: #23734f;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.28;
   font-weight: 900;
 }
@@ -819,7 +829,7 @@
 .pointCard p {
   margin: 4px 0 0;
   color: #123325;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.42;
   font-weight: 800;
   word-break: keep-all;
@@ -843,7 +853,7 @@
   padding: 0 7px;
   background: #1768cc;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1;
   font-weight: 900;
   white-space: nowrap;
@@ -867,12 +877,13 @@
   left: 50%;
   bottom: 0;
   z-index: 20;
-  width: min(600px, 100vw);
+  width: 100%;
+  max-width: var(--gb-container-pc);
   transform: translateX(-50%);
   margin: 0;
   border-top: 1px solid #e7edf6;
   border-radius: 0;
-  padding: 28px 12px 18px;
+  padding: 1.75rem 0.75rem max(1.125rem, env(safe-area-inset-bottom));
   background: #ffffff;
   box-shadow: 0 -10px 24px rgba(15, 35, 65, 0.08);
   text-align: center;
@@ -881,7 +892,7 @@
 .loginBox p {
   margin: 0 0 31px;
   color: #172033;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 1.45;
   font-weight: 500;
 }
@@ -907,7 +918,7 @@
   align-items: center;
   justify-content: center;
   padding: 0 10px;
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 900;
   text-decoration: none;
 }
@@ -935,243 +946,308 @@
   padding: 0 14px;
   background: #2f7ff0;
   color: #ffffff;
-  font-size: 15px;
+  font-size: 0.9375rem;
   font-weight: 900;
 }
 
-@media (max-width: 480px) {
+
+@media (max-width: 30rem) {
   .page {
-    padding: 0;
-    display: block;
-    overflow-x: hidden;
-    overflow-y: auto;
     min-height: 100vh;
+    min-height: 100svh;
     min-height: 100dvh;
+    display: flex;
+    overflow-x: clip;
+    overflow-y: auto;
   }
 
   .landing,
   .questionScreen {
-    --mobile-screen-scale: calc(100vw / 600px);
-    width: 100vw;
-    height: calc(852 / 600 * 100vw);
-    height: max(calc(852 / 600 * 100vw), 100svh);
-    height: max(calc(852 / 600 * 100vw), 100dvh);
-    min-height: 0;
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
     background-size: 100% 100%;
+  }
+
+  .backButton {
+    left: 1rem;
+  }
+
+  .progressOverlay {
+    left: 3.75rem;
+    right: 1rem;
+    width: auto;
+  }
+
+  .questionTitle {
+    width: calc(100% - 3rem);
+  }
+
+  .optionList,
+  .questionHint {
+    width: calc(100% - 2rem);
+  }
+
+  .mobileFrame,
+  .resultFrame {
+    width: 100%;
+    max-width: 37.5rem;
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    height: auto;
+    overflow: visible;
     box-shadow: none;
   }
 
-  .landingImage,
-  .questionImage {
-    object-fit: fill;
+  .resultHeroText p {
+    font-size: 0.875rem;
   }
 
-  .introBrand {
-    top: calc(24 / 852 * 100%);
-    width: calc(120 / 600 * 100vw);
-    font-size: calc(15 / 600 * 100vw);
-    line-height: calc(18 / 600 * 100vw);
+  .resultHeroText h1 {
+    font-size: 1.875rem;
   }
 
+  .resultHeroText span {
+    min-height: 1.75rem;
+    margin-top: 0.75rem;
+    padding: 0.4375rem 0.875rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 22.5rem) {
   .introPill {
-    top: calc(47 / 852 * 100%);
-    width: calc(301 / 600 * 100vw);
-    max-width: none;
-    height: calc(45 / 600 * 100vw);
-    font-size: calc(16 / 600 * 100vw);
+    width: calc(100% - 3rem);
+    font-size: 0.9375rem;
   }
 
   .introTitle {
-    top: calc(103 / 852 * 100%);
-    width: calc(321 / 600 * 100vw);
-    max-width: none;
-    height: calc(120 / 600 * 100vw);
-    font-size: calc(46 / 600 * 100vw);
-    line-height: calc(58 / 600 * 100vw);
+    width: calc(100% - 1.5rem);
+    font-size: 2.5rem;
+    line-height: 3.125rem;
   }
 
   .introTitleFront,
   .introTitleShadow {
-    width: calc(315 / 600 * 100vw);
-    height: calc(116 / 600 * 100vw);
-    -webkit-text-stroke-width: calc(2 / 600 * 100vw);
-  }
-
-  .introTitleShadow {
-    left: calc(4 / 600 * 100vw);
-    top: calc(4 / 600 * 100vw);
+    width: 100%;
   }
 
   .introTypeGrid {
-    top: calc(241 / 852 * 100%);
-    width: calc(360 / 600 * 100vw);
-    max-width: none;
-    gap: calc(10 / 600 * 100vw);
+    width: calc(100% - 1rem);
+    gap: 0.375rem;
   }
 
   .introTypeCard {
-    height: calc(104 / 600 * 100vw);
-    border-radius: calc(5 / 600 * 100vw);
-    padding: calc(15 / 600 * 100vw) calc(5 / 600 * 100vw) 0;
+    height: 6rem;
+    padding: 0.75rem 0.25rem 0;
   }
 
   .introTypeCard img {
-    width: calc(48 / 600 * 100vw);
-    height: calc(48 / 600 * 100vw);
+    width: 2.75rem;
+    height: 2.75rem;
   }
 
   .introTypeCard span {
-    margin-top: calc(10 / 600 * 100vw);
-    font-size: calc(13 / 600 * 100vw);
-    line-height: calc(14 / 600 * 100vw);
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    line-height: 0.8125rem;
   }
 
   .introOwl {
-    top: calc(476 / 852 * 100%);
-    width: calc(325 / 600 * 100vw);
-    max-width: none;
-    height: calc(245 / 600 * 100vw);
+    width: calc(100% - 3rem);
+    max-width: 20.3125rem;
   }
 
   .startButton {
-    top: calc(716 / 852 * 100%);
-    width: calc(361 / 600 * 100vw);
-    max-width: none;
-    height: calc(72 / 600 * 100vw);
-  }
-
-  .startButtonStrong {
-    font-size: calc(16 / 600 * 100vw);
-  }
-
-  .startButtonSub {
-    margin-top: calc(4 / 600 * 100vw);
-    font-size: calc(14 / 600 * 100vw);
-  }
-
-  .shareButton {
-    top: calc(804 / 852 * 100%);
-    min-width: calc(133 / 600 * 100vw);
-    height: calc(24 / 600 * 100vw);
-    gap: calc(7 / 600 * 100vw);
-    font-size: calc(16 / 600 * 100vw);
-    line-height: calc(19 / 600 * 100vw);
-  }
-
-  .shareIcon {
-    width: calc(18 / 600 * 100vw);
-    height: calc(18 / 600 * 100vw);
-  }
-
-  .backButton {
-    left: calc(119.5 / 600 * 100vw);
-    top: calc(28 / 852 * 100%);
-    width: calc(36 / 600 * 100vw);
-    height: calc(36 / 600 * 100vw);
-  }
-
-  .backButton::before {
-    width: calc(11 / 600 * 100vw);
-    height: calc(11 / 600 * 100vw);
-    border-left-width: calc(2 / 600 * 100vw);
-    border-bottom-width: calc(2 / 600 * 100vw);
-  }
-
-  .progressOverlay {
-    left: calc(163.5 / 600 * 100vw);
-    top: calc(28 / 852 * 100%);
-    width: calc(317 / 600 * 100vw);
-    height: calc(36 / 600 * 100vw);
-  }
-
-  .progressTrack {
-    height: calc(12 / 600 * 100vw);
-  }
-
-  .progressBar {
-    width: calc((20 / 600 * 100vw) + (100% - (40 / 600 * 100vw)) * var(--progress-ratio));
-  }
-
-  .progressOwl {
-    left: calc((28 / 600 * 100vw) + (100% - (56 / 600 * 100vw)) * var(--progress-ratio));
-    width: calc(40 / 600 * 100vw);
-    height: calc(36 / 600 * 100vw);
-  }
-
-  .questionNo {
-    top: calc(94 / 852 * 100%);
-    width: calc(48 / 600 * 100vw);
-    height: calc(48 / 600 * 100vw);
-    font-size: calc(24 / 600 * 100vw);
-    line-height: calc(29 / 600 * 100vw);
+    width: calc(100% - 2rem);
   }
 
   .questionTitle {
-    top: calc(176 / 852 * 100%);
-    width: calc(306 / 600 * 100vw);
-    font-size: calc(30 / 600 * 100vw);
-    line-height: calc(36 / 600 * 100vw);
+    font-size: 1.5rem;
+    line-height: 1.875rem;
+  }
+
+  .jobChipList {
+    gap: 0.375rem;
+  }
+
+  .jobChip {
+    padding-inline: 0.25rem;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-height: 48rem) {
+  .landing,
+  .questionScreen {
+    min-height: 100vh;
+    min-height: 100svh;
+    min-height: 100dvh;
+    height: 100vh;
+    height: 100svh;
+    height: 100dvh;
+  }
+
+  .introBrand {
+    top: 1rem;
+  }
+
+  .introPill {
+    top: 2.25rem;
+    height: 2.5rem;
+  }
+
+  .introTitle {
+    top: 5.125rem;
+    height: 6.375rem;
+    font-size: 2.5rem;
+    line-height: 3.125rem;
+  }
+
+  .introTitleFront,
+  .introTitleShadow {
+    height: 6.375rem;
+  }
+
+  .introTypeGrid {
+    top: 12rem;
+    gap: 0.4375rem;
+  }
+
+  .introTypeCard {
+    height: 5.5rem;
+    padding-top: 0.625rem;
+  }
+
+  .introTypeCard img {
+    width: 2.625rem;
+    height: 2.625rem;
+  }
+
+  .introTypeCard span {
+    margin-top: 0.375rem;
+    font-size: 0.75rem;
+    line-height: 0.8125rem;
+  }
+
+  .introOwl {
+    bottom: 7.625rem;
+    width: 17rem;
+    height: 12.8125rem;
+  }
+
+  .startButton {
+    bottom: 3rem;
+    height: 3.875rem;
+  }
+
+  .shareButton {
+    bottom: 0.75rem;
+  }
+
+  .backButton,
+  .progressOverlay {
+    top: 1.125rem;
+  }
+
+  .questionNo {
+    top: 4.25rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 1.375rem;
+  }
+
+  .questionTitle {
+    top: 7.75rem;
+    font-size: 1.5rem;
+    line-height: 1.875rem;
   }
 
   .questionOwl {
-    top: calc(292 / 852 * 100%);
-    width: var(--question-owl-width);
-    height: 220px;
-    background-position: var(--question-owl-x) var(--question-owl-y);
-    background-size: 1972px 3928px;
-    transform: translateX(-50%) scale(var(--mobile-screen-scale));
+    top: 14.5rem;
+    transform: translateX(-50%) scale(0.84);
     transform-origin: top center;
   }
 
   .optionList {
-    top: calc(536 / 852 * 100%);
-    width: calc(361 / 600 * 100vw);
-    gap: calc(8 / 600 * 100vw);
+    bottom: 2.625rem;
+    gap: 0.375rem;
   }
 
   .optionButton {
-    height: calc(44 / 600 * 100vw);
-    border-radius: calc(5 / 600 * 100vw);
-    gap: calc(8 / 600 * 100vw);
-    padding: 0 calc(16 / 600 * 100vw);
-  }
-
-  .optionRadio {
-    width: calc(20 / 600 * 100vw);
-    height: calc(20 / 600 * 100vw);
-  }
-
-  .optionButtonSelected .optionRadio {
-    border-width: calc(6 / 600 * 100vw);
-  }
-
-  .optionText {
-    font-size: calc(14 / 600 * 100vw);
-    line-height: calc(17 / 600 * 100vw);
+    height: 2.5rem;
   }
 
   .questionHint {
-    top: calc(792 / 852 * 100%);
-    width: calc(361 / 600 * 100vw);
-    font-size: calc(12 / 600 * 100vw);
-    line-height: calc(14 / 600 * 100vw);
+    bottom: 0.75rem;
+  }
+}
+
+@media (max-height: 43.75rem) {
+  .introPill {
+    top: 1.875rem;
+    height: 2.25rem;
   }
 
-  .mobileFrame {
-    width: 100%;
-    min-height: 100vh;
-    min-height: 100dvh;
-    height: auto;
-    overflow: hidden;
-    box-shadow: none;
+  .introTitle {
+    top: 4.5rem;
+    font-size: 2.25rem;
+    line-height: 2.75rem;
   }
 
-  .resultFrame {
-    width: 100%;
-    max-width: 600px;
-    height: 100vh;
-    height: 100dvh;
-    margin: 0 auto;
-    overflow-y: auto;
+  .introTypeGrid {
+    top: 10rem;
+  }
+
+  .introTypeCard {
+    height: 5rem;
+  }
+
+  .introOwl {
+    bottom: 6.75rem;
+    width: 14.75rem;
+    height: 11.125rem;
+  }
+
+  .startButton {
+    bottom: 2.625rem;
+    height: 3.5rem;
+  }
+
+  .shareButton {
+    bottom: 0.5rem;
+  }
+
+  .questionNo {
+    top: 3.75rem;
+  }
+
+  .questionTitle {
+    top: 6.875rem;
+    font-size: 1.375rem;
+    line-height: 1.6875rem;
+  }
+
+  .questionOwl {
+    top: 12.75rem;
+    transform: translateX(-50%) scale(0.72);
+  }
+
+  .optionList {
+    bottom: 2.25rem;
+    gap: 0.3125rem;
+  }
+
+  .optionButton {
+    height: 2.25rem;
+  }
+
+  .questionHint {
+    bottom: 0.625rem;
   }
 }
