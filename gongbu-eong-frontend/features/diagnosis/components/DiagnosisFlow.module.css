@@ -23,8 +23,8 @@
   max-width: var(--gb-container-pc);
   min-height: 53.25rem;
   height: 100vh;
-  height: 100svh;
   height: 100dvh;
+  height: 100svh;
   overflow: hidden;
   background:
     url("/diagnosis/intro/asset-0-768x1376.png") center / 100% 100% no-repeat,
@@ -229,8 +229,8 @@
   max-width: var(--gb-container-pc);
   min-height: 53.25rem;
   height: 100vh;
-  height: 100svh;
   height: 100dvh;
+  height: 100svh;
   overflow: hidden;
   background:
     url("/diagnosis/intro/asset-0-768x1376.png") center / 100% 100% no-repeat,
@@ -969,11 +969,11 @@
   .questionScreen {
     width: 100%;
     min-height: 100vh;
-    min-height: 100svh;
     min-height: 100dvh;
+    min-height: 100svh;
     height: 100vh;
-    height: 100svh;
     height: 100dvh;
+    height: 100svh;
     background-size: 100% 100%;
   }
 
@@ -1090,11 +1090,11 @@
   .landing,
   .questionScreen {
     min-height: 100vh;
-    min-height: 100svh;
     min-height: 100dvh;
+    min-height: 100svh;
     height: 100vh;
-    height: 100svh;
     height: 100dvh;
+    height: 100svh;
   }
 
   .introBrand {
