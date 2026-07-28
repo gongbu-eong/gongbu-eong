@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getDiagnosisQuestions,
   getDiagnosisStats,
@@ -151,6 +151,7 @@ export function DiagnosisFlow() {
   const [state, setState] = useState<FlowState>({ status: "intro" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [participantCount, setParticipantCount] = useState<number | null>(null);
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     let ignore = false;
@@ -177,6 +178,7 @@ export function DiagnosisFlow() {
   }, []);
 
   async function startSurvey() {
+    isSubmittingRef.current = false;
     setAnswers({});
     setState({ status: "loading" });
 
@@ -196,6 +198,12 @@ export function DiagnosisFlow() {
     questions: DiagnosisQuestionDto[],
     resolvedAnswers = answers,
   ) {
+    if (isSubmittingRef.current) {
+      return;
+    }
+
+    isSubmittingRef.current = true;
+
     const payload: DiagnosisAnswerRequestDto[] = questions.map((question) => ({
       questionId: question.id,
       optionId: resolvedAnswers[question.id],
@@ -206,6 +214,7 @@ export function DiagnosisFlow() {
     try {
       setState({ status: "result", result: await submitDiagnosis(payload) });
     } catch (error) {
+      isSubmittingRef.current = false;
       setState({
         status: "error",
         message:
@@ -234,12 +243,12 @@ export function DiagnosisFlow() {
 
     setAnswers(nextAnswers);
 
-    window.setTimeout(() => {
-      if (args.index === args.questions.length - 1) {
-        submit(args.questions, nextAnswers);
-        return;
-      }
+    if (args.index === args.questions.length - 1) {
+      void submit(args.questions, nextAnswers);
+      return;
+    }
 
+    window.setTimeout(() => {
       setState({
         status: "survey",
         questions: args.questions,
@@ -565,26 +574,36 @@ function DiagnosisResult({
 }: {
   result: DiagnosisResultResponseDto;
 }) {
+  const [displayResult] = useState<DiagnosisResultResponseDto>(() => ({
+    ...result,
+    scores: { ...result.scores },
+    percentages: { ...result.percentages },
+    axisResults: result.axisResults.map((axis) => ({ ...axis })),
+    strengths: [...result.strengths],
+    growthPoints: [...result.growthPoints],
+    recommendations: [...result.recommendations],
+    jobCategories: result.jobCategories.map((job) => ({ ...job })),
+  }));
   const anonymousId = getAnonymousId();
   const kakaoLoginUrl = buildLoginUrl(
     process.env.NEXT_PUBLIC_KAKAO_LOGIN_URL,
-    result.runId,
+    displayResult.runId,
     anonymousId,
   );
   const naverLoginUrl = buildLoginUrl(
     process.env.NEXT_PUBLIC_NAVER_LOGIN_URL,
-    result.runId,
+    displayResult.runId,
     anonymousId,
   );
-  const typeDetail = RESULT_TYPE_DETAILS[result.typeCode];
-  const heroPosition = RESULT_HERO_POSITION[result.typeCode];
-  const pointCards = buildPointCards(result);
+  const typeDetail = RESULT_TYPE_DETAILS[displayResult.typeCode];
+  const heroPosition = RESULT_HERO_POSITION[displayResult.typeCode];
+  const pointCards = buildPointCards(displayResult);
 
   return (
     <MobileFrame className={styles.resultFrame} pageClassName={styles.resultPage}>
       <section
         className={styles.resultHero}
-        aria-label={`나의 강점·성향 유형은 ${result.typeName}. ${typeDetail.heroSummary}`}
+        aria-label={`나의 강점·성향 유형은 ${displayResult.typeName}. ${typeDetail.heroSummary}`}
         style={
           {
             "--result-hero-left": `${
@@ -593,7 +612,7 @@ function DiagnosisResult({
             "--result-hero-top": `${
               (-heroPosition.y / RESULT_HERO_CARD.height) * 100
             }%`,
-            "--result-hero-color": RESULT_HERO_COLOR[result.typeCode],
+            "--result-hero-color": RESULT_HERO_COLOR[displayResult.typeCode],
           } as CSSProperties
         }
       >
@@ -606,7 +625,7 @@ function DiagnosisResult({
         />
         <div className={styles.resultHeroText}>
           <p>나의 강점·성향 유형은</p>
-          <h1>{result.typeName}</h1>
+          <h1>{displayResult.typeName}</h1>
           <span>{typeDetail.heroSummary}</span>
         </div>
       </section>
@@ -626,7 +645,7 @@ function DiagnosisResult({
             <span>나의 성향 분석</span>
           </h2>
           <div className={styles.scoreList}>
-            {result.axisResults.map((axis) => (
+            {displayResult.axisResults.map((axis) => (
               <div key={axis.code} className={styles.scoreItem}>
                 <div className={styles.scoreHeader}>
                   <AxisLabel left={axis.leftLabel} right={axis.rightLabel} />
@@ -672,7 +691,7 @@ function DiagnosisResult({
             <span>이런 직무 강해요</span>
           </h2>
           <div className={styles.jobChipList}>
-            {result.jobCategories.slice(0, 20).map((job) => (
+            {displayResult.jobCategories.slice(0, 20).map((job) => (
               <span key={job.name} className={styles.jobChip}>
                 {shortenJobName(job.name)}
               </span>

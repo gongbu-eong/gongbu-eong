@@ -122,6 +122,8 @@ body {
   min-height: 100%;
   margin: 0;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {

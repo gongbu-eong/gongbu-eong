@@ -272,18 +272,30 @@ async function insertAnswers(
   runId: string,
   answers: { questionId: string; optionId: string; score?: number }[],
 ) {
-  for (const answer of answers) {
-    await client.query(
-      `
-        INSERT INTO public.diagnosis_answers (
-          diagnosis_run_id,
-          question_id,
-          option_id,
-          answer_value
-        )
-        VALUES ($1, $2, $3, $4)
-      `,
-      [runId, answer.questionId, answer.optionId, answer.score || null],
-    );
-  }
+  await client.query(
+    `
+      INSERT INTO public.diagnosis_answers (
+        diagnosis_run_id,
+        question_id,
+        option_id,
+        answer_value
+      )
+      SELECT
+        $1::uuid,
+        answer.question_id,
+        answer.option_id,
+        answer.answer_value
+      FROM UNNEST(
+        $2::uuid[],
+        $3::uuid[],
+        $4::integer[]
+      ) AS answer(question_id, option_id, answer_value)
+    `,
+    [
+      runId,
+      answers.map((answer) => answer.questionId),
+      answers.map((answer) => answer.optionId),
+      answers.map((answer) => answer.score ?? null),
+    ],
+  );
 }

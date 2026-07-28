@@ -326,17 +326,18 @@ export async function submitDiagnosis(args: {
   userAgent?: string;
   referer?: string;
 }): Promise<DiagnosisResultResponseDto> {
-  const questionSet = await findActiveQuestionSet();
-
-  if (!questionSet) {
-    throw new Error("Active diagnosis question set was not found.");
-  }
-
   if (args.body.answers.length !== EXPECTED_ANSWER_COUNT) {
     throw new Error(`Exactly ${EXPECTED_ANSWER_COUNT} answers are required.`);
   }
 
-  const answerScores = await findAnswerScores(args.body.answers);
+  const [questionSet, answerScores] = await Promise.all([
+    findActiveQuestionSet(),
+    findAnswerScores(args.body.answers),
+  ]);
+
+  if (!questionSet) {
+    throw new Error("Active diagnosis question set was not found.");
+  }
 
   if (answerScores.length !== args.body.answers.length) {
     throw new Error("Some answers are invalid.");

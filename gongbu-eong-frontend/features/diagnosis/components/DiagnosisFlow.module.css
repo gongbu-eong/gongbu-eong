@@ -816,23 +816,27 @@
 
 .pointCard strong {
   display: block;
-  color: #23734f;
+  color: #123325;
   font-size: 0.8125rem;
   line-height: 1.28;
   font-weight: 900;
 }
 
 .pointCardGrowth strong {
-  color: #80611b;
+  color: #1a160d;
 }
 
 .pointCard p {
   margin: 4px 0 0;
-  color: #123325;
+  color: #23734f;
   font-size: 0.8125rem;
   line-height: 1.42;
-  font-weight: 800;
+  font-weight: 500;
   word-break: keep-all;
+}
+
+.pointCardGrowth p {
+  color: #80611b;
 }
 
 .jobChipList {
