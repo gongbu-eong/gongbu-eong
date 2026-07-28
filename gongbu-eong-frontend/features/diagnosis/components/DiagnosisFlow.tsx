@@ -95,6 +95,25 @@ const RESULT_HERO_POSITION: Record<
   flexibility: { x: 1331, y: 406 },
 };
 
+const RESULT_HERO_CARD = {
+  width: 393,
+  height: 302,
+};
+
+const RESULT_HERO_COLOR: Record<
+  DiagnosisResultResponseDto["typeCode"],
+  string
+> = {
+  stability: "#15489a",
+  challenge: "#f3a427",
+  teamwork: "#a154e5",
+  individual: "#e85759",
+  execution: "#5bbf47",
+  planning: "#6a7e92",
+  principle: "#bd895e",
+  flexibility: "#0b778b",
+};
+
 const QUESTION_OWL_BOUNDS: Array<{ x: number; y: number; width: number }> = [
   { x: 151, y: 372, width: 252 },
   { x: 622, y: 372, width: 256 },
@@ -533,6 +552,9 @@ function DiagnosisSurvey({
             </button>
           ))}
         </div>
+        <p className={styles.questionHint}>
+          가장 가까운 하나를 선택하면 다음으로 넘어가요
+        </p>
       </section>
     </div>
   );
@@ -565,11 +587,29 @@ function DiagnosisResult({
         aria-label={`나의 강점·성향 유형은 ${result.typeName}. ${typeDetail.heroSummary}`}
         style={
           {
-            "--result-hero-x": `-${heroPosition.x}px`,
-            "--result-hero-y": `-${heroPosition.y}px`,
+            "--result-hero-left": `${
+              (-heroPosition.x / RESULT_HERO_CARD.width) * 100
+            }%`,
+            "--result-hero-top": `${
+              (-heroPosition.y / RESULT_HERO_CARD.height) * 100
+            }%`,
+            "--result-hero-color": RESULT_HERO_COLOR[result.typeCode],
           } as CSSProperties
         }
-      />
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/diagnosis-result-heroes.svg"
+          alt=""
+          className={styles.resultHeroSprite}
+          draggable={false}
+        />
+        <div className={styles.resultHeroText}>
+          <p>나의 강점·성향 유형은</p>
+          <h1>{result.typeName}</h1>
+          <span>{typeDetail.heroSummary}</span>
+        </div>
+      </section>
 
       <section className={styles.resultContent}>
         <section className={styles.typeIntro}>
