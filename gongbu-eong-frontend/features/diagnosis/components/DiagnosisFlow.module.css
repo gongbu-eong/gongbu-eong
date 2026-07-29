@@ -1269,3 +1269,123 @@
     bottom: 0.625rem;
   }
 }
+
+/*
+ * Tablet and desktop keep the same single-column composition as mobile.
+ * Only the inner elements grow to retain their mobile width ratio inside
+ * the centered 600px content area.
+ */
+@media (min-width: 37.5rem) {
+  .landing,
+  .questionScreen {
+    --wide-screen-offset: max(0px, calc(100dvh - 56.25rem));
+  }
+
+  .landing,
+  .questionScreen,
+  .mobileFrame,
+  .resultFrame {
+    width: 37.5rem;
+    max-width: 37.5rem;
+  }
+
+  .introPill {
+    width: 28.75rem;
+    max-width: calc(100% - 4rem);
+    font-size: 1.125rem;
+  }
+
+  .introTitle {
+    top: 5.75rem;
+    width: 30rem;
+    max-width: calc(100% - 3rem);
+    height: 9.5rem;
+    font-size: 3.75rem;
+    line-height: 4.5rem;
+  }
+
+  .introTitleFront,
+  .introTitleShadow {
+    width: 29.5rem;
+    height: 9.5rem;
+  }
+
+  .introTypeGrid {
+    top: 15.75rem;
+    width: 31.25rem;
+    max-width: calc(100% - 4rem);
+    gap: 0.75rem;
+  }
+
+  .introTypeCard {
+    height: 6.875rem;
+  }
+
+  .introTypeCard img {
+    width: 3rem;
+    height: 3rem;
+  }
+
+  .introTypeCard span {
+    font-size: 0.875rem;
+  }
+
+  .introOwl {
+    bottom: calc(8.1875rem + var(--wide-screen-offset));
+    width: 20.3125rem;
+    max-width: none;
+    transform: translateX(-50%) scale(1.28);
+  }
+
+  .startButton {
+    bottom: calc(4rem + var(--wide-screen-offset));
+    width: 31.25rem;
+    max-width: calc(100% - 4rem);
+  }
+
+  .shareButton {
+    bottom: calc(1.5rem + var(--wide-screen-offset));
+  }
+
+  .backButton {
+    left: 1.5rem;
+  }
+
+  .progressOverlay {
+    left: 5.625rem;
+    right: 1.5rem;
+    width: auto;
+  }
+
+  .questionTitle {
+    width: 29rem;
+    font-size: 2rem;
+    line-height: 2.5rem;
+  }
+
+  .questionOwl {
+    transform: translateX(-50%) scale(1.2);
+    transform-origin: top center;
+  }
+
+  .optionList,
+  .questionHint {
+    width: 31.25rem;
+  }
+
+  .optionList {
+    bottom: calc(4rem + var(--wide-screen-offset));
+  }
+
+  .questionHint {
+    bottom: calc(1.9375rem + var(--wide-screen-offset));
+  }
+
+  .optionButton {
+    height: 3rem;
+  }
+
+  .optionText {
+    font-size: 0.9375rem;
+  }
+}
