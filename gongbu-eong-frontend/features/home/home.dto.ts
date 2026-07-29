@@ -5,6 +5,7 @@ export type CurrentUserDto = {
   displayName: string | null;
   avatarUrl: string | null;
   provider: "kakao" | "naver" | null;
+  diagnosisTypeName: string | null;
 };
 
 export type CurrentUserResponseDto = {

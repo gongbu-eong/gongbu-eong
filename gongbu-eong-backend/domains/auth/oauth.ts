@@ -129,7 +129,8 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     response.cookies.delete("oauth_anonymous_id");
     response.cookies.set("gongbu_eong_session", sessionToken, {
       httpOnly: true,
-      sameSite: "lax",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
       path: "/",
       maxAge: 60 * 60 * 24 * 365 * 10,
     });

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent, PointerEvent } from "react";
@@ -10,53 +11,127 @@ import styles from "./HomeMain.module.css";
 const hotJobs = [
   { id: "hot-1", dday: "D-32", title: "OO공사 신입 채용", meta: "정규직 · 수도권" },
   { id: "hot-2", dday: "D-32", title: "▽▽재단 상반기 공채", meta: "정규직 · 수도권" },
-  { id: "hot-3", dday: "D-30", title: "한국교육개발원 행정직", meta: "정규직 · 충북" },
-  { id: "hot-4", dday: "D-18", title: "국민건강보험공단 사무행정", meta: "신입 · 전국" },
-  { id: "hot-5", dday: "D-12", title: "한국전력공사 체험형 인턴", meta: "인턴 · 나주" },
+  { id: "hot-3", dday: "D-32", title: "OO공사 신입 채용", meta: "정규직 · 수도권" },
 ];
 
 const aiTools = [
+  {
+    href: "#",
+    tag: "첫 1회 무료",
+    title: "Ai 자소서 코칭",
+    description: "합격하는 문장으로 AI가 다듬어 드려요.",
+    image: "/home/home-tool-diagnosis.png",
+    imageAlt: "Ai 자소서 코칭",
+  },
   {
     href: "/ai-tools/diagnosis",
     tag: "완전 무료",
     title: "강점·성향 진단",
     description: "10문항이면 끝, 내 강점 유형을 알려드려요.",
+    image: "/home/home-tool-match.png",
+    imageAlt: "강점·성향 진단",
   },
   {
     href: "#",
     tag: "첫 1회 무료",
-    title: "AI 자소서 코칭",
-    description: "합격하는 문장으로 AI가 다듬어 드려요.",
+    title: "Ai 면접 코칭",
+    description: "실전처럼 연습하고 면접 울렁증 극복해요.",
+    image: "/home/home-tool-resume.png",
+    imageAlt: "Ai 면접 코칭",
   },
   {
     href: "#",
-    tag: "AI 추천",
-    title: "맞춤 공고 찾기",
-    description: "성향과 관심 직무를 기준으로 공고를 모아봐요.",
-  },
-  {
-    href: "#",
-    tag: "연습",
-    title: "면접 질문 연습",
-    description: "예상 질문과 답변 흐름을 미리 점검해요.",
+    tag: "준비중",
+    title: "탈락사례 분석",
+    description: "왜 떨어졌을까? 곧 데이터로 알려드려요.",
+    image: "/home/home-tool-interview.png",
+    imageAlt: "탈락사례 분석",
   },
 ];
 
 const recommendedJobs = [
-  { id: "rec-1", title: "건강보험심사평가원 사무직", meta: "진단결과 추천 · D-9" },
-  { id: "rec-2", title: "한국산업인력공단 일반행정", meta: "진단결과 추천 · D-15" },
-  { id: "rec-3", title: "한국환경공단 사업관리", meta: "진단결과 추천 · D-18" },
+  {
+    id: "rec-1",
+    company: "한전KDN",
+    title: "한전KDN(주) 구미지사 AMI분야 일용근로자 모집공고",
+    meta: "~ 2026. 07. 28(화)",
+    dday: "D-1",
+    employment: "정규직",
+    region: "서울",
+    experience: "신입/경력",
+  },
+  {
+    id: "rec-2",
+    company: "한전KDN",
+    title: "한전KDN(주) 구미지사 AMI분야 일용근로자 모집공고",
+    meta: "~ 2026. 07. 28(화)",
+    dday: "D-5",
+    employment: "정규직",
+    region: "서울",
+    experience: "신입/경력",
+  },
+  {
+    id: "rec-3",
+    company: "한전KDN",
+    title: "한전KDN(주) 구미지사 AMI분야 일용근로자 모집공고",
+    meta: "~ 2026. 07. 28(화)",
+    dday: "D-5",
+    employment: "정규직",
+    region: "서울",
+    experience: "신입/경력",
+  },
+  {
+    id: "rec-4",
+    company: "한전KDN",
+    title: "한전KDN(주) 구미지사 AMI분야 일용근로자 모집공고",
+    meta: "~ 2026. 07. 28(화)",
+    dday: "D-5",
+    employment: "정규직",
+    region: "서울",
+    experience: "신입/경력",
+  },
+  {
+    id: "rec-5",
+    company: "한전KDN",
+    title: "[대전보훈병원] 계약직(청년인턴(장애인)) 채용공고 한...",
+    meta: "~ 2026. 07. 28(화)",
+    dday: "D-5",
+    employment: "정규직",
+    region: "서울",
+    experience: "신입/경력",
+  },
 ];
 
 const communityPosts = [
-  { id: "post-1", title: "필기 루틴, 오전형으로 바꾸니까 훨씬 낫네요", meta: "자유게시판" },
-  { id: "post-2", title: "공기업 자소서 항목별로 정리하는 법", meta: "취업자료" },
-  { id: "post-3", title: "면접 스터디 구합니다", meta: "스터디" },
+  {
+    id: "post-1",
+    category: "후기",
+    title: "○○공사 필기 난이도 정리해봤어요",
+    description: "문제 유형이 작년이랑 좀 달라졌어요. 자료해석 파트가 특…",
+  },
+  {
+    id: "post-2",
+    category: "합격",
+    title: "안정형인데 이 기관 붙었습니다 🎉",
+    description: "진단에서 나온 유형 그대로 지원했더니 잘 맞더라고요.",
+  },
+  {
+    id: "post-3",
+    category: "질문",
+    title: "NCS 직업기초 어디서 공부하나요?",
+    description: "독학 중인데 추천 자료나 강의 있을까요?",
+  },
 ];
 
-export function HomeMain() {
-  const [user, setUser] = useState<CurrentUserDto | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function HomeMain({
+  initialUser = null,
+  authResolved = false,
+}: {
+  initialUser?: CurrentUserDto | null;
+  authResolved?: boolean;
+}) {
+  const [user, setUser] = useState<CurrentUserDto | null>(initialUser);
+  const [isLoading, setIsLoading] = useState(!initialUser && !authResolved);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const hotListRef = useRef<HTMLDivElement>(null);
@@ -64,6 +139,10 @@ export function HomeMain() {
   const draggedRef = useRef(false);
 
   useEffect(() => {
+    if (initialUser || authResolved) {
+      return;
+    }
+
     let mounted = true;
 
     getCurrentUser()
@@ -83,12 +162,13 @@ export function HomeMain() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [authResolved, initialUser]);
 
   const nickname = useMemo(() => {
     if (isLoading) return "";
     return user?.nickname || user?.displayName || "회원";
   }, [isLoading, user]);
+  const diagnosisTypeName = user?.diagnosisTypeName || "진단 결과 확인";
 
   const startHotDrag = (event: PointerEvent<HTMLDivElement>) => {
     const target = hotListRef.current;
@@ -174,14 +254,29 @@ export function HomeMain() {
         </Link>
 
           <section className={styles.resultBanner}>
-            <p>
-              <span>{nickname}</span>님의 진단 결과
-            </p>
-            <strong>안정 추구형</strong>
+            {user ? (
+              <>
+                <p>
+                  <span>{nickname}</span>님의 진단 결과
+                </p>
+                <strong>{diagnosisTypeName}</strong>
+              </>
+            ) : (
+              <p className={styles.resultLoginMessage}>로그인이 필요합니다.</p>
+            )}
             <Link href="/ai-tools/diagnosis" className={styles.resultLink}>
-              <span>결과 자세히 보기</span>
+              <span>{user ? "결과 자세히 보기" : "진단 시작하기"}</span>
               <b aria-hidden="true">→</b>
             </Link>
+            <Image
+              src="/home/home-main-owl.png"
+              alt=""
+              width={208}
+              height={150}
+              className={styles.resultOwl}
+              priority
+              sizes="208px"
+            />
           </section>
 
         <SectionHeader icon="🔥" title="Hot 공고" href="#" />
@@ -203,7 +298,7 @@ export function HomeMain() {
           ))}
         </div>
 
-        <SectionHeader title="AI 취업 도구" href="#" />
+        <SectionHeader title="Ai 취업 도구" href="#" />
         <div className={styles.toolList}>
           {aiTools.map((tool) => (
             <Link href={tool.href} key={tool.title} className={styles.toolCard}>
@@ -212,7 +307,15 @@ export function HomeMain() {
                 <strong>{tool.title}</strong>
                 <small>{tool.description}</small>
               </span>
-              <span className={styles.toolThumb} aria-hidden="true" />
+              <span className={styles.toolThumb}>
+                <Image
+                  src={tool.image}
+                  alt={tool.imageAlt}
+                  width={94}
+                  height={80}
+                  sizes="94px"
+                />
+              </span>
             </Link>
           ))}
         </div>
@@ -222,8 +325,17 @@ export function HomeMain() {
           <div className={styles.listGroup}>
             {recommendedJobs.map((job) => (
               <Link href="#" key={job.id} className={styles.listItem}>
+                <span className={styles.recommendTop}>
+                  <small className={styles.company}>{job.company}</small>
+                  <span className={styles.recommendDday}>{job.dday}</span>
+                </span>
                 <strong>{job.title}</strong>
-                <small>{job.meta}</small>
+                <span className={styles.recommendTags}>
+                  <small>{job.employment}</small>
+                  <small>{job.region}</small>
+                  <small>{job.experience}</small>
+                </span>
+                <small className={styles.recommendDate}>{job.meta}</small>
               </Link>
             ))}
           </div>
@@ -231,9 +343,15 @@ export function HomeMain() {
           <SectionHeader title="커뮤니티" href="#" />
           <div className={styles.listGroup}>
             {communityPosts.map((post) => (
-              <Link href="#" key={post.id} className={styles.listItem}>
+              <Link href="#" key={post.id} className={styles.communityItem}>
+                <span className={styles.communityCategory}>{post.category}</span>
                 <strong>{post.title}</strong>
-                <small>{post.meta}</small>
+                <p>{post.description}</p>
+                <span className={styles.communityMeta}>
+                  <span>♡ 1,204</span>
+                  <span>♧ 32</span>
+                  <time>2시간 전</time>
+                </span>
               </Link>
             ))}
           </div>
@@ -244,9 +362,13 @@ export function HomeMain() {
             <HomeIcon />
             <span>홈</span>
           </Link>
+          <Link href="#">
+            <CalendarIcon />
+            <span>캘린더</span>
+          </Link>
           <Link href="/ai-tools/diagnosis">
             <AiIcon />
-            <span>AI</span>
+            <span>Ai 도구</span>
           </Link>
           <Link href="#">
             <CommunityIcon />
@@ -318,9 +440,15 @@ export function HomeMain() {
                 <DrawerSection icon="my" title="마이페이지" />
               </nav>
 
-              <button type="button" className={styles.logoutButton} onClick={handleLogout} disabled={isLoggingOut}>
-                {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
-              </button>
+              {user ? (
+                <button type="button" className={styles.logoutButton} onClick={handleLogout} disabled={isLoggingOut}>
+                  {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+                </button>
+              ) : (
+                <Link href="/ai-tools/diagnosis" className={styles.loginButton}>
+                  진단 시작하기
+                </Link>
+              )}
             </div>
           </aside>
         ) : null}
@@ -370,16 +498,63 @@ function DrawerSection({
 }
 
 function getDrawerIcon(icon: "home" | "megaphone" | "calendar" | "ai" | "community" | "my") {
-  const icons = {
-    home: "🏠",
-    megaphone: "📣",
-    calendar: "🗓️",
-    ai: "🤖",
-    community: "👥",
-    my: "👤",
-  };
+  if (icon === "home") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M3.5 10.6 12 3.5l8.5 7.1v9.2h-5.4v-6.1H8.9v6.1H3.5v-9.2Z" fill="currentColor" />
+      </svg>
+    );
+  }
 
-  return icons[icon];
+  if (icon === "megaphone") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M4 10.2v3.6h3.2l7.7 4.2V6l-7.7 4.2H4Z" fill="currentColor" />
+        <path d="m15 9 4.8-2.1v10.2L15 15V9ZM7.2 14l1.4 5h3l-1.8-4.1L7.2 14Z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  if (icon === "calendar") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="16" rx="2.5" fill="currentColor" opacity=".18" />
+        <path d="M3 9h18M7 3v4M17 3v4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M7 12h3v3H7v-3Zm7 0h3v3h-3v-3Z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  if (icon === "ai") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 4V2m-1 0h2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <rect x="3" y="5" width="18" height="15" rx="5" fill="currentColor" />
+        <circle cx="8.5" cy="12" r="1.5" fill="#fff" />
+        <circle cx="15.5" cy="12" r="1.5" fill="#fff" />
+        <path d="M9 16h6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  if (icon === "community") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="8" cy="8" r="3" fill="currentColor" />
+        <circle cx="16" cy="8" r="3" fill="currentColor" opacity=".75" />
+        <path d="M2.8 19c.4-4.1 2.2-6.1 5.2-6.1s4.8 2 5.2 6.1H2.8Zm8 0c.2-3.4 1.9-5.3 5.2-5.3 3 0 4.8 1.8 5.2 5.3H10.8Z" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="7.5" r="4" fill="currentColor" />
+      <path d="M4.5 21c.5-5.1 3-7.6 7.5-7.6s7 2.5 7.5 7.6h-15Z" fill="currentColor" />
+      <circle cx="18.5" cy="17.5" r="3.5" fill="#f5b91e" />
+      <path d="M18.5 15.8v1.9l1.2.8" fill="none" stroke="#fff" strokeWidth="1.1" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function BellIcon() {
@@ -433,6 +608,26 @@ function HomeIcon() {
   return (
     <svg width="25" height="25" viewBox="0 0 25 25" aria-hidden="true">
       <path d="M4 11.5 12.5 4l8.5 7.5v9H15v-6H10v6H4v-9Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="25" height="27" viewBox="0 0 25 27" aria-hidden="true">
+      <path
+        d="M3 7.5h19v16H3v-16Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path d="M3 11h19M7 4v6M18 4v6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="8" cy="16" r="1.1" fill="currentColor" />
+      <circle cx="12.5" cy="16" r="1.1" fill="currentColor" />
+      <circle cx="17" cy="16" r="1.1" fill="currentColor" />
+      <circle cx="8" cy="20" r="1.1" fill="currentColor" />
+      <circle cx="12.5" cy="20" r="1.1" fill="currentColor" />
     </svg>
   );
 }

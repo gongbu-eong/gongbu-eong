@@ -2,11 +2,13 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   getDiagnosisQuestions,
   getDiagnosisStats,
   submitDiagnosis,
 } from "../diagnosis.api";
+import { getCurrentUser } from "@/features/home/home.api";
 import {
   DiagnosisAnswerRequestDto,
   DiagnosisQuestionDto,
@@ -148,9 +150,11 @@ const POINT_CARD_TITLES: Record<
 };
 
 export function DiagnosisFlow() {
+  const router = useRouter();
   const [state, setState] = useState<FlowState>({ status: "intro" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [participantCount, setParticipantCount] = useState<number | null>(null);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
@@ -159,6 +163,23 @@ export function DiagnosisFlow() {
     resultHeroImage.src = "/diagnosis-result-heroes.svg";
     const questionOwlImage = new window.Image();
     questionOwlImage.src = "/diagnosis-question-owls.svg";
+
+    getCurrentUser()
+      .then((response) => {
+        if (ignore) return;
+
+        if (response.authenticated && response.user) {
+          router.replace("/");
+          return;
+        }
+
+        setIsCheckingSession(false);
+      })
+      .catch(() => {
+        if (!ignore) {
+          setIsCheckingSession(false);
+        }
+      });
 
     getDiagnosisStats()
       .then((stats) => {
@@ -175,7 +196,7 @@ export function DiagnosisFlow() {
     return () => {
       ignore = true;
     };
-  }, []);
+  }, [router]);
 
   async function startSurvey() {
     isSubmittingRef.current = false;
@@ -269,6 +290,10 @@ export function DiagnosisFlow() {
       questions,
       index: nextIndex,
     });
+  }
+
+  if (isCheckingSession) {
+    return null;
   }
 
   if (state.status === "intro") {

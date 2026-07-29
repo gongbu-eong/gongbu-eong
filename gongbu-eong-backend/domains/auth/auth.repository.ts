@@ -222,6 +222,7 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     display_name: string | null;
     avatar_url: string | null;
     provider: OAuthProvider | null;
+    diagnosis_type_name: string | null;
   }>(
     `
       SELECT
@@ -230,7 +231,8 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
         users.nickname,
         users.display_name,
         users.avatar_url,
-        oauth.provider
+        oauth.provider,
+        diagnosis.personality_type_name AS diagnosis_type_name
       FROM public.user_sessions sessions
       JOIN public.users users
         ON users.id = sessions.user_id
@@ -241,6 +243,17 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
         ORDER BY last_used_at DESC NULLS LAST, created_at DESC
         LIMIT 1
       ) oauth ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT personality_types.name AS personality_type_name
+        FROM public.diagnosis_login_conversions conversions
+        JOIN public.diagnosis_results results
+          ON results.id = conversions.diagnosis_result_id
+        JOIN public.personality_types personality_types
+          ON personality_types.id = results.personality_type_id
+        WHERE conversions.user_id = users.id
+        ORDER BY conversions.created_at DESC
+        LIMIT 1
+      ) diagnosis ON TRUE
       WHERE sessions.session_token_hash = $1
         AND users.status = 'active'
       ORDER BY sessions.created_at DESC
@@ -262,6 +275,7 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     displayName: user.display_name,
     avatarUrl: user.avatar_url,
     provider: user.provider,
+    diagnosisTypeName: user.diagnosis_type_name,
   };
 }
 

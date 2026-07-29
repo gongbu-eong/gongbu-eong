@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { HomeEntry } from "@/features/home/components/HomeEntry";
 
 export default function Home() {
-  redirect("/ai-tools/diagnosis");
+  return <HomeEntry />;
 }
