@@ -129,6 +129,31 @@ export async function findPersonalityType(code: DiagnosisTypeCode) {
   return result.rows[0];
 }
 
+export async function findJobCategoriesForPersonalityType(
+  code: DiagnosisTypeCode,
+) {
+  const result = await query<{ name: string; reason: string }>(
+    `
+      SELECT categories.name, mappings.reason
+      FROM public.personality_job_category_mappings mappings
+      JOIN public.personality_types personality_types
+        ON personality_types.id = mappings.personality_type_id
+      JOIN public.job_categories categories
+        ON categories.id = mappings.job_category_id
+      WHERE personality_types.code = $1
+        AND categories.is_active = TRUE
+      ORDER BY
+        mappings.fit_weight DESC,
+        mappings.sort_order ASC,
+        categories.sort_order ASC
+      LIMIT 20
+    `,
+    [code],
+  );
+
+  return result.rows;
+}
+
 export async function createDiagnosisRunWithResult(args: {
   questionSetId: string;
   anonymousId?: string;

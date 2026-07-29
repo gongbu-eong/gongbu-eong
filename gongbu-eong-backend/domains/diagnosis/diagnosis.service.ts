@@ -10,6 +10,7 @@ import {
   createDiagnosisRunWithResult,
   findActiveQuestionSet,
   findAnswerScores,
+  findJobCategoriesForPersonalityType,
   findPersonalityType,
   findQuestionsWithOptions,
 } from "./diagnosis.repository";
@@ -34,7 +35,6 @@ type ResultCopy = {
   personDescription: string;
   strengths: [string, string, string];
   growthPoint: string;
-  jobCategories: { name: string; reason: string }[];
 };
 
 const EXPECTED_ANSWER_COUNT = 16;
@@ -107,14 +107,6 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
     ],
     growthPoint:
       "검증된 방식 안에서도 작은 실험을 하나씩 넣어보면 변화 대응력이 좋아집니다.",
-    jobCategories: [
-      { name: "안전·품질·보건", reason: "기준과 절차를 안정적으로 지키는 성향과 잘 맞습니다." },
-      { name: "총무·자산관리", reason: "조직 운영을 꾸준히 관리하는 업무에 강점이 있습니다." },
-      { name: "재무·회계·세무", reason: "반복 점검과 안정적인 처리 역량을 살리기 좋습니다." },
-      { name: "의료·보건", reason: "책임감 있게 서비스를 유지하는 역할과 연결됩니다." },
-      { name: "법무·감사·윤리", reason: "원칙과 기준을 꾸준히 확인하는 태도와 어울립니다." },
-      { name: "구매·조달·계약", reason: "정해진 절차와 조건을 안정적으로 관리하는 업무와 맞습니다." },
-    ],
   },
   challenge: {
     heroSummary: "새로운 기회와 변화 속에서 동기가 살아나는 편입니다.",
@@ -127,16 +119,6 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
     ],
     growthPoint:
       "도전 전에 최소 확인 기준을 정해두면 시행착오를 줄이면서 속도를 유지할 수 있습니다.",
-    jobCategories: [
-      { name: "홍보·대외협력", reason: "변화하는 이슈에 빠르게 대응하는 힘을 살릴 수 있습니다." },
-      { name: "고객·민원·사업운영", reason: "현장 상황을 보고 빠르게 조정하는 업무와 맞습니다." },
-      { name: "IT·정보화·데이터", reason: "새로운 기술과 디지털 전환 과제에 적응하기 좋습니다." },
-      { name: "연구·기술개발(R&D)", reason: "새로운 가능성을 검토하고 실험하는 업무와 연결됩니다." },
-      { name: "경영·기획·전략", reason: "새 과제를 발굴하고 방향을 전환하는 업무와 맞습니다." },
-      { name: "화학·환경·에너지", reason: "변화하는 기술과 정책 환경에 대응하는 분야와 연결됩니다." },
-      { name: "기계·전기·전자", reason: "기술 변화와 문제 해결이 필요한 업무에서 강점을 살릴 수 있습니다." },
-      { name: "토목·건축·시설", reason: "현장 변수에 부딪히며 해결책을 찾는 역할과 어울립니다." },
-    ],
   },
   teamwork: {
     heroSummary: "사람들과 의견을 맞추며 함께 성과를 만드는 편입니다.",
@@ -149,14 +131,6 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
     ],
     growthPoint:
       "협의가 길어질 때는 본인이 책임질 결론과 마감 기준을 먼저 정해보세요.",
-    jobCategories: [
-      { name: "인사·노무·교육", reason: "사람과 제도를 조율하는 협업형 업무와 잘 맞습니다." },
-      { name: "홍보·대외협력", reason: "이해관계자와 소통하며 방향을 맞추는 업무에 강합니다." },
-      { name: "고객·민원·사업운영", reason: "사람의 요구를 듣고 조정하는 역할과 연결됩니다." },
-      { name: "의료·보건", reason: "팀 기반 서비스와 협업이 중요한 분야와 어울립니다." },
-      { name: "경영·기획·전략", reason: "부서 간 의견을 맞추고 실행 방향을 정리하는 업무와 맞습니다." },
-      { name: "총무·자산관리", reason: "조직 구성원과 운영 흐름을 조율하는 역할과 연결됩니다." },
-    ],
   },
   individual: {
     heroSummary: "혼자 집중해 판단하고 완성도를 끌어올리는 편입니다.",
@@ -169,15 +143,6 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
     ],
     growthPoint:
       "중요한 결정 전에는 짧게라도 외부 피드백을 받아 관점의 빈틈을 줄여보세요.",
-    jobCategories: [
-      { name: "IT·정보화·데이터", reason: "집중해서 문제를 분석하고 구현하는 업무와 잘 맞습니다." },
-      { name: "연구·기술개발(R&D)", reason: "독립적으로 가설을 검토하는 성향을 살릴 수 있습니다." },
-      { name: "재무·회계·세무", reason: "혼자 꼼꼼히 확인하는 시간이 중요한 업무와 연결됩니다." },
-      { name: "법무·감사·윤리", reason: "근거를 바탕으로 독립적으로 판단하는 역할과 맞습니다." },
-      { name: "구매·조달·계약", reason: "조건과 자료를 독립적으로 비교 검토하는 업무와 어울립니다." },
-      { name: "경영·기획·전략", reason: "자료를 깊게 분석해 판단하는 과제에 강점을 살릴 수 있습니다." },
-      { name: "안전·품질·보건", reason: "독립적인 점검과 기준 확인이 필요한 역할과 연결됩니다." },
-    ],
   },
   execution: {
     heroSummary: "고민보다 행동으로 먼저 흐름을 만드는 편입니다.",
@@ -190,15 +155,6 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
     ],
     growthPoint:
       "바로 시작하되 체크리스트 하나를 곁들이면 속도와 완성도를 함께 챙길 수 있습니다.",
-    jobCategories: [
-      { name: "고객·민원·사업운영", reason: "현장에서 빠르게 대응하고 운영하는 업무와 잘 맞습니다." },
-      { name: "토목·건축·시설", reason: "계획을 실제 현장 실행으로 옮기는 역할과 연결됩니다." },
-      { name: "기계·전기·전자", reason: "기술 문제를 빠르게 확인하고 처리하는 성향을 살릴 수 있습니다." },
-      { name: "홍보·대외협력", reason: "이슈가 생겼을 때 기민하게 움직이는 업무에 강합니다." },
-      { name: "총무·자산관리", reason: "운영 이슈를 빠르게 처리하고 현장을 관리하는 업무와 맞습니다." },
-      { name: "안전·품질·보건", reason: "문제를 발견했을 때 즉시 조치하는 역할과 연결됩니다." },
-      { name: "화학·환경·에너지", reason: "현장 상황에 맞춰 운영과 관리를 수행하는 분야와 어울립니다." },
-    ],
   },
   planning: {
     heroSummary: "분석과 우선순위로 효율적인 길을 찾는 편입니다.",
@@ -211,18 +167,6 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
     ],
     growthPoint:
       "분석 시간이 길어질 때는 실행 마감일을 먼저 정해 계획이 행동으로 이어지게 해보세요.",
-    jobCategories: [
-      { name: "경영·기획·전략", reason: "목표와 성과를 구조화하는 업무와 잘 맞습니다." },
-      { name: "IT·정보화·데이터", reason: "데이터와 시스템 관점으로 문제를 분석하기 좋습니다." },
-      { name: "연구·기술개발(R&D)", reason: "근거를 검토하고 설계하는 성향과 연결됩니다." },
-      { name: "구매·조달·계약", reason: "조건 비교와 리스크 검토 역량을 활용하기 좋습니다." },
-      { name: "재무·회계·세무", reason: "수치와 기준을 바탕으로 계획을 세우는 업무와 어울립니다." },
-      { name: "법무·감사·윤리", reason: "근거를 정리하고 판단 기준을 세우는 역할과 맞습니다." },
-      { name: "홍보·대외협력", reason: "메시지와 대응 전략을 설계하는 업무에 강점을 살릴 수 있습니다." },
-      { name: "인사·노무·교육", reason: "제도와 교육 흐름을 기획하는 역할과 연결됩니다." },
-      { name: "고객·민원·사업운영", reason: "사업 운영 방향과 개선 우선순위를 설계하는 업무와 연결됩니다." },
-      { name: "총무·자산관리", reason: "운영 자원과 일정 흐름을 계획적으로 관리하는 역할과 맞습니다." },
-    ],
   },
   principle: {
     heroSummary: "기준과 세부 사항을 꼼꼼히 확인하는 편입니다.",
@@ -235,16 +179,6 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
     ],
     growthPoint:
       "원칙을 지키되 예외 상황에서 선택할 대안 기준을 함께 세워두면 유연성이 좋아집니다.",
-    jobCategories: [
-      { name: "법무·감사·윤리", reason: "원칙과 근거 중심 판단이 중요한 업무와 잘 맞습니다." },
-      { name: "재무·회계·세무", reason: "정확한 수치와 조건 확인 역량을 살리기 좋습니다." },
-      { name: "안전·품질·보건", reason: "점검과 기준 준수가 중요한 분야와 연결됩니다." },
-      { name: "구매·조달·계약", reason: "계약 조건과 절차를 꼼꼼히 확인하는 역할과 맞습니다." },
-      { name: "총무·자산관리", reason: "문서와 자산 기준을 정확히 관리하는 업무와 어울립니다." },
-      { name: "의료·보건", reason: "절차와 확인이 중요한 지원 업무에서 강점이 살아납니다." },
-      { name: "토목·건축·시설", reason: "품질, 기준, 점검이 필요한 현장 관리와 연결됩니다." },
-      { name: "기계·전기·전자", reason: "설비 기준과 점검 절차를 정확히 따르는 업무와 맞습니다." },
-    ],
   },
   flexibility: {
     heroSummary: "상황 변화에 맞춰 현실적인 대안을 찾는 편입니다.",
@@ -257,17 +191,6 @@ const RESULT_COPIES: Record<DiagnosisTypeCode, ResultCopy> = {
     ],
     growthPoint:
       "유연하게 바꾸더라도 반드시 지킬 기준 2~3개를 고정하면 결과가 더 안정됩니다.",
-    jobCategories: [
-      { name: "홍보·대외협력", reason: "변화하는 이슈에 유연하게 대응하는 힘을 살릴 수 있습니다." },
-      { name: "고객·민원·사업운영", reason: "사람과 상황을 함께 보며 빠르게 조정하는 업무와 맞습니다." },
-      { name: "화학·환경·에너지", reason: "기준 관리와 변화 대응을 함께 요구하는 직무입니다." },
-      { name: "경영·기획·전략", reason: "환경 변화에 맞춰 전략을 조정하는 역할과 연결됩니다." },
-      { name: "IT·정보화·데이터", reason: "새로운 요구와 시스템 변화에 맞춰 조정하는 업무와 어울립니다." },
-      { name: "인사·노무·교육", reason: "사람과 조직 상황에 맞춰 제도를 조정하는 역할과 연결됩니다." },
-      { name: "총무·자산관리", reason: "운영 중 발생하는 변수를 현실적으로 처리하는 업무와 맞습니다." },
-      { name: "연구·기술개발(R&D)", reason: "실험 결과에 따라 방향을 유연하게 바꾸는 과제와 어울립니다." },
-      { name: "토목·건축·시설", reason: "현장 조건 변화에 맞춰 대안을 찾는 업무와 연결됩니다." },
-    ],
   },
 };
 
@@ -375,6 +298,7 @@ export async function submitDiagnosis(args: {
   }
 
   const resultCopy = getResultCopy(typeCode);
+  const jobCategories = await findJobCategoriesForPersonalityType(typeCode);
   const totalScore = Math.round(traitScores[typeCode]);
   const created = await createDiagnosisRunWithResult({
     questionSetId: questionSet.id,
@@ -438,7 +362,7 @@ export async function submitDiagnosis(args: {
     strengths: resultCopy.strengths,
     growthPoints: [resultCopy.growthPoint],
     recommendations: [],
-    jobCategories: resultCopy.jobCategories,
+    jobCategories,
   };
 }
 

@@ -4,15 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent, PointerEvent } from "react";
-import { getCurrentUser, logoutCurrentUser } from "../home.api";
-import type { CurrentUserDto } from "../home.dto";
+import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "../home.api";
+import type {
+  CurrentUserDto,
+  HomeJobsResponseDto,
+  JobPostingDto,
+} from "../home.dto";
 import styles from "./HomeMain.module.css";
-
-const hotJobs = [
-  { id: "hot-1", dday: "D-32", title: "OO공사 신입 채용", meta: "정규직 · 수도권" },
-  { id: "hot-2", dday: "D-32", title: "▽▽재단 상반기 공채", meta: "정규직 · 수도권" },
-  { id: "hot-3", dday: "D-32", title: "OO공사 신입 채용", meta: "정규직 · 수도권" },
-];
 
 const aiTools = [
   {
@@ -49,59 +47,6 @@ const aiTools = [
   },
 ];
 
-const recommendedJobs = [
-  {
-    id: "rec-1",
-    company: "한전KDN",
-    title: "한전KDN(주) 구미지사 AMI분야 일용근로자 모집공고",
-    meta: "~ 2026. 07. 28(화)",
-    dday: "D-1",
-    employment: "정규직",
-    region: "서울",
-    experience: "신입/경력",
-  },
-  {
-    id: "rec-2",
-    company: "한전KDN",
-    title: "한전KDN(주) 구미지사 AMI분야 일용근로자 모집공고",
-    meta: "~ 2026. 07. 28(화)",
-    dday: "D-5",
-    employment: "정규직",
-    region: "서울",
-    experience: "신입/경력",
-  },
-  {
-    id: "rec-3",
-    company: "한전KDN",
-    title: "한전KDN(주) 구미지사 AMI분야 일용근로자 모집공고",
-    meta: "~ 2026. 07. 28(화)",
-    dday: "D-5",
-    employment: "정규직",
-    region: "서울",
-    experience: "신입/경력",
-  },
-  {
-    id: "rec-4",
-    company: "한전KDN",
-    title: "한전KDN(주) 구미지사 AMI분야 일용근로자 모집공고",
-    meta: "~ 2026. 07. 28(화)",
-    dday: "D-5",
-    employment: "정규직",
-    region: "서울",
-    experience: "신입/경력",
-  },
-  {
-    id: "rec-5",
-    company: "한전KDN",
-    title: "[대전보훈병원] 계약직(청년인턴(장애인)) 채용공고 한...",
-    meta: "~ 2026. 07. 28(화)",
-    dday: "D-5",
-    employment: "정규직",
-    region: "서울",
-    experience: "신입/경력",
-  },
-];
-
 const communityPosts = [
   {
     id: "post-1",
@@ -134,6 +79,11 @@ export function HomeMain({
   const [isLoading, setIsLoading] = useState(!initialUser && !authResolved);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [jobs, setJobs] = useState<HomeJobsResponseDto>({
+    hotJobs: [],
+    recommendedJobs: [],
+    recommendationTypeName: null,
+  });
   const hotListRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
   const draggedRef = useRef(false);
@@ -163,6 +113,28 @@ export function HomeMain({
       mounted = false;
     };
   }, [authResolved, initialUser]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    getHomeJobs()
+      .then((response) => {
+        if (mounted) setJobs(response);
+      })
+      .catch(() => {
+        if (mounted) {
+          setJobs({
+            hotJobs: [],
+            recommendedJobs: [],
+            recommendationTypeName: null,
+          });
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const nickname = useMemo(() => {
     if (isLoading) return "";
@@ -210,6 +182,11 @@ export function HomeMain({
     try {
       await logoutCurrentUser();
       setUser(null);
+      setJobs((current) => ({
+        ...current,
+        recommendedJobs: [],
+        recommendationTypeName: null,
+      }));
       setIsMenuOpen(false);
     } finally {
       setIsLoggingOut(false);
@@ -279,7 +256,7 @@ export function HomeMain({
             />
           </section>
 
-        <SectionHeader icon="🔥" title="Hot 공고" href="#" />
+        <SectionHeader icon="🔥" title="Hot 공고" href="/jobs" />
         <div
           ref={hotListRef}
           className={styles.hotList}
@@ -289,12 +266,19 @@ export function HomeMain({
           onPointerCancel={endHotDrag}
           onPointerLeave={endHotDrag}
         >
-          {hotJobs.map((job) => (
-            <Link href="#" key={job.id} className={styles.hotCard} onClickCapture={ignoreClickAfterDrag}>
+          {jobs.hotJobs.map((job) => (
+            <a
+              href={job.applyUrl || `/jobs/${job.id}`}
+              key={job.id}
+              className={styles.hotCard}
+              onClickCapture={ignoreClickAfterDrag}
+              target={job.applyUrl ? "_blank" : undefined}
+              rel={job.applyUrl ? "noreferrer" : undefined}
+            >
               <span className={styles.hotBadge}>{job.dday}</span>
               <strong>{job.title}</strong>
-              <small>{job.meta}</small>
-            </Link>
+              <small>{toJobMeta(job)}</small>
+            </a>
           ))}
         </div>
 
@@ -321,23 +305,32 @@ export function HomeMain({
         </div>
 
         <div className={styles.contentBand}>
-          <SectionHeader title="진단결과 추천 공고" href="#" />
+          <SectionHeader title="진단결과 추천 공고" href="/jobs?recommended=true" />
           <div className={styles.listGroup}>
-            {recommendedJobs.map((job) => (
-              <Link href="#" key={job.id} className={styles.listItem}>
+            {jobs.recommendedJobs.map((job) => (
+              <a
+                href={job.applyUrl || `/jobs/${job.id}`}
+                key={job.id}
+                className={styles.listItem}
+                target={job.applyUrl ? "_blank" : undefined}
+                rel={job.applyUrl ? "noreferrer" : undefined}
+              >
                 <span className={styles.recommendTop}>
-                  <small className={styles.company}>{job.company}</small>
+                  <small className={styles.company}>{job.institutionName}</small>
                   <span className={styles.recommendDday}>{job.dday}</span>
                 </span>
                 <strong>{job.title}</strong>
                 <span className={styles.recommendTags}>
-                  <small>{job.employment}</small>
-                  <small>{job.region}</small>
-                  <small>{job.experience}</small>
+                  {job.employmentType ? <small>{job.employmentType}</small> : null}
+                  {job.region ? <small>{job.region}</small> : null}
+                  {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
                 </span>
-                <small className={styles.recommendDate}>{job.meta}</small>
-              </Link>
+                <small className={styles.recommendDate}>{toEndDate(job.applicationEndAt)}</small>
+              </a>
             ))}
+            {user && jobs.recommendedJobs.length === 0 ? (
+              <p className={styles.emptyJobs}>추천 가능한 진행 중 공고가 없습니다.</p>
+            ) : null}
           </div>
 
           <SectionHeader title="커뮤니티" href="#" />
@@ -455,6 +448,20 @@ export function HomeMain({
       </section>
     </main>
   );
+}
+
+function toJobMeta(job: JobPostingDto) {
+  return [job.employmentType, job.region].filter(Boolean).join(" · ") || job.institutionName;
+}
+
+function toEndDate(value: string | null) {
+  if (!value) return "상시 채용";
+
+  return `~ ${new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value))}`;
 }
 
 function DrawerSection({

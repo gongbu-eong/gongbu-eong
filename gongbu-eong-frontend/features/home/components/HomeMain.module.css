@@ -291,6 +291,14 @@
   padding-bottom: 10px;
 }
 
+.emptyJobs {
+  margin: 0;
+  padding: 36px 16px;
+  color: #7b8497;
+  text-align: center;
+  font-size: 0.8125rem;
+}
+
 .toolList {
   display: grid;
   gap: 8px;

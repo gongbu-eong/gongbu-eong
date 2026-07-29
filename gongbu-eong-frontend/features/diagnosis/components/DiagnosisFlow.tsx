@@ -718,7 +718,7 @@ function DiagnosisResult({
           <div className={styles.jobChipList}>
             {displayResult.jobCategories.slice(0, 20).map((job) => (
               <span key={job.name} className={styles.jobChip}>
-                {shortenJobName(job.name)}
+                {job.name}
               </span>
             ))}
           </div>
@@ -756,28 +756,6 @@ function AxisLabel({ left, right }: { left: string; right: string }) {
       <span className={styles.axisRight}>{right}</span>
     </span>
   );
-}
-
-function shortenJobName(name: string) {
-  const aliases: Record<string, string> = {
-    "경영·기획·전략": "기획·전략",
-    "인사·노무·교육": "사무·행정",
-    "재무·회계·세무": "회계·재무",
-    "법무·감사·윤리": "감사·법무",
-    "총무·자산관리": "총무·자산",
-    "홍보·대외협력": "홍보·협력",
-    "구매·조달·계약": "조달·계약",
-    "고객·민원·사업운영": "민원·운영",
-    "IT·정보화·데이터": "IT·데이터",
-    "토목·건축·시설": "시설·건축",
-    "기계·전기·전자": "기계·전기",
-    "화학·환경·에너지": "환경·에너지",
-    "안전·품질·보건": "품질관리",
-    "연구·기술개발(R&D)": "연구개발",
-    "의료·보건": "의료·보건",
-  };
-
-  return aliases[name] ?? name;
 }
 
 function ResultTitleIcon({

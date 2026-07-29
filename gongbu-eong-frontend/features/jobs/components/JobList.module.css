@@ -1,0 +1,119 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background: #f5f7fa;
+  color: #1a2233;
+}
+
+.frame {
+  width: min(600px, 100%);
+  min-height: 100dvh;
+  padding: 0 16px 40px;
+  background: #ffffff;
+}
+
+.header {
+  height: 56px;
+  display: grid;
+  grid-template-columns: 32px 1fr 32px;
+  align-items: center;
+  border-bottom: 1px solid #e4e8ef;
+}
+
+.header a {
+  color: #1a2233;
+  text-decoration: none;
+  font-size: 1.25rem;
+}
+
+.header h1 {
+  margin: 0;
+  text-align: center;
+  font-size: 1.125rem;
+}
+
+.summary {
+  margin: 20px 0 12px;
+  color: #5a6580;
+  font-size: 0.875rem;
+}
+
+.summary strong {
+  color: #2f7ff0;
+}
+
+.list {
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+}
+
+.card {
+  display: block;
+  padding: 18px 16px;
+  border: 1px solid #e4e8ef;
+  border-radius: 8px;
+  color: #1a2233;
+  text-decoration: none;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.top small {
+  overflow: hidden;
+  color: #5a6580;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top em {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #d3f3e5;
+  color: #1fb573;
+  font-size: 0.75rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.card > strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tags small {
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: #f0f4fa;
+  color: #5a6580;
+}
+
+.card p {
+  margin: 10px 0 0;
+  color: #2f7ff0;
+  font-size: 0.75rem;
+}
+
+.empty {
+  padding: 80px 0;
+  color: #7b8497;
+  text-align: center;
+  font-size: 0.875rem;
+}
