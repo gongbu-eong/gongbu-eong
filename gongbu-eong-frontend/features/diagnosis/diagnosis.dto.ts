@@ -62,3 +62,38 @@ export type DiagnosisResultResponseDto = {
     reason: string;
   }[];
 };
+
+export type DiagnosisResultHistoryItemDto = {
+  resultId: string;
+  runId: string;
+  typeCode: DiagnosisTypeCode;
+  typeName: string;
+  completedAt: string;
+};
+
+export type DiagnosisResultHistoryResponseDto = {
+  items: DiagnosisResultHistoryItemDto[];
+  nextCursor: string | null;
+};
+
+export type DiagnosisResultDetailResponseDto = {
+  result: DiagnosisResultResponseDto;
+  completedAt: string;
+  percentile: {
+    traitLabel: string;
+    topPercent: number;
+  };
+  companies: {
+    id: string;
+    name: string;
+  }[];
+  monthlyHiring: {
+    month: number;
+    totalCount: number;
+    primaryCategory: string;
+    categories: {
+      name: string;
+      count: number;
+    }[];
+  };
+};

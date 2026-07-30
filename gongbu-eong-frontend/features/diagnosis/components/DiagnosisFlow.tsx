@@ -1,14 +1,23 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   getDiagnosisQuestions,
   getDiagnosisStats,
   submitDiagnosis,
 } from "../diagnosis.api";
 import { getCurrentUser } from "@/features/home/home.api";
+import {
+  AiIcon,
+  BellIcon,
+  CalendarIcon,
+  CommunityIcon,
+  HomeIcon,
+  MenuIcon,
+  MyIcon,
+} from "@/features/home/components/HomeMain";
 import {
   DiagnosisAnswerRequestDto,
   DiagnosisQuestionDto,
@@ -150,11 +159,11 @@ const POINT_CARD_TITLES: Record<
 };
 
 export function DiagnosisFlow() {
-  const router = useRouter();
   const [state, setState] = useState<FlowState>({ status: "intro" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [participantCount, setParticipantCount] = useState<number | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
@@ -169,11 +178,12 @@ export function DiagnosisFlow() {
         if (ignore) return;
 
         if (response.authenticated && response.user) {
-          router.replace("/");
-          return;
+          setIsAuthenticated(true);
         }
 
-        setIsCheckingSession(false);
+        if (!ignore) {
+          setIsCheckingSession(false);
+        }
       })
       .catch(() => {
         if (!ignore) {
@@ -196,7 +206,7 @@ export function DiagnosisFlow() {
     return () => {
       ignore = true;
     };
-  }, [router]);
+  }, []);
 
   async function startSurvey() {
     isSubmittingRef.current = false;
@@ -296,21 +306,30 @@ export function DiagnosisFlow() {
     return null;
   }
 
+  const withAuthenticatedShell = (screen: ReactNode) =>
+    isAuthenticated ? (
+      <AuthenticatedDiagnosisShell>{screen}</AuthenticatedDiagnosisShell>
+    ) : (
+      screen
+    );
+
   if (state.status === "intro") {
-    return (
+    return withAuthenticatedShell(
       <DiagnosisIntro
         participantCount={participantCount}
         onStart={startSurvey}
-      />
+      />,
     );
   }
 
   if (state.status === "loading") {
-    return <MobileFrame>문항을 불러오는 중입니다...</MobileFrame>;
+    return withAuthenticatedShell(
+      <MobileFrame>문항을 불러오는 중입니다...</MobileFrame>,
+    );
   }
 
   if (state.status === "error") {
-    return (
+    return withAuthenticatedShell(
       <MobileFrame>
         <p className="text-lg font-semibold text-red-700">진행할 수 없어요</p>
         <p className="mt-2 text-sm text-zinc-600">{state.message}</p>
@@ -320,21 +339,22 @@ export function DiagnosisFlow() {
         >
           다시 시도하기
         </button>
-      </MobileFrame>
+      </MobileFrame>,
     );
   }
 
   if (state.status === "result") {
-    return (
+    return withAuthenticatedShell(
       <DiagnosisResult
         result={state.result}
-      />
+        isAuthenticated={isAuthenticated}
+      />,
     );
   }
 
   const currentQuestion = state.questions[state.index];
 
-  return (
+  return withAuthenticatedShell(
     <DiagnosisSurvey
       currentQuestion={currentQuestion}
       index={state.index}
@@ -349,7 +369,7 @@ export function DiagnosisFlow() {
           index: state.index,
         })
       }
-    />
+    />,
   );
 }
 
@@ -596,8 +616,10 @@ function DiagnosisSurvey({
 
 function DiagnosisResult({
   result,
+  isAuthenticated,
 }: {
   result: DiagnosisResultResponseDto;
+  isAuthenticated: boolean;
 }) {
   const [displayResult] = useState<DiagnosisResultResponseDto>(() => ({
     ...result,
@@ -716,7 +738,7 @@ function DiagnosisResult({
             <span>이런 직무 강해요</span>
           </h2>
           <div className={styles.jobChipList}>
-            {displayResult.jobCategories.slice(0, 20).map((job) => (
+            {displayResult.jobCategories.slice(0, 6).map((job) => (
               <span key={job.name} className={styles.jobChip}>
                 {job.name}
               </span>
@@ -729,22 +751,72 @@ function DiagnosisResult({
           />
         </section>
 
-        <section className={styles.loginBox} aria-label="소셜 로그인">
-          <p>
-            가입하면 <strong>전체 결과 + 맞춤 공고</strong>를 볼 수 있어요
-          </p>
-          <div className={styles.loginActions}>
-            <a className={styles.kakaoButton} href={kakaoLoginUrl}>
-              <span className={styles.quickBadge}>3초 컷!</span>
-              카카오로 시작하기
-            </a>
-            <a className={styles.naverButton} href={naverLoginUrl}>
-              네이버로 시작하기
-            </a>
-          </div>
-        </section>
+        {!isAuthenticated ? (
+          <section className={styles.loginBox} aria-label="소셜 로그인">
+            <p>
+              가입하면 <strong>전체 결과 + 맞춤 공고</strong>를 볼 수 있어요
+            </p>
+            <div className={styles.loginActions}>
+              <a className={styles.kakaoButton} href={kakaoLoginUrl}>
+                <span className={styles.quickBadge}>3초 컷!</span>
+                카카오로 시작하기
+              </a>
+              <a className={styles.naverButton} href={naverLoginUrl}>
+                네이버로 시작하기
+              </a>
+            </div>
+          </section>
+        ) : null}
       </section>
     </MobileFrame>
+  );
+}
+
+function AuthenticatedDiagnosisShell({ children }: { children: ReactNode }) {
+  return (
+    <main className={styles.authenticatedShell}>
+      <header className={styles.authenticatedHeader}>
+        <Link href="/" className={styles.authenticatedLogo} aria-label="공부엉이 홈">
+          <span>공</span>부엉이
+        </Link>
+        <div className={styles.authenticatedHeaderActions}>
+          <Link href="#" aria-label="알림">
+            <BellIcon />
+          </Link>
+          <Link href="/" aria-label="메뉴">
+            <MenuIcon />
+          </Link>
+        </div>
+      </header>
+
+      <div className={styles.authenticatedContent}>{children}</div>
+
+      <footer className={styles.authenticatedFooter} aria-label="하단 메뉴">
+        <Link href="/">
+          <HomeIcon />
+          <span>홈</span>
+        </Link>
+        <Link href="#">
+          <CalendarIcon />
+          <span>캘린더</span>
+        </Link>
+        <Link href="/ai-tools/diagnosis" className={styles.authenticatedFooterActive}>
+          <span className={styles.authenticatedAiIcon}>
+            <AiIcon />
+            <small>BEST</small>
+          </span>
+          <span>AI 도구</span>
+        </Link>
+        <Link href="#">
+          <CommunityIcon />
+          <span>커뮤니티</span>
+        </Link>
+        <Link href="#">
+          <MyIcon />
+          <span>MY</span>
+        </Link>
+      </footer>
+    </main>
   );
 }
 

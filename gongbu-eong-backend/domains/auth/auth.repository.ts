@@ -7,6 +7,7 @@ export type OAuthProfile = {
   providerUserId: string;
   email?: string;
   nickname?: string;
+  avatarUrl?: string;
 };
 
 export async function upsertOAuthUser(args: {
@@ -42,16 +43,27 @@ export async function upsertOAuthUser(args: {
     if (!userId) {
       const user = await client.query<{ id: string }>(
         `
-          INSERT INTO public.users (email, nickname, display_name, last_login_at)
-          VALUES ($1, $2, $2, NOW())
+          INSERT INTO public.users (
+            email,
+            nickname,
+            display_name,
+            avatar_url,
+            last_login_at
+          )
+          VALUES ($1, $2, $2, $3, NOW())
           ON CONFLICT (email) DO UPDATE SET
-            nickname = COALESCE(public.users.nickname, EXCLUDED.nickname),
-            display_name = COALESCE(public.users.display_name, EXCLUDED.display_name),
+            nickname = COALESCE(EXCLUDED.nickname, public.users.nickname),
+            display_name = COALESCE(EXCLUDED.display_name, public.users.display_name),
+            avatar_url = COALESCE(EXCLUDED.avatar_url, public.users.avatar_url),
             last_login_at = NOW(),
             updated_at = NOW()
           RETURNING id
         `,
-        [args.profile.email || null, args.profile.nickname || null],
+        [
+          args.profile.email || null,
+          args.profile.nickname || null,
+          args.profile.avatarUrl || null,
+        ],
       );
       userId = user.rows[0].id;
 
@@ -91,10 +103,21 @@ export async function upsertOAuthUser(args: {
       await client.query(
         `
           UPDATE public.users
-          SET last_login_at = NOW(), updated_at = NOW()
+          SET
+            email = COALESCE($2, email),
+            nickname = COALESCE($3, nickname),
+            display_name = COALESCE($3, display_name),
+            avatar_url = COALESCE($4, avatar_url),
+            last_login_at = NOW(),
+            updated_at = NOW()
           WHERE id = $1
         `,
-        [userId],
+        [
+          userId,
+          args.profile.email || null,
+          args.profile.nickname || null,
+          args.profile.avatarUrl || null,
+        ],
       );
 
       await client.query(
@@ -166,6 +189,33 @@ export async function upsertOAuthUser(args: {
     if (args.diagnosisRunId) {
       await client.query(
         `
+          UPDATE public.diagnosis_runs
+          SET user_id = $2
+          WHERE id = $1
+            AND (user_id IS NULL OR user_id = $2)
+            AND ($3::uuid IS NULL OR anonymous_id = $3::uuid)
+        `,
+        [
+          args.diagnosisRunId,
+          userId,
+          args.anonymousId || null,
+        ],
+      );
+
+      await client.query(
+        `
+          UPDATE public.diagnosis_results results
+          SET user_id = $2
+          FROM public.diagnosis_runs runs
+          WHERE runs.id = $1
+            AND results.diagnosis_run_id = runs.id
+            AND runs.user_id = $2
+        `,
+        [args.diagnosisRunId, userId],
+      );
+
+      await client.query(
+        `
           INSERT INTO public.diagnosis_login_conversions (
             diagnosis_run_id,
             diagnosis_result_id,
@@ -189,6 +239,7 @@ export async function upsertOAuthUser(args: {
           LEFT JOIN public.diagnosis_results
             ON diagnosis_results.diagnosis_run_id = diagnosis_runs.id
           WHERE diagnosis_runs.id = $1
+            AND diagnosis_runs.user_id = $2
           ON CONFLICT (diagnosis_run_id, user_id, provider) DO NOTHING
         `,
         [
@@ -222,7 +273,10 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     display_name: string | null;
     avatar_url: string | null;
     provider: OAuthProvider | null;
+    diagnosis_type_code: string | null;
     diagnosis_type_name: string | null;
+    diagnosis_run_id: string | null;
+    diagnosis_result_id: string | null;
   }>(
     `
       SELECT
@@ -232,7 +286,10 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
         users.display_name,
         users.avatar_url,
         oauth.provider,
-        diagnosis.personality_type_name AS diagnosis_type_name
+        diagnosis.personality_type_code AS diagnosis_type_code,
+        diagnosis.personality_type_name AS diagnosis_type_name,
+        diagnosis.diagnosis_run_id,
+        diagnosis.diagnosis_result_id
       FROM public.user_sessions sessions
       JOIN public.users users
         ON users.id = sessions.user_id
@@ -244,17 +301,32 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
         LIMIT 1
       ) oauth ON TRUE
       LEFT JOIN LATERAL (
-        SELECT personality_types.name AS personality_type_name
-        FROM public.diagnosis_login_conversions conversions
-        JOIN public.diagnosis_results results
-          ON results.id = conversions.diagnosis_result_id
+        SELECT
+          personality_types.code AS personality_type_code,
+          personality_types.name AS personality_type_name,
+          runs.id AS diagnosis_run_id,
+          results.id AS diagnosis_result_id
+        FROM public.diagnosis_results results
+        JOIN public.diagnosis_runs runs
+          ON runs.id = results.diagnosis_run_id
         JOIN public.personality_types personality_types
           ON personality_types.id = results.personality_type_id
-        WHERE conversions.user_id = users.id
-        ORDER BY conversions.created_at DESC
+        WHERE results.user_id = users.id
+           OR runs.user_id = users.id
+           OR EXISTS (
+             SELECT 1
+             FROM public.diagnosis_login_conversions conversions
+             WHERE conversions.diagnosis_result_id = results.id
+               AND conversions.user_id = users.id
+           )
+        ORDER BY
+          runs.completed_at DESC NULLS LAST,
+          results.created_at DESC,
+          results.id DESC
         LIMIT 1
       ) diagnosis ON TRUE
       WHERE sessions.session_token_hash = $1
+        AND sessions.expires_at > NOW()
         AND users.status = 'active'
       ORDER BY sessions.created_at DESC
       LIMIT 1
@@ -275,7 +347,10 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     displayName: user.display_name,
     avatarUrl: user.avatar_url,
     provider: user.provider,
+    diagnosisTypeCode: user.diagnosis_type_code,
     diagnosisTypeName: user.diagnosis_type_name,
+    diagnosisRunId: user.diagnosis_run_id,
+    diagnosisResultId: user.diagnosis_result_id,
   };
 }
 

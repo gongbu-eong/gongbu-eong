@@ -1,88 +1,257 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { getHomeJobs, getJobPostings } from "@/features/home/home.api";
-import type { JobPostingDto } from "@/features/home/home.dto";
+import { FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import {
+  getCurrentUser,
+  getHomeJobs,
+  getJobPostings,
+  setJobBookmark,
+} from "@/features/home/home.api";
+import type { JobListView, JobPostingDto } from "@/features/home/home.dto";
+import { JobFooter, JobHeader } from "./JobChrome";
 import styles from "./JobList.module.css";
 
-export function JobList({ recommended }: { recommended: boolean }) {
+const NCS_OPTIONS = [
+  "건설", "경비.청소", "경영.회계.사무", "교육.자연.사회과학", "금융.보험",
+  "기계", "농림어업", "문화.예술.디자인.방송", "법률.경찰.소방.교도.국방",
+  "보건.의료", "사업관리", "사회복지.종교", "섬유.의복", "식품가공", "연구",
+  "영업판매", "운전.운송", "음식서비스", "이용.숙박.여행.오락.스포츠",
+  "인쇄.목재.가구.공예", "재료", "전기.전자", "정보통신", "화학",
+  "환경.에너지.안전",
+];
+const REGIONS = ["서울", "경기", "인천", "강원", "충북", "충남", "대전", "세종", "전북", "전남", "광주", "경북", "경남", "대구", "울산", "부산", "제주"];
+const EMPLOYMENTS = ["정규직", "무기계약직", "비정규직", "청년인턴"];
+const EDUCATIONS = ["학력무관", "고졸", "대졸(2~3년)", "대졸(4년)", "석사", "박사"];
+const CAREERS = ["신입", "경력", "신입+경력"];
+
+type Filters = {
+  startDate: string;
+  endDate: string;
+  ncs: string;
+  region: string;
+  employmentType: string;
+  education: string;
+  career: string;
+};
+const EMPTY_FILTERS: Filters = {
+  startDate: "", endDate: "", ncs: "", region: "", employmentType: "",
+  education: "", career: "",
+};
+
+export function JobList({
+  view: initialView,
+  resultId,
+}: {
+  view: JobListView;
+  resultId?: string;
+}) {
+  const [view, setView] = useState<JobListView>(initialView);
   const [jobs, setJobs] = useState<JobPostingDto[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [typeName, setTypeName] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [queryInput, setQueryInput] = useState("");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<"closing" | "latest" | "views">("closing");
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [draftFilters, setDraftFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [pendingJobId, setPendingJobId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    getCurrentUser()
+      .then((r) => {
+        setAuthenticated(r.authenticated);
+        if (r.authenticated) {
+          return getHomeJobs().then((home) => setBookmarkCount(home.bookmarkCount));
+        }
+      })
+      .catch(() => setAuthenticated(false));
+  }, []);
 
   useEffect(() => {
     let mounted = true;
-
-    const request = recommended
-      ? getHomeJobs().then((response) => {
-          setTypeName(response.recommendationTypeName);
-          return response.recommendedJobs;
-        })
-      : getJobPostings({ limit: 50 }).then((response) => response.items);
-
-    request
-      .then((items) => {
-        if (mounted) setJobs(items);
+    getJobPostings({ view, query, sort, resultId, limit: 100, ...filters })
+      .then((response) => {
+        if (!mounted) return;
+        setJobs(response.items);
+        setTotal(response.total);
+        if (view === "bookmarked") setBookmarkCount(response.total);
+        setMessage(
+          view === "recommended" && !response.recommendationTypeName
+            ? "최근 강점·성향 진단 결과가 있어야 맞춤 공고를 볼 수 있어요."
+            : null,
+        );
       })
-      .finally(() => {
-        if (mounted) setIsLoading(false);
-      });
+      .catch((error) => mounted && setMessage(error instanceof Error ? error.message : "공고를 불러오지 못했습니다."))
+      .finally(() => mounted && setLoading(false));
+    return () => { mounted = false; };
+  }, [filters, query, resultId, sort, view]);
 
-    return () => {
-      mounted = false;
-    };
-  }, [recommended]);
+  const activeFilterCount = useMemo(
+    () => Object.values(filters).filter(Boolean).length,
+    [filters],
+  );
+
+  const submitSearch = (event: FormEvent) => {
+    event.preventDefault();
+    setQuery(queryInput.trim());
+  };
+
+  const toggleBookmark = async (job: JobPostingDto) => {
+    if (!authenticated) {
+      setMessage("찜한 공고를 저장하려면 로그인이 필요합니다.");
+      return;
+    }
+    if (pendingJobId) return;
+    const next = !job.isBookmarked;
+    setPendingJobId(job.id);
+    try {
+      const response = await setJobBookmark(job.id, next);
+      setBookmarkCount(response.bookmarkCount);
+      setJobs((items) =>
+        view === "bookmarked" && !next
+          ? items.filter((item) => item.id !== job.id)
+          : items.map((item) => item.id === job.id ? { ...item, isBookmarked: next } : item),
+      );
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "찜 상태를 바꾸지 못했습니다.");
+    } finally {
+      setPendingJobId(null);
+    }
+  };
+
+  const changeView = (next: JobListView) => {
+    setView(next);
+    window.history.replaceState(null, "", next === "all" ? "/jobs" : `/jobs?view=${next}`);
+  };
 
   return (
     <main className={styles.page}>
       <section className={styles.frame}>
-        <header className={styles.header}>
-          <Link href="/" aria-label="홈으로 돌아가기">←</Link>
-          <h1>{recommended ? "진단결과 추천 공고" : "채용 공고"}</h1>
-          <span />
-        </header>
+        <JobHeader />
+        <section className={styles.searchSection}>
+          <h1>채용 공고</h1>
+          <form onSubmit={submitSearch} className={styles.searchRow}>
+            <label className={styles.searchBox}>
+              <input value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="공공·기관 검색" />
+              <button type="submit" aria-label="검색"><SearchIcon /></button>
+            </label>
+            <button type="button" className={styles.filterButton} onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}>
+              <FilterIcon /> 필터{activeFilterCount ? ` ${activeFilterCount}` : ""}
+            </button>
+          </form>
+        </section>
 
-        {recommended && typeName ? (
-          <p className={styles.summary}>
-            <strong>{typeName}</strong>과 연관된 직무의 진행 중 공고입니다.
-          </p>
-        ) : null}
+        <nav className={styles.tabs} aria-label="공고 보기">
+          <button className={view === "all" || view === "closing" ? styles.selectedTab : ""} onClick={() => changeView("all")}>전체</button>
+          <button className={view === "recommended" ? styles.selectedTab : ""} onClick={() => changeView("recommended")}>맞춤 추천</button>
+          <button className={view === "bookmarked" ? styles.selectedTab : ""} onClick={() => changeView("bookmarked")}>
+            찜 <span>{bookmarkCount}</span>
+          </button>
+        </nav>
 
+        <div className={styles.resultBar}>
+          <span>총 {total.toLocaleString("ko-KR")}건</span>
+            <label className={styles.sortSelect}>
+              <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+                <option value="closing">{view === "recommended" ? "추천순" : "마감순"}</option>
+                <option value="latest">등록순</option>
+                <option value="views">조회순</option>
+              </select>
+              <ChevronIcon />
+            </label>
+        </div>
+
+        {message ? <p className={styles.message}>{message}</p> : null}
         <div className={styles.list}>
           {jobs.map((job) => (
-            <a
-              href={job.applyUrl || "#"}
-              key={job.id}
-              className={styles.card}
-              target={job.applyUrl ? "_blank" : undefined}
-              rel={job.applyUrl ? "noreferrer" : undefined}
-            >
-              <span className={styles.top}>
-                <small>{job.institutionName}</small>
-                <em>{job.dday}</em>
-              </span>
-              <strong>{job.title}</strong>
-              <span className={styles.tags}>
-                {job.employmentType ? <small>{job.employmentType}</small> : null}
-                {job.region ? <small>{job.region}</small> : null}
-                {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
-              </span>
-              {job.categories.length ? (
-                <p>{job.categories.join(" · ")}</p>
-              ) : null}
-            </a>
+            <article key={job.id} className={styles.card}>
+              <Link href={`/jobs/${job.id}`} className={styles.cardLink}>
+                <small className={styles.company}>{job.institutionName}</small>
+                <strong>{job.title}</strong>
+                <span className={styles.tags}>
+                  {job.employmentType ? <em>{job.employmentType}</em> : null}
+                  {job.region ? <em>{job.region}</em> : null}
+                  {job.careerRequirement ? <em>{job.careerRequirement}</em> : null}
+                </span>
+                <span className={styles.cardBottom}>
+                  <time>{toEndDate(job.applicationEndAt)}</time>
+                  <b className={getDdayClass(job)}>{job.isClosed ? "마감" : job.dday}</b>
+                </span>
+              </Link>
+              <button
+                type="button"
+                className={`${styles.star} ${job.isBookmarked ? styles.starActive : ""}`}
+                aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
+                disabled={pendingJobId === job.id}
+                onClick={() => void toggleBookmark(job)}
+              >
+                <StarIcon filled={job.isBookmarked} />
+              </button>
+            </article>
           ))}
-
-          {!isLoading && jobs.length === 0 ? (
-            <p className={styles.empty}>
-              {recommended
-                ? "최근 진단 결과와 연결된 진행 중 공고가 없습니다."
-                : "현재 진행 중인 공고가 없습니다."}
-            </p>
-          ) : null}
+          {!loading && jobs.length === 0 ? <p className={styles.empty}>조건에 맞는 공고가 없습니다.</p> : null}
         </div>
+        <JobFooter />
       </section>
+
+      {filterOpen ? (
+        <div className={styles.filterOverlay} role="dialog" aria-modal="true" aria-label="상세 필터">
+          <button className={styles.dim} aria-label="필터 닫기" onClick={() => setFilterOpen(false)} />
+          <section className={styles.filterSheet}>
+            <div className={styles.sheetHandle} />
+            <header><h2>상세 필터</h2><button onClick={() => setDraftFilters(EMPTY_FILTERS)}>초기화</button></header>
+            <FilterField label="등록일">
+              <div className={styles.dateRow}>
+                <input type="date" value={draftFilters.startDate} onChange={(e) => setDraftFilters({ ...draftFilters, startDate: e.target.value })} />
+                <span>~</span>
+                <input type="date" value={draftFilters.endDate} onChange={(e) => setDraftFilters({ ...draftFilters, endDate: e.target.value })} />
+                <CalendarFilterIcon />
+              </div>
+            </FilterField>
+            <SelectField label="채용분야(표준직무 NCS)" value={draftFilters.ncs} options={NCS_OPTIONS} onChange={(ncs) => setDraftFilters({ ...draftFilters, ncs })} />
+            <SelectField label="근무지" value={draftFilters.region} options={REGIONS} onChange={(region) => setDraftFilters({ ...draftFilters, region })} />
+            <SelectField label="고용형태" value={draftFilters.employmentType} options={EMPLOYMENTS} onChange={(employmentType) => setDraftFilters({ ...draftFilters, employmentType })} />
+            <SelectField label="학력정보" value={draftFilters.education} options={EDUCATIONS} onChange={(education) => setDraftFilters({ ...draftFilters, education })} />
+            <SelectField label="경력사항" value={draftFilters.career} options={CAREERS} onChange={(career) => setDraftFilters({ ...draftFilters, career })} />
+            <button className={styles.applyFilter} onClick={() => { setFilters(draftFilters); setFilterOpen(false); }}>공고 보기</button>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
+
+function FilterField({ label, children }: { label: string; children: ReactNode }) {
+  return <label className={styles.filterField}><span>{label}</span>{children}</label>;
+}
+function SelectField({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (value: string) => void }) {
+  return (
+    <FilterField label={label}>
+      <span className={styles.filterSelect}>
+        <select value={value} onChange={(e) => onChange(e.target.value)}>
+          <option value="">전체</option>
+          {options.map((option) => <option key={option}>{option}</option>)}
+        </select>
+        <ChevronIcon />
+      </span>
+    </FilterField>
+  );
+}
+function toEndDate(value: string | null) {
+  if (!value) return "상시 채용";
+  return `~ ${new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit", weekday: "short" }).format(new Date(value))}`;
+}
+function getDdayClass(job: JobPostingDto) {
+  if (job.isClosed || job.dday === "D-Day" || job.dday === "D-1") return styles.urgent;
+  return styles.dday;
+}
+function SearchIcon() { return <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 5 5" /></svg>; }
+function FilterIcon() { return <svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10m-7 6h4" /></svg>; }
+function ChevronIcon() { return <svg viewBox="0 0 12 8"><path d="m1 1 5 5 5-5" /></svg>; }
+function CalendarFilterIcon() { return <svg viewBox="0 0 24 24"><path d="M6 3v3m12-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Zm3 8h3m2 0h3m-8 4h3" /></svg>; }
+function StarIcon({ filled }: { filled: boolean }) { return <svg viewBox="0 0 24 24"><path d="m12 2.8 2.85 5.77 6.37.93-4.61 4.49 1.09 6.34L12 17.34l-5.7 2.99 1.09-6.34L2.78 9.5l6.37-.93L12 2.8Z" fill={filled ? "currentColor" : "white"} /></svg>; }

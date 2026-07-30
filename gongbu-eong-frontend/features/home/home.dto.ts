@@ -5,7 +5,19 @@ export type CurrentUserDto = {
   displayName: string | null;
   avatarUrl: string | null;
   provider: "kakao" | "naver" | null;
+  diagnosisTypeCode:
+    | "stability"
+    | "challenge"
+    | "teamwork"
+    | "individual"
+    | "execution"
+    | "planning"
+    | "principle"
+    | "flexibility"
+    | null;
   diagnosisTypeName: string | null;
+  diagnosisRunId: string | null;
+  diagnosisResultId: string | null;
 };
 
 export type CurrentUserResponseDto = {
@@ -26,12 +38,46 @@ export type JobPostingDto = {
   applyUrl: string | null;
   categories: string[];
   matchScore?: number;
+  isBookmarked: boolean;
+  ncsCategory: string | null;
+  educationRequirement: string | null;
+  hiringCount: number | null;
+  isClosed: boolean;
+};
+
+export type JobPostingDetailDto = JobPostingDto & {
+  applicationStartAt: string | null;
+  announcementAt: string | null;
+  emailApplyAddress: string | null;
+  jobCategory: string | null;
+  basicInfo: string | null;
+  qualification: string | null;
+  disqualification: string | null;
+  preference: string | null;
+  screeningProcess: string | null;
+  applicationMethod: string | null;
+  requiredDocuments: string | null;
+  additionalNotice: string | null;
+  files: Array<{
+    id: string;
+    fileName: string;
+    fileType: string | null;
+    fileUrl: string;
+  }>;
+  stages: Array<{
+    id: string;
+    stageName: string;
+    stageOrder: number;
+    startAt: string | null;
+    endAt: string | null;
+  }>;
 };
 
 export type HomeJobsResponseDto = {
   hotJobs: JobPostingDto[];
   recommendedJobs: JobPostingDto[];
   recommendationTypeName: string | null;
+  bookmarkCount: number;
 };
 
 export type JobPostingListResponseDto = {
@@ -39,4 +85,12 @@ export type JobPostingListResponseDto = {
   total: number;
   limit: number;
   offset: number;
+  recommendationTypeName: string | null;
+};
+
+export type JobListView = "all" | "closing" | "recommended" | "bookmarked";
+
+export type JobBookmarkResponseDto = {
+  isBookmarked: boolean;
+  bookmarkCount: number;
 };

@@ -7,113 +7,481 @@
 }
 
 .frame {
-  width: min(600px, 100%);
+  width: 100%;
+  max-width: 37.5rem;
   min-height: 100dvh;
-  padding: 0 16px 40px;
-  background: #ffffff;
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  background: #fff;
 }
 
-.header {
-  height: 56px;
-  display: grid;
-  grid-template-columns: 32px 1fr 32px;
-  align-items: center;
+.searchSection {
+  height: 8rem;
+  padding: 1rem;
   border-bottom: 1px solid #e4e8ef;
 }
 
-.header a {
-  color: #1a2233;
-  text-decoration: none;
+.searchSection h1 {
+  margin: 0 0 1rem;
   font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 700;
 }
 
-.header h1 {
-  margin: 0;
-  text-align: center;
-  font-size: 1.125rem;
+.searchRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 4.375rem;
+  gap: 0.5rem;
 }
 
-.summary {
-  margin: 20px 0 12px;
+.searchBox {
+  display: flex;
+  min-width: 0;
+  height: 3rem;
+  padding-left: 1.5rem;
+  border: 1px solid #2f7ff0;
+  border-radius: 3.4375rem;
+  background: #fff;
+}
+
+.searchBox input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #1a2233;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.searchBox input::placeholder { color: #9aa4b8; }
+
+.searchBox button {
+  display: grid;
+  width: 3rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #328efa;
+  cursor: pointer;
+}
+
+.searchBox svg {
+  width: 1.55rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.filterButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #2f7ff0;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.filterButton svg {
+  width: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  height: 2.875rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid #e4e8ef;
+}
+
+.tabs button {
+  position: relative;
+  border: 0;
+  background: #fff;
+  color: #5a6580;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.tabs button::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: #e4e8ef;
+}
+
+.tabs .selectedTab {
+  color: #2f7ff0;
+  font-weight: 700;
+}
+
+.tabs .selectedTab::after {
+  height: 2px;
+  background: #2f7ff0;
+}
+
+.tabs span {
+  display: inline-grid;
+  min-width: 1.625rem;
+  height: 1.375rem;
+  margin-left: 0.25rem;
+  padding-inline: 0.35rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #e9f2ff;
+  color: #2f7ff0;
+  font-size: 0.75rem;
+}
+
+.resultBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4.25rem;
+  padding: 0 1rem;
   color: #5a6580;
   font-size: 0.875rem;
 }
 
-.summary strong {
-  color: #2f7ff0;
+.sortSelect {
+  position: relative;
+  display: block;
+  width: 7.5rem;
+  height: 2.25rem;
+}
+
+.sortSelect select {
+  width: 100%;
+  height: 100%;
+  padding: 0 2.25rem 0 1rem;
+  appearance: none;
+  border: 1px solid #e4e8ef;
+  border-radius: 5.5rem;
+  outline: 0;
+  background: #fff;
+  color: #5a6580;
+  font: inherit;
+}
+
+.sortSelect svg {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  width: 0.625rem;
+  height: 0.5rem;
+  pointer-events: none;
+  fill: none;
+  stroke: #5a6580;
+  stroke-width: 1.5;
+  transform: translateY(-50%);
 }
 
 .list {
   display: grid;
-  gap: 10px;
-  padding-top: 16px;
+  gap: 0.5rem;
+  padding: 0 1rem;
 }
 
 .card {
-  display: block;
-  padding: 18px 16px;
+  position: relative;
+  min-width: 0;
+  height: 10.25rem;
+  overflow: hidden;
   border: 1px solid #e4e8ef;
-  border-radius: 8px;
+  border-radius: 0.625rem;
+  background: #fff;
+}
+
+.cardLink {
+  display: flex;
+  min-width: 0;
+  height: 100%;
+  flex-direction: column;
+  padding: 1rem 3.75rem 1rem 1rem;
   color: #1a2233;
   text-decoration: none;
 }
 
-.top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.top small {
+.company {
   overflow: hidden;
   color: #5a6580;
-  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1.0625rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.top em {
-  flex: 0 0 auto;
-  padding: 4px 8px;
-  border-radius: 999px;
-  background: #d3f3e5;
-  color: #1fb573;
-  font-size: 0.75rem;
-  font-style: normal;
-  font-weight: 800;
-}
-
-.card > strong {
-  display: block;
-  margin-top: 10px;
+.cardLink > strong {
+  display: -webkit-box;
+  min-width: 0;
+  margin-top: 0.5rem;
+  overflow: hidden;
   font-size: 0.9375rem;
-  line-height: 1.45;
+  line-height: 1.25rem;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .tags {
   display: flex;
+  min-height: 1.375rem;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 12px;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  overflow: hidden;
 }
 
-.tags small {
-  padding: 4px 7px;
-  border-radius: 4px;
-  background: #f0f4fa;
+.tags em {
+  display: inline-grid;
+  height: 1.375rem;
+  padding: 0 0.625rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #2f7ff0;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-style: normal;
+  white-space: nowrap;
+}
+
+.cardBottom {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: auto;
   color: #5a6580;
+  font-size: 0.875rem;
 }
 
-.card p {
-  margin: 10px 0 0;
-  color: #2f7ff0;
-  font-size: 0.75rem;
+.cardBottom time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardBottom b {
+  flex: 0 0 auto;
+  height: 1.375rem;
+  padding: 0 0.5rem;
+  border-radius: 0.3125rem;
+  font-size: 0.6875rem;
+  line-height: 1.375rem;
+}
+
+.dday { background: #e8f7ed; color: #1d9d5f; }
+.urgent { background: #ffedef; color: #e8544d; }
+
+.star {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  display: grid;
+  width: 1.5625rem;
+  height: 1.5625rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #f5b91d;
+  cursor: pointer;
+}
+
+.star svg {
+  width: 100%;
+  stroke: #e4e8ef;
+  stroke-width: 1.4;
+}
+
+.starActive svg { stroke: #f5b91d; }
+
+.message {
+  margin: 0 1rem 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.4375rem;
+  background: #fff4e5;
+  color: #8a5a00;
+  font-size: 0.8125rem;
 }
 
 .empty {
-  padding: 80px 0;
+  padding: 5rem 0;
   color: #7b8497;
   text-align: center;
   font-size: 0.875rem;
+}
+
+.filterOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.dim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.filterSheet {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 37.5rem;
+  max-height: calc(100dvh - 4rem);
+  padding: 0 1rem 1.5rem;
+  overflow-y: auto;
+  border-radius: 1rem 1rem 0 0;
+  background: #fff;
+}
+
+.sheetHandle {
+  width: 2.5rem;
+  height: 0.25rem;
+  margin: 0.5rem auto 0.75rem;
+  border-radius: 999px;
+  background: #e4e8ef;
+}
+
+.filterSheet header {
+  display: flex;
+  height: 3.5rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e4e8ef;
+}
+
+.filterSheet h2 { margin: 0; font-size: 1.0625rem; }
+
+.filterSheet header button {
+  height: 1.75rem;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 0.4375rem;
+  background: #2f7ff0;
+  color: #fff;
+}
+
+.filterField {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  color: #5a6580;
+  font-size: 0.875rem;
+}
+
+.filterField select,
+.filterField input {
+  width: 100%;
+  height: 2.5625rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 0.4375rem;
+  outline: 0;
+  background: #f5f7fa;
+  color: #5a6580;
+  font: inherit;
+}
+
+.filterSelect {
+  position: relative;
+  display: block;
+  height: 2.5625rem;
+}
+
+.filterSelect select {
+  appearance: none;
+  padding-right: 3rem;
+}
+
+.filterSelect svg {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  width: 0.75rem;
+  height: 0.5rem;
+  fill: none;
+  stroke: #5a6580;
+  stroke-width: 1.5;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.dateRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.25rem;
+  height: 2.5625rem;
+  padding: 0 2.75rem 0 0.5rem;
+  border-radius: 0.4375rem;
+  background: #f5f7fa;
+}
+
+.dateRow input {
+  min-width: 0;
+  padding: 0 0.25rem;
+  background: transparent;
+}
+
+.dateRow input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+.dateRow > svg {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: #5a6580;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.applyFilter {
+  width: 100%;
+  height: 3.25rem;
+  margin-top: 1.5rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #2f7ff0;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+@media (max-width: 23rem) {
+  .searchSection,
+  .tabs,
+  .resultBar,
+  .list { padding-inline: 0.75rem; }
+  .searchRow { grid-template-columns: minmax(0, 1fr) 4rem; }
+  .cardLink { padding-left: 0.875rem; }
 }

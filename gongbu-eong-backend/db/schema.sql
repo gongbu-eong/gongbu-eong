@@ -704,8 +704,12 @@ CREATE INDEX IF NOT EXISTS idx_calendar_user_starts ON public.user_calendar_item
 CREATE INDEX IF NOT EXISTS idx_diagnosis_runs_user_created ON public.diagnosis_runs(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_runs_anonymous ON public.diagnosis_runs(anonymous_id);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_results_user ON public.diagnosis_results(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_diagnosis_results_type_created ON public.diagnosis_results(personality_type_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_run ON public.diagnosis_login_conversions(diagnosis_run_id);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_user_created ON public.diagnosis_login_conversions(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_result_user ON public.diagnosis_login_conversions(diagnosis_result_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_job_posting_categories_category_posting ON public.job_posting_categories(job_category_id, job_posting_id);
+CREATE INDEX IF NOT EXISTS idx_job_postings_announcement_created ON public.job_postings(announcement_at DESC, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_created ON public.ai_usage_events(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_resume_user_created ON public.user_resumes(user_id, created_at DESC);

@@ -1,0 +1,173 @@
+.page {
+  min-height: 100dvh;
+  background: #ffffff;
+  color: #1a2233;
+  font-family: "Pretendard", Arial, Helvetica, sans-serif;
+}
+
+.loginFrame {
+  position: relative;
+  width: min(100%, 393px);
+  min-height: 852px;
+  margin: 0 auto;
+  background: #ffffff;
+}
+
+.logo {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88px;
+  height: 33px;
+  border-radius: 8px;
+  background: #2f7ff0;
+  color: #ffffff;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+
+.owl {
+  position: absolute;
+  top: 146px;
+  left: 50%;
+  width: 201px;
+  height: 226px;
+  border-radius: 8px;
+  object-fit: cover;
+  transform: translateX(-50%);
+}
+
+.copy {
+  position: absolute;
+  top: 404px;
+  left: 50%;
+  width: 100%;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.copy h1 {
+  margin: 0;
+  font-size: 1.625rem;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.copy p {
+  margin: 10px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.actions {
+  position: absolute;
+  top: 556px;
+  left: 16px;
+  right: 16px;
+}
+
+.oauthError {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  left: 0;
+  margin: 0;
+  border: 1px solid #f3b4b4;
+  border-radius: 8px;
+  background: #fff2f2;
+  color: #b42318;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+
+.kakaoButton,
+.naverButton {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 52px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.kakaoButton {
+  background: #f9e000;
+  color: #3b1c1c;
+}
+
+.naverButton {
+  margin-top: 8px;
+  background: #00c300;
+  color: #ffffff;
+}
+
+.kakaoButton img,
+.naverButton img {
+  position: absolute;
+  left: 100px;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+}
+
+.kakaoButton span,
+.naverButton span {
+  position: absolute;
+  left: 146px;
+  white-space: nowrap;
+}
+
+.skipLink {
+  display: block;
+  margin-top: 14px;
+  color: #5a6580;
+  text-align: center;
+  text-decoration: none;
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  font-weight: 400;
+}
+
+.oneStep {
+  position: absolute;
+  top: 740px;
+  left: 16px;
+  margin: 0;
+  color: #5a6580;
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  font-weight: 400;
+}
+
+.terms {
+  position: absolute;
+  top: 780px;
+  left: 50%;
+  width: 248px;
+  margin: 0;
+  color: #5a6580;
+  text-align: center;
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  font-weight: 400;
+  transform: translateX(-50%);
+}
+
+.terms a {
+  color: inherit;
+  text-underline-offset: 2px;
+}

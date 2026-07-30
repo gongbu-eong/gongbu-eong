@@ -1,0 +1,550 @@
+.page {
+  min-height: 100dvh;
+  background: #f3f6fb;
+  color: #1a2233;
+  font-family: "Pretendard", sans-serif;
+}
+
+.frame {
+  position: relative;
+  width: min(100%, 37.5rem);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding-bottom: 5rem;
+  background: #fff;
+}
+
+.header {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 2.5rem;
+  align-items: center;
+  height: 3rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid #edf0f5;
+}
+
+.header button {
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: #1a2233;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.header h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.hero {
+  position: relative;
+  height: 18.875rem;
+  overflow: hidden;
+  padding: 1.5rem 1rem;
+  color: #fff;
+  text-align: center;
+}
+
+.hero p {
+  margin: 0 0 .35rem;
+  font-size: .875rem;
+  font-weight: 400;
+}
+
+.hero h2 {
+  margin: 0;
+  font-size: 1.625rem;
+  line-height: 1.3;
+  font-weight: 700;
+}
+
+.hero > span {
+  display: inline-flex;
+  min-height: 1.75rem;
+  margin-top: .55rem;
+  padding: .35rem .85rem;
+  align-items: center;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 24%);
+  font-size: .75rem;
+}
+
+.heroImage {
+  position: absolute;
+  left: 50%;
+  bottom: -1.2rem;
+  width: 12.5rem;
+  height: 12.5rem;
+  object-fit: contain;
+  transform: translateX(-50%);
+}
+
+.content {
+  padding: 1.25rem 1rem 2rem;
+}
+
+.personSection,
+.section {
+  margin-bottom: 2rem;
+}
+
+.personSection h2,
+.section h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.personSection > p {
+  margin: .65rem 0 0;
+  color: #596780;
+  font-size: .875rem;
+  line-height: 1.55;
+}
+
+.sectionCaption {
+  margin: .35rem 0 1rem;
+  color: #7a879d;
+  font-size: .875rem;
+  line-height: 1.45;
+}
+
+.axisList {
+  display: grid;
+  gap: 1.1rem;
+}
+
+.axisItem > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .45rem;
+  font-size: .875rem;
+}
+
+.axisItem strong {
+  font-weight: 700;
+}
+
+.axisItem strong i {
+  color: #8894a8;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.axisItem b {
+  color: #2f80ed;
+}
+
+.axisItem > span {
+  display: block;
+  height: .625rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e9f1;
+}
+
+.axisItem > span i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #3380ee;
+}
+
+.percentile {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 1.4rem;
+  padding: 1rem;
+  border-radius: .5rem;
+  background: #f4f7fc;
+}
+
+.percentile span {
+  font-size: .9375rem;
+}
+
+.percentile strong {
+  color: #2877ed;
+  font-size: 1.625rem;
+}
+
+.pointList,
+.tipList,
+.companyList {
+  display: grid;
+  gap: .5rem;
+}
+
+.pointCard,
+.growthCard {
+  display: grid;
+  grid-template-columns: 3rem 1fr;
+  gap: .75rem;
+  align-items: center;
+  min-height: 5rem;
+  padding: .75rem;
+  border-radius: .5rem;
+  background: #dff8ed;
+}
+
+.growthCard {
+  background: #fff3d7;
+}
+
+.pointCard > span,
+.growthCard > span {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  font-size: 1.75rem;
+}
+
+.pointCard strong,
+.growthCard strong,
+.tipList strong {
+  display: block;
+  margin-bottom: .25rem;
+  color: #142c25;
+  font-size: .9375rem;
+}
+
+.pointCard p,
+.growthCard p,
+.tipList p {
+  margin: 0;
+  color: #277a5e;
+  font-size: .875rem;
+  line-height: 1.45;
+}
+
+.growthCard p {
+  color: #795817;
+}
+
+.tipList article {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr;
+  gap: .65rem;
+  padding: .9rem;
+  border: 1px solid #e0e5ee;
+  border-radius: .5rem;
+}
+
+.tipList article > span {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #3380ee;
+  color: #fff;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.tipList p {
+  color: #596780;
+}
+
+.coachingButton {
+  width: 100%;
+  min-height: 2.75rem;
+  margin-top: .75rem;
+  border: 1px solid #dbe1eb;
+  border-radius: .5rem;
+  background: #f5f7fa;
+  color: #9aa4b5;
+  font-size: .875rem;
+}
+
+.section h3 {
+  margin: 1.25rem 0 .65rem;
+  font-size: .9375rem;
+}
+
+.jobChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.jobChips span {
+  display: inline-flex;
+  min-height: 2rem;
+  padding: .4rem .8rem;
+  align-items: center;
+  border-radius: 999px;
+  background: #2169cb;
+  color: #fff;
+  font-size: .8125rem;
+  font-weight: 700;
+}
+
+.companyList article {
+  min-height: 3.5rem;
+  padding: 1rem;
+  border: 1px solid #dfe5ee;
+  border-radius: .5rem;
+}
+
+.companyList strong {
+  font-size: .875rem;
+}
+
+.empty {
+  margin: 0;
+  padding: 1rem;
+  color: #7a879d;
+  font-size: .875rem;
+  text-align: center;
+}
+
+.hiringTotal {
+  padding: 1rem;
+  border-radius: .5rem;
+  background: #f3f7fd;
+}
+
+.hiringTotal span,
+.hiringTotal small {
+  display: block;
+  color: #6e7c92;
+  font-size: .8125rem;
+}
+
+.hiringTotal strong {
+  display: block;
+  margin: .25rem 0;
+  color: #2776eb;
+  font-size: 1.625rem;
+}
+
+.hiringBars {
+  display: grid;
+  gap: .8rem;
+  margin-top: 1rem;
+}
+
+.hiringBars > div > span {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: .35rem;
+  font-size: .8125rem;
+}
+
+.hiringBars > div > span b {
+  color: #2776eb;
+}
+
+.hiringBars > div > i {
+  display: block;
+  height: .5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e9f1;
+}
+
+.hiringBars > div > i b {
+  display: block;
+  min-width: .15rem;
+  height: 100%;
+  border-radius: inherit;
+  background: #3380ee;
+}
+
+.actions {
+  display: grid;
+  gap: .5rem;
+}
+
+.actions a,
+.actions button {
+  display: grid;
+  width: 100%;
+  min-height: 3rem;
+  place-items: center;
+  border: 1px solid #3380ee;
+  border-radius: .5rem;
+  background: #3380ee;
+  color: #fff;
+  font-size: .9375rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.actions button {
+  background: #fff;
+  color: #3380ee;
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  height: 5rem;
+  padding: .5rem .5rem .35rem;
+  border-top: 1px solid #e1e6ee;
+  background: #fff;
+  width: min(100%, 37.5rem);
+  transform: translateX(-50%);
+}
+
+.footer a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: .2rem;
+  color: #8a96aa;
+  font-size: .6875rem;
+  text-decoration: none;
+}
+
+.footer svg {
+  width: 1.45rem;
+  height: 1.45rem;
+}
+
+.footer .active {
+  color: #3380ee;
+}
+
+.historyOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.historyBackdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgb(17 27 45 / 52%);
+}
+
+.historySheet {
+  position: relative;
+  width: min(100%, 37.5rem);
+  max-height: min(78dvh, 43rem);
+  overflow: hidden;
+  border-radius: 1rem 1rem 0 0;
+  background: #fff;
+}
+
+.historySheet > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3.75rem;
+  padding: 0 1rem;
+  border-bottom: 1px solid #e8ebf1;
+}
+
+.historySheet h2 {
+  font-size: 1.125rem;
+}
+
+.historySheet header button {
+  border: 0;
+  background: transparent;
+  color: #1a2233;
+  font-size: 1.75rem;
+}
+
+.historyList {
+  max-height: calc(min(78dvh, 43rem) - 3.75rem);
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.historyList > button {
+  display: flex;
+  width: 100%;
+  min-height: 6.9375rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: .5rem;
+  padding: 1rem;
+  border: 1px solid #e0e5ee;
+  border-radius: .5rem;
+  background: #fff;
+  text-align: left;
+}
+
+.historyList > button span {
+  display: grid;
+  gap: .5rem;
+}
+
+.historyList strong {
+  font-size: .9375rem;
+}
+
+.historyList time {
+  color: #8793a7;
+  font-size: .875rem;
+}
+
+.historyList > button i {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid #cbd3df;
+  border-radius: 50%;
+}
+
+.historyList > .selectedHistory {
+  border-color: #3380ee;
+  background: #f5f9ff;
+}
+
+.historyList > .selectedHistory i {
+  border: .35rem solid #3380ee;
+}
+
+.sentinel {
+  min-height: 2rem;
+  color: #8793a7;
+  font-size: .8125rem;
+  text-align: center;
+}
+
+.state {
+  display: grid;
+  width: min(100%, 37.5rem);
+  min-height: 100dvh;
+  margin: 0 auto;
+  place-content: center;
+  gap: 1rem;
+  background: #fff;
+  text-align: center;
+}
+
+.state a {
+  color: #2877ed;
+}
+
+@media (min-width: 600px) {
+  .hero {
+    height: 19.5rem;
+  }
+
+  .content {
+    padding-right: 1.5rem;
+    padding-left: 1.5rem;
+  }
+}

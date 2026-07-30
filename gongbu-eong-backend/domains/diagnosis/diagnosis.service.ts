@@ -1,6 +1,8 @@
 import {
   CreateDiagnosisRunRequestDto,
   DiagnosisQuestionsResponseDto,
+  DiagnosisResultDetailResponseDto,
+  DiagnosisResultHistoryResponseDto,
   DiagnosisResultResponseDto,
   DiagnosisStatsResponseDto,
 } from "./diagnosis.dto";
@@ -11,6 +13,12 @@ import {
   findActiveQuestionSet,
   findAnswerScores,
   findJobCategoriesForPersonalityType,
+  findLatestDiagnosisResultForUser,
+  findDiagnosisResultForUser,
+  findDiagnosisResultHistory,
+  findDiagnosisPercentile,
+  findRecommendedInstitutions,
+  findMonthlyHiringByPersonalityType,
   findPersonalityType,
   findQuestionsWithOptions,
 } from "./diagnosis.repository";
@@ -35,6 +43,17 @@ type ResultCopy = {
   personDescription: string;
   strengths: [string, string, string];
   growthPoint: string;
+};
+
+const PERCENTILE_TRAIT_LABELS: Record<DiagnosisTypeCode, string> = {
+  stability: "안정성",
+  challenge: "도전성",
+  teamwork: "협업성",
+  individual: "독립 몰입도",
+  execution: "실행력",
+  planning: "기획력",
+  principle: "정밀성",
+  flexibility: "유연성",
 };
 
 const EXPECTED_ANSWER_COUNT = 16;
@@ -243,8 +262,121 @@ export async function getDiagnosisStats(): Promise<DiagnosisStatsResponseDto> {
   };
 }
 
+export async function getLatestDiagnosisResult(
+  userId: string,
+): Promise<DiagnosisResultResponseDto | null> {
+  const result = await findLatestDiagnosisResultForUser(userId);
+
+  if (!result) {
+    return null;
+  }
+
+  return toDiagnosisResultResponse(result);
+}
+
+export async function getDiagnosisResultDetail(
+  userId: string,
+  resultId?: string,
+): Promise<DiagnosisResultDetailResponseDto | null> {
+  const result = resultId
+    ? await findDiagnosisResultForUser(userId, resultId)
+    : await findLatestDiagnosisResultForUser(userId);
+
+  if (!result) {
+    return null;
+  }
+
+  const [response, topPercent, companies, monthlyHiring] =
+    await Promise.all([
+      toDiagnosisResultResponse(result),
+      findDiagnosisPercentile(result.result_id, result.type_code),
+      findRecommendedInstitutions(result.type_code, 3),
+      findMonthlyHiringByPersonalityType(result.type_code),
+    ]);
+
+  return {
+    result: response,
+    completedAt: new Date(result.completed_at).toISOString(),
+    percentile: {
+      traitLabel: PERCENTILE_TRAIT_LABELS[result.type_code],
+      topPercent,
+    },
+    companies,
+    monthlyHiring: {
+      month: new Date().getMonth() + 1,
+      totalCount: monthlyHiring.totalCount,
+      primaryCategory:
+        response.jobCategories[0]?.name ||
+        monthlyHiring.categories[0]?.name ||
+        "",
+      categories: monthlyHiring.categories,
+    },
+  };
+}
+
+export async function getDiagnosisResultHistory(args: {
+  userId: string;
+  cursor?: string;
+  limit?: number;
+}): Promise<DiagnosisResultHistoryResponseDto> {
+  const limit = Math.max(1, Math.min(args.limit || 10, 30));
+  const rows = await findDiagnosisResultHistory({
+    userId: args.userId,
+    cursor: args.cursor,
+    limit: limit + 1,
+  });
+  const hasNext = rows.length > limit;
+  const items = rows.slice(0, limit);
+
+  return {
+    items: items.map((row) => ({
+      resultId: row.result_id,
+      runId: row.run_id,
+      typeCode: row.type_code,
+      typeName: row.type_name,
+      completedAt: new Date(row.completed_at).toISOString(),
+    })),
+    nextCursor: hasNext ? items.at(-1)?.result_id || null : null,
+  };
+}
+
+async function toDiagnosisResultResponse(
+  result: Awaited<ReturnType<typeof findLatestDiagnosisResultForUser>>,
+): Promise<DiagnosisResultResponseDto> {
+  if (!result) {
+    throw new Error("Diagnosis result was not found.");
+  }
+
+  const axisScores: AxisScores = {
+    stability: result.stability_axis_percent,
+    teamwork: result.teamwork_axis_percent,
+    execution: result.execution_axis_percent,
+    principle: result.principle_axis_percent,
+  };
+  const traitScores = toTraitScores(axisScores);
+  const jobCategories = await findJobCategoriesForPersonalityType(
+    result.type_code,
+  );
+
+  return {
+    runId: result.run_id,
+    resultId: result.result_id,
+    typeCode: result.type_code,
+    typeName: result.type_name,
+    summary: result.summary || "",
+    scores: traitScores,
+    percentages: traitScores,
+    axisResults: toAxisResults(axisScores),
+    strengths: Array.isArray(result.strengths) ? result.strengths : [],
+    growthPoints: Array.isArray(result.weaknesses) ? result.weaknesses : [],
+    recommendations: [],
+    jobCategories,
+  };
+}
+
 export async function submitDiagnosis(args: {
   body: CreateDiagnosisRunRequestDto;
+  userId?: string;
   ipAddress?: string;
   userAgent?: string;
   referer?: string;
@@ -301,6 +433,7 @@ export async function submitDiagnosis(args: {
   const jobCategories = await findJobCategoriesForPersonalityType(typeCode);
   const totalScore = Math.round(traitScores[typeCode]);
   const created = await createDiagnosisRunWithResult({
+    userId: args.userId,
     questionSetId: questionSet.id,
     anonymousId: args.body.anonymousId,
     entrySource: args.body.entrySource || "diagnosis",

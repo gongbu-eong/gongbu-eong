@@ -3,6 +3,28 @@ import { createHash, randomBytes } from "crypto";
 import { OAuthProfile, upsertOAuthUser } from "./auth.repository";
 
 type OAuthProvider = "kakao" | "naver";
+type EntrySource =
+  | "main_home"
+  | "diagnosis"
+  | "job_detail"
+  | "calendar"
+  | "ai_tools"
+  | "community"
+  | "my_page"
+  | "external_share"
+  | "unknown";
+
+const entrySources = new Set<EntrySource>([
+  "main_home",
+  "diagnosis",
+  "job_detail",
+  "calendar",
+  "ai_tools",
+  "community",
+  "my_page",
+  "external_share",
+  "unknown",
+]);
 
 const providerConfig = {
   kakao: {
@@ -52,18 +74,18 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
     maxAge: 60 * 10,
   });
 
-  const entrySource = request.nextUrl.searchParams.get("entrySource");
-  if (entrySource) {
-    response.cookies.set("oauth_entry_source", entrySource, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 10,
-    });
-  }
+  const entrySource = normalizeEntrySource(
+    request.nextUrl.searchParams.get("entrySource"),
+  );
+  response.cookies.set("oauth_entry_source", entrySource, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 10,
+  });
 
   const diagnosisRunId = request.nextUrl.searchParams.get("diagnosisRunId");
-  if (diagnosisRunId) {
+  if (diagnosisRunId && isUuid(diagnosisRunId)) {
     response.cookies.set("oauth_diagnosis_run_id", diagnosisRunId, {
       httpOnly: true,
       sameSite: "lax",
@@ -73,7 +95,7 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
   }
 
   const anonymousId = request.nextUrl.searchParams.get("anonymousId");
-  if (anonymousId) {
+  if (anonymousId && isUuid(anonymousId)) {
     response.cookies.set("oauth_anonymous_id", anonymousId, {
       httpOnly: true,
       sameSite: "lax",
@@ -97,7 +119,9 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
   const storedState = request.cookies.get(`${provider}_oauth_state`)?.value;
 
   if (!code || !state || !storedState || state !== storedState) {
-    return NextResponse.redirect(failureRedirectUrl);
+    return NextResponse.redirect(
+      buildFailureRedirectUrl(failureRedirectUrl, provider),
+    );
   }
 
   try {
@@ -115,9 +139,15 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
         ? new Date(Date.now() + token.expiresIn * 1000)
         : undefined,
       sessionTokenHash: hashValue(sessionToken),
-      entrySource: request.cookies.get("oauth_entry_source")?.value || "unknown",
-      diagnosisRunId: request.cookies.get("oauth_diagnosis_run_id")?.value,
-      anonymousId: request.cookies.get("oauth_anonymous_id")?.value,
+      entrySource: normalizeEntrySource(
+        request.cookies.get("oauth_entry_source")?.value,
+      ),
+      diagnosisRunId: validUuidOrUndefined(
+        request.cookies.get("oauth_diagnosis_run_id")?.value,
+      ),
+      anonymousId: validUuidOrUndefined(
+        request.cookies.get("oauth_anonymous_id")?.value,
+      ),
       ipAddress,
       userAgent: request.headers.get("user-agent") || undefined,
     });
@@ -132,12 +162,15 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       secure: process.env.NODE_ENV === "production",
       path: "/",
-      maxAge: 60 * 60 * 24 * 365 * 10,
+      maxAge: 60 * 60 * 24 * 14,
     });
 
     return response;
-  } catch {
-    return NextResponse.redirect(failureRedirectUrl);
+  } catch (error) {
+    console.error(`[OAuth:${provider}] callback failed`, error);
+    return NextResponse.redirect(
+      buildFailureRedirectUrl(failureRedirectUrl, provider),
+    );
   }
 }
 
@@ -217,6 +250,9 @@ async function fetchOAuthProfile(
       providerUserId: String(body.id),
       email: body.kakao_account?.email,
       nickname: body.kakao_account?.profile?.nickname,
+      avatarUrl:
+        body.kakao_account?.profile?.profile_image_url ||
+        body.properties?.profile_image,
     };
   }
 
@@ -234,9 +270,47 @@ async function fetchOAuthProfile(
     providerUserId: body.response.id,
     email: body.response.email,
     nickname: body.response.nickname || body.response.name,
+    avatarUrl: body.response.profile_image,
   };
 }
 
 function hashValue(value: string) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function normalizeEntrySource(value?: string | null): EntrySource {
+  if (!value) {
+    return "unknown";
+  }
+
+  if (value === "main") {
+    return "main_home";
+  }
+
+  return entrySources.has(value as EntrySource)
+    ? (value as EntrySource)
+    : "unknown";
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+function validUuidOrUndefined(value?: string) {
+  return value && isUuid(value) ? value : undefined;
+}
+
+function buildFailureRedirectUrl(
+  redirectUrl: string,
+  provider: OAuthProvider,
+) {
+  const url = new URL(redirectUrl);
+  if (url.pathname === "/") {
+    url.pathname = "/login";
+  }
+  url.searchParams.set("oauthError", "callback_failed");
+  url.searchParams.set("provider", provider);
+  return url;
 }
