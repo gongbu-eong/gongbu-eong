@@ -87,7 +87,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
           <>
             <article className={styles.content}>
               <section className={styles.summary}>
-                <span className={job.isClosed ? styles.closedBadge : styles.openBadge}>
+                <span className={getDdayBadgeClass(job)}>
                   {job.isClosed ? "마감" : job.dday}
                 </span>
                 <small>{job.institutionName}</small>
@@ -106,13 +106,13 @@ export function JobDetail({ jobId }: { jobId: string }) {
               <section className={styles.factGrid}>
                 <Fact label="채용인원" value={toHiringCount(job.hiringCount)} />
                 <Fact label="고용형태" value={job.employmentType || "정보 없음"} />
-                <Fact label="접수 기간" value={job.isClosed ? "마감" : toShortDeadline(job.applicationEndAt)} />
+                <Fact label="접수 기간" value={toCompactPeriod(job.applicationStartAt, job.applicationEndAt)} />
                 <Fact label="근무지" value={job.region || "정보 없음"} />
               </section>
 
-              <div className={job.isClosed ? styles.closedNotice : styles.openNotice}>
+              <div className={getDeadlineNoticeClass(job)}>
                 <strong>{job.isClosed ? "이 공고는 접수가 마감되었어요" : `지금 접수 중이에요! ${toRemainingText(job.applicationEndAt)}`}</strong>
-                <span>{job.isClosed ? `(${toCompactPeriod(job.applicationStartAt, job.applicationEndAt)})` : `(~ ${toDateTime(job.applicationEndAt)})`}</span>
+                <span>{job.isClosed ? `(${toCompactPeriod(job.applicationStartAt, job.applicationEndAt)})` : toDeadlineDetail(job.applicationEndAt)}</span>
               </div>
 
               <DetailSection title="기본 정보" icon="📋">
@@ -234,7 +234,12 @@ function toCompactPeriod(start: string | null, end: string | null) {
   const format = (value: string | null) => value
     ? new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value)).replace(/\s/g, "")
     : "";
-  return `${format(start)}~${format(end)}` || "상시";
+  const formattedStart = format(start);
+  const formattedEnd = format(end);
+  if (!formattedStart && !formattedEnd) return "상시";
+  if (!formattedStart) return `~${formattedEnd}`;
+  if (!formattedEnd) return `${formattedStart}~`;
+  return `${formattedStart}~${formattedEnd}`;
 }
 function toDateTime(value: string | null) {
   if (!value) return "상시";
@@ -242,14 +247,24 @@ function toDateTime(value: string | null) {
     year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
   }).format(new Date(value)).replace(/\s/g, " ");
 }
-function toShortDeadline(value: string | null) {
-  if (!value) return "상시";
-  return `~ ${new Intl.DateTimeFormat("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value))}`;
-}
 function toRemainingText(value: string | null) {
   if (!value) return "상시 채용 중이에요";
   const days = Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000));
   return days === 0 ? "오늘 마감이에요" : `마감까지 ${days}일 남았어요`;
+}
+function toDeadlineDetail(value: string | null) {
+  return value ? `(~ ${toDateTime(value)})` : "(마감일 정보 없음)";
+}
+function isUrgentJob(job: Pick<JobPostingDetailDto, "dday" | "isClosed">) {
+  return job.isClosed || job.dday === "D-Day" || job.dday === "D-1";
+}
+function getDdayBadgeClass(job: Pick<JobPostingDetailDto, "dday" | "isClosed">) {
+  if (job.isClosed) return styles.closedBadge;
+  return isUrgentJob(job) ? styles.urgentBadge : styles.openBadge;
+}
+function getDeadlineNoticeClass(job: Pick<JobPostingDetailDto, "dday" | "isClosed">) {
+  if (job.isClosed) return styles.closedNotice;
+  return isUrgentJob(job) ? styles.urgentNotice : styles.openNotice;
 }
 function extractBasicValue(value: string | null, label: string) {
   if (!value) return null;

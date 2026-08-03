@@ -7,13 +7,27 @@ GRANT ALL ON SCHEMA public TO public;
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
 
-CREATE OR REPLACE FUNCTION public.set_updated_at()
-RETURNS TRIGGER AS $$
+DO $$
 BEGIN
-  NEW.updated_at = NOW();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_proc
+    JOIN pg_namespace ON pg_namespace.oid = pg_proc.pronamespace
+    WHERE pg_namespace.nspname = 'public'
+      AND pg_proc.proname = 'set_updated_at'
+      AND pg_get_function_identity_arguments(pg_proc.oid) = ''
+  ) THEN
+    EXECUTE '
+      CREATE FUNCTION public.set_updated_at()
+      RETURNS TRIGGER AS $fn$
+      BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+      END;
+      $fn$ LANGUAGE plpgsql
+    ';
+  END IF;
+END $$;
 
 DO $$
 BEGIN

@@ -72,6 +72,7 @@
 }
 
 .openBadge,
+.urgentBadge,
 .closedBadge {
   position: absolute;
   top: 0;
@@ -87,6 +88,7 @@
 }
 
 .openBadge { background: #e8f7ed; color: #1f9f65; }
+.urgentBadge { background: #ffedef; color: #e8544d; }
 .closedBadge { background: #ffedef; color: #e8544d; }
 
 .bookmark {
@@ -147,6 +149,7 @@
 }
 
 .closedNotice,
+.urgentNotice,
 .openNotice {
   display: flex;
   min-height: 3.25rem;
@@ -161,8 +164,9 @@
 }
 
 .closedNotice { background: #ffedef; color: #e8544d; }
+.urgentNotice { background: #ffedef; color: #e8544d; }
 .openNotice { background: #e8f7ed; color: #1fb573; }
-.closedNotice strong, .openNotice strong { font-weight: 600; }
+.closedNotice strong, .urgentNotice strong, .openNotice strong { font-weight: 600; }
 
 .detailSection {
   padding: 1.5rem 0;
