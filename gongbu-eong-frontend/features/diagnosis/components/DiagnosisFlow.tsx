@@ -453,6 +453,34 @@ function DiagnosisIntro({
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          src="/diagnosis/intro/asset-13-173x190.png"
+          alt=""
+          className={`${styles.introDecor} ${styles.introDecorBulb}`}
+          draggable={false}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/diagnosis/intro/asset-10-192x189.png"
+          alt=""
+          className={`${styles.introDecor} ${styles.introDecorStarLarge}`}
+          draggable={false}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/diagnosis/intro/asset-12-87x88.png"
+          alt=""
+          className={`${styles.introDecor} ${styles.introDecorStarSmall}`}
+          draggable={false}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/diagnosis/intro/asset-11-191x195.png"
+          alt=""
+          className={`${styles.introDecor} ${styles.introDecorSparkle}`}
+          draggable={false}
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src="/diagnosis/intro/asset-9-1727x1300.png"
           alt=""
           className={styles.introOwl}
@@ -545,7 +573,7 @@ function DiagnosisSurvey({
   const owlBounds = QUESTION_OWL_BOUNDS[owlIndex];
 
   return (
-    <div className={styles.page}>
+    <div className={`${styles.page} ${styles.questionPage}`}>
       <section className={styles.questionScreen} aria-label="강점·성향 진단 문항">
         <div
           className={styles.questionOwl}

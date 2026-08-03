@@ -17,6 +17,10 @@
   background: #ffffff;
 }
 
+.questionPage {
+  background: #ffffff;
+}
+
 .landing {
   position: relative;
   width: 100%;
@@ -206,6 +210,47 @@
 
 .introTypeFlexible {
   background: #0b778b;
+}
+
+.introTypeChallenge img {
+  transform: rotate(32deg);
+}
+
+.introDecor {
+  position: absolute;
+  z-index: 1;
+  display: block;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.introDecorBulb {
+  left: 3.625rem;
+  top: 25.5rem;
+  width: 3.125rem;
+  height: 3.4375rem;
+}
+
+.introDecorStarLarge {
+  right: 4.75rem;
+  top: 26.25rem;
+  width: 2.375rem;
+  height: 2.375rem;
+}
+
+.introDecorStarSmall {
+  left: 6.5625rem;
+  top: 28.25rem;
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+.introDecorSparkle {
+  right: 3.125rem;
+  top: 27.625rem;
+  width: 1.875rem;
+  height: 1.875rem;
 }
 
 .introOwl {
@@ -1347,24 +1392,53 @@
     height: 16.5rem;
   }
 
+  .introDecorBulb {
+    left: 7rem;
+    top: 23.875rem;
+    width: 3.875rem;
+    height: 4.25rem;
+  }
+
+  .introDecorStarLarge {
+    right: 9.625rem;
+    top: 26rem;
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+
+  .introDecorStarSmall {
+    left: 9.25rem;
+    top: 28.375rem;
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .introDecorSparkle {
+    right: 7.5rem;
+    top: 27.625rem;
+    width: 2.125rem;
+    height: 2.125rem;
+  }
+
   .startButton {
     width: 28.75rem;
   }
 
   .questionScreen {
-    width: 24.5625rem;
-    max-width: none;
+    width: 37.5rem;
+    max-width: 37.5rem;
     min-height: 53.25rem;
     height: 53.25rem;
     flex: 0 0 53.25rem;
-    zoom: 1.5267175573;
   }
 }
 
 .authenticatedShell {
   position: relative;
   width: min(37.5rem, 100%);
-  min-height: 61.25rem;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
   margin: 0 auto;
   padding: 3rem 0 calc(5rem + env(safe-area-inset-bottom));
   background: #ffffff;
@@ -1414,14 +1488,26 @@
 
 .authenticatedContent {
   width: 100%;
-  min-height: 53.25rem;
+  min-height: calc(100vh - 8rem - env(safe-area-inset-bottom));
+  min-height: calc(100svh - 8rem - env(safe-area-inset-bottom));
+  min-height: calc(100dvh - 8rem - env(safe-area-inset-bottom));
+}
+
+.authenticatedContent .page {
+  min-height: calc(100vh - 8rem - env(safe-area-inset-bottom));
+  min-height: calc(100svh - 8rem - env(safe-area-inset-bottom));
+  min-height: calc(100dvh - 8rem - env(safe-area-inset-bottom));
 }
 
 .authenticatedContent .landing,
 .authenticatedContent .questionScreen {
   width: 100%;
-  min-height: 53.25rem;
-  height: 53.25rem;
+  min-height: calc(100vh - 8rem - env(safe-area-inset-bottom));
+  min-height: calc(100svh - 8rem - env(safe-area-inset-bottom));
+  min-height: calc(100dvh - 8rem - env(safe-area-inset-bottom));
+  height: calc(100vh - 8rem - env(safe-area-inset-bottom));
+  height: calc(100svh - 8rem - env(safe-area-inset-bottom));
+  height: calc(100dvh - 8rem - env(safe-area-inset-bottom));
 }
 
 .authenticatedFooter {
