@@ -354,8 +354,9 @@ export function DiagnosisFlow() {
 
   const currentQuestion = state.questions[state.index];
 
-  return withAuthenticatedShell(
+  return (
     <DiagnosisSurvey
+      isAuthenticated={isAuthenticated}
       currentQuestion={currentQuestion}
       index={state.index}
       questionCount={state.questions.length}
@@ -369,7 +370,7 @@ export function DiagnosisFlow() {
           index: state.index,
         })
       }
-    />,
+    />
   );
 }
 
@@ -431,11 +432,16 @@ function DiagnosisIntro({
         <p className={styles.introPill}>3분이면 알 수 있는 나의 취업 강점</p>
         <h1 className={styles.introTitle} aria-label="나의 강점·성향 유형은?">
           <span className={styles.introTitleShadow} aria-hidden="true">
-            <span>나의 강점·성향</span>
+            <span>
+              나의 <span>강점</span>·<span>성향</span>
+            </span>
             <span>유형은?</span>
           </span>
           <span className={styles.introTitleFront} aria-hidden="true">
-            <span>나의 강점·성향</span>
+            <span>
+              나의 <span className={styles.introTitleStrength}>강점</span>·
+              <span className={styles.introTitleTendency}>성향</span>
+            </span>
             <span>유형은?</span>
           </span>
         </h1>
@@ -553,6 +559,7 @@ function DiagnosisIntro({
 }
 
 function DiagnosisSurvey({
+  isAuthenticated,
   currentQuestion,
   index,
   questionCount,
@@ -560,6 +567,7 @@ function DiagnosisSurvey({
   onBack,
   onSelect,
 }: {
+  isAuthenticated: boolean;
   currentQuestion: DiagnosisQuestionDto;
   index: number;
   questionCount: number;
@@ -574,7 +582,12 @@ function DiagnosisSurvey({
 
   return (
     <div className={`${styles.page} ${styles.questionPage}`}>
-      <section className={styles.questionScreen} aria-label="강점·성향 진단 문항">
+      <section
+        className={`${styles.questionScreen} ${
+          isAuthenticated ? styles.questionScreenAuthenticated : ""
+        }`}
+        aria-label="강점·성향 진단 문항"
+      >
         <div
           className={styles.questionOwl}
           aria-hidden="true"
@@ -610,6 +623,15 @@ function DiagnosisSurvey({
             />
           </div>
         </div>
+        {isAuthenticated ? (
+          <Link
+            href="/"
+            className={styles.surveyHomeButton}
+            aria-label="홈으로 이동"
+          >
+            <SurveyHomeIcon />
+          </Link>
+        ) : null}
         <button
           className={styles.backButton}
           type="button"
@@ -772,10 +794,12 @@ function DiagnosisResult({
               </span>
             ))}
           </div>
-          <div
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/diagnosis-result-pass-banner.png"
+            alt="합격의 문을 열어드립니다."
             className={styles.passBanner}
-            role="img"
-            aria-label="합격의 문을 열어드립니다."
+            draggable={false}
           />
         </section>
 
@@ -858,21 +882,58 @@ function AxisLabel({ left, right }: { left: string; right: string }) {
   );
 }
 
+function SurveyHomeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        d="m4.5 10.5 7.5-6 7.5 6v8a1 1 0 0 1-1 1H15v-5h-6v5H5.5a1 1 0 0 1-1-1v-8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function ResultTitleIcon({
   type,
 }: {
   type: "person" | "chart" | "growth" | "job";
 }) {
-  const icon = {
-    person: "🔎",
-    chart: "📊",
-    growth: "💪",
-    job: "🎯",
-  }[type];
-
   return (
     <span className={styles.titleIcon} aria-hidden="true">
-      {icon}
+      {type === "person" ? (
+        <svg viewBox="0 0 24 24" focusable="false">
+          <circle cx="10" cy="10" r="6.25" fill="#d8efff" stroke="#64748b" strokeWidth="1.5" />
+          <circle cx="8.5" cy="8.5" r="2" fill="#ffffff" opacity="0.9" />
+          <path d="m14.7 14.7 5.15 5.15" fill="none" stroke="#2f7ff0" strokeWidth="3" strokeLinecap="round" />
+        </svg>
+      ) : null}
+      {type === "chart" ? (
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M3.5 3.5v17h17" fill="none" stroke="#172033" strokeWidth="1.5" strokeLinecap="round" />
+          <rect x="6" y="12" width="3" height="6" rx="0.75" fill="#20b66f" />
+          <rect x="10.5" y="8" width="3" height="10" rx="0.75" fill="#f0445b" />
+          <rect x="15" y="5" width="3" height="13" rx="0.75" fill="#2f7ff0" />
+        </svg>
+      ) : null}
+      {type === "growth" ? (
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M5.2 20.2c2.2-1.3 3.3-3.1 3.5-5.6l.2-2.4 2.1 1.1 2-4.7c.5-1.2 2.1-1.5 3-.6.5.5.6 1.2.3 1.9l-1.2 2.8 2.1-.9c1.6-.7 3.3.5 3.3 2.2v1.5c0 2.9-2.3 5.2-5.2 5.2H9.1c-1.4 0-2.7-.2-3.9-.5Z" fill="#ffc83d" stroke="#e99018" strokeWidth="1.25" strokeLinejoin="round" />
+          <path d="m7.2 13.8-2.6-.7-1.2 5.6 3.2.8" fill="#ffd85f" stroke="#e99018" strokeWidth="1.25" strokeLinejoin="round" />
+        </svg>
+      ) : null}
+      {type === "job" ? (
+        <svg viewBox="0 0 24 24" focusable="false">
+          <circle cx="11" cy="13" r="8" fill="#ffffff" stroke="#ef4056" strokeWidth="2" />
+          <circle cx="11" cy="13" r="5" fill="#ef4056" />
+          <circle cx="11" cy="13" r="2" fill="#ffffff" />
+          <path d="m11 13 7.8-7.8" fill="none" stroke="#2f7ff0" strokeWidth="1.7" strokeLinecap="round" />
+          <path d="m18.3 5.7.1-3 1.3 1.3 2.8.1-2.2 2.2Z" fill="#59c58a" stroke="#23734f" strokeWidth="0.7" strokeLinejoin="round" />
+        </svg>
+      ) : null}
     </span>
   );
 }
