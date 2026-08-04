@@ -37,6 +37,7 @@ export function getJobPostings(args?: {
   endDate?: string;
   sort?: "closing" | "latest" | "views";
   resultId?: string;
+  scope?: "monthly-regular";
 }) {
   const searchParams = new URLSearchParams();
 
@@ -54,6 +55,7 @@ export function getJobPostings(args?: {
   if (args?.endDate) searchParams.set("endDate", args.endDate);
   if (args?.sort) searchParams.set("sort", args.sort);
   if (args?.resultId) searchParams.set("resultId", args.resultId);
+  if (args?.scope) searchParams.set("scope", args.scope);
 
   const query = searchParams.size ? `?${searchParams.toString()}` : "";
   return apiClient<JobPostingListResponseDto>(`/api/jobs${query}`);

@@ -327,12 +327,15 @@ export async function findJobCategoriesForPersonalityType(
 export async function findDiagnosisPercentile(
   resultId: string,
   typeCode: DiagnosisTypeCode,
+  userId: string,
 ) {
-  const result = await query<{ top_percent: number | string }>(
+  const result = await query<{
+    top_percent: number | string | null;
+    sample_size: number | string;
+  }>(
     `
-      WITH scored AS (
+      WITH target AS (
         SELECT
-          results.id,
           CASE $2
             WHEN 'stability' THEN results.stability_axis_percent
             WHEN 'challenge' THEN 100 - results.stability_axis_percent
@@ -344,29 +347,110 @@ export async function findDiagnosisPercentile(
             WHEN 'flexibility' THEN 100 - results.principle_axis_percent
           END AS trait_score
         FROM public.diagnosis_results results
+        WHERE results.id = $1
       ),
-      target AS (
-        SELECT trait_score FROM scored WHERE id = $1
+      registered_results AS (
+        SELECT DISTINCT ON (owners.user_id)
+          owners.user_id,
+          results.stability_axis_percent,
+          results.teamwork_axis_percent,
+          results.execution_axis_percent,
+          results.principle_axis_percent
+        FROM public.diagnosis_results results
+        JOIN public.diagnosis_runs runs
+          ON runs.id = results.diagnosis_run_id
+        CROSS JOIN LATERAL (
+          SELECT COALESCE(
+            results.user_id,
+            runs.user_id,
+            (
+              SELECT conversions.user_id
+              FROM public.diagnosis_login_conversions conversions
+              WHERE conversions.diagnosis_result_id = results.id
+              ORDER BY conversions.created_at DESC
+              LIMIT 1
+            )
+          ) AS user_id
+        ) owners
+        JOIN public.users users
+          ON users.id = owners.user_id
+         AND users.status = 'active'
+        WHERE owners.user_id <> $3::uuid
+        ORDER BY
+          owners.user_id,
+          COALESCE(runs.completed_at, results.created_at) DESC,
+          results.id DESC
+      ),
+      peers AS (
+        SELECT
+          CASE $2
+            WHEN 'stability' THEN stability_axis_percent
+            WHEN 'challenge' THEN 100 - stability_axis_percent
+            WHEN 'teamwork' THEN teamwork_axis_percent
+            WHEN 'individual' THEN 100 - teamwork_axis_percent
+            WHEN 'execution' THEN execution_axis_percent
+            WHEN 'planning' THEN 100 - execution_axis_percent
+            WHEN 'principle' THEN principle_axis_percent
+            WHEN 'flexibility' THEN 100 - principle_axis_percent
+          END AS trait_score
+        FROM registered_results
       )
-      SELECT LEAST(
-        100,
-        GREATEST(
-          1,
-          CEIL(
-            100.0 * (
-              COUNT(*) FILTER (
-                WHERE scored.trait_score > (SELECT trait_score FROM target)
-              ) + 1
-            ) / GREATEST(COUNT(*), 1)
-          )
-        )
-      )::integer AS top_percent
-      FROM scored
+      SELECT
+        CASE
+          WHEN COUNT(*) = 0 THEN NULL
+          ELSE LEAST(
+            100,
+            GREATEST(
+              1,
+              CEIL(
+                100.0 * (
+                  COUNT(*) FILTER (
+                    WHERE peers.trait_score > (SELECT trait_score FROM target)
+                  ) + 1
+                ) / (COUNT(*) + 1)
+              )
+            )
+          )::integer
+        END AS top_percent,
+        COUNT(*)::integer AS sample_size
+      FROM peers
     `,
-    [resultId, typeCode],
+    [resultId, typeCode, userId],
   );
 
-  return Number(result.rows[0]?.top_percent || 1);
+  const row = result.rows[0];
+  return {
+    topPercent: row?.top_percent == null ? null : Number(row.top_percent),
+    sampleSize: Number(row?.sample_size || 0),
+  };
+}
+
+export async function countPreviousDiagnosisResults(
+  userId: string,
+  currentResultId: string,
+) {
+  const result = await query<{ result_count: number | string }>(
+    `
+      SELECT COUNT(DISTINCT results.id)::integer AS result_count
+      FROM public.diagnosis_results results
+      JOIN public.diagnosis_runs runs
+        ON runs.id = results.diagnosis_run_id
+      WHERE results.id <> $2::uuid
+        AND (
+          results.user_id = $1::uuid
+          OR runs.user_id = $1::uuid
+          OR EXISTS (
+            SELECT 1
+            FROM public.diagnosis_login_conversions conversions
+            WHERE conversions.diagnosis_result_id = results.id
+              AND conversions.user_id = $1::uuid
+          )
+        )
+    `,
+    [userId, currentResultId],
+  );
+
+  return Number(result.rows[0]?.result_count || 0);
 }
 
 export async function findRecommendedInstitutions(
@@ -428,36 +512,103 @@ export async function findMonthlyHiringByPersonalityType(
         ORDER BY mappings.fit_weight DESC, mappings.sort_order ASC
         LIMIT 6
       ),
-      monthly_postings AS (
-        SELECT DISTINCT postings.id, posting_categories.job_category_id
+      matched_postings AS (
+        SELECT
+          postings.id,
+          mapped_categories.id AS job_category_id,
+          mapped_categories.name,
+          mapped_categories.fit_weight,
+          mapped_categories.sort_order,
+          ROW_NUMBER() OVER (
+            PARTITION BY postings.id
+            ORDER BY mapped_categories.fit_weight DESC, mapped_categories.sort_order ASC
+          ) AS match_rank
         FROM public.job_postings postings
         JOIN public.job_posting_categories posting_categories
           ON posting_categories.job_posting_id = postings.id
         JOIN mapped_categories
           ON mapped_categories.id = posting_categories.job_category_id
-        WHERE COALESCE(postings.announcement_at, postings.created_at)
-            >= DATE_TRUNC('month', CURRENT_DATE)
-          AND COALESCE(postings.announcement_at, postings.created_at)
-            < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+        WHERE postings.is_active = TRUE
+          AND (
+            postings.application_end_at IS NULL
+            OR postings.application_end_at >= NOW()
+          )
+          AND (
+            postings.employment_type = '정규직'
+            OR (
+              postings.employment_type ILIKE '%정규%'
+              AND postings.employment_type NOT ILIKE '%비정규%'
+            )
+          )
+          AND COALESCE(
+            postings.application_start_at,
+            postings.announcement_at,
+            postings.created_at
+          ) < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+          AND COALESCE(
+            postings.application_end_at,
+            'infinity'::timestamptz
+          ) >= DATE_TRUNC('month', CURRENT_DATE)
+      ),
+      primary_matches AS (
+        SELECT id, job_category_id, name, fit_weight, sort_order
+        FROM matched_postings
+        WHERE match_rank = 1
+      ),
+      category_counts AS (
+        SELECT
+          mapped_categories.id,
+          mapped_categories.name,
+          mapped_categories.fit_weight,
+          mapped_categories.sort_order,
+          COUNT(primary_matches.id)::integer AS posting_count
+        FROM mapped_categories
+        LEFT JOIN primary_matches
+          ON primary_matches.job_category_id = mapped_categories.id
+        GROUP BY
+          mapped_categories.id,
+          mapped_categories.name,
+          mapped_categories.fit_weight,
+          mapped_categories.sort_order
+      ),
+      ranked_counts AS (
+        SELECT
+          category_counts.*,
+          ROW_NUMBER() OVER (
+            ORDER BY posting_count DESC, fit_weight DESC, sort_order ASC
+          ) AS display_rank
+        FROM category_counts
+        WHERE posting_count > 0
+      ),
+      count_summary AS (
+        SELECT COUNT(*)::integer AS category_count
+        FROM ranked_counts
+      ),
+      displayed_counts AS (
+        SELECT name, posting_count, display_rank
+        FROM ranked_counts
+        WHERE display_rank <= CASE
+          WHEN (SELECT category_count FROM count_summary) <= 4 THEN 4
+          ELSE 3
+        END
+
+        UNION ALL
+
+        SELECT
+          '기타' AS name,
+          SUM(posting_count)::integer AS posting_count,
+          4 AS display_rank
+        FROM ranked_counts
+        WHERE (SELECT category_count FROM count_summary) > 4
+          AND display_rank > 3
+        HAVING SUM(posting_count) > 0
       )
       SELECT
-        mapped_categories.name,
-        COUNT(DISTINCT monthly_postings.id)::integer AS posting_count,
-        (
-          SELECT COUNT(DISTINCT id)::integer
-          FROM monthly_postings
-        ) AS total_count
-      FROM mapped_categories
-      LEFT JOIN monthly_postings
-        ON monthly_postings.job_category_id = mapped_categories.id
-      GROUP BY
-        mapped_categories.id,
-        mapped_categories.name,
-        mapped_categories.fit_weight,
-        mapped_categories.sort_order
-      ORDER BY
-        mapped_categories.fit_weight DESC,
-        mapped_categories.sort_order ASC
+        displayed_counts.name,
+        displayed_counts.posting_count,
+        (SELECT COUNT(*)::integer FROM primary_matches) AS total_count
+      FROM displayed_counts
+      ORDER BY displayed_counts.display_rank ASC
     `,
     [typeCode],
   );

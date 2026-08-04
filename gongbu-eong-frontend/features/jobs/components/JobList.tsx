@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getCurrentUser,
   getHomeJobs,
@@ -24,6 +24,7 @@ const REGIONS = ["서울", "경기", "인천", "강원", "충북", "충남", "�
 const EMPLOYMENTS = ["정규직", "무기계약직", "비정규직", "청년인턴"];
 const EDUCATIONS = ["학력무관", "고졸", "대졸(2~3년)", "대졸(4년)", "석사", "박사"];
 const CAREERS = ["신입", "경력", "신입+경력"];
+const PAGE_SIZE = 20;
 
 type Filters = {
   startDate: string;
@@ -42,9 +43,11 @@ const EMPTY_FILTERS: Filters = {
 export function JobList({
   view: initialView,
   resultId,
+  scope,
 }: {
   view: JobListView;
   resultId?: string;
+  scope?: "monthly-regular";
 }) {
   const [view, setView] = useState<JobListView>(initialView);
   const [jobs, setJobs] = useState<JobPostingDto[]>([]);
@@ -54,12 +57,18 @@ export function JobList({
   const [queryInput, setQueryInput] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"closing" | "latest" | "views">("closing");
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [draftFilters, setDraftFilters] = useState<Filters>(EMPTY_FILTERS);
+  const scopedFilters = scope === "monthly-regular"
+    ? { ...EMPTY_FILTERS, employmentType: "정규직" }
+    : EMPTY_FILTERS;
+  const [filters, setFilters] = useState<Filters>(scopedFilters);
+  const [draftFilters, setDraftFilters] = useState<Filters>(scopedFilters);
+  const [monthlyRegularOnly, setMonthlyRegularOnly] = useState(scope === "monthly-regular");
   const [filterOpen, setFilterOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getCurrentUser()
@@ -74,7 +83,16 @@ export function JobList({
 
   useEffect(() => {
     let mounted = true;
-    getJobPostings({ view, query, sort, resultId, limit: 100, ...filters })
+    getJobPostings({
+      view,
+      query,
+      sort,
+      resultId,
+      scope: monthlyRegularOnly ? "monthly-regular" : undefined,
+      limit: PAGE_SIZE,
+      offset: 0,
+      ...filters,
+    })
       .then((response) => {
         if (!mounted) return;
         setJobs(response.items);
@@ -89,7 +107,45 @@ export function JobList({
       .catch((error) => mounted && setMessage(error instanceof Error ? error.message : "공고를 불러오지 못했습니다."))
       .finally(() => mounted && setLoading(false));
     return () => { mounted = false; };
-  }, [filters, query, resultId, sort, view]);
+  }, [filters, monthlyRegularOnly, query, resultId, sort, view]);
+
+  const loadMore = useCallback(async () => {
+    if (loading || loadingMore || jobs.length >= total) return;
+
+    setLoadingMore(true);
+    try {
+      const response = await getJobPostings({
+        view,
+        query,
+        sort,
+        resultId,
+        scope: monthlyRegularOnly ? "monthly-regular" : undefined,
+        limit: PAGE_SIZE,
+        offset: jobs.length,
+        ...filters,
+      });
+      setJobs((current) => [
+        ...current,
+        ...response.items.filter((item) => !current.some((saved) => saved.id === item.id)),
+      ]);
+      setTotal(response.total);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "공고를 더 불러오지 못했습니다.");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [filters, jobs.length, loading, loadingMore, monthlyRegularOnly, query, resultId, sort, total, view]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || loading || jobs.length >= total) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) void loadMore();
+    }, { rootMargin: "240px 0px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [jobs.length, loadMore, loading, total]);
 
   const activeFilterCount = useMemo(
     () => Object.values(filters).filter(Boolean).length,
@@ -126,6 +182,7 @@ export function JobList({
 
   const changeView = (next: JobListView) => {
     setView(next);
+    if (next !== "recommended") setMonthlyRegularOnly(false);
     window.history.replaceState(null, "", next === "all" ? "/jobs" : `/jobs?view=${next}`);
   };
 
@@ -155,7 +212,10 @@ export function JobList({
         </nav>
 
         <div className={styles.resultBar}>
-          <span>총 {total.toLocaleString("ko-KR")}건</span>
+          <span>
+            총 {total.toLocaleString("ko-KR")}건
+            {monthlyRegularOnly ? <em>이번 달 · 정규직</em> : null}
+          </span>
             <label className={styles.sortSelect}>
               <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
                 <option value="closing">{view === "recommended" ? "추천순" : "마감순"}</option>
@@ -195,6 +255,9 @@ export function JobList({
             </article>
           ))}
           {!loading && jobs.length === 0 ? <p className={styles.empty}>조건에 맞는 공고가 없습니다.</p> : null}
+          <div ref={loadMoreRef} className={styles.loadMore} aria-live="polite">
+            {loadingMore ? "공고를 더 불러오는 중..." : null}
+          </div>
         </div>
         <JobFooter />
       </section>
@@ -218,7 +281,11 @@ export function JobList({
             <SelectField label="고용형태" value={draftFilters.employmentType} options={EMPLOYMENTS} onChange={(employmentType) => setDraftFilters({ ...draftFilters, employmentType })} />
             <SelectField label="학력정보" value={draftFilters.education} options={EDUCATIONS} onChange={(education) => setDraftFilters({ ...draftFilters, education })} />
             <SelectField label="경력사항" value={draftFilters.career} options={CAREERS} onChange={(career) => setDraftFilters({ ...draftFilters, career })} />
-            <button className={styles.applyFilter} onClick={() => { setFilters(draftFilters); setFilterOpen(false); }}>공고 보기</button>
+            <button className={styles.applyFilter} onClick={() => {
+              setFilters(draftFilters);
+              if (draftFilters.employmentType !== "정규직") setMonthlyRegularOnly(false);
+              setFilterOpen(false);
+            }}>공고 보기</button>
           </section>
         </div>
       ) : null}

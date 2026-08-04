@@ -183,17 +183,6 @@ export function HomeMain({
     };
   }, []);
 
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isMenuOpen]);
-
   const nickname = useMemo(() => {
     if (isLoading) return "";
     return user?.nickname || user?.displayName || "회원";
@@ -514,97 +503,14 @@ export function HomeMain({
         </footer>
 
         {isMenuOpen ? (
-          <aside className={styles.menuOverlay} aria-modal="true" role="dialog" aria-label="메뉴">
-            <button type="button" className={styles.menuDim} aria-label="메뉴 닫기" onClick={closeMenu} />
-            <div className={styles.drawer}>
-              <header className={styles.drawerHeader}>
-                <div className={styles.drawerAvatar} aria-hidden="true">
-                  {user?.avatarUrl ? (
-                    <Image src={user.avatarUrl} alt="" width={64} height={64} />
-                  ) : (
-                    <span>{user ? "🙉" : "☺️"}</span>
-                  )}
-                </div>
-                <div>
-                  <strong>{user ? nickname : "로그인을 해주세요."}</strong>
-                  {user ? (
-                    <p>프로필을 수정 할 수 있습니다.</p>
-                  ) : (
-                    <Link href="/login" className={styles.drawerLoginLink} onClick={closeMenu}>
-                      로그인 하기 →
-                    </Link>
-                  )}
-                </div>
-                <button type="button" className={styles.drawerClose} aria-label="메뉴 닫기" onClick={closeMenu}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M5.4 5.4 18.6 18.6M18.6 5.4 5.4 18.6" />
-                  </svg>
-                </button>
-              </header>
-
-              <nav className={styles.drawerNav} aria-label="전체 메뉴">
-                <DrawerSection icon="home" title="홈" />
-                <DrawerSection
-                  icon="megaphone"
-                  title="채용 공고"
-                  items={[
-                    "채용 공고",
-                    "진단결과 추천 공고",
-                    "찜한 공고",
-                  ]}
-                  hrefs={[
-                    "/jobs",
-                    user ? "/jobs?view=recommended" : "/login",
-                    user ? "/jobs?view=bookmarked" : "/login",
-                  ]}
-                  badge={String(jobs.bookmarkCount ?? 0)}
-                />
-                <DrawerSection
-                  icon="calendar"
-                  title="캘린더"
-                  items={[
-                    "전체 채용 캘린더",
-                    "나만의 캘린더",
-                  ]}
-                  hrefs={user ? [] : ["/login", "/login"]}
-                />
-                <DrawerSection
-                  icon="ai"
-                  title="AI 도구"
-                  label="BEST"
-                  items={[
-                    "AI 도구 모음",
-                    "직무 성향 진단",
-                    "AI 자소서 코칭",
-                    "AI 면접 코칭",
-                    "심리·직무 테스트 모음",
-                  ]}
-                  hrefs={user ? [] : ["/login", "/login", "/login", "/login", "/login"]}
-                />
-                <DrawerSection
-                  icon="community"
-                  title="커뮤니티"
-                  items={[
-                    "인기글",
-                    "내 또래 인기글",
-                    "내 글 · 댓글",
-                  ]}
-                  hrefs={user ? [] : ["/login", "/login", "/login"]}
-                />
-                <DrawerSection
-                  icon="my"
-                  title="마이페이지"
-                  titleHref={user ? "#" : "/login"}
-                />
-              </nav>
-
-              {user ? (
-                <button type="button" className={styles.logoutButton} onClick={handleLogout} disabled={isLoggingOut}>
-                  {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
-                </button>
-              ) : null}
-            </div>
-          </aside>
+          <HomeMenuDrawer
+            user={user}
+            nickname={nickname}
+            bookmarkCount={jobs.bookmarkCount ?? 0}
+            isLoggingOut={isLoggingOut}
+            onClose={closeMenu}
+            onLogout={handleLogout}
+          />
         ) : null}
 
         {isComingSoonOpen ? (
@@ -635,6 +541,133 @@ export function HomeMain({
   );
 }
 
+export function HomeMenuDrawer({
+  user,
+  nickname,
+  bookmarkCount = 0,
+  isLoggingOut = false,
+  onClose,
+  onLogout,
+}: {
+  user: CurrentUserDto | null;
+  nickname: string;
+  bookmarkCount?: number;
+  isLoggingOut?: boolean;
+  onClose: () => void;
+  onLogout: () => void | Promise<void>;
+}) {
+  useEffect(() => {
+    const root = document.documentElement;
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const hasScrollbar = window.innerWidth > root.clientWidth;
+    const previous = {
+      rootOverflowX: root.style.overflowX,
+      rootOverflowY: root.style.overflowY,
+      bodyOverflow: body.style.overflow,
+      bodyPosition: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+    };
+
+    // Keep the desktop scrollbar gutter while the page is locked so the
+    // centered 600px frame does not shift when the drawer opens.
+    root.style.overflowX = "hidden";
+    root.style.overflowY = hasScrollbar ? "scroll" : "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+
+    return () => {
+      root.style.overflowX = previous.rootOverflowX;
+      root.style.overflowY = previous.rootOverflowY;
+      body.style.overflow = previous.bodyOverflow;
+      body.style.position = previous.bodyPosition;
+      body.style.top = previous.bodyTop;
+      body.style.width = previous.bodyWidth;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  return (
+    <aside className={styles.menuOverlay} aria-modal="true" role="dialog" aria-label="메뉴">
+      <button type="button" className={styles.menuDim} aria-label="메뉴 닫기" onClick={onClose} />
+      <div className={styles.drawer}>
+        <header className={styles.drawerHeader}>
+          <div className={styles.drawerAvatar} aria-hidden="true">
+            {user?.avatarUrl ? (
+              <Image src={user.avatarUrl} alt="" width={64} height={64} />
+            ) : (
+              <span>{user ? "🙉" : "☺️"}</span>
+            )}
+          </div>
+          <div>
+            <strong>{user ? nickname : "로그인을 해주세요."}</strong>
+            {user ? (
+              <p>프로필을 수정 할 수 있습니다.</p>
+            ) : (
+              <Link href="/login" className={styles.drawerLoginLink} onClick={onClose}>
+                로그인 하기 →
+              </Link>
+            )}
+          </div>
+          <button type="button" className={styles.drawerClose} aria-label="메뉴 닫기" onClick={onClose}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5.4 5.4 18.6 18.6M18.6 5.4 5.4 18.6" />
+            </svg>
+          </button>
+        </header>
+
+        <nav className={styles.drawerNav} aria-label="전체 메뉴">
+          <DrawerSection icon="home" title="홈" titleHref="/" onNavigate={onClose} />
+          <DrawerSection
+            icon="megaphone"
+            title="채용 공고"
+            items={["채용 공고", "진단결과 추천 공고", "찜한 공고"]}
+            hrefs={[
+              "/jobs",
+              user ? "/jobs?view=recommended" : "/login",
+              user ? "/jobs?view=bookmarked" : "/login",
+            ]}
+            badge={String(bookmarkCount)}
+            onNavigate={onClose}
+          />
+          <DrawerSection
+            icon="calendar"
+            title="캘린더"
+            items={["전체 채용 캘린더", "나만의 캘린더"]}
+            hrefs={user ? [] : ["/login", "/login"]}
+            onNavigate={onClose}
+          />
+          <DrawerSection
+            icon="ai"
+            title="AI 도구"
+            label="BEST"
+            items={["AI 도구 모음", "직무 성향 진단", "AI 자소서 코칭", "AI 면접 코칭", "심리·직무 테스트 모음"]}
+            hrefs={user ? [] : ["/login", "/login", "/login", "/login", "/login"]}
+            onNavigate={onClose}
+          />
+          <DrawerSection
+            icon="community"
+            title="커뮤니티"
+            items={["인기글", "내 또래 인기글", "내 글 · 댓글"]}
+            hrefs={user ? [] : ["/login", "/login", "/login"]}
+            onNavigate={onClose}
+          />
+          <DrawerSection icon="my" title="마이페이지" titleHref={user ? "#" : "/login"} onNavigate={onClose} />
+        </nav>
+
+        {user ? (
+          <button type="button" className={styles.logoutButton} onClick={onLogout} disabled={isLoggingOut}>
+            {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+          </button>
+        ) : null}
+      </div>
+    </aside>
+  );
+}
+
 function toJobMeta(job: JobPostingDto) {
   return [job.employmentType, job.region].filter(Boolean).join(" · ") || job.institutionName;
 }
@@ -657,6 +690,7 @@ function DrawerSection({
   titleHref,
   label,
   badge,
+  onNavigate,
 }: {
   icon: "home" | "megaphone" | "calendar" | "ai" | "community" | "my";
   title: string;
@@ -665,6 +699,7 @@ function DrawerSection({
   titleHref?: string;
   label?: string;
   badge?: string;
+  onNavigate?: () => void;
 }) {
   return (
     <section className={styles.drawerSection}>
@@ -673,14 +708,14 @@ function DrawerSection({
       </div>
       <div className={styles.drawerSectionBody}>
         <h3>
-          {titleHref ? <Link href={titleHref}>{title}</Link> : title}
+          {titleHref ? <Link href={titleHref} onClick={onNavigate}>{title}</Link> : title}
           {label ? <span className={styles.drawerLabel}>{label}</span> : null}
         </h3>
         {items.length > 0 ? (
           <ul>
             {items.map((item, index) => (
               <li key={item}>
-                <Link href={hrefs[index] || "#"}>
+                <Link href={hrefs[index] || "#"} onClick={onNavigate}>
                   {item}
                   {badge && index === items.length - 1 ? <span className={styles.drawerBadge}>{badge}</span> : null}
                 </Link>

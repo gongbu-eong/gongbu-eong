@@ -159,6 +159,25 @@
   font-size: 0.875rem;
 }
 
+.resultBar > span {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.resultBar em {
+  display: inline-flex;
+  height: 1.5rem;
+  align-items: center;
+  padding: 0 0.625rem;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #2f7ff0;
+  font-size: 0.6875rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .sortSelect {
   position: relative;
   display: block;
@@ -326,6 +345,14 @@
   color: #7b8497;
   text-align: center;
   font-size: 0.875rem;
+}
+
+.loadMore {
+  min-height: 2.5rem;
+  padding: 0.75rem 0;
+  color: #7b8497;
+  text-align: center;
+  font-size: 0.8125rem;
 }
 
 .filterOverlay {

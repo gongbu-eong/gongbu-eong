@@ -38,17 +38,21 @@ export async function getHomeJobs(
     ? await findLatestDiagnosisType(userId)
     : null;
 
-  const [hotRows, recommendedRows, bookmarkCount] = await Promise.all([
+  const [hotRows, recommendedResult, bookmarkCount] = await Promise.all([
     findHotJobPostings(12, userId),
     diagnosisType
-      ? findRecommendedJobPostings(diagnosisType.code, 5, userId)
-      : Promise.resolve([]),
+      ? findRecommendedJobPostings({
+          personalityCode: diagnosisType.code,
+          limit: 5,
+          userId,
+        })
+      : Promise.resolve({ rows: [], total: 0 }),
     userId ? countUserJobBookmarks(userId) : Promise.resolve(0),
   ]);
 
   return {
     hotJobs: hotRows.map(toJobPostingDto),
-    recommendedJobs: recommendedRows.map(toJobPostingDto),
+    recommendedJobs: recommendedResult.rows.map(toJobPostingDto),
     recommendationTypeName: diagnosisType?.name || null,
     bookmarkCount,
   };
@@ -69,6 +73,7 @@ export async function getJobPostings(args: {
   careerRequirement?: string;
   startDate?: string;
   endDate?: string;
+  monthlyRegularOnly?: boolean;
   sort?: "closing" | "latest" | "views" | "recommended";
 }): Promise<JobPostingListResponseDto> {
   const limit = clamp(args.limit ?? 20, 1, 100);
@@ -84,18 +89,21 @@ export async function getJobPostings(args: {
           )
         : await findLatestDiagnosisType(args.userId)
       : null;
-    const rows = diagnosisType
+    const result = diagnosisType
       ? await findRecommendedJobPostings(
-          diagnosisType.code,
-          limit + offset,
-          args.userId,
+          {
+            personalityCode: diagnosisType.code,
+            limit,
+            offset,
+            userId: args.userId,
+            monthlyRegularOnly: args.monthlyRegularOnly,
+          },
         )
-      : [];
-    const items = rows.slice(offset, offset + limit);
+      : { rows: [], total: 0 };
 
     return {
-      items: items.map(toJobPostingDto),
-      total: rows.length,
+      items: result.rows.map(toJobPostingDto),
+      total: result.total,
       limit,
       offset,
       recommendationTypeName: diagnosisType?.name || null,

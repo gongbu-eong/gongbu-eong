@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   getDiagnosisQuestions,
   getDiagnosisStats,
@@ -159,6 +160,7 @@ const POINT_CARD_TITLES: Record<
 };
 
 export function DiagnosisFlow() {
+  const router = useRouter();
   const [state, setState] = useState<FlowState>({ status: "intro" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [participantCount, setParticipantCount] = useState<number | null>(null);
@@ -243,7 +245,16 @@ export function DiagnosisFlow() {
     setState({ status: "submitting", questions, index: questions.length - 1 });
 
     try {
-      setState({ status: "result", result: await submitDiagnosis(payload) });
+      const result = await submitDiagnosis(payload);
+
+      if (isAuthenticated) {
+        router.push(
+          `/ai-tools/diagnosis/result?resultId=${encodeURIComponent(result.resultId)}`,
+        );
+        return;
+      }
+
+      setState({ status: "result", result });
     } catch (error) {
       isSubmittingRef.current = false;
       setState({

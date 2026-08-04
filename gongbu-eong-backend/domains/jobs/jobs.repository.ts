@@ -171,11 +171,43 @@ export async function findHotJobPostings(limit: number, userId?: string) {
 }
 
 export async function findRecommendedJobPostings(
-  personalityCode: string,
-  limit: number,
-  userId?: string,
+  args: {
+    personalityCode: string;
+    limit: number;
+    offset?: number;
+    userId?: string;
+    monthlyRegularOnly?: boolean;
+  },
 ) {
-  const result = await query<JobPostingRow>(
+  const monthlyRegularFilter = args.monthlyRegularOnly
+    ? `AND (
+          postings.employment_type = '정규직'
+          OR (
+            postings.employment_type ILIKE '%정규%'
+            AND postings.employment_type NOT ILIKE '%비정규%'
+          )
+        )
+        AND COALESCE(
+          postings.application_start_at,
+          postings.announcement_at,
+          postings.created_at
+        ) < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+        AND COALESCE(postings.application_end_at, 'infinity'::timestamptz)
+          >= DATE_TRUNC('month', CURRENT_DATE)
+        AND categories.id IN (
+          SELECT scoped_mappings.job_category_id
+          FROM public.personality_job_category_mappings scoped_mappings
+          JOIN public.personality_types scoped_types
+            ON scoped_types.id = scoped_mappings.personality_type_id
+          JOIN public.job_categories scoped_categories
+            ON scoped_categories.id = scoped_mappings.job_category_id
+          WHERE scoped_types.code = $1
+            AND scoped_categories.is_active = TRUE
+          ORDER BY scoped_mappings.fit_weight DESC, scoped_mappings.sort_order ASC
+          LIMIT 6
+        )`
+    : "";
+  const result = await query<JobPostingRow & { total_count: string }>(
     `
       SELECT
         postings.id,
@@ -190,6 +222,7 @@ export async function findRecommendedJobPostings(
         postings.education_requirement,
         postings.hiring_count,
         postings.is_active,
+        COUNT(*) OVER() AS total_count,
         (
           $3::uuid IS NOT NULL
           AND EXISTS (
@@ -216,6 +249,7 @@ export async function findRecommendedJobPostings(
       WHERE postings.is_active = TRUE
         AND categories.is_active = TRUE
         AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
+        ${monthlyRegularFilter}
       GROUP BY postings.id, institutions.name
       ORDER BY
         postings.application_end_at ASC NULLS LAST,
@@ -229,11 +263,15 @@ export async function findRecommendedJobPostings(
         MAX(mappings.fit_weight) DESC,
         postings.created_at DESC
       LIMIT $2
+      OFFSET $4
     `,
-    [personalityCode, limit, userId || null],
+    [args.personalityCode, args.limit, args.userId || null, args.offset || 0],
   );
 
-  return result.rows;
+  return {
+    rows: result.rows,
+    total: Number(result.rows[0]?.total_count || 0),
+  };
 }
 
 export async function findJobPostings(args: {

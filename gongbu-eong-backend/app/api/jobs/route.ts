@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       careerRequirement: value("career"),
       startDate: value("startDate"),
       endDate: value("endDate"),
+      monthlyRegularOnly: value("scope") === "monthly-regular",
       sort:
         value("sort") === "latest" || value("sort") === "views"
           ? (value("sort") as "latest" | "views")

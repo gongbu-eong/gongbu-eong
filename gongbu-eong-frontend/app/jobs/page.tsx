@@ -4,7 +4,7 @@ import type { JobListView } from "@/features/home/home.dto";
 export default async function JobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; resultId?: string }>;
+  searchParams: Promise<{ view?: string; resultId?: string; scope?: string }>;
 }) {
   const params = await searchParams;
   const view: JobListView =
@@ -16,9 +16,10 @@ export default async function JobsPage({
 
   return (
     <JobList
-      key={`${view}-${params.resultId || "latest"}`}
+      key={`${view}-${params.resultId || "latest"}-${params.scope || "all"}`}
       view={view}
       resultId={params.resultId}
+      scope={params.scope === "monthly-regular" ? "monthly-regular" : undefined}
     />
   );
 }

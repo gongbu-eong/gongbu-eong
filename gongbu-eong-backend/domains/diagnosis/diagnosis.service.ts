@@ -17,11 +17,13 @@ import {
   findDiagnosisResultForUser,
   findDiagnosisResultHistory,
   findDiagnosisPercentile,
+  countPreviousDiagnosisResults,
   findRecommendedInstitutions,
   findMonthlyHiringByPersonalityType,
   findPersonalityType,
   findQuestionsWithOptions,
 } from "./diagnosis.repository";
+import { getJobPostings } from "../jobs/jobs.service";
 
 type AxisCode = "stability" | "teamwork" | "execution" | "principle";
 type OptionNo = 1 | 2 | 3 | 4 | 5;
@@ -286,12 +288,20 @@ export async function getDiagnosisResultDetail(
     return null;
   }
 
-  const [response, topPercent, companies, monthlyHiring] =
+  const [response, percentile, previousResultCount, companies, monthlyHiring, recommendedJobs] =
     await Promise.all([
       toDiagnosisResultResponse(result),
-      findDiagnosisPercentile(result.result_id, result.type_code),
+      findDiagnosisPercentile(result.result_id, result.type_code, userId),
+      countPreviousDiagnosisResults(userId, result.result_id),
       findRecommendedInstitutions(result.type_code, 3),
       findMonthlyHiringByPersonalityType(result.type_code),
+      getJobPostings({
+        view: "recommended",
+        userId,
+        diagnosisResultId: result.result_id,
+        limit: 3,
+        offset: 0,
+      }),
     ]);
 
   return {
@@ -299,9 +309,22 @@ export async function getDiagnosisResultDetail(
     completedAt: new Date(result.completed_at).toISOString(),
     percentile: {
       traitLabel: PERCENTILE_TRAIT_LABELS[result.type_code],
-      topPercent,
+      topPercent: percentile.topPercent,
+      sampleSize: percentile.sampleSize,
     },
+    previousResultCount,
     companies,
+    recommendedPostings: recommendedJobs.items.map((posting) => ({
+      id: posting.id,
+      institutionName: posting.institutionName,
+      title: posting.title,
+      applicationEndAt: posting.applicationEndAt,
+      dday: posting.dday,
+      employmentType: posting.employmentType,
+      region: posting.region,
+      careerRequirement: posting.careerRequirement,
+      categories: posting.categories,
+    })),
     monthlyHiring: {
       month: new Date().getMonth() + 1,
       totalCount: monthlyHiring.totalCount,

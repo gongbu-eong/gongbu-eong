@@ -81,11 +81,24 @@ export type DiagnosisResultDetailResponseDto = {
   completedAt: string;
   percentile: {
     traitLabel: string;
-    topPercent: number;
+    topPercent: number | null;
+    sampleSize: number;
   };
+  previousResultCount: number;
   companies: {
     id: string;
     name: string;
+  }[];
+  recommendedPostings: {
+    id: string;
+    institutionName: string;
+    title: string;
+    applicationEndAt: string | null;
+    dday: string;
+    employmentType: string | null;
+    region: string | null;
+    careerRequirement: string | null;
+    categories: string[];
   }[];
   monthlyHiring: {
     month: number;
