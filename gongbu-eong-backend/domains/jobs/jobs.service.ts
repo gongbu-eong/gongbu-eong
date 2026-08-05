@@ -1,11 +1,13 @@
 import type {
   HomeJobsResponseDto,
+  JobPostingCalendarResponseDto,
   JobPostingDetailDto,
   JobPostingDto,
   JobPostingListResponseDto,
 } from "./jobs.dto";
 import {
   findHotJobPostings,
+  findCalendarJobPostings,
   findJobPostings,
   findLatestDiagnosisType,
   findDiagnosisTypeForUserResult,
@@ -136,6 +138,30 @@ export async function getJobPostings(args: {
   };
 }
 
+export async function getCalendarJobPostings(args: {
+  startDate: string;
+  endDate: string;
+  userId?: string;
+  view?: "all" | "bookmarked";
+}): Promise<JobPostingCalendarResponseDto> {
+  const result =
+    args.view === "bookmarked" && !args.userId
+      ? { rows: [], total: 0 }
+      : await findCalendarJobPostings({
+          startDate: args.startDate,
+          endDate: args.endDate,
+          userId: args.userId,
+          bookmarkedOnly: args.view === "bookmarked",
+        });
+
+  return {
+    items: result.rows.map(toJobPostingDto),
+    total: result.total,
+    startDate: args.startDate,
+    endDate: args.endDate,
+  };
+}
+
 export async function getJobPostingDetail(
   jobPostingId: string,
   userId?: string,
@@ -218,6 +244,9 @@ export async function removeJobBookmark(userId: string, jobPostingId: string) {
 }
 
 function toJobPostingDto(row: JobPostingRow): JobPostingDto {
+  const applicationStartAt = row.application_start_at
+    ? new Date(row.application_start_at).toISOString()
+    : null;
   const applicationEndAt = row.application_end_at
     ? new Date(row.application_end_at).toISOString()
     : null;
@@ -226,6 +255,7 @@ function toJobPostingDto(row: JobPostingRow): JobPostingDto {
     id: row.id,
     institutionName: row.institution_name,
     title: row.title,
+    applicationStartAt,
     applicationEndAt,
     dday: toDday(applicationEndAt),
     employmentType: row.employment_type,

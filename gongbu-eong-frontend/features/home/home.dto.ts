@@ -30,6 +30,7 @@ export type JobPostingDto = {
   id: string;
   institutionName: string;
   title: string;
+  applicationStartAt: string | null;
   applicationEndAt: string | null;
   dday: string;
   employmentType: string | null;
@@ -46,7 +47,6 @@ export type JobPostingDto = {
 };
 
 export type JobPostingDetailDto = JobPostingDto & {
-  applicationStartAt: string | null;
   announcementAt: string | null;
   emailApplyAddress: string | null;
   jobCategory: string | null;
@@ -86,6 +86,13 @@ export type JobPostingListResponseDto = {
   limit: number;
   offset: number;
   recommendationTypeName: string | null;
+};
+
+export type JobPostingCalendarResponseDto = {
+  items: JobPostingDto[];
+  total: number;
+  startDate: string;
+  endDate: string;
 };
 
 export type JobListView = "all" | "closing" | "recommended" | "bookmarked";

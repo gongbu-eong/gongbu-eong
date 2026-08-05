@@ -4,10 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
+import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
-import { HomeMenuDrawer } from "@/features/home/components/HomeMain";
-import { getDiagnosisResultDetail, getDiagnosisResultHistory } from "../diagnosis.api";
+import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
+import {
+  getDiagnosisResultDetail,
+  getDiagnosisResultHistory,
+  selectDiagnosisResult,
+} from "../diagnosis.api";
 import type {
   DiagnosisResultDetailResponseDto,
   DiagnosisResultHistoryItemDto,
@@ -129,8 +133,6 @@ export function DiagnosisResultDetail() {
   const [historyCursor, setHistoryCursor] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [shareMessage, setShareMessage] = useState("공유하고 코칭 받기 →");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -157,17 +159,29 @@ export function DiagnosisResultDetail() {
     setHistoryLoading(true);
     try {
       const response = await getDiagnosisResultHistory(cursor);
-      const previousItems = response.items.filter(
-        (item) => item.resultId !== detail?.result.resultId,
-      );
+      const currentItem = detail
+        ? {
+            resultId: detail.result.resultId,
+            runId: detail.result.runId,
+            typeCode: detail.result.typeCode,
+            typeName: detail.result.typeName,
+            completedAt: detail.completedAt,
+          }
+        : null;
+      const responseItems = currentItem && !cursor
+        ? response.items.filter((item) => item.resultId !== currentItem.resultId)
+        : response.items;
+      const nextItems = !cursor && currentItem
+        ? [currentItem, ...responseItems]
+        : responseItems;
       setHistory((current) => cursor
-        ? [...current, ...previousItems.filter((item) => !current.some((saved) => saved.resultId === item.resultId))]
-        : previousItems);
+        ? [...current, ...nextItems.filter((item) => !current.some((saved) => saved.resultId === item.resultId))]
+        : nextItems);
       setHistoryCursor(response.nextCursor);
     } finally {
       setHistoryLoading(false);
     }
-  }, [detail?.result.resultId]);
+  }, [detail]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -214,53 +228,10 @@ export function DiagnosisResultDetail() {
     }
   };
 
-  const handleLogout = async () => {
-    if (isLoggingOut) return;
-
-    setIsLoggingOut(true);
-    try {
-      await logoutCurrentUser();
-      setUser(null);
-      setIsMenuOpen(false);
-      router.replace("/");
-      router.refresh();
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
-
   return (
     <main className={styles.page}>
       <article className={styles.frame}>
-        <header className={styles.header}>
-          <div className={styles.headerGroup}>
-            <button type="button" onClick={() => router.back()} aria-label="뒤로 가기" className={styles.headerButton}><FigmaHeaderIcon kind="back" /></button>
-            <Link href="/" aria-label="홈으로 이동" className={styles.headerButton}><FigmaHeaderIcon kind="home" /></Link>
-          </div>
-          <div className={styles.headerGroup}>
-            <button type="button" aria-label="알림" className={styles.headerButton}><FigmaHeaderIcon kind="bell" /></button>
-            <button
-              type="button"
-              aria-label="메인 메뉴"
-              aria-expanded={isMenuOpen}
-              className={styles.headerButton}
-              onClick={() => setIsMenuOpen(true)}
-            >
-              <FigmaHeaderIcon kind="menu" />
-            </button>
-          </div>
-        </header>
-
-        {isMenuOpen ? (
-          <HomeMenuDrawer
-            user={user}
-            nickname={nickname}
-            bookmarkCount={bookmarkCount}
-            isLoggingOut={isLoggingOut}
-            onClose={() => setIsMenuOpen(false)}
-            onLogout={handleLogout}
-          />
-        ) : null}
+        <JobHeader user={user} nickname={nickname} bookmarkCount={bookmarkCount} />
 
         <div className={styles.resultBody}>
           <h1 className={styles.pageTitle}>
@@ -304,7 +275,7 @@ export function DiagnosisResultDetail() {
               </div>
             ) : (
               <div className={styles.percentile}>
-                <span>{nickname}님의 {detail.percentile.traitLabel}은</span>
+                <span>{nickname}님의 {detail.percentile.traitLabel} 은(는)</span>
                 <strong>상위 <b>{detail.percentile.topPercent}</b>%</strong>
               </div>
             )}
@@ -356,7 +327,7 @@ export function DiagnosisResultDetail() {
             <p className={styles.sectionCaption}>{result.typeName}과 잘 맞는 직무와 공기업이에요.</p>
             <h3>{nickname}님에게 어울리는 직무</h3>
             <div className={styles.jobChips}>{result.jobCategories.slice(0, 6).map((category) => <span key={category.name}>{category.name}</span>)}</div>
-            <h3>{nickname}님에게 어울리는 기업</h3>
+            <h3>{nickname}님에게 어울리는 공고</h3>
             <div className={styles.postingList}>
               {detail.recommendedPostings.map((posting) => <RecommendedPosting key={posting.id} posting={posting} />)}
               {!detail.recommendedPostings.length && detail.companies.map((company) => <article className={styles.companyFallback} key={company.id}><strong>{company.name}</strong></article>)}
@@ -387,7 +358,7 @@ export function DiagnosisResultDetail() {
           </div>
         </div>
 
-        <ResultFooter />
+        <JobFooter active="ai" />
       </article>
 
       {historyOpen ? (
@@ -397,8 +368,9 @@ export function DiagnosisResultDetail() {
             <header><h2>강점·성향 진단 결과</h2><button type="button" onClick={() => setHistoryOpen(false)} aria-label="닫기">×</button></header>
             <div className={styles.historyList}>
               {history.map((item) => (
-                <button type="button" key={item.resultId} className={item.resultId === result.resultId ? styles.selectedHistory : ""} onClick={() => {
+                <button type="button" key={item.resultId} className={item.resultId === result.resultId ? styles.selectedHistory : ""} onClick={async () => {
                   setHistoryOpen(false);
+                  await selectDiagnosisResult(item.resultId);
                   router.replace(`/ai-tools/diagnosis/result?resultId=${encodeURIComponent(item.resultId)}`);
                 }}>
                   <span><strong>{item.typeName}</strong><time>{formatDate(item.completedAt)}</time></span><i aria-hidden="true" />
@@ -410,16 +382,6 @@ export function DiagnosisResultDetail() {
         </div>
       ) : null}
     </main>
-  );
-}
-
-type FigmaHeaderIconKind = "back" | "home" | "bell" | "menu";
-
-function FigmaHeaderIcon({ kind }: { kind: FigmaHeaderIconKind }) {
-  return (
-    <span className={`${styles.figmaHeaderIcon} ${styles[`figmaHeaderIcon_${kind}`]}`} aria-hidden="true">
-      <Image src="/diagnosis/result-detail/header-group.svg" alt="" width={361} height={22} unoptimized />
-    </span>
   );
 }
 
@@ -440,24 +402,6 @@ function RecommendedPosting({ posting }: { posting: DiagnosisResultDetailRespons
       </div>
       <div className={styles.postingMeta}><time>{posting.applicationEndAt ? `~ ${formatPostingDate(posting.applicationEndAt)}` : "상시 채용"}</time><b className={ddayClass}>{posting.dday}</b><i aria-hidden="true"><Image src="/diagnosis/result-detail/bookmark.svg" alt="" width={25} height={25} /></i></div>
     </Link>
-  );
-}
-
-function ResultFooter() {
-  return (
-    <footer className={styles.footer}>
-      <Link href="/"><Image src="/diagnosis/result-detail/footer-home.svg" alt="" width={25} height={26} /><span>홈</span></Link>
-      <Link href="#"><Image src="/diagnosis/result-detail/footer-calendar.svg" alt="" width={24} height={26} /><span>캘린더</span></Link>
-      <Link href="/ai-tools/diagnosis" className={styles.active}>
-        <span className={styles.footerIconWrap}>
-          <Image src="/diagnosis/result-detail/footer-ai.svg" alt="" width={27} height={27} />
-          <b className={styles.footerBest}>BEST</b>
-        </span>
-        <span>AI 도구</span>
-      </Link>
-      <Link href="#"><Image src="/diagnosis/result-detail/footer-community.svg" alt="" width={28} height={24} /><span>커뮤니티</span></Link>
-      <Link href="#"><Image src="/diagnosis/result-detail/footer-my.svg" alt="" width={28} height={25} /><span>MY</span></Link>
-    </footer>
   );
 }
 

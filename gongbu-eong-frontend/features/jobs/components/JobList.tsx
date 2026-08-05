@@ -64,6 +64,7 @@ export function JobList({
   const [draftFilters, setDraftFilters] = useState<Filters>(scopedFilters);
   const [monthlyRegularOnly, setMonthlyRegularOnly] = useState(scope === "monthly-regular");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
@@ -197,7 +198,7 @@ export function JobList({
               <input value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="공공·기관 검색" />
               <button type="submit" aria-label="검색"><SearchIcon /></button>
             </label>
-            <button type="button" className={styles.filterButton} onClick={() => { setDraftFilters(filters); setFilterOpen(true); }}>
+            <button type="button" className={styles.filterButton} onClick={() => { setDraftFilters(filters); setDatePickerOpen(false); setFilterOpen(true); }}>
               <FilterIcon /> 필터{activeFilterCount ? ` ${activeFilterCount}` : ""}
             </button>
           </form>
@@ -269,12 +270,12 @@ export function JobList({
             <div className={styles.sheetHandle} />
             <header><h2>상세 필터</h2><button onClick={() => setDraftFilters(EMPTY_FILTERS)}>초기화</button></header>
             <FilterField label="등록일">
-              <div className={styles.dateRow}>
-                <input type="date" value={draftFilters.startDate} onChange={(e) => setDraftFilters({ ...draftFilters, startDate: e.target.value })} />
-                <span>~</span>
-                <input type="date" value={draftFilters.endDate} onChange={(e) => setDraftFilters({ ...draftFilters, endDate: e.target.value })} />
-                <CalendarFilterIcon />
-              </div>
+              <DateRangeField
+                open={datePickerOpen}
+                value={draftFilters}
+                onToggle={() => setDatePickerOpen((current) => !current)}
+                onChange={(next) => setDraftFilters({ ...draftFilters, ...next })}
+              />
             </FilterField>
             <SelectField label="채용분야(표준직무 NCS)" value={draftFilters.ncs} options={NCS_OPTIONS} onChange={(ncs) => setDraftFilters({ ...draftFilters, ncs })} />
             <SelectField label="근무지" value={draftFilters.region} options={REGIONS} onChange={(region) => setDraftFilters({ ...draftFilters, region })} />
@@ -284,6 +285,7 @@ export function JobList({
             <button className={styles.applyFilter} onClick={() => {
               setFilters(draftFilters);
               if (draftFilters.employmentType !== "정규직") setMonthlyRegularOnly(false);
+              setDatePickerOpen(false);
               setFilterOpen(false);
             }}>공고 보기</button>
           </section>
@@ -307,6 +309,42 @@ function SelectField({ label, value, options, onChange }: { label: string; value
         <ChevronIcon />
       </span>
     </FilterField>
+  );
+}
+function DateRangeField({
+  open,
+  value,
+  onToggle,
+  onChange,
+}: {
+  open: boolean;
+  value: Pick<Filters, "startDate" | "endDate">;
+  onToggle: () => void;
+  onChange: (value: Partial<Pick<Filters, "startDate" | "endDate">>) => void;
+}) {
+  const displayValue = value.startDate || value.endDate
+    ? `${value.startDate || "YYYY-MM-DD"} ~ ${value.endDate || "YYYY-MM-DD"}`
+    : "YYYY-MM-DD ~ YYYY-MM-DD";
+
+  return (
+    <div className={styles.datePickerWrap}>
+      <button type="button" className={styles.dateRangeButton} onClick={onToggle}>
+        <span>{displayValue}</span>
+        <CalendarFilterIcon />
+      </button>
+      {open ? (
+        <div className={styles.datePickerPanel}>
+          <label>
+            <span>시작일</span>
+            <input type="date" value={value.startDate} onChange={(event) => onChange({ startDate: event.target.value })} />
+          </label>
+          <label>
+            <span>종료일</span>
+            <input type="date" value={value.endDate} onChange={(event) => onChange({ endDate: event.target.value })} />
+          </label>
+        </div>
+      ) : null}
+    </div>
   );
 }
 function toEndDate(value: string | null) {

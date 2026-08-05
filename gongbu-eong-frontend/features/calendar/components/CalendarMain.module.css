@@ -1,0 +1,677 @@
+.page {
+  width: 100%;
+  min-height: 100dvh;
+  background: #eef3fb;
+}
+
+.frame {
+  width: 100%;
+  max-width: 37.5rem;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: #fff;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3rem;
+  padding: 0 1rem;
+  background: #fff;
+}
+
+.leftActions,
+.rightActions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.topBar a,
+.topBar button {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  background: transparent;
+  color: #1a2233;
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.topBar svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.content {
+  padding: 0.75rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+}
+
+.pageTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.9rem;
+  color: #1a2233;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.pageTitle svg {
+  width: 1.55rem;
+  height: 1.55rem;
+}
+
+.scopeTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 1.05rem;
+}
+
+.scopeTabs button {
+  height: 3.125rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #e9edf5;
+  color: #5a6580;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 900;
+}
+
+.scopeTabs .activeTab {
+  background: #2f7ff0;
+  color: #fff;
+}
+
+.monthModeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.monthNavigator {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  color: #1a2233;
+}
+
+.monthNavigator strong {
+  color: #1a2233;
+  font-size: 1.05rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.monthNavigator button,
+.dateStrip > button,
+.weekSelector > button {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.8rem;
+  border: 0;
+  background: transparent;
+  color: #8d98ad;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.monthNavigator button:disabled,
+.dateStrip > button:disabled,
+.weekSelector > button:disabled {
+  opacity: 0.35;
+}
+
+.modeTabs {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.modeTabs button {
+  height: 2.5rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: #f3f6fb;
+  color: #5a6580;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 900;
+}
+
+.modeTabs .activeMode {
+  background: #111827;
+  color: #fff;
+}
+
+.dateStrip {
+  display: grid;
+  grid-template-columns: 1.25rem repeat(7, minmax(0, 1fr)) 1.25rem;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.dateButton {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+  justify-self: center;
+  min-width: 0;
+  width: 2.625rem;
+  height: 3.65rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: #1a2233;
+  font-family: inherit;
+}
+
+.dateButton span {
+  color: #9aa4b8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dateButton.sunday span,
+.dateButton.sunday strong,
+.monthWeekdays span:first-child,
+.monthDay.sunday {
+  color: #ff5252;
+}
+
+.dateButton.saturday span,
+.dateButton.saturday strong,
+.monthWeekdays span:last-child,
+.monthDay.saturday {
+  color: #2f7ff0;
+}
+
+.dateButton strong {
+  color: #1a2233;
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dateButton i,
+.monthDay i {
+  width: 0.28rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.dateButton.selectedDate {
+  background: #2f7ff0;
+  color: #fff;
+}
+
+.dateButton.selectedDate span,
+.dateButton.selectedDate strong {
+  color: #fff;
+}
+
+.weekSelector {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) 1.25rem;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.9rem 0 1.1rem;
+}
+
+.weekSelector > div {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.weekSelector > div::-webkit-scrollbar {
+  display: none;
+}
+
+.weekSelector > div button {
+  flex: 0 0 auto;
+  min-width: 4.2rem;
+  height: 3.5rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: #1a2233;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 800;
+}
+
+.weekSelector > div .selectedWeek {
+  background: #2f7ff0;
+  color: #fff;
+}
+
+.scheduleTitle,
+.weekRangeTitle,
+.todayTitle {
+  margin: 0 0 0.75rem;
+  color: #1a2233;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.scheduleTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.scheduleTitle span,
+.todayTitle small {
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.todayTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.todayTitle span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.55rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  background: #2f7ff0;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.filterWrap {
+  position: relative;
+  z-index: 5;
+  margin-bottom: 0.85rem;
+}
+
+.filterRow {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.filterRow::-webkit-scrollbar {
+  display: none;
+}
+
+.filterControl {
+  flex: 0 0 auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.filterControl::after {
+  content: "▼";
+  position: absolute;
+  top: 50%;
+  right: 0.48rem;
+  color: #5a6580;
+  font-size: 0.75rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.filterControlOpen::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.filterControl select {
+  appearance: none;
+  height: 2.125rem;
+  padding: 0 1.45rem 0 0.65rem;
+  border: 1px solid #dce3ef;
+  border-radius: 0.35rem;
+  background: #fff;
+  color: #5a6580;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+
+.activeFilterControl select {
+  border-color: #2f7ff0;
+  color: #2f7ff0;
+}
+
+.regionPanel {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid #dce3ef;
+  border-radius: 0.55rem;
+  background: #fff;
+  box-shadow: 0 0.75rem 1.75rem rgba(26, 34, 51, 0.14);
+}
+
+.regionGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  column-gap: 0.7rem;
+  row-gap: 0.2rem;
+}
+
+.regionOption {
+  height: 2.25rem;
+  border: 0;
+  background: transparent;
+  color: #5a6580;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.allRegionOption {
+  width: 100%;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px solid #edf1f7;
+  color: #1a2233;
+  font-weight: 900;
+}
+
+.selectedRegionOption {
+  color: #2f7ff0;
+  font-weight: 900;
+}
+
+.loading {
+  margin: 1rem 0 0;
+  padding: 3rem 1rem;
+  border-radius: 0.75rem;
+  background: #f4f7fb;
+  color: #5a6580;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.jobCards {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.jobCard {
+  display: grid;
+  grid-template-columns: 2.875rem minmax(0, 1fr) 1.6rem;
+  align-items: start;
+  gap: 0.75rem;
+  min-height: 7.125rem;
+  padding: 1rem;
+  border: 1px solid #dce3ef;
+  border-radius: 0.625rem;
+  background: #fff;
+  color: #1a2233;
+  text-decoration: none;
+}
+
+.jobCopy {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.company {
+  overflow: hidden;
+  color: #5a6580;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobCard strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #1a2233;
+  font-size: 0.925rem;
+  font-weight: 900;
+  line-height: 1.32;
+  text-overflow: ellipsis;
+  word-break: keep-all;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  color: #c5cedd;
+}
+
+.tags small {
+  color: #9aa4b8;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.tags i {
+  width: 1px;
+  height: 0.75rem;
+  background: #dce3ef;
+}
+
+.tags em {
+  display: inline-flex;
+  align-items: center;
+  height: 1.25rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  background: #fff3cf;
+  color: #f3a500;
+  font-size: 0.6875rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.dday {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.875rem;
+  height: 2.875rem;
+  border-radius: 0.35rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 900;
+}
+
+.normal {
+  background: #21bf75;
+}
+
+.near {
+  background: #2f7ff0;
+}
+
+.urgent {
+  background: #ef4e4e;
+}
+
+.eventStart {
+  background: #21bf75;
+}
+
+.eventEnd {
+  background: #ef4e4e;
+}
+
+.starIcon {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #dce3ef;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.starActive {
+  color: #f5b91e;
+}
+
+.emptyState {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  padding: 2.5rem 1rem;
+  border-radius: 0.75rem;
+  background: #f4f7fb;
+  text-align: center;
+}
+
+.emptyState strong {
+  color: #1a2233;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.emptyState p {
+  margin: 0;
+  color: #7b8497;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.emptyState a {
+  justify-self: center;
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  background: #2f7ff0;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 900;
+}
+
+.monthCalendar {
+  margin-top: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.monthWeekdays,
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.monthWeekdays {
+  margin-bottom: 0.65rem;
+}
+
+.monthWeekdays span {
+  color: #9aa4b8;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.monthGrid {
+  row-gap: 0.45rem;
+}
+
+.monthDay {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.25rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: #1a2233;
+  font-family: inherit;
+}
+
+.monthDay span {
+  color: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.otherMonthDay {
+  color: #c5cedd;
+}
+
+.selectedMonthDay {
+  background: #2f7ff0;
+  color: #fff;
+}
+
+.groupedJobs {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.dayJobSection {
+  display: grid;
+  gap: 0.625rem;
+}
+
+@media (max-width: 420px) {
+  .content {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .scopeTabs button {
+    height: 3rem;
+  }
+
+  .modeTabs button {
+    padding: 0 0.85rem;
+  }
+
+  .dateStrip {
+    grid-template-columns: 1rem repeat(7, minmax(0, 1fr)) 1rem;
+  }
+
+  .jobCard {
+    grid-template-columns: 2.8rem minmax(0, 1fr) 1.45rem;
+    gap: 0.65rem;
+    padding: 0.95rem 0.9rem;
+  }
+
+  .regionGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

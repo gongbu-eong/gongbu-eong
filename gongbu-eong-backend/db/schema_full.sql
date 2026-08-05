@@ -137,6 +137,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   display_name VARCHAR(100),
   phone VARCHAR(30),
   avatar_url TEXT,
+  selected_diagnosis_result_id UUID,
   status public.user_status NOT NULL DEFAULT 'active',
   last_login_at TIMESTAMPTZ,
   withdrawn_at TIMESTAMPTZ,
@@ -463,6 +464,19 @@ CREATE TABLE IF NOT EXISTS public.diagnosis_login_conversions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (diagnosis_run_id, user_id, provider)
 );
+
+DO $$
+BEGIN
+  ALTER TABLE public.users
+    ADD CONSTRAINT users_selected_diagnosis_result_id_fkey
+    FOREIGN KEY (selected_diagnosis_result_id)
+    REFERENCES public.diagnosis_results(id)
+    ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_users_selected_diagnosis_result_id
+  ON public.users(selected_diagnosis_result_id);
 
 CREATE TABLE IF NOT EXISTS public.diagnosis_recommended_job_postings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

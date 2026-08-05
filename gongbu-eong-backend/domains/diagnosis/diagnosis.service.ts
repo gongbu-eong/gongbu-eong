@@ -17,6 +17,7 @@ import {
   findDiagnosisResultForUser,
   findDiagnosisResultHistory,
   findDiagnosisPercentile,
+  selectDiagnosisResultForUser,
   countPreviousDiagnosisResults,
   findRecommendedInstitutions,
   findMonthlyHiringByPersonalityType,
@@ -299,6 +300,7 @@ export async function getDiagnosisResultDetail(
         view: "recommended",
         userId,
         diagnosisResultId: result.result_id,
+        monthlyRegularOnly: true,
         limit: 3,
         offset: 0,
       }),
@@ -361,6 +363,15 @@ export async function getDiagnosisResultHistory(args: {
     })),
     nextCursor: hasNext ? items.at(-1)?.result_id || null : null,
   };
+}
+
+export async function setSelectedDiagnosisResult(args: {
+  userId: string;
+  resultId: string;
+}) {
+  const selected = await selectDiagnosisResultForUser(args.userId, args.resultId);
+
+  return Boolean(selected);
 }
 
 async function toDiagnosisResultResponse(

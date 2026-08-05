@@ -13,11 +13,12 @@
   min-height: 100dvh;
   background: #ffffff;
   overflow: hidden;
-  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  word-break: keep-all;
 }
 
 .header {
-  height: 48px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -69,15 +70,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 48px;
-  margin: 16px 16px 0;
+  height: 42px;
+  margin: 10px 16px 0;
   padding: 0 13px 0 24px;
   border: 1px solid #2f7ff0;
   border-radius: 999px;
   background: #ffffff;
   color: #9aa4b8;
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 
@@ -88,22 +89,31 @@
 
 .resultBanner {
   position: relative;
-  height: 192px;
-  margin: 16px 16px 28px;
-  padding: 32px 24px 0;
+  height: 174px;
+  margin: 12px 16px 32px;
+  padding: 29px 20px 0;
   border-radius: 10px;
-  background: #2f7ff0;
+  background: #1f53a2;
   color: #ffffff;
   overflow: hidden;
 }
+
+.resultBannerStability { background: #1f53a2; }
+.resultBannerChallenge { background: #f5a623; }
+.resultBannerTeamwork { background: #a454e8; }
+.resultBannerIndividual { background: #e85458; }
+.resultBannerExecution { background: #55c547; }
+.resultBannerPlanning { background: #708498; }
+.resultBannerPrinciple { background: #bd895e; }
+.resultBannerFlexibility { background: #0d8190; }
 
 .resultBanner p {
   position: relative;
   z-index: 1;
   width: max-content;
-  max-width: 190px;
+  max-width: 184px;
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   line-height: 1.25;
   font-weight: 700;
   white-space: nowrap;
@@ -114,15 +124,9 @@
 }
 
 .resultBanner .resultEyebrow {
-  display: grid;
-  gap: 1px;
-  width: max-content;
-  max-width: 52%;
-  white-space: normal;
-}
-
-.resultBanner .resultEyebrow span {
   display: block;
+  width: auto;
+  max-width: 54%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -131,7 +135,7 @@
 .resultBanner .resultLoginMessage {
   max-width: 112px;
   color: #ffffff;
-  font-size: 1.0625rem;
+  font-size: 1rem;
   line-height: 1.193;
   font-weight: 700;
   white-space: normal;
@@ -141,10 +145,10 @@
   position: relative;
   z-index: 1;
   display: block;
-  width: 185px;
-  margin-top: 3px;
+  width: 180px;
+  margin-top: 4px;
   color: #ffffff;
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   line-height: 1.2;
   font-weight: 900;
 }
@@ -152,19 +156,19 @@
 .resultLink {
   position: absolute;
   z-index: 1;
-  left: 24px;
-  bottom: 51px;
+  left: 20px;
+  bottom: 43px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 124px;
-  height: 28px;
+  width: 118px;
+  height: 27px;
   padding: 0;
   border-radius: 7px;
   background: #f5b91e;
   color: #111827;
   text-decoration: none;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 800;
   gap: 6px;
   line-height: 1;
@@ -182,28 +186,28 @@
 }
 
 .loggedOutResultBanner {
-  padding-top: 54px;
+  padding-top: 49px;
   background: #328efa;
 }
 
 .loggedOutResultBanner .resultLink {
-  left: 24px;
-  bottom: 54px;
-  width: 110px;
-  height: 28px;
+  left: 20px;
+  bottom: 43px;
+  width: 114px;
+  height: 29px;
   border: 1px solid #ffffff;
   border-radius: 7px;
   background: transparent;
   color: #ffffff;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
 }
 
 .loggedOutResultOwl {
   position: absolute;
-  right: 24px;
-  top: 31px;
-  width: 133px;
-  height: 130px;
+  right: 22px;
+  top: 23px;
+  width: 132px;
+  height: 132px;
   object-fit: cover;
   object-position: center;
   pointer-events: none;
@@ -267,7 +271,7 @@
 }
 
 .resultBanner + .sectionHeader {
-  padding-bottom: 20px;
+  padding-bottom: 12px;
 }
 
 .sectionHeader h2 {
@@ -275,20 +279,20 @@
   align-items: center;
   gap: 3px;
   margin: 0;
-  font-size: 1.0625rem;
+  font-size: 1rem;
   line-height: 1.2;
   font-weight: 900;
 }
 
 .sectionHeader h2 span {
-  font-size: 1.0625rem;
+  font-size: 1rem;
   line-height: 1;
 }
 
 .sectionHeader a {
   color: #5a6580;
   text-decoration: none;
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   line-height: 1;
   font-weight: 400;
 }
@@ -325,9 +329,9 @@
 }
 
 .hotCard {
-  flex: 0 0 159px;
-  height: 118px;
-  padding: 15px;
+  flex: 0 0 143px;
+  height: 104px;
+  padding: 12px;
   border: 1px solid #e4e8ef;
   border-radius: 10px;
   background: #ffffff;
@@ -337,13 +341,18 @@
 .hotBadge {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  padding: 0 8px;
+  height: 20px;
+  padding: 0 7px;
   border-radius: 999px;
   background: #d3f3e5;
   color: #1fb573;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 900;
+}
+
+.hotBadgeUrgent {
+  background: #ffe1e1;
+  color: #ff5252;
 }
 
 .hotCard strong,
@@ -357,27 +366,27 @@
 
 .hotCard strong {
   display: -webkit-box;
-  min-height: 2.6em;
-  margin-top: 8px;
+  min-height: 2.5em;
+  margin-top: 7px;
   overflow: hidden;
-  font-size: 0.875rem;
-  line-height: 1.3;
+  font-size: 0.75rem;
+  line-height: 1.25;
   text-overflow: ellipsis;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
 .hotCard small {
-  margin-top: 6px;
+  margin-top: 5px;
   color: #5a6580;
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .hotList + .sectionHeader {
-  padding-top: 38px;
+  padding-top: 34px;
   padding-bottom: 10px;
 }
 
@@ -399,8 +408,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 113px;
-  padding: 16px 15px;
+  height: 104px;
+  padding: 14px 15px;
   border: 1px solid #e4e8ef;
   border-radius: 10px;
   background: #f5f7fa;
@@ -419,34 +428,34 @@
 .toolCopy em {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  margin-bottom: 13px;
-  padding: 0 12px;
+  height: 20px;
+  margin-bottom: 9px;
+  padding: 0 10px;
   border-radius: 999px;
   background: #2f7ff0;
   color: #ffffff;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-style: normal;
   font-weight: 900;
 }
 
 .toolCard strong {
-  font-size: 1.0625rem;
+  font-size: 0.9375rem;
   line-height: 1.25;
 }
 
 .toolCard small {
-  margin-top: 7px;
+  margin-top: 5px;
   color: #5a6580;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   line-height: 1.4;
 }
 
 .toolThumb {
   position: relative;
-  flex: 0 0 86px;
-  width: 86px;
-  height: 78px;
+  flex: 0 0 80px;
+  width: 80px;
+  height: 72px;
   border-radius: 14px;
   overflow: hidden;
 }
@@ -475,7 +484,7 @@
 }
 
 .contentBand {
-  margin-top: 46px;
+  margin-top: 36px;
   padding: 24px 0 48px;
   background: #f5f7fa;
 }
@@ -577,6 +586,11 @@
   font-weight: 900;
 }
 
+.recommendDdayUrgent {
+  background: #ffeded;
+  color: #ef4d4d;
+}
+
 .recommendTags {
   display: flex;
   gap: 5px;
@@ -664,7 +678,7 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   width: min(600px, 100%);
-  height: calc(80px + env(safe-area-inset-bottom));
+  height: calc(72px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   border-top: 1px solid #e4e8ef;
   background: #ffffff;
@@ -677,10 +691,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.4035rem;
+  gap: 0.25rem;
   color: #5a6580;
   text-decoration: none;
-  font-size: 0.8125rem;
+  font-size: 0.6875rem;
   line-height: 1rem;
   font-weight: 400;
 }
@@ -742,13 +756,11 @@
 .menuOverlay {
   position: fixed;
   inset: 0;
-  left: 50%;
-  z-index: 100;
-  width: min(600px, 100%);
+  z-index: 5000;
+  width: 100vw;
   height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
-  transform: translateX(-50%);
 }
 
 .menuDim {
@@ -763,8 +775,8 @@
 .drawer {
   position: absolute;
   top: 0;
-  right: 0;
-  width: 79.9%;
+  right: max(0px, calc((100vw - 600px) / 2));
+  width: min(79.9vw, 479.4px);
   height: 100dvh;
   display: flex;
   flex-direction: column;

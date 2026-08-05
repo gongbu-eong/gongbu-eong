@@ -11,6 +11,13 @@
   overflow-y: auto;
   background:
     linear-gradient(180deg, #c7f2ff 0%, #e0f6ff 44%, #f5d9ef 100%);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.page::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .resultPage {
@@ -18,7 +25,57 @@
 }
 
 .questionPage {
-  background: #ffffff;
+  height: 100vh;
+  height: 100svh;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #c7f2ff 0%, #e0f6ff 44%, #f5d9ef 100%);
+}
+
+.embeddedIntro {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  background: transparent;
+}
+
+.authenticatedIntroPage {
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  background:
+    linear-gradient(180deg, #c7f2ff 0%, #e0f6ff 44%, #f5d9ef 100%);
+  overflow-x: hidden;
+}
+
+.authenticatedIntroShell {
+  position: relative;
+  width: 100%;
+  max-width: var(--gb-container-pc);
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  background:
+    linear-gradient(180deg, #c7f2ff 0%, #e0f6ff 44%, #f5d9ef 100%);
+  overflow-x: hidden;
+}
+
+.authenticatedIntroContent {
+  width: 100%;
+  background:
+    linear-gradient(180deg, #c7f2ff 0%, #e0f6ff 44%, #f5d9ef 100%);
+}
+
+.authenticatedIntroContent .landing {
+  width: 100%;
+  max-width: var(--gb-container-pc);
+  margin: 0 auto;
 }
 
 .landing {

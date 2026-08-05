@@ -135,8 +135,28 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--gb-font-sans);
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 * {
   box-sizing: border-box;
+}
+
+p,
+li,
+dt,
+dd,
+span,
+strong,
+small,
+a,
+button,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  word-break: keep-all;
 }

@@ -65,6 +65,8 @@ export async function findLatestDiagnosisType(userId: string) {
         ON runs.id = results.diagnosis_run_id
       JOIN public.personality_types personality_types
         ON personality_types.id = results.personality_type_id
+      JOIN public.users users
+        ON users.id = $1
       WHERE results.user_id = $1
          OR runs.user_id = $1
          OR EXISTS (
@@ -74,6 +76,7 @@ export async function findLatestDiagnosisType(userId: string) {
              AND conversions.user_id = $1
          )
       ORDER BY
+        (results.id = users.selected_diagnosis_result_id) DESC,
         runs.completed_at DESC NULLS LAST,
         results.created_at DESC,
         results.id DESC
@@ -123,6 +126,7 @@ export async function findHotJobPostings(limit: number, userId?: string) {
         postings.id,
         COALESCE(institutions.name, postings.raw_payload->'list'->>'instNm', '기관 미정') AS institution_name,
         postings.title,
+        postings.application_start_at,
         postings.application_end_at,
         postings.employment_type,
         postings.work_region,
@@ -193,26 +197,40 @@ export async function findRecommendedJobPostings(
           postings.created_at
         ) < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
         AND COALESCE(postings.application_end_at, 'infinity'::timestamptz)
-          >= DATE_TRUNC('month', CURRENT_DATE)
-        AND categories.id IN (
-          SELECT scoped_mappings.job_category_id
-          FROM public.personality_job_category_mappings scoped_mappings
-          JOIN public.personality_types scoped_types
-            ON scoped_types.id = scoped_mappings.personality_type_id
-          JOIN public.job_categories scoped_categories
-            ON scoped_categories.id = scoped_mappings.job_category_id
-          WHERE scoped_types.code = $1
-            AND scoped_categories.is_active = TRUE
-          ORDER BY scoped_mappings.fit_weight DESC, scoped_mappings.sort_order ASC
-          LIMIT 6
-        )`
+          >= DATE_TRUNC('month', CURRENT_DATE)`
     : "";
   const result = await query<JobPostingRow & { total_count: string }>(
     `
+      WITH mapped_categories AS (
+        SELECT categories.name, mappings.fit_weight, mappings.sort_order
+        FROM public.personality_job_category_mappings mappings
+        JOIN public.personality_types personality_types
+          ON personality_types.id = mappings.personality_type_id
+        JOIN public.job_categories categories
+          ON categories.id = mappings.job_category_id
+        WHERE personality_types.code = $1
+          AND categories.is_active = TRUE
+        ORDER BY mappings.fit_weight DESC, mappings.sort_order ASC
+        LIMIT 6
+      ),
+      matched_categories AS (
+        SELECT
+          postings.id AS job_posting_id,
+          mapped_categories.name,
+          mapped_categories.fit_weight,
+          mapped_categories.sort_order
+        FROM public.job_postings postings
+        JOIN mapped_categories
+          ON POSITION(
+            REGEXP_REPLACE(mapped_categories.name, '[[:space:]·.]', '', 'g')
+            IN REGEXP_REPLACE(COALESCE(postings.ncs_category, ''), '[[:space:]·.]', '', 'g')
+          ) > 0
+      )
       SELECT
         postings.id,
         COALESCE(institutions.name, postings.raw_payload->'list'->>'instNm', '기관 미정') AS institution_name,
         postings.title,
+        postings.application_start_at,
         postings.application_end_at,
         postings.employment_type,
         postings.work_region,
@@ -232,22 +250,14 @@ export async function findRecommendedJobPostings(
               AND bookmarks.job_posting_id = postings.id
           )
         ) AS is_bookmarked,
-        array_agg(DISTINCT categories.name ORDER BY categories.name) AS categories,
-        MAX(mappings.fit_weight)::integer AS match_score
+        array_agg(DISTINCT matched_categories.name ORDER BY matched_categories.name) AS categories,
+        MAX(matched_categories.fit_weight)::integer AS match_score
       FROM public.job_postings postings
-      JOIN public.job_posting_categories posting_categories
-        ON posting_categories.job_posting_id = postings.id
-      JOIN public.job_categories categories
-        ON categories.id = posting_categories.job_category_id
-      JOIN public.personality_job_category_mappings mappings
-        ON mappings.job_category_id = categories.id
-      JOIN public.personality_types personality_types
-        ON personality_types.id = mappings.personality_type_id
-       AND personality_types.code = $1
+      JOIN matched_categories
+        ON matched_categories.job_posting_id = postings.id
       LEFT JOIN public.public_institutions institutions
         ON institutions.id = postings.institution_id
       WHERE postings.is_active = TRUE
-        AND categories.is_active = TRUE
         AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
         ${monthlyRegularFilter}
       GROUP BY postings.id, institutions.name
@@ -260,7 +270,7 @@ export async function findRecommendedJobPostings(
           ELSE 1
         END,
         postings.view_count DESC,
-        MAX(mappings.fit_weight) DESC,
+        MAX(matched_categories.fit_weight) DESC,
         postings.created_at DESC
       LIMIT $2
       OFFSET $4
@@ -403,6 +413,86 @@ export async function findJobPostings(args: {
       OFFSET ${offsetParam}
     `,
     values,
+  );
+
+  return {
+    rows: result.rows,
+    total: Number(result.rows[0]?.total_count || 0),
+  };
+}
+
+export async function findCalendarJobPostings(args: {
+  startDate: string;
+  endDate: string;
+  userId?: string;
+  bookmarkedOnly?: boolean;
+  limit?: number;
+}) {
+  const limit = Math.min(Math.max(args.limit || 500, 1), 1000);
+  const bookmarkFilter = args.bookmarkedOnly
+    ? `AND $1::uuid IS NOT NULL
+       AND EXISTS (
+         SELECT 1
+         FROM public.user_job_bookmarks filter_bookmarks
+         WHERE filter_bookmarks.user_id = $1::uuid
+           AND filter_bookmarks.job_posting_id = postings.id
+       )`
+    : "";
+
+  const result = await query<JobPostingRow & { total_count: string }>(
+    `
+      SELECT
+        postings.id,
+        COALESCE(institutions.name, postings.raw_payload->'list'->>'instNm', '기관 미정') AS institution_name,
+        postings.title,
+        postings.application_start_at,
+        postings.application_end_at,
+        postings.employment_type,
+        postings.work_region,
+        postings.career_requirement,
+        postings.apply_url,
+        postings.ncs_category,
+        postings.education_requirement,
+        postings.hiring_count,
+        postings.is_active,
+        (
+          $1::uuid IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM public.user_job_bookmarks bookmarks
+            WHERE bookmarks.user_id = $1::uuid
+              AND bookmarks.job_posting_id = postings.id
+          )
+        ) AS is_bookmarked,
+        COALESCE(
+          array_agg(DISTINCT categories.name ORDER BY categories.name)
+            FILTER (WHERE categories.id IS NOT NULL),
+          ARRAY[]::text[]
+        ) AS categories,
+        COUNT(*) OVER() AS total_count
+      FROM public.job_postings postings
+      LEFT JOIN public.public_institutions institutions
+        ON institutions.id = postings.institution_id
+      LEFT JOIN public.job_posting_categories posting_categories
+        ON posting_categories.job_posting_id = postings.id
+      LEFT JOIN public.job_categories categories
+        ON categories.id = posting_categories.job_category_id
+      WHERE (
+          postings.application_start_at::date BETWEEN $2::date AND $3::date
+          OR postings.application_end_at::date BETWEEN $2::date AND $3::date
+        )
+        ${bookmarkFilter}
+      GROUP BY postings.id, institutions.name
+      ORDER BY
+        LEAST(
+          COALESCE(postings.application_start_at::date, '9999-12-31'::date),
+          COALESCE(postings.application_end_at::date, '9999-12-31'::date)
+        ) ASC,
+        postings.view_count DESC,
+        postings.created_at DESC
+      LIMIT $4
+    `,
+    [args.userId || null, args.startDate, args.endDate, limit],
   );
 
   return {

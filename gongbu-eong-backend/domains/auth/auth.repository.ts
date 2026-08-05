@@ -252,6 +252,20 @@ export async function upsertOAuthUser(args: {
           args.userAgent || null,
         ],
       );
+
+      await client.query(
+        `
+          UPDATE public.users users
+          SET
+            selected_diagnosis_result_id = diagnosis_results.id,
+            updated_at = NOW()
+          FROM public.diagnosis_results diagnosis_results
+          WHERE users.id = $2
+            AND diagnosis_results.diagnosis_run_id = $1
+            AND diagnosis_results.user_id = $2
+        `,
+        [args.diagnosisRunId, userId],
+      );
     }
 
     await client.query("COMMIT");
@@ -320,6 +334,7 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
                AND conversions.user_id = users.id
            )
         ORDER BY
+          (results.id = users.selected_diagnosis_result_id) DESC,
           runs.completed_at DESC NULLS LAST,
           results.created_at DESC,
           results.id DESC

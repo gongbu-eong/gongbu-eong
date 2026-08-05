@@ -179,6 +179,8 @@ export async function findLatestDiagnosisResultForUser(userId: string) {
         ON runs.id = results.diagnosis_run_id
       JOIN public.personality_types personality_types
         ON personality_types.id = results.personality_type_id
+      JOIN public.users users
+        ON users.id = $1
       WHERE results.user_id = $1
          OR runs.user_id = $1
          OR EXISTS (
@@ -188,6 +190,7 @@ export async function findLatestDiagnosisResultForUser(userId: string) {
              AND conversions.user_id = $1
          )
       ORDER BY
+        (results.id = users.selected_diagnosis_result_id) DESC,
         runs.completed_at DESC NULLS LAST,
         results.created_at DESC,
         results.id DESC
@@ -197,6 +200,44 @@ export async function findLatestDiagnosisResultForUser(userId: string) {
   );
 
   return result.rows[0];
+}
+
+export async function selectDiagnosisResultForUser(
+  userId: string,
+  resultId: string,
+) {
+  const result = await query<{ selected_diagnosis_result_id: string }>(
+    `
+      WITH owned_result AS (
+        SELECT results.id
+        FROM public.diagnosis_results results
+        JOIN public.diagnosis_runs runs
+          ON runs.id = results.diagnosis_run_id
+        WHERE results.id = $2
+          AND (
+            results.user_id = $1
+            OR runs.user_id = $1
+            OR EXISTS (
+              SELECT 1
+              FROM public.diagnosis_login_conversions conversions
+              WHERE conversions.diagnosis_result_id = results.id
+                AND conversions.user_id = $1
+            )
+          )
+        LIMIT 1
+      )
+      UPDATE public.users users
+      SET
+        selected_diagnosis_result_id = owned_result.id,
+        updated_at = NOW()
+      FROM owned_result
+      WHERE users.id = $1
+      RETURNING users.selected_diagnosis_result_id
+    `,
+    [userId, resultId],
+  );
+
+  return result.rows[0] || null;
 }
 
 export async function findDiagnosisResultForUser(
@@ -378,6 +419,7 @@ export async function findDiagnosisPercentile(
         WHERE owners.user_id <> $3::uuid
         ORDER BY
           owners.user_id,
+          (results.id = users.selected_diagnosis_result_id) DESC,
           COALESCE(runs.completed_at, results.created_at) DESC,
           results.id DESC
       ),
@@ -460,7 +502,7 @@ export async function findRecommendedInstitutions(
   const result = await query<{ id: string; name: string }>(
     `
       WITH mapped_categories AS (
-        SELECT mappings.job_category_id
+        SELECT categories.name
         FROM public.personality_job_category_mappings mappings
         JOIN public.personality_types personality_types
           ON personality_types.id = mappings.personality_type_id
@@ -475,12 +517,29 @@ export async function findRecommendedInstitutions(
       FROM public.job_postings postings
       JOIN public.public_institutions institutions
         ON institutions.id = postings.institution_id
-      JOIN public.job_posting_categories posting_categories
-        ON posting_categories.job_posting_id = postings.id
       JOIN mapped_categories
-        ON mapped_categories.job_category_id = posting_categories.job_category_id
+        ON POSITION(
+          REGEXP_REPLACE(mapped_categories.name, '[[:space:]·.]', '', 'g')
+          IN REGEXP_REPLACE(COALESCE(postings.ncs_category, ''), '[[:space:]·.]', '', 'g')
+        ) > 0
       WHERE postings.is_active = TRUE
         AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
+        AND (
+          postings.employment_type = '정규직'
+          OR (
+            postings.employment_type ILIKE '%정규%'
+            AND postings.employment_type NOT ILIKE '%비정규%'
+          )
+        )
+        AND COALESCE(
+          postings.application_start_at,
+          postings.announcement_at,
+          postings.created_at
+        ) < DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month'
+        AND COALESCE(
+          postings.application_end_at,
+          'infinity'::timestamptz
+        ) >= DATE_TRUNC('month', CURRENT_DATE)
       GROUP BY institutions.id, institutions.name
       ORDER BY COUNT(DISTINCT postings.id) DESC, institutions.name ASC
       LIMIT $2
@@ -518,16 +577,13 @@ export async function findMonthlyHiringByPersonalityType(
           mapped_categories.id AS job_category_id,
           mapped_categories.name,
           mapped_categories.fit_weight,
-          mapped_categories.sort_order,
-          ROW_NUMBER() OVER (
-            PARTITION BY postings.id
-            ORDER BY mapped_categories.fit_weight DESC, mapped_categories.sort_order ASC
-          ) AS match_rank
+          mapped_categories.sort_order
         FROM public.job_postings postings
-        JOIN public.job_posting_categories posting_categories
-          ON posting_categories.job_posting_id = postings.id
         JOIN mapped_categories
-          ON mapped_categories.id = posting_categories.job_category_id
+          ON POSITION(
+            REGEXP_REPLACE(mapped_categories.name, '[[:space:]·.]', '', 'g')
+            IN REGEXP_REPLACE(COALESCE(postings.ncs_category, ''), '[[:space:]·.]', '', 'g')
+          ) > 0
         WHERE postings.is_active = TRUE
           AND (
             postings.application_end_at IS NULL
@@ -550,21 +606,16 @@ export async function findMonthlyHiringByPersonalityType(
             'infinity'::timestamptz
           ) >= DATE_TRUNC('month', CURRENT_DATE)
       ),
-      primary_matches AS (
-        SELECT id, job_category_id, name, fit_weight, sort_order
-        FROM matched_postings
-        WHERE match_rank = 1
-      ),
       category_counts AS (
         SELECT
           mapped_categories.id,
           mapped_categories.name,
           mapped_categories.fit_weight,
           mapped_categories.sort_order,
-          COUNT(primary_matches.id)::integer AS posting_count
+          COUNT(DISTINCT matched_postings.id)::integer AS posting_count
         FROM mapped_categories
-        LEFT JOIN primary_matches
-          ON primary_matches.job_category_id = mapped_categories.id
+        LEFT JOIN matched_postings
+          ON matched_postings.job_category_id = mapped_categories.id
         GROUP BY
           mapped_categories.id,
           mapped_categories.name,
@@ -606,7 +657,7 @@ export async function findMonthlyHiringByPersonalityType(
       SELECT
         displayed_counts.name,
         displayed_counts.posting_count,
-        (SELECT COUNT(*)::integer FROM primary_matches) AS total_count
+        (SELECT COUNT(DISTINCT id)::integer FROM matched_postings) AS total_count
       FROM displayed_counts
       ORDER BY displayed_counts.display_rank ASC
     `,
@@ -751,6 +802,19 @@ export async function createDiagnosisRunWithResult(args: {
         JSON.stringify(args.rawResult),
       ],
     );
+
+    if (args.userId) {
+      await client.query(
+        `
+          UPDATE public.users
+          SET
+            selected_diagnosis_result_id = $1,
+            updated_at = NOW()
+          WHERE id = $2
+        `,
+        [result.rows[0].id, args.userId],
+      );
+    }
 
     await client.query("COMMIT");
 

@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { MouseEvent, PointerEvent } from "react";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "../home.api";
 import type {
@@ -53,41 +54,49 @@ const resultCards = {
     names: ["안정 추구형", "안정추구형"],
     image: "/home/result-types/stability.png",
     className: styles.resultOwlStability,
+    bannerClassName: styles.resultBannerStability,
   },
   challenge: {
     names: ["도전 개척형", "도전개척형"],
     image: "/home/result-types/challenge.png",
     className: styles.resultOwlChallenge,
+    bannerClassName: styles.resultBannerChallenge,
   },
   teamwork: {
     names: ["협업 조력형", "협업조력형"],
     image: "/home/result-types/teamwork.png",
     className: styles.resultOwlTeamwork,
+    bannerClassName: styles.resultBannerTeamwork,
   },
   individual: {
     names: ["독립 몰입형", "독립몰입형"],
     image: "/home/result-types/individual.png",
     className: styles.resultOwlIndividual,
+    bannerClassName: styles.resultBannerIndividual,
   },
   execution: {
     names: ["실행 추진형", "실행추진형"],
     image: "/home/result-types/execution.png",
     className: styles.resultOwlExecution,
+    bannerClassName: styles.resultBannerExecution,
   },
   planning: {
     names: ["전략 기획형", "전략기획형"],
     image: "/home/result-types/planning.png",
     className: styles.resultOwlPlanning,
+    bannerClassName: styles.resultBannerPlanning,
   },
   principle: {
     names: ["정밀 관리형", "정밀관리형"],
     image: "/home/result-types/principle.png",
     className: styles.resultOwlPrinciple,
+    bannerClassName: styles.resultBannerPrinciple,
   },
   flexibility: {
     names: ["유연 대응형", "유연대응형"],
     image: "/home/result-types/flexibility.png",
     className: styles.resultOwlFlexibility,
+    bannerClassName: styles.resultBannerFlexibility,
   },
 } as const;
 
@@ -195,34 +204,55 @@ export function HomeMain({
           card.names.some((name) => diagnosisTypeName.includes(name)),
         )) ?? resultCards.stability;
 
-  const startHotDrag = (event: PointerEvent<HTMLDivElement>) => {
-    const target = hotListRef.current;
-    if (!target) return;
+const DRAG_THRESHOLD = 10;
 
-    dragRef.current = {
-      isDown: true,
-      startX: event.clientX,
-      scrollLeft: target.scrollLeft,
-    };
-    draggedRef.current = false;
+const startHotDrag = (event: PointerEvent<HTMLDivElement>) => {
+  // 모바일 터치는 브라우저 기본 스크롤 사용
+  if (event.pointerType !== "mouse") return;
+
+  const target = hotListRef.current;
+  if (!target) return;
+
+  dragRef.current = {
+    isDown: true,
+    startX: event.clientX,
+    scrollLeft: target.scrollLeft,
+  };
+
+  draggedRef.current = false;
+};
+
+const moveHotDrag = (event: PointerEvent<HTMLDivElement>) => {
+  if (event.pointerType !== "mouse") return;
+
+  const target = hotListRef.current;
+  if (!target || !dragRef.current.isDown) return;
+
+  const distance = event.clientX - dragRef.current.startX;
+
+  if (
+    !draggedRef.current &&
+    Math.abs(distance) > DRAG_THRESHOLD
+  ) {
+    draggedRef.current = true;
     target.setPointerCapture(event.pointerId);
-  };
+  }
 
-  const moveHotDrag = (event: PointerEvent<HTMLDivElement>) => {
-    const target = hotListRef.current;
-    if (!target || !dragRef.current.isDown) return;
+  if (!draggedRef.current) return;
 
-    const distance = event.clientX - dragRef.current.startX;
-    if (Math.abs(distance) > 4) {
-      draggedRef.current = true;
-      event.preventDefault();
-    }
-    target.scrollLeft = dragRef.current.scrollLeft - distance;
-  };
+  event.preventDefault();
+  target.scrollLeft = dragRef.current.scrollLeft - distance;
+};
 
-  const endHotDrag = () => {
-    dragRef.current.isDown = false;
-  };
+const endHotDrag = (event: PointerEvent<HTMLDivElement>) => {
+  const target = hotListRef.current;
+
+  if (target?.hasPointerCapture(event.pointerId)) {
+    target.releasePointerCapture(event.pointerId);
+  }
+
+  dragRef.current.isDown = false;
+};
 
   const closeMenu = () => {
     setIsMenuOpen(false);
@@ -247,15 +277,17 @@ export function HomeMain({
     }
   };
 
-  const ignoreClickAfterDrag = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (!draggedRef.current) return;
+const ignoreClickAfterDrag = (
+  event: MouseEvent<HTMLAnchorElement>,
+) => {
+  if (!draggedRef.current) return;
 
-    event.preventDefault();
-    event.stopPropagation();
-    window.setTimeout(() => {
-      draggedRef.current = false;
-    }, 0);
-  };
+  event.preventDefault();
+  event.stopPropagation();
+
+  // 드래그 직후 발생하는 클릭만 차단
+  draggedRef.current = false;
+};
 
   return (
     <main className={styles.page}>
@@ -288,14 +320,13 @@ export function HomeMain({
 
           <section
             className={`${styles.resultBanner} ${
-              user ? "" : styles.loggedOutResultBanner
+              user ? resultCard.bannerClassName : styles.loggedOutResultBanner
             }`}
           >
             {user ? (
               <>
                 <p className={styles.resultEyebrow}>
-                  <span>{nickname}님의</span>
-                  <span>강점·성향 진단 결과</span>
+                  {nickname}님의 진단 결과
                 </p>
                 <strong>{diagnosisTypeName}</strong>
               </>
@@ -336,7 +367,7 @@ export function HomeMain({
             )}
           </section>
 
-        <SectionHeader icon="🔥" title="Hot 공고" href="/jobs" />
+        <SectionHrefNoneHeader icon="🔥" title="Hot 공고" />
         <div
           ref={hotListRef}
           className={styles.hotList}
@@ -346,18 +377,20 @@ export function HomeMain({
           onPointerCancel={endHotDrag}
           onPointerLeave={endHotDrag}
         >
-          {jobs.hotJobs.map((job) => (
-            <Link
-              href={`/jobs/${job.id}`}
-              key={job.id}
-              className={styles.hotCard}
-              onClickCapture={ignoreClickAfterDrag}
-            >
-              <span className={styles.hotBadge}>{job.dday}</span>
-              <strong>{job.title}</strong>
-              <small>{toJobMeta(job)}</small>
-            </Link>
-          ))}
+        {jobs.hotJobs.map((job) => (
+          <Link
+            href={`/jobs/${job.id}`}
+            key={job.id}
+            className={styles.hotCard}
+            onClickCapture={ignoreClickAfterDrag}
+          >
+            <span className={`${styles.hotBadge} ${isUrgentDday(job.dday) ? styles.hotBadgeUrgent : ""}`}>
+              {job.dday}
+            </span>
+            <strong>{job.title}</strong>
+            <small>{toJobMeta(job)}</small>
+          </Link>
+        ))}
         </div>
 
         <SectionHeader title="AI 취업 도구" href={user ? "#" : "/login"} />
@@ -427,7 +460,9 @@ export function HomeMain({
               >
                 <span className={styles.recommendTop}>
                   <small className={styles.company}>{job.institutionName}</small>
-                  <span className={styles.recommendDday}>{job.dday}</span>
+                  <span className={`${styles.recommendDday} ${isUrgentDday(job.dday) ? styles.recommendDdayUrgent : ""}`}>
+                    {job.dday}
+                  </span>
                 </span>
                 <strong>{job.title}</strong>
                 <span className={styles.recommendTags}>
@@ -481,7 +516,7 @@ export function HomeMain({
             <HomeIcon />
             <span>홈</span>
           </Link>
-          <Link href={user ? "#" : "/login"}>
+          <Link href={user ? "/calendar" : "/login"}>
             <CalendarIcon />
             <span>캘린더</span>
           </Link>
@@ -556,6 +591,9 @@ export function HomeMenuDrawer({
   onClose: () => void;
   onLogout: () => void | Promise<void>;
 }) {
+  const portalRoot = typeof document === "undefined" ? null : document.body;
+
+
   useEffect(() => {
     const root = document.documentElement;
     const body = document.body;
@@ -590,7 +628,7 @@ export function HomeMenuDrawer({
     };
   }, []);
 
-  return (
+  const drawer = (
     <aside className={styles.menuOverlay} aria-modal="true" role="dialog" aria-label="메뉴">
       <button type="button" className={styles.menuDim} aria-label="메뉴 닫기" onClick={onClose} />
       <div className={styles.drawer}>
@@ -637,7 +675,7 @@ export function HomeMenuDrawer({
             icon="calendar"
             title="캘린더"
             items={["전체 채용 캘린더", "나만의 캘린더"]}
-            hrefs={user ? [] : ["/login", "/login"]}
+            hrefs={user ? ["/calendar", "/calendar?view=mine"] : ["/login", "/login"]}
             onNavigate={onClose}
           />
           <DrawerSection
@@ -666,10 +704,17 @@ export function HomeMenuDrawer({
       </div>
     </aside>
   );
+
+  return portalRoot ? createPortal(drawer, portalRoot) : null;
 }
 
 function toJobMeta(job: JobPostingDto) {
   return [job.employmentType, job.region].filter(Boolean).join(" · ") || job.institutionName;
+}
+
+function isUrgentDday(dday: string) {
+  const normalized = dday.trim();
+  return normalized === "D-Day" || normalized === "D-0" || normalized === "D-1";
 }
 
 function toEndDate(value: string | null) {
@@ -850,6 +895,18 @@ function SectionHeader({ icon, title, href }: { icon?: string; title: string; hr
     </div>
   );
 }
+
+function SectionHrefNoneHeader({ icon, title }: { icon?: string; title: string; }) {
+  return (
+    <div className={styles.sectionHeader}>
+      <h2>
+        {icon ? <span aria-hidden="true">{icon}</span> : null}
+        {title}
+      </h2>
+    </div>
+  );
+}
+
 
 export function HomeIcon() {
   return (

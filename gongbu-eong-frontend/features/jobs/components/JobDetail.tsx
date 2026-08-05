@@ -69,9 +69,6 @@ export function JobDetail({ jobId }: { jobId: string }) {
         <JobHeader />
         <div className={styles.titleRow}>
           <h1>공고정보</h1>
-          <Link href="/jobs" aria-label="목록으로 돌아가기" className={styles.close}>
-            <CloseIcon />
-          </Link>
         </div>
 
         {loading ? <p className={styles.state}>공고 정보를 불러오고 있어요.</p> : null}
@@ -118,7 +115,6 @@ export function JobDetail({ jobId }: { jobId: string }) {
               <DetailSection title="기본 정보" icon="📋">
                 <InfoRow label="표준직무(NCS)" value={job.ncsCategory || job.categories.join(" · ") || job.jobCategory} />
                 <InfoRow label="학력정보" value={job.educationRequirement} />
-                <InfoRow label="근무분야" value={job.jobCategory} />
                 <InfoRow label="채용구분" value={job.careerRequirement} />
                 <InfoRow label="고용형태" value={job.employmentType} />
                 <InfoRow label="대체인력" value={extractBasicValue(job.basicInfo, "대체인력")} />
@@ -176,6 +172,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
                 onClick={() => void toggleBookmark()}
               >
                 <StarIcon filled={job.isBookmarked} />
+                <span>일정 담기</span>
               </button>
               {job.isClosed || (!job.applyUrl && !job.emailApplyAddress) ? (
                 <button type="button" className={styles.disabledApply} disabled>
@@ -276,6 +273,5 @@ function getFileBadge(fileType: string | null, fileName: string) {
   return extension.replace(/^\./, "").slice(0, 5).toUpperCase();
 }
 
-function CloseIcon() { return <svg viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19" /></svg>; }
 function StarIcon({ filled }: { filled: boolean }) { return <svg viewBox="0 0 24 24"><path d="m12 2.8 2.85 5.77 6.37.93-4.61 4.49 1.09 6.34L12 17.34l-5.7 2.99 1.09-6.34L2.78 9.5l6.37-.93L12 2.8Z" fill={filled ? "currentColor" : "white"} /></svg>; }
 function DownloadIcon() { return <svg viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></svg>; }

@@ -1,22 +1,78 @@
 .header {
+  position: relative;
+  z-index: 900;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
   height: 3rem;
   padding: 0 1rem;
+  align-items: center;
+  justify-content: space-between;
   background: #fff;
 }
 
-.logo {
-  color: #1a2233;
-  text-decoration: none;
-  font-size: 0.9375rem;
-  font-weight: 800;
+.headerGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
-.logo span { color: #f6b70d; }
-.menu { display: grid; place-items: center; width: 2rem; height: 2rem; color: #1a2233; }
-.menu svg { width: 1.375rem; height: 0.9375rem; }
+.header button,
+.header a {
+  border: 0;
+  background: transparent;
+  color: #1a2233;
+  text-decoration: none;
+}
+
+.headerButton {
+  display: grid;
+  width: 1.75rem;
+  height: 2rem;
+  padding: 0;
+  place-items: center;
+  cursor: pointer;
+}
+
+.figmaHeaderIcon {
+  position: relative;
+  display: block;
+  height: 1.375rem;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.figmaHeaderIcon img {
+  position: absolute;
+  top: 0;
+  width: 22.5625rem;
+  max-width: none;
+  height: 1.375rem;
+}
+
+.figmaHeaderIcon_back {
+  width: 0.8125rem;
+}
+
+.figmaHeaderIcon_back img {
+  left: 0;
+}
+
+.figmaHeaderIcon_home,
+.figmaHeaderIcon_bell,
+.figmaHeaderIcon_menu {
+  width: 1.375rem;
+}
+
+.figmaHeaderIcon_home img {
+  left: -1.8125rem;
+}
+
+.figmaHeaderIcon_bell img {
+  left: -18.8125rem;
+}
+
+.figmaHeaderIcon_menu img {
+  left: -21.1875rem;
+}
 
 .footer {
   position: fixed;
@@ -40,10 +96,46 @@
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
+  min-width: 0;
   color: #5a6580;
   text-decoration: none;
   font-size: 0.6875rem;
+  line-height: 1.1;
+  font-weight: 500;
 }
 
-.footer svg { width: 1.55rem; height: 1.55rem; }
-.footer .active { color: #2f7ff0; }
+.footer img {
+  display: block;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.footer .active {
+  color: #2f7ff0;
+  font-weight: 700;
+}
+
+.footerIconWrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.footerBest {
+  position: absolute;
+  top: -0.6875rem;
+  left: 50%;
+  display: inline-flex;
+  height: 1rem;
+  min-width: 2.0625rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #ffe0e0;
+  color: #ff5a5a;
+  font-size: 0.5625rem;
+  line-height: 1;
+  font-weight: 900;
+  transform: translateX(-10%);
+}

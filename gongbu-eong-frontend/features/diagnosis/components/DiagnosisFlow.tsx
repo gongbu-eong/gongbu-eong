@@ -10,15 +10,8 @@ import {
   submitDiagnosis,
 } from "../diagnosis.api";
 import { getCurrentUser } from "@/features/home/home.api";
-import {
-  AiIcon,
-  BellIcon,
-  CalendarIcon,
-  CommunityIcon,
-  HomeIcon,
-  MenuIcon,
-  MyIcon,
-} from "@/features/home/components/HomeMain";
+import type { CurrentUserDto } from "@/features/home/home.dto";
+import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
 import {
   DiagnosisAnswerRequestDto,
   DiagnosisQuestionDto,
@@ -166,6 +159,7 @@ export function DiagnosisFlow() {
   const [participantCount, setParticipantCount] = useState<number | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUserDto | null>(null);
   const isSubmittingRef = useRef(false);
 
   useEffect(() => {
@@ -181,6 +175,10 @@ export function DiagnosisFlow() {
 
         if (response.authenticated && response.user) {
           setIsAuthenticated(true);
+          setCurrentUser(response.user);
+        } else {
+          setIsAuthenticated(false);
+          setCurrentUser(null);
         }
 
         if (!ignore) {
@@ -317,30 +315,34 @@ export function DiagnosisFlow() {
     return null;
   }
 
-  const withAuthenticatedShell = (screen: ReactNode) =>
-    isAuthenticated ? (
-      <AuthenticatedDiagnosisShell>{screen}</AuthenticatedDiagnosisShell>
-    ) : (
-      screen
-    );
-
   if (state.status === "intro") {
-    return withAuthenticatedShell(
+    const intro = (
       <DiagnosisIntro
+        isEmbedded={isAuthenticated}
         participantCount={participantCount}
         onStart={startSurvey}
-      />,
+      />
     );
+
+    if (isAuthenticated) {
+      return (
+        <AuthenticatedIntroShell user={currentUser}>
+          {intro}
+        </AuthenticatedIntroShell>
+      );
+    }
+
+    return intro;
   }
 
   if (state.status === "loading") {
-    return withAuthenticatedShell(
-      <MobileFrame>문항을 불러오는 중입니다...</MobileFrame>,
+    return (
+      <MobileFrame>문항을 불러오는 중입니다...</MobileFrame>
     );
   }
 
   if (state.status === "error") {
-    return withAuthenticatedShell(
+    return (
       <MobileFrame>
         <p className="text-lg font-semibold text-red-700">진행할 수 없어요</p>
         <p className="mt-2 text-sm text-zinc-600">{state.message}</p>
@@ -350,16 +352,16 @@ export function DiagnosisFlow() {
         >
           다시 시도하기
         </button>
-      </MobileFrame>,
+      </MobileFrame>
     );
   }
 
   if (state.status === "result") {
-    return withAuthenticatedShell(
+    return (
       <DiagnosisResult
         result={state.result}
         isAuthenticated={isAuthenticated}
-      />,
+      />
     );
   }
 
@@ -386,9 +388,11 @@ export function DiagnosisFlow() {
 }
 
 function DiagnosisIntro({
+  isEmbedded = false,
   participantCount,
   onStart,
 }: {
+  isEmbedded?: boolean;
   participantCount: number | null;
   onStart: () => void;
 }) {
@@ -437,7 +441,7 @@ function DiagnosisIntro({
   ];
 
   return (
-    <div className={styles.page}>
+    <div className={isEmbedded ? styles.embeddedIntro : styles.page}>
       <section className={styles.landing} aria-label="강점·성향 진단 도입부">
         <p className={styles.introBrand}>공부엉이</p>
         <p className={styles.introPill}>3분이면 알 수 있는 나의 취업 강점</p>
@@ -675,6 +679,26 @@ function DiagnosisSurvey({
   );
 }
 
+function AuthenticatedIntroShell({
+  user,
+  children,
+}: {
+  user: CurrentUserDto | null;
+  children: ReactNode;
+}) {
+  const nickname = user?.nickname || user?.displayName || "회원";
+
+  return (
+    <main className={styles.authenticatedIntroPage}>
+      <section className={styles.authenticatedIntroShell}>
+        <JobHeader user={user} nickname={nickname} />
+        <div className={styles.authenticatedIntroContent}>{children}</div>
+        <JobFooter active="ai" />
+      </section>
+    </main>
+  );
+}
+
 function DiagnosisResult({
   result,
   isAuthenticated,
@@ -832,54 +856,6 @@ function DiagnosisResult({
         ) : null}
       </section>
     </MobileFrame>
-  );
-}
-
-function AuthenticatedDiagnosisShell({ children }: { children: ReactNode }) {
-  return (
-    <main className={styles.authenticatedShell}>
-      <header className={styles.authenticatedHeader}>
-        <Link href="/" className={styles.authenticatedLogo} aria-label="공부엉이 홈">
-          <span>공</span>부엉이
-        </Link>
-        <div className={styles.authenticatedHeaderActions}>
-          <Link href="#" aria-label="알림">
-            <BellIcon />
-          </Link>
-          <Link href="/" aria-label="메뉴">
-            <MenuIcon />
-          </Link>
-        </div>
-      </header>
-
-      <div className={styles.authenticatedContent}>{children}</div>
-
-      <footer className={styles.authenticatedFooter} aria-label="하단 메뉴">
-        <Link href="/">
-          <HomeIcon />
-          <span>홈</span>
-        </Link>
-        <Link href="#">
-          <CalendarIcon />
-          <span>캘린더</span>
-        </Link>
-        <Link href="/ai-tools/diagnosis" className={styles.authenticatedFooterActive}>
-          <span className={styles.authenticatedAiIcon}>
-            <AiIcon />
-            <small>BEST</small>
-          </span>
-          <span>AI 도구</span>
-        </Link>
-        <Link href="#">
-          <CommunityIcon />
-          <span>커뮤니티</span>
-        </Link>
-        <Link href="#">
-          <MyIcon />
-          <span>MY</span>
-        </Link>
-      </footer>
-    </main>
   );
 }
 

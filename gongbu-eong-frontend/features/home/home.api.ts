@@ -3,6 +3,7 @@ import type {
   CurrentUserResponseDto,
   HomeJobsResponseDto,
   JobBookmarkResponseDto,
+  JobPostingCalendarResponseDto,
   JobListView,
   JobPostingListResponseDto,
   JobPostingDetailDto,
@@ -59,6 +60,21 @@ export function getJobPostings(args?: {
 
   const query = searchParams.size ? `?${searchParams.toString()}` : "";
   return apiClient<JobPostingListResponseDto>(`/api/jobs${query}`);
+}
+
+export function getCalendarJobPostings(args: {
+  startDate: string;
+  endDate: string;
+  view?: "all" | "bookmarked";
+}) {
+  const searchParams = new URLSearchParams();
+  searchParams.set("startDate", args.startDate);
+  searchParams.set("endDate", args.endDate);
+  if (args.view === "bookmarked") searchParams.set("view", "bookmarked");
+
+  return apiClient<JobPostingCalendarResponseDto>(
+    `/api/jobs/calendar?${searchParams.toString()}`,
+  );
 }
 
 export function getJobPosting(jobId: string) {

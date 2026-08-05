@@ -40,6 +40,13 @@ export function getDiagnosisResultHistory(cursor?: string, limit = 10) {
   );
 }
 
+export function selectDiagnosisResult(resultId: string) {
+  return apiClient<{ ok: boolean; resultId: string }>(
+    `/api/diagnosis/results/${encodeURIComponent(resultId)}`,
+    { method: "PATCH" },
+  );
+}
+
 export function submitDiagnosis(answers: DiagnosisAnswerRequestDto[]) {
   return apiClient<DiagnosisResultResponseDto>("/api/diagnosis/runs", {
     method: "POST",
