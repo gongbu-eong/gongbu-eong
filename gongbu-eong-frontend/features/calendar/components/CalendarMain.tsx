@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   getCalendarJobPostings,
   getCurrentUser,
+  setJobBookmark,
 } from "@/features/home/home.api";
 import {
   CalendarIcon,
@@ -86,6 +87,7 @@ export function CalendarMain({
   const [filters, setFilters] = useState<CalendarFilters>(DEFAULT_FILTERS);
   const [jobs, setJobs] = useState<JobPostingDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [bookmarkPendingId, setBookmarkPendingId] = useState<string | null>(null);
 
   const bounds = useMemo(() => {
     const current = startOfMonth(new Date());
@@ -228,6 +230,33 @@ export function CalendarMain({
     setMonth(startOfMonth(date));
   };
 
+  const toggleBookmark = async (job: JobPostingDto) => {
+    if (bookmarkPendingId) return;
+    if (!user) {
+      window.alert("찜한 공고를 저장하려면 로그인이 필요합니다.");
+      return;
+    }
+
+    setBookmarkPendingId(job.id);
+    try {
+      const response = await setJobBookmark(job.id, !job.isBookmarked);
+      setJobs((current) => {
+        if (scope === "mine" && !response.isBookmarked) {
+          return current.filter((item) => item.id !== job.id);
+        }
+        return current.map((item) =>
+          item.id === job.id
+            ? { ...item, isBookmarked: response.isBookmarked }
+            : item,
+        );
+      });
+    } catch {
+      window.alert("찜 상태를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setBookmarkPendingId(null);
+    }
+  };
+
   return (
     <main className={styles.page}>
       <section className={styles.frame}>
@@ -307,6 +336,8 @@ export function CalendarMain({
               <GroupedJobList
                 sections={selectedWeekJobSections}
                 emptyLabel="선택한 주차에 찜한 공고가 없어요."
+                onToggleBookmark={toggleBookmark}
+                pendingBookmarkId={bookmarkPendingId}
               />
             </>
           ) : mode === "month" ? (
@@ -328,6 +359,8 @@ export function CalendarMain({
               <JobList
                 events={selectedDateFilteredEvents}
                 emptyLabel="선택한 날짜의 시작/마감 공고가 없어요."
+                onToggleBookmark={toggleBookmark}
+                pendingBookmarkId={bookmarkPendingId}
               />
             </>
           ) : (
@@ -344,6 +377,8 @@ export function CalendarMain({
               <JobList
                 events={selectedDateFilteredEvents}
                 emptyLabel="선택한 날짜의 시작/마감 공고가 없어요."
+                onToggleBookmark={toggleBookmark}
+                pendingBookmarkId={bookmarkPendingId}
               />
             </>
           )}
@@ -601,9 +636,13 @@ function FilterRow({
 function GroupedJobList({
   sections,
   emptyLabel,
+  onToggleBookmark,
+  pendingBookmarkId,
 }: {
   sections: Array<{ date: Date; events: CalendarJobEvent[] }>;
   emptyLabel: string;
+  onToggleBookmark: (job: JobPostingDto) => void;
+  pendingBookmarkId: string | null;
 }) {
   const visibleSections = sections.filter((section) => section.events.length > 0);
 
@@ -623,7 +662,12 @@ function GroupedJobList({
           {index > 0 ? (
             <SelectedDateHeader date={section.date} count={section.events.length} />
           ) : null}
-          <JobList events={section.events} emptyLabel={emptyLabel} />
+          <JobList
+            events={section.events}
+            emptyLabel={emptyLabel}
+            onToggleBookmark={onToggleBookmark}
+            pendingBookmarkId={pendingBookmarkId}
+          />
         </section>
       ))}
     </div>
@@ -633,9 +677,13 @@ function GroupedJobList({
 function JobList({
   events,
   emptyLabel,
+  onToggleBookmark,
+  pendingBookmarkId,
 }: {
   events: CalendarJobEvent[];
   emptyLabel: string;
+  onToggleBookmark: (job: JobPostingDto) => void;
+  pendingBookmarkId: string | null;
 }) {
   if (events.length === 0) {
     return (
@@ -649,7 +697,12 @@ function JobList({
   return (
     <div className={styles.jobCards}>
       {events.map((event) => (
-        <CalendarJobCard key={event.id} event={event} />
+        <CalendarJobCard
+          key={event.id}
+          event={event}
+          onToggleBookmark={onToggleBookmark}
+          isBookmarkPending={pendingBookmarkId === event.job.id}
+        />
       ))}
     </div>
   );
@@ -703,7 +756,15 @@ function MonthCalendar({
   );
 }
 
-function CalendarJobCard({ event }: { event: CalendarJobEvent }) {
+function CalendarJobCard({
+  event,
+  onToggleBookmark,
+  isBookmarkPending,
+}: {
+  event: CalendarJobEvent;
+  onToggleBookmark: (job: JobPostingDto) => void;
+  isBookmarkPending: boolean;
+}) {
   const { job } = event;
 
   return (
@@ -724,12 +785,19 @@ function CalendarJobCard({ event }: { event: CalendarJobEvent }) {
           {job.matchScore ? <em>유형추천</em> : null}
         </span>
       </span>
-      <span
+      <button
+        type="button"
         className={`${styles.starIcon} ${job.isBookmarked ? styles.starActive : ""}`}
-        aria-hidden="true"
+        aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
+        disabled={isBookmarkPending}
+        onClick={(clickEvent) => {
+          clickEvent.preventDefault();
+          clickEvent.stopPropagation();
+          onToggleBookmark(job);
+        }}
       >
         ★
-      </span>
+      </button>
     </Link>
   );
 }

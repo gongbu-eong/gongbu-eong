@@ -8,6 +8,7 @@ import {
 } from "./diagnosis.dto";
 import type { DiagnosisTypeCode } from "./diagnosis.dto";
 import {
+  countDiagnosisResultHistory,
   countCompletedDiagnosisRuns,
   createDiagnosisRunWithResult,
   findActiveQuestionSet,
@@ -17,6 +18,7 @@ import {
   findDiagnosisResultForUser,
   findDiagnosisResultHistory,
   findDiagnosisPercentile,
+  findSelectedDiagnosisResultId,
   selectDiagnosisResultForUser,
   countPreviousDiagnosisResults,
   findRecommendedInstitutions,
@@ -345,11 +347,15 @@ export async function getDiagnosisResultHistory(args: {
   limit?: number;
 }): Promise<DiagnosisResultHistoryResponseDto> {
   const limit = Math.max(1, Math.min(args.limit || 10, 30));
-  const rows = await findDiagnosisResultHistory({
-    userId: args.userId,
-    cursor: args.cursor,
-    limit: limit + 1,
-  });
+  const [rows, totalCount, selectedResultId] = await Promise.all([
+    findDiagnosisResultHistory({
+      userId: args.userId,
+      cursor: args.cursor,
+      limit: limit + 1,
+    }),
+    countDiagnosisResultHistory(args.userId),
+    findSelectedDiagnosisResultId(args.userId),
+  ]);
   const hasNext = rows.length > limit;
   const items = rows.slice(0, limit);
 
@@ -360,8 +366,11 @@ export async function getDiagnosisResultHistory(args: {
       typeCode: row.type_code,
       typeName: row.type_name,
       completedAt: new Date(row.completed_at).toISOString(),
+      isSelected: row.is_selected,
     })),
     nextCursor: hasNext ? items.at(-1)?.result_id || null : null,
+    totalCount,
+    selectedResultId,
   };
 }
 

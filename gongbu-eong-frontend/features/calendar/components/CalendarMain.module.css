@@ -538,9 +538,18 @@
   place-items: center;
   width: 1.5rem;
   height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #dce3ef;
   font-size: 1.45rem;
   line-height: 1;
+  cursor: pointer;
+}
+
+.starIcon:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .starActive {

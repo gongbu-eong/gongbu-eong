@@ -13,6 +13,7 @@ async function main() {
   const client = new Client({ connectionString: databaseUrl });
   const files = [
     "schema.sql",
+    "alter_user_resumes.sql",
     "seed_diagnosis.sql",
     "alter_job_category_recommendations.sql",
   ];

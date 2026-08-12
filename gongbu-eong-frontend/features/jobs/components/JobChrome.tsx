@@ -135,7 +135,7 @@ export function JobFooter({
         <Image src="/diagnosis/result-detail/footer-community.svg" alt="" width={28} height={24} />
         <span>커뮤니티</span>
       </Link>
-      <Link href="#" className={active === "my" ? styles.active : undefined}>
+      <Link href="/my" className={active === "my" ? styles.active : undefined}>
         <Image src="/diagnosis/result-detail/footer-my.svg" alt="" width={28} height={25} />
         <span>MY</span>
       </Link>

@@ -59,6 +59,7 @@ export type DiagnosisResultHistoryRow = {
   type_code: DiagnosisTypeCode;
   type_name: string;
   completed_at: Date | string;
+  is_selected: boolean;
 };
 
 export async function findActiveQuestionSet() {
@@ -298,12 +299,15 @@ export async function findDiagnosisResultHistory(args: {
         results.id AS result_id,
         personality_types.code AS type_code,
         personality_types.name AS type_name,
-        COALESCE(runs.completed_at, results.created_at) AS completed_at
+        COALESCE(runs.completed_at, results.created_at) AS completed_at,
+        (results.id = users.selected_diagnosis_result_id) AS is_selected
       FROM public.diagnosis_results results
       JOIN public.diagnosis_runs runs
         ON runs.id = results.diagnosis_run_id
       JOIN public.personality_types personality_types
         ON personality_types.id = results.personality_type_id
+      JOIN public.users users
+        ON users.id = $1
       WHERE (
         results.user_id = $1
         OR runs.user_id = $1
@@ -338,6 +342,44 @@ export async function findDiagnosisResultHistory(args: {
   );
 
   return result.rows;
+}
+
+export async function countDiagnosisResultHistory(userId: string) {
+  const result = await query<{ total_count: string }>(
+    `
+      SELECT COUNT(DISTINCT results.id)::text AS total_count
+      FROM public.diagnosis_results results
+      JOIN public.diagnosis_runs runs
+        ON runs.id = results.diagnosis_run_id
+      WHERE (
+        results.user_id = $1
+        OR runs.user_id = $1
+        OR EXISTS (
+          SELECT 1
+          FROM public.diagnosis_login_conversions conversions
+          WHERE conversions.diagnosis_result_id = results.id
+            AND conversions.user_id = $1
+        )
+      )
+    `,
+    [userId],
+  );
+
+  return Number(result.rows[0]?.total_count || 0);
+}
+
+export async function findSelectedDiagnosisResultId(userId: string) {
+  const result = await query<{ selected_diagnosis_result_id: string | null }>(
+    `
+      SELECT selected_diagnosis_result_id
+      FROM public.users
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [userId],
+  );
+
+  return result.rows[0]?.selected_diagnosis_result_id || null;
 }
 
 export async function findJobCategoriesForPersonalityType(

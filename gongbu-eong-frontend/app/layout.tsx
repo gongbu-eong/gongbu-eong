@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -58,6 +59,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         {children}
+        <div id="datepicker-root" />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-VN2DTZMSG1"
           strategy="afterInteractive"

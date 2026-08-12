@@ -75,11 +75,14 @@ export type DiagnosisResultHistoryItemDto = {
   typeCode: DiagnosisTypeCode;
   typeName: string;
   completedAt: string;
+  isSelected: boolean;
 };
 
 export type DiagnosisResultHistoryResponseDto = {
   items: DiagnosisResultHistoryItemDto[];
   nextCursor: string | null;
+  totalCount: number;
+  selectedResultId: string | null;
 };
 
 export type DiagnosisResultDetailResponseDto = {

@@ -531,7 +531,7 @@ const ignoreClickAfterDrag = (
             <CommunityIcon />
             <span>커뮤니티</span>
           </Link>
-          <Link href={user ? "#" : "/login"}>
+          <Link href={user ? "/my" : "/login"}>
             <MyIcon />
             <span>MY</span>
           </Link>
@@ -693,7 +693,7 @@ export function HomeMenuDrawer({
             hrefs={user ? [] : ["/login", "/login", "/login"]}
             onNavigate={onClose}
           />
-          <DrawerSection icon="my" title="마이페이지" titleHref={user ? "#" : "/login"} onNavigate={onClose} />
+          <DrawerSection icon="my" title="마이페이지" titleHref={user ? "/my" : "/login"} onNavigate={onClose} />
         </nav>
 
         {user ? (

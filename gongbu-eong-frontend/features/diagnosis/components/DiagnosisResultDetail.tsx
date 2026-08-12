@@ -166,6 +166,7 @@ export function DiagnosisResultDetail() {
             typeCode: detail.result.typeCode,
             typeName: detail.result.typeName,
             completedAt: detail.completedAt,
+            isSelected: true,
           }
         : null;
       const responseItems = currentItem && !cursor
