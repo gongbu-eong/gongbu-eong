@@ -417,13 +417,17 @@
 
 .uploadDropzone {
   display: grid;
+  width: 100%;
   min-height: 10.5rem;
   place-items: center;
   padding: 1rem;
   border: 1px dashed #2f7ff0;
   border-radius: 0.5rem;
   background: #eaf3ff;
+  color: #1a2233;
+  font: inherit;
   text-align: center;
+  cursor: pointer;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease,

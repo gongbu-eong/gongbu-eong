@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChangeEvent, FormEvent, forwardRef, useEffect, useMemo, useState, type DragEvent as ReactDragEvent } from "react";
+import { ChangeEvent, FormEvent, forwardRef, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { ko } from "date-fns/locale";
 import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
@@ -44,7 +44,48 @@ function createEmptyPayload(sourceType: "upload" | "manual"): ResumePayloadDto {
 }
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const RESUME_ACCEPT = ".hwp,.hwpx,.hwt,.hml,.pdf,.doc,.docx,.docm,.dot,.dotx,.dotm,.rtf";
+const RESUME_ACCEPT = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-word.document.macroEnabled.12",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
+  "application/vnd.ms-word.template.macroEnabled.12",
+  "application/rtf",
+  "text/rtf",
+  "application/x-hwp",
+  "application/vnd.hancom.hwp",
+  "application/vnd.hancom.hwpx",
+  ".hwp",
+  ".hwpx",
+  ".hwt",
+  ".hml",
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".docm",
+  ".dot",
+  ".dotx",
+  ".dotm",
+  ".rtf",
+].join(",");
+const RESUME_FILE_PICKER_TYPES = [
+  {
+    description: "이력서 문서",
+    accept: {
+      "application/pdf": [".pdf"],
+      "application/msword": [".doc", ".dot"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"],
+      "application/vnd.ms-word.document.macroEnabled.12": [".docm"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.template": [".dotx"],
+      "application/vnd.ms-word.template.macroEnabled.12": [".dotm"],
+      "application/rtf": [".rtf"],
+      "application/x-hwp": [".hwp", ".hwt", ".hml"],
+      "application/vnd.hancom.hwp": [".hwp"],
+      "application/vnd.hancom.hwpx": [".hwpx"],
+    },
+  },
+];
 const ACCEPTED_UPLOAD_EXTENSIONS = new Set([
   "hwp",
   "hwpx",
@@ -59,6 +100,15 @@ const ACCEPTED_UPLOAD_EXTENSIONS = new Set([
   "dotm",
   "rtf",
 ]);
+
+type ResumeFilePickerWindow = Window & {
+  showOpenFilePicker?: (options?: {
+    multiple?: boolean;
+    excludeAcceptAllOption?: boolean;
+    types?: typeof RESUME_FILE_PICKER_TYPES;
+  }) => Promise<Array<{ getFile: () => Promise<File> }>>;
+};
+
 const JOB_CATEGORIES = [
   "건설",
   "경비·청소",
@@ -106,6 +156,7 @@ export function MyResumeForm({
   resumeId?: string;
 }) {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [tab, setTab] = useState<"upload" | "manual">("upload");
   const [tabPayloads, setTabPayloads] = useState({
     upload: createEmptyPayload("upload"),
@@ -243,7 +294,32 @@ export function MyResumeForm({
     event.target.value = "";
   };
 
-  const handleDrop = async (event: ReactDragEvent<HTMLLabelElement>) => {
+  const openResumeFilePicker = async () => {
+    setError(null);
+    const picker = (window as ResumeFilePickerWindow).showOpenFilePicker;
+    if (picker) {
+      try {
+        const [handle] = await picker({
+          multiple: false,
+          excludeAcceptAllOption: true,
+          types: RESUME_FILE_PICKER_TYPES,
+        });
+        const file = await handle?.getFile();
+        if (file) {
+          await handleUploadFile(file);
+        }
+        return;
+      } catch (pickerError) {
+        if (pickerError instanceof DOMException && pickerError.name === "AbortError") {
+          return;
+        }
+      }
+    }
+
+    fileInputRef.current?.click();
+  };
+
+  const handleDrop = async (event: ReactDragEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
     setIsDragActive(false);
@@ -254,13 +330,13 @@ export function MyResumeForm({
     }
   };
 
-  const handleDragOver = (event: ReactDragEvent<HTMLLabelElement>) => {
+  const handleDragOver = (event: ReactDragEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
     setIsDragActive(true);
   };
 
-  const handleDragLeave = (event: ReactDragEvent<HTMLLabelElement>) => {
+  const handleDragLeave = (event: ReactDragEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
@@ -358,6 +434,7 @@ export function MyResumeForm({
         <form className={styles.form} onSubmit={handleSubmit}>
           {tab === "upload" ? (
             <>
+              <input ref={fileInputRef} hidden type="file" accept={RESUME_ACCEPT} onChange={handleUpload} />
               {uploadedFile ? (
                 <div className={styles.uploadFile}>
                   <span className={styles.fileSheetIcon} aria-hidden="true" />
@@ -365,24 +442,24 @@ export function MyResumeForm({
                     <strong>{uploadedFile.name}</strong>
                     <span>{formatBytes(uploadedFile.size)} · 방금 첨부</span>
                   </span>
-                  <label className={styles.smallButton}>
+                  <button type="button" className={styles.smallButton} onClick={openResumeFilePicker}>
                     다시 첨부하기
-                    <input hidden type="file" accept={RESUME_ACCEPT} onChange={handleUpload} />
-                  </label>
+                  </button>
                 </div>
               ) : (
-                <label
+                <button
+                  type="button"
                   className={`${styles.uploadDropzone} ${isDragActive ? styles.uploadDropzoneActive : ""}`}
+                  onClick={openResumeFilePicker}
                   onDragEnter={handleDragOver}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
-                  <input type="file" accept={RESUME_ACCEPT} onChange={handleUpload} />
                   <span className={styles.fileSheetIcon} aria-hidden="true" />
                   <strong>{isUploading ? "분석 중입니다..." : "파일을 선택하거나 여기에 끌어다 놓으세요"}</strong>
                   <span>HWP · HWPX · PDF · DOC · DOCX (최대 10MB)</span>
-                </label>
+                </button>
               )}
               {parseJobMessage ? <p className={styles.uploadStatus}>{parseJobMessage}</p> : null}
             </>
