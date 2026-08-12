@@ -125,6 +125,7 @@ function buildAiExtractionPrompt() {
 - educations: 학력/학력사항/교육사항 중 학교 학력만. 고등학교, 대학교, 대학원 등 학교명과 전공, 학점, 입학/졸업 기간.
 - experiences: 실제 근무/재직/인턴 경력만. 학교 학력, 교육/연수, 동아리, 봉사활동, 프로젝트, 자기소개서 문장 제외.
 - activities: 교육/연수, 대외활동, 기타활동, 봉사, 동아리, 서포터즈, 프로젝트 활동. 기관 칸이 있으면 issuer에 넣습니다. 실제 근무 경력과 자격증/어학 제외.
+- activities 표 제약: 활동명/과정명 칸이 있으면 activityName에 넣습니다. 활동명/과정명 칸이 없고 "활동 내용" 칸만 있으면 그 값은 description에 넣고 activityName은 빈 문자열입니다. 같은 행의 "기관" 칸만 issuer입니다. 같은 행의 "기간" 칸만 startDate/endDate/activityDate입니다. 인접 행의 기간/기관을 절대 가져오지 않습니다.
 - awards: 수상/수상내용/포상 섹션의 실제 수상 항목만. 기관 칸이 있으면 issuer에 넣습니다.
 - certifications: 자격증/면허증/면허 섹션의 실제 자격 항목만.
 - languages: 어학/외국어 섹션의 언어, 시험명, 점수/급수, 취득일, 기관. 언어 칸이 없으면 language는 빈 문자열로 둡니다. TOEIC/JLPT 같은 시험명으로 언어를 추론하지 않습니다.
@@ -770,11 +771,14 @@ function normalizeEntry(item: unknown, type: ResumeEntryType): ResumeEntryDto {
 
   if (type === "activity") {
     const activityName = pickString(record, ["activityName", "name", "활동명"]);
-    const description = pickString(record, ["description", "content", "활동내용"]);
+    const rawDescription =
+      pickString(record, ["description", "content", "details", "활동내용", "활동 내용", "세부내용"]) ||
+      (!activityName ? titleText : EMPTY);
     const issuer = pickString(record, ["issuer", "organization", "institute", "institution", "agency", "기관", "기관명"]);
     const resolvedStartDate = normalizeMonth(pickString(record, ["startDate", "start", "시작일"]) || startDate);
     const resolvedEndDate = normalizeMonth(pickString(record, ["endDate", "end", "종료일"]) || endDate);
     const activityDate = resolveMonth(pickString(record, ["activityDate", "date", "활동일자"]), period, subtitleText, titleText);
+    const description = cleanActivityDescription(rawDescription, activityName, issuer, resolvedStartDate, resolvedEndDate);
     return {
       title: activityName,
       activityName,
@@ -783,9 +787,7 @@ function normalizeEntry(item: unknown, type: ResumeEntryType): ResumeEntryDto {
       activityDate,
       startDate: resolvedStartDate,
       endDate: resolvedEndDate,
-      subtitle: [description, formatMonthRangeLabel(resolvedStartDate, resolvedEndDate) || formatMonthLabel(activityDate), issuer]
-        .filter(Boolean)
-        .join(" · "),
+      subtitle: description,
     };
   }
 
@@ -1229,7 +1231,12 @@ function parseStructuredKoreanResume(lines: string[], text: string): Partial<Res
     educations,
     experiences: parseExperienceRows(experienceLines),
     awards: parseAwardRows(awardLines),
-    activities: [...parseActivityRows(trainingLines), ...parseActivityRows(activityLines)],
+    activities: [
+      ...parseActivityRows(trainingLines, { primaryField: "description" }),
+      ...parseActivityRows(activityLines, {
+        primaryField: hasActivityNameColumn(activityLines) ? "activityName" : "description",
+      }),
+    ],
     certifications: parseCertificationRows(certificationLines),
     languages: parseLanguageRows(languageLines),
   };
@@ -1327,15 +1334,21 @@ function parseLanguageRows(lines: string[]) {
   return rows;
 }
 
-function parseActivityRows(lines: string[]) {
+function parseActivityRows(
+  lines: string[],
+  options: { primaryField: "activityName" | "description" } = { primaryField: "activityName" },
+) {
   const rows: ResumeEntryDto[] = [];
   for (let index = 0; index < lines.length; index += 1) {
     const period = parseMonthRange(lines[index]);
     if (!period) continue;
-    const activityName = cleanText(lines[index + 1]);
-    const description = cleanText(lines[index + 2]);
-    const issuer = cleanText(lines[index + 3]);
-    if (!activityName || isImportNoiseText(activityName) || /^(기간|과정명|활동내용|기관)$/.test(activityName.replace(/\s/g, ""))) continue;
+    const cells = collectActivityRowCells(lines, index);
+    const primaryValue = cells.primaryValue;
+    const issuer = cells.issuer;
+    const activityName = options.primaryField === "activityName" ? primaryValue : EMPTY;
+    const rawDescription = options.primaryField === "description" ? primaryValue : cells.description;
+    const description = cleanActivityDescription(rawDescription, activityName, issuer, period[0], period[1]);
+    if (!primaryValue || isImportNoiseText(primaryValue) || /^(기간|과정명|활동내용|기관)$/.test(primaryValue.replace(/\s/g, ""))) continue;
     rows.push({
       title: activityName,
       activityName,
@@ -1344,10 +1357,39 @@ function parseActivityRows(lines: string[]) {
       activityDate: period.filter(Boolean).join(" ~ "),
       startDate: period[0],
       endDate: period[1],
-      subtitle: [description, formatMonthRangeLabel(period[0], period[1]), issuer].filter(Boolean).join(" · "),
+      subtitle: description,
     });
   }
   return rows;
+}
+
+function collectActivityRowCells(lines: string[], periodIndex: number) {
+  const cells: string[] = [];
+  for (let index = periodIndex + 1; index < lines.length; index += 1) {
+    const value = cleanText(lines[index]);
+    if (!value) continue;
+    if (parseMonthRange(value)) break;
+    cells.push(value);
+  }
+
+  const issuerIndex = cells.findIndex((cell, index) => index > 0 && isOrganizationLikeText(cell));
+  if (issuerIndex >= 0) {
+    return {
+      primaryValue: cleanText(cells.slice(0, issuerIndex).join(" ")),
+      description: EMPTY,
+      issuer: cells[issuerIndex],
+    };
+  }
+
+  return {
+    primaryValue: cells[0] || EMPTY,
+    description: cleanText(cells.slice(1).join(" ")),
+    issuer: EMPTY,
+  };
+}
+
+function hasActivityNameColumn(lines: string[]) {
+  return lines.some((line) => /활동명|활동\s*명/.test(line.replace(/\s/g, "")));
 }
 
 function parseAwardRows(lines: string[]) {
@@ -1901,7 +1943,7 @@ function isImportableResumeEntry(entry: ResumeEntryDto, type: ResumeEntryType) {
   }
 
   if (type === "activity") {
-    const title = cleanText(entry.activityName || entry.title);
+    const title = cleanText(entry.activityName || entry.title || entry.description);
     return Boolean(title && !isImportNoiseText(title));
   }
 
@@ -1932,6 +1974,36 @@ function isImportNoiseText(value?: string | null) {
   if (/(기재합니다|작성합니다|내용을기재|내용을작성)/.test(compact)) return true;
   if (/^0{2,4}[.\-/년\s]+0{1,2}/.test(compact)) return true;
   return false;
+}
+
+function cleanActivityDescription(
+  value?: string | null,
+  activityName?: string | null,
+  issuer?: string | null,
+  startDate?: string | null,
+  endDate?: string | null,
+) {
+  const text = cleanText(value);
+  if (!text || isDateLikeValue(text) || isOrganizationLikeText(text)) return EMPTY;
+  if (sameCompactText(text, activityName) || sameCompactText(text, issuer)) return EMPTY;
+  const period = formatMonthRangeLabel(startDate, endDate);
+  if (period && sameCompactText(text, period)) return EMPTY;
+  return text;
+}
+
+function isOrganizationLikeText(value?: string | null) {
+  const text = cleanText(value);
+  return Boolean(
+    text &&
+      !isDateLikeValue(text) &&
+      /대학교|대학원|고등학교|학교|기관|협회|센터|연구원|연구소|재단|공사|공단|회사|법인|어학원|교육원|university|college|institute|center|centre|academy/i.test(text),
+  );
+}
+
+function sameCompactText(left?: string | null, right?: string | null) {
+  const cleanLeft = cleanText(left).replace(/\s/g, "").toLowerCase();
+  const cleanRight = cleanText(right).replace(/\s/g, "").toLowerCase();
+  return Boolean(cleanLeft && cleanRight && cleanLeft === cleanRight);
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

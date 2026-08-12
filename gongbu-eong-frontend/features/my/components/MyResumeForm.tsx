@@ -1,7 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ChangeEvent, FormEvent, forwardRef, useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  forwardRef,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent as ReactDragEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { ko } from "date-fns/locale";
 import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
@@ -44,18 +55,7 @@ function createEmptyPayload(sourceType: "upload" | "manual"): ResumePayloadDto {
 }
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const RESUME_ACCEPT = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-word.document.macroEnabled.12",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
-  "application/vnd.ms-word.template.macroEnabled.12",
-  "application/rtf",
-  "text/rtf",
-  "application/x-hwp",
-  "application/vnd.hancom.hwp",
-  "application/vnd.hancom.hwpx",
+const RESUME_ACCEPT_EXTENSIONS = [
   ".hwp",
   ".hwpx",
   ".hwt",
@@ -68,7 +68,21 @@ const RESUME_ACCEPT = [
   ".dotx",
   ".dotm",
   ".rtf",
-].join(",");
+];
+const RESUME_ACCEPT = RESUME_ACCEPT_EXTENSIONS.join(",");
+const RESUME_ACCEPT_MIME_TYPES = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-word.document.macroEnabled.12",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.template",
+  "application/vnd.ms-word.template.macroEnabled.12",
+  "application/rtf",
+  "text/rtf",
+  "application/x-hwp",
+  "application/vnd.hancom.hwp",
+  "application/vnd.hancom.hwpx",
+];
 const RESUME_FILE_PICKER_TYPES = [
   {
     description: "이력서 문서",
@@ -100,6 +114,7 @@ const ACCEPTED_UPLOAD_EXTENSIONS = new Set([
   "dotm",
   "rtf",
 ]);
+const ACCEPTED_UPLOAD_MIME_TYPES = new Set(RESUME_ACCEPT_MIME_TYPES);
 
 type ResumeFilePickerWindow = Window & {
   showOpenFilePicker?: (options?: {
@@ -139,11 +154,11 @@ const JOB_CATEGORIES = [
 const GPA_MAX_OPTIONS = ["4.5", "4.3", "4.0", "100"];
 
 type EntryModalState =
-  | { type: "experience"; draft: ResumeEntryDto }
-  | { type: "certification"; draft: ResumeEntryDto }
-  | { type: "award"; draft: ResumeEntryDto }
-  | { type: "activity"; draft: ResumeEntryDto }
-  | { type: "language"; draft: ResumeEntryDto }
+  | { type: "experience"; draft: ResumeEntryDto; index?: number }
+  | { type: "certification"; draft: ResumeEntryDto; index?: number }
+  | { type: "award"; draft: ResumeEntryDto; index?: number }
+  | { type: "activity"; draft: ResumeEntryDto; index?: number }
+  | { type: "language"; draft: ResumeEntryDto; index?: number }
   | null;
 
 type PickerMode = "date" | "month";
@@ -385,18 +400,66 @@ export function MyResumeForm({
       return;
     }
 
-    if (entryModal.type === "experience") {
-      patchPayload({ experiences: [...(payload.experiences || []), cleaned] });
-    } else if (entryModal.type === "certification") {
-      patchPayload({ certifications: [...(payload.certifications || []), cleaned] });
-    } else if (entryModal.type === "award") {
-      patchPayload({ awards: [...(payload.awards || []), cleaned] });
-    } else if (entryModal.type === "activity") {
-      patchPayload({ activities: [...(payload.activities || []), cleaned] });
-    } else {
-      patchPayload({ languages: [...(payload.languages || []), cleaned] });
-    }
+    updateEntryList(entryModal.type, (entries) =>
+      typeof entryModal.index === "number"
+        ? replaceAt(entries, entryModal.index, cleaned)
+        : [...entries, cleaned],
+    );
     setEntryModal(null);
+  };
+
+  const updateEntryList = (
+    type: Exclude<EntryModalState, null>["type"],
+    updater: (entries: ResumeEntryDto[]) => ResumeEntryDto[],
+  ) => {
+    if (type === "experience") {
+      patchPayload({ experiences: updater(payload.experiences || []) });
+    } else if (type === "certification") {
+      patchPayload({ certifications: updater(payload.certifications || []) });
+    } else if (type === "award") {
+      patchPayload({ awards: updater(payload.awards || []) });
+    } else if (type === "activity") {
+      patchPayload({ activities: updater(payload.activities || []) });
+    } else {
+      patchPayload({ languages: updater(payload.languages || []) });
+    }
+  };
+
+  const openEntryEditor = (
+    type: Exclude<EntryModalState, null>["type"],
+    entry: ResumeEntryDto,
+    index: number,
+  ) => {
+    setEntryModal({ type, draft: normalizeEntryLabels(cleanEntry(entry), type), index });
+  };
+
+  const reorderEntries = (
+    type: Exclude<EntryModalState, null>["type"],
+    fromIndex: number,
+    toIndex: number,
+  ) => {
+    updateEntryList(type, (entries) => moveEntry(entries, fromIndex, toIndex));
+  };
+
+  const hasOtherCurrentExperience = (editingIndex?: number) =>
+    (payload.experiences || []).some((entry, index) =>
+      index !== editingIndex && isCurrentEndDate(entry.endDate),
+    );
+
+  const toggleCurrentExperience = (checked: boolean) => {
+    if (!entryModal || entryModal.type !== "experience") return;
+    if (checked && hasOtherCurrentExperience(entryModal.index)) {
+      window.alert("이미 근무 중인 데이터가 존재합니다.");
+      return;
+    }
+
+    setEntryModal({
+      ...entryModal,
+      draft: {
+        ...entryModal.draft,
+        endDate: checked ? "현재" : "",
+      },
+    });
   };
 
   return (
@@ -434,7 +497,7 @@ export function MyResumeForm({
         <form className={styles.form} onSubmit={handleSubmit}>
           {tab === "upload" ? (
             <>
-              <input ref={fileInputRef} hidden type="file" accept={RESUME_ACCEPT} onChange={handleUpload} />
+              <input ref={fileInputRef} hidden type="file" accept={RESUME_ACCEPT} multiple={false} onChange={handleUpload} />
               {uploadedFile ? (
                 <div className={styles.uploadFile}>
                   <span className={styles.fileSheetIcon} aria-hidden="true" />
@@ -544,7 +607,9 @@ export function MyResumeForm({
                 entries={payload.experiences || []}
                 emptyText="경력을 추가하면 직무 적합성 분석에 반영돼요."
                 onAdd={() => setEntryModal({ type: "experience", draft: {} })}
-                onRemove={(index) => patchPayload({ experiences: removeAt(payload.experiences || [], index) })}
+                onEdit={(entry, index) => openEntryEditor("experience", entry, index)}
+                onRemove={(index) => updateEntryList("experience", (entries) => removeAt(entries, index))}
+                onReorder={(fromIndex, toIndex) => reorderEntries("experience", fromIndex, toIndex)}
               />
               <EntryEditor
                 kind="award"
@@ -552,18 +617,40 @@ export function MyResumeForm({
                 entries={payload.awards || []}
                 emptyText="수상 경력을 추가해보세요."
                 onAdd={() => setEntryModal({ type: "award", draft: {} })}
-                onRemove={(index) => patchPayload({ awards: removeAt(payload.awards || [], index) })}
+                onEdit={(entry, index) => openEntryEditor("award", entry, index)}
+                onRemove={(index) => updateEntryList("award", (entries) => removeAt(entries, index))}
+                onReorder={(fromIndex, toIndex) => reorderEntries("award", fromIndex, toIndex)}
               />
-              <EntryEditor kind="activity" title="활동" entries={payload.activities || []} emptyText="활동 경험을 추가해보세요." onAdd={() => setEntryModal({ type: "activity", draft: {} })} onRemove={(index) => patchPayload({ activities: removeAt(payload.activities || [], index) })} />
+              <EntryEditor
+                kind="activity"
+                title="활동"
+                entries={payload.activities || []}
+                emptyText="활동 경험을 추가해보세요."
+                onAdd={() => setEntryModal({ type: "activity", draft: {} })}
+                onEdit={(entry, index) => openEntryEditor("activity", entry, index)}
+                onRemove={(index) => updateEntryList("activity", (entries) => removeAt(entries, index))}
+                onReorder={(fromIndex, toIndex) => reorderEntries("activity", fromIndex, toIndex)}
+              />
               <EntryEditor
                 kind="certification"
                 title="자격증"
                 entries={payload.certifications || []}
                 emptyText="자격증을 추가해보세요. (예: 전기기능사, 소방설비기사)"
                 onAdd={() => setEntryModal({ type: "certification", draft: {} })}
-                onRemove={(index) => patchPayload({ certifications: removeAt(payload.certifications || [], index) })}
+                onEdit={(entry, index) => openEntryEditor("certification", entry, index)}
+                onRemove={(index) => updateEntryList("certification", (entries) => removeAt(entries, index))}
+                onReorder={(fromIndex, toIndex) => reorderEntries("certification", fromIndex, toIndex)}
               />
-              <EntryEditor kind="language" title="어학" entries={payload.languages || []} emptyText="어학 정보를 추가해보세요." onAdd={() => setEntryModal({ type: "language", draft: {} })} onRemove={(index) => patchPayload({ languages: removeAt(payload.languages || [], index) })} />
+              <EntryEditor
+                kind="language"
+                title="어학"
+                entries={payload.languages || []}
+                emptyText="어학 정보를 추가해보세요."
+                onAdd={() => setEntryModal({ type: "language", draft: {} })}
+                onEdit={(entry, index) => openEntryEditor("language", entry, index)}
+                onRemove={(index) => updateEntryList("language", (entries) => removeAt(entries, index))}
+                onReorder={(fromIndex, toIndex) => reorderEntries("language", fromIndex, toIndex)}
+              />
 
               <button type="submit" className={`${styles.primaryButton} ${styles.saveButton}`} disabled={isSaving || isUploading}>
                 {isSaving ? "저장 중..." : "저장하기"}
@@ -589,12 +676,24 @@ export function MyResumeForm({
                 <TextField label="담당 업무" value={entryModal.draft.duties || entryModal.draft.subtitle || ""} placeholder="담당 업무를 입력하세요." onChange={(duties) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, duties, subtitle: duties } })} />
                 <DateRangeField
                   label="근무 기간"
+                  labelAddon={(
+                    <label className={styles.inlineCheckbox}>
+                      <input
+                        type="checkbox"
+                        checked={isCurrentEndDate(entryModal.draft.endDate)}
+                        onChange={(event) => toggleCurrentExperience(event.target.checked)}
+                      />
+                      <span>근무 중</span>
+                    </label>
+                  )}
                   startLabel="근무 시작일"
                   endLabel="근무 종료일"
                   startValue={entryModal.draft.startDate || ""}
                   endValue={entryModal.draft.endDate || ""}
                   onStartChange={(startDate) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, startDate } })}
                   onEndChange={(endDate) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, endDate } })}
+                  endDisabled={isCurrentEndDate(entryModal.draft.endDate)}
+                  endDisplayValue={isCurrentEndDate(entryModal.draft.endDate) ? "현재" : undefined}
                 />
               </>
             ) : entryModal.type === "certification" ? (
@@ -615,7 +714,16 @@ export function MyResumeForm({
                 <TextField label="활동명" value={entryModal.draft.activityName || ""} placeholder="활동명을 입력하세요." onChange={(activityName) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, activityName, title: activityName } })} />
                 <TextField label="활동 내용" value={entryModal.draft.description || ""} placeholder="활동 내용을 입력하세요." onChange={(description) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, description, subtitle: description } })} />
                 <TextField label="활동기관" value={entryModal.draft.issuer || ""} placeholder="활동기관을 입력하세요." onChange={(issuer) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, issuer } })} />
-                <DatePickerField label="활동 일자" value={entryModal.draft.activityDate || entryModal.draft.startDate || ""} onChange={(activityDate) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, activityDate, startDate: activityDate } })} />
+                <DateRangeField
+                  label="활동 기간"
+                  startLabel="활동 시작일"
+                  endLabel="활동 종료일"
+                  startValue={entryModal.draft.startDate || entryModal.draft.activityDate || ""}
+                  endValue={entryModal.draft.endDate || ""}
+                  type="month"
+                  onStartChange={(startDate) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, startDate, activityDate: startDate } })}
+                  onEndChange={(endDate) => setEntryModal({ ...entryModal, draft: { ...entryModal.draft, endDate } })}
+                />
               </>
             ) : (
               <>
@@ -710,6 +818,7 @@ function DatePickerField({
 
 function DateRangeField({
   label,
+  labelAddon,
   startLabel,
   endLabel,
   startValue,
@@ -717,8 +826,11 @@ function DateRangeField({
   type = "date",
   onStartChange,
   onEndChange,
+  endDisabled = false,
+  endDisplayValue,
 }: {
   label?: string;
+  labelAddon?: ReactNode;
   startLabel: string;
   endLabel: string;
   startValue: string;
@@ -726,10 +838,19 @@ function DateRangeField({
   type?: PickerMode;
   onStartChange: (value: string) => void;
   onEndChange: (value: string) => void;
+  endDisabled?: boolean;
+  endDisplayValue?: string;
 }) {
   return (
     <div className={styles.fieldGroup}>
-      <label>{label || `${startLabel} ~ ${endLabel}`}</label>
+      {labelAddon ? (
+        <div className={styles.fieldLabelRow}>
+          <label>{label || `${startLabel} ~ ${endLabel}`}</label>
+          {labelAddon}
+        </div>
+      ) : (
+        <label>{label || `${startLabel} ~ ${endLabel}`}</label>
+      )}
       <div className={styles.dateRangeInput}>
         <DatePickerControl
           ariaLabel={startLabel}
@@ -746,6 +867,8 @@ function DateRangeField({
           placeholder={type === "month" ? "YYYY-MM" : "YYYY-MM-DD"}
           type={type}
           compact
+          disabled={endDisabled}
+          displayValue={endDisplayValue}
           onChange={onEndChange}
         />
       </div>
@@ -759,6 +882,8 @@ function DatePickerControl({
   placeholder,
   type = "date",
   compact = false,
+  disabled = false,
+  displayValue,
   onChange,
 }: {
   ariaLabel: string;
@@ -766,15 +891,18 @@ function DatePickerControl({
   placeholder: string;
   type?: PickerMode;
   compact?: boolean;
+  disabled?: boolean;
+  displayValue?: string;
   onChange: (value: string) => void;
 }) {
   const selected = parsePickerDate(value, type);
 
   return (
-    <div className={`${styles.datePickerControl} ${compact ? styles.datePickerControlCompact : ""}`}>
+    <div className={`${styles.datePickerControl} ${compact ? styles.datePickerControlCompact : ""} ${disabled ? styles.datePickerControlDisabled : ""}`}>
       <DatePicker
         aria-label={ariaLabel}
         selected={selected}
+        disabled={disabled}
         locale="ko"
         dateFormat={type === "month" ? "yyyy.MM" : "yyyy.MM.dd"}
         showMonthYearPicker={type === "month"}
@@ -782,7 +910,7 @@ function DatePickerControl({
         showMonthDropdown={type === "date"}
         dropdownMode="select"
         showPopperArrow={false}
-        customInput={<DatePickerButton ariaLabel={ariaLabel} placeholder={placeholder} />}
+        customInput={<DatePickerButton ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} displayValue={displayValue} />}
         portalId="datepicker-root"
         enableTabLoop={false}
         shouldCloseOnSelect
@@ -792,7 +920,10 @@ function DatePickerControl({
         popperClassName={styles.datePickerPopper}
         popperPlacement="bottom-end"
         openToDate={selected || new Date()}
-        onChange={(date: Date | null) => onChange(formatPickerDate(date, type))}
+        onChange={(date: Date | null) => {
+          if (disabled) return;
+          onChange(formatPickerDate(date, type));
+        }}
       />
       <span className={styles.dateRangeCalendar} aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -810,17 +941,20 @@ const DatePickerButton = forwardRef<
     onClick?: () => void;
     placeholder?: string;
     ariaLabel: string;
+    disabled?: boolean;
+    displayValue?: string;
   }
->(({ value, onClick, placeholder, ariaLabel }, ref) => (
+>(({ value, onClick, placeholder, ariaLabel, disabled = false, displayValue }, ref) => (
   <button
     ref={ref}
     type="button"
     className={styles.datePickerInput}
     onClick={onClick}
     aria-label={ariaLabel}
+    disabled={disabled}
   >
-    <span className={!value ? styles.datePickerPlaceholder : undefined}>
-      {value || placeholder}
+    <span className={!(displayValue || value) ? styles.datePickerPlaceholder : undefined}>
+      {displayValue || value || placeholder}
     </span>
   </button>
 ));
@@ -874,15 +1008,130 @@ function EntryEditor({
   entries,
   emptyText,
   onAdd,
+  onEdit,
   onRemove,
+  onReorder,
 }: {
   kind: ResumeEntryKind;
   title: string;
   entries: ResumeEntryDto[];
   emptyText: string;
   onAdd: () => void;
+  onEdit: (entry: ResumeEntryDto, index: number) => void;
   onRemove: (index: number) => void;
+  onReorder: (fromIndex: number, toIndex: number) => void;
 }) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const pointerDragRef = useRef<{
+    fromIndex: number;
+    targetIndex: number;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    active: boolean;
+    element: HTMLDivElement;
+    longPressTimer?: number;
+  } | null>(null);
+  const suppressClickRef = useRef(false);
+
+  const getEntryIndexFromPoint = (clientX: number, clientY: number) => {
+    const element = document.elementFromPoint(clientX, clientY);
+    const target = element?.closest<HTMLElement>("[data-entry-kind][data-entry-index]");
+    if (!target || target.dataset.entryKind !== kind) return null;
+    const index = Number(target.dataset.entryIndex);
+    return Number.isInteger(index) ? index : null;
+  };
+
+  const clearPointerDragTimer = () => {
+    const timer = pointerDragRef.current?.longPressTimer;
+    if (timer) {
+      window.clearTimeout(timer);
+    }
+  };
+
+  const activatePointerDrag = (pointerId: number) => {
+    const dragState = pointerDragRef.current;
+    if (!dragState) return;
+    dragState.active = true;
+    suppressClickRef.current = true;
+    setDragIndex(dragState.fromIndex);
+    setDropIndex(dragState.targetIndex);
+    dragState.element.setPointerCapture(pointerId);
+  };
+
+  const resetPointerDrag = () => {
+    const dragState = pointerDragRef.current;
+    if (dragState?.active && dragState.element.hasPointerCapture(dragState.pointerId)) {
+      dragState.element.releasePointerCapture(dragState.pointerId);
+    }
+    clearPointerDragTimer();
+    pointerDragRef.current = null;
+    setDragIndex(null);
+    setDropIndex(null);
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 0);
+  };
+
+  const beginPointerDrag = (event: ReactPointerEvent<HTMLDivElement>, index: number) => {
+    if (entries.length < 2 || (event.pointerType === "mouse" && event.button !== 0)) return;
+
+    const dragState: NonNullable<typeof pointerDragRef.current> = {
+      fromIndex: index,
+      targetIndex: index,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+      element: event.currentTarget,
+    };
+    pointerDragRef.current = dragState;
+
+    if (event.pointerType === "mouse") {
+      return;
+    }
+
+    dragState.longPressTimer = window.setTimeout(() => {
+      const currentDragState = pointerDragRef.current;
+      if (!currentDragState || currentDragState.pointerId !== event.pointerId) return;
+      activatePointerDrag(event.pointerId);
+    }, 250);
+  };
+
+  const movePointerDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const dragState = pointerDragRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    const distance = Math.hypot(event.clientX - dragState.startX, event.clientY - dragState.startY);
+    if (!dragState.active) {
+      if (event.pointerType === "mouse" && distance > 6) {
+        activatePointerDrag(event.pointerId);
+      } else if (event.pointerType !== "mouse" && distance > 10) {
+        resetPointerDrag();
+      }
+    }
+
+    if (!pointerDragRef.current?.active) return;
+
+    event.preventDefault();
+    const nextDropIndex = getEntryIndexFromPoint(event.clientX, event.clientY);
+    if (nextDropIndex !== null) {
+      pointerDragRef.current.targetIndex = nextDropIndex;
+      setDropIndex(nextDropIndex);
+    }
+  };
+
+  const finishPointerDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const dragState = pointerDragRef.current;
+    if (!dragState || dragState.pointerId !== event.pointerId) return;
+
+    if (dragState.active && dragState.fromIndex !== dragState.targetIndex) {
+      onReorder(dragState.fromIndex, dragState.targetIndex);
+    }
+    resetPointerDrag();
+  };
+
   return (
     <section>
       <div className={styles.formSectionHeader}>
@@ -894,15 +1143,50 @@ function EntryEditor({
           <div className={styles.emptyEntry}>{emptyText}</div>
         ) : entries.map((entry, index) => {
           const display = formatEntryDisplay(kind, entry);
+          const requiredTitlePlaceholder = getRequiredTitlePlaceholder(kind);
           return (
-            <div key={`${kind}-${display.title}-${index}`} className={styles.entryEditCard}>
+            <div
+              key={`${kind}-${display.title}-${index}`}
+              className={`${styles.entryEditCard} ${dragIndex === index ? styles.entryDragging : ""} ${dropIndex === index && dragIndex !== index ? styles.entryDropTarget : ""}`}
+              role="button"
+              tabIndex={0}
+              aria-label={`${title} 항목 수정`}
+              data-entry-kind={kind}
+              data-entry-index={index}
+              onClick={() => {
+                if (suppressClickRef.current) return;
+                onEdit(entry, index);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onEdit(entry, index);
+                }
+              }}
+              onPointerDown={(event) => beginPointerDrag(event, index)}
+              onPointerMove={movePointerDrag}
+              onPointerUp={finishPointerDrag}
+              onPointerCancel={resetPointerDrag}
+            >
               <span className={styles.entryContent}>
-                <strong>{display.title || "-"}</strong>
+                <strong className={!display.title ? styles.entryMissingTitle : undefined}>
+                  {display.title || requiredTitlePlaceholder}
+                </strong>
                 {display.lines.map((line) => (
                   <small key={line}>{line}</small>
                 ))}
               </span>
-              <button type="button" className={styles.entryRemove} onClick={() => onRemove(index)} aria-label={`${title} 삭제`}>
+              <button
+                type="button"
+                className={styles.entryRemove}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRemove(index);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+                aria-label={`${title} 삭제`}
+              >
                 ×
               </button>
             </div>
@@ -972,8 +1256,7 @@ function isCompleteEntry(entry: ResumeEntryDto, kind: ResumeEntryKind) {
   }
   if (kind === "activity") {
     return [
-      normalized.activityName || normalized.title,
-      normalized.description,
+      normalized.activityName || normalized.title || normalized.description,
       normalized.startDate || normalized.activityDate,
     ].every(isFilled);
   }
@@ -1095,20 +1378,7 @@ function normalizeEntryLabels(entry: ResumeEntryDto, kind: ResumeEntryKind): Res
   }
 
   if (kind === "activity") {
-    const activityName = entry.activityName || entry.title;
-    const description = entry.description || entry.subtitle;
-    const activityDate = entry.activityDate || entry.startDate || entry.endDate;
-    const issuer = entry.issuer;
-    return {
-      ...entry,
-      activityName,
-      description,
-      activityDate,
-      issuer,
-      title: entry.title || activityName,
-      subtitle: entry.subtitle || description,
-      startDate: entry.startDate || activityDate,
-    };
+    return normalizeActivityEntry(entry);
   }
 
   if (kind === "certification") {
@@ -1175,11 +1445,13 @@ function formatEntryDisplay(kind: ResumeEntryKind, entry: ResumeEntryDto) {
   }
 
   if (kind === "activity") {
+    const activity = normalizeActivityEntry(normalized);
     return {
-      title: normalized.activityName || normalized.title,
+      title: activity.activityName || activity.title,
       lines: compactLines([
-        normalized.description || normalized.subtitle,
-        [formatMonthRangeLabel(normalized.startDate, normalized.endDate) || formatDateLabel(normalized.activityDate || normalized.startDate), normalized.issuer].filter(Boolean).join(" · "),
+        activity.description,
+        activity.issuer,
+        formatMonthRangeLabel(activity.startDate, activity.endDate) || formatDateLabel(activity.activityDate || activity.startDate),
       ]),
     };
   }
@@ -1205,6 +1477,15 @@ function compactLines(lines: Array<string | null | undefined>) {
   return lines.map((line) => cleanText(line)).filter(Boolean);
 }
 
+function getRequiredTitlePlaceholder(kind: ResumeEntryKind) {
+  if (kind === "experience") return "회사·기관명을 입력해주세요.";
+  if (kind === "award") return "공모전명을 입력해주세요.";
+  if (kind === "activity") return "활동명을 입력해주세요.";
+  if (kind === "certification") return "자격증명을 입력해주세요.";
+  if (kind === "language") return "어학시험명을 입력해주세요.";
+  return "학교명을 입력해주세요.";
+}
+
 function hasEntryContent(entry: ResumeEntryDto, kind: ResumeEntryKind) {
   const display = formatEntryDisplay(kind, entry);
   return Boolean(display.title || display.lines.length);
@@ -1213,6 +1494,120 @@ function hasEntryContent(entry: ResumeEntryDto, kind: ResumeEntryKind) {
 function cleanText(value?: string | null) {
   const next = value?.trim();
   return next || "";
+}
+
+function isDateLikeText(value?: string | null) {
+  const text = cleanText(value);
+  if (!text) return false;
+
+  const compact = text.replace(/\s/g, "");
+  const monthMatches = compact.match(/(?:19|20)?\d{2}[.\-/년]+(?:0?[1-9]|1[0-2])/g) || [];
+  if (!monthMatches.length) return false;
+
+  const withoutDateParts = compact
+    .replace(/(?:19|20)?\d{2}[.\-/년]+(?:0?[1-9]|1[0-2])/g, "")
+    .replace(/현재|재직중|진행중|부터|까지/g, "")
+    .replace(/[.~～–\-·年月]/g, "");
+
+  return !withoutDateParts;
+}
+
+function normalizeActivityEntry(entry: ResumeEntryDto): ResumeEntryDto {
+  const rawIssuer = cleanText(entry.issuer);
+  const rawActivityName = cleanText(entry.activityName);
+  const activityName = shouldTreatAsActivityDescription(rawActivityName, rawIssuer) ? "" : rawActivityName;
+  const rawTitle = cleanText(entry.title);
+  const title = activityName ? rawTitle || activityName : "";
+  const subtitle = cleanText(entry.subtitle);
+  const rawDescription = cleanText(entry.description) || (!activityName ? rawActivityName || rawTitle : "");
+  const subtitleRange = extractMonthRangeText(subtitle);
+  const activityDateRange = extractMonthRangeText(entry.activityDate);
+  const [subtitleStartDate, subtitleEndDate] = splitMonthRange(subtitleRange);
+  const [activityStartDate, activityEndDate] = splitMonthRange(activityDateRange);
+  const startDate = activityStartDate || normalizeMonthInputValue(entry.startDate) || subtitleStartDate;
+  const endDate = activityEndDate || normalizeMonthInputValue(entry.endDate) || subtitleEndDate;
+  const issuer = isDateLikeText(rawIssuer)
+    ? extractActivityIssuerFromMetadata(subtitle, activityName)
+    : rawIssuer || extractActivityIssuerFromMetadata(subtitle, activityName) || inferActivityIssuerFromDescription(rawDescription);
+  const description = cleanActivityDescription(rawDescription, {
+    activityName,
+    issuer,
+    startDate,
+    endDate,
+  });
+  const activityDate = normalizeMonthInputValue(entry.activityDate) || startDate;
+
+  return {
+    ...entry,
+    title,
+    activityName,
+    description,
+    issuer,
+    activityDate,
+    startDate,
+    endDate,
+    subtitle: description,
+  };
+}
+
+function cleanActivityDescription(
+  value: string | null | undefined,
+  context: { activityName?: string | null; issuer?: string | null; startDate?: string | null; endDate?: string | null },
+) {
+  const parts = splitMetadataParts(value);
+  const rangeLabel = formatMonthRangeLabel(context.startDate, context.endDate);
+  const cleanedParts = parts.filter((part) => {
+    if (isDateLikeText(part)) return false;
+    if (isSameCleanText(part, context.activityName)) return false;
+    if (isSameCleanText(part, context.issuer)) return false;
+    if (rangeLabel && isSameCleanText(part, rangeLabel)) return false;
+    if (looksLikeOrganizationText(part)) return false;
+    return true;
+  });
+  return cleanedParts.join(" · ");
+}
+
+function shouldTreatAsActivityDescription(activityName?: string | null, issuer?: string | null) {
+  const name = cleanText(activityName);
+  if (!name) return false;
+  if (/동아리|봉사|서포터즈|인턴|프로젝트|활동|캠프|대회|공모전/.test(name)) return false;
+  if (/university|college|어학원|학교|대학교|대학원|academy/i.test(cleanText(issuer))) return true;
+  return false;
+}
+
+function extractActivityIssuerFromMetadata(value?: string | null, activityName?: string | null) {
+  return splitMetadataParts(value).find((part) => !isSameCleanText(part, activityName) && looksLikeOrganizationText(part)) || "";
+}
+
+function inferActivityIssuerFromDescription(value?: string | null) {
+  const text = cleanText(value);
+  if (!text || isDateLikeText(text)) return "";
+  if (looksLikeOrganizationText(text)) {
+    return text;
+  }
+  return "";
+}
+
+function splitMetadataParts(value?: string | null) {
+  return cleanText(value)
+    .split(/·|\n/)
+    .map((part) => cleanText(part))
+    .filter(Boolean);
+}
+
+function looksLikeOrganizationText(value?: string | null) {
+  const text = cleanText(value);
+  return Boolean(text && !isDateLikeText(text) && /대학교|대학원|고등학교|학교|기관|협회|센터|연구원|재단|공사|공단|회사|법인|어학원|university|college|institute|center|centre|academy/i.test(text));
+}
+
+function isSameCleanText(left?: string | null, right?: string | null) {
+  const cleanLeft = cleanText(left).replace(/\s/g, "").toLowerCase();
+  const cleanRight = cleanText(right).replace(/\s/g, "").toLowerCase();
+  return Boolean(cleanLeft && cleanRight && cleanLeft === cleanRight);
+}
+
+function isCurrentEndDate(value?: string | null) {
+  return /^(현재|재직중|진행중)$/.test(cleanText(value).replace(/\s/g, ""));
 }
 
 function parseDesiredJobs(value?: string | null) {
@@ -1497,7 +1892,7 @@ function normalizeUploadEntries(entries: unknown, type: ResumeEntryKind) {
     }
 
     if (type === "activity") {
-      const description =
+      const rawDescription =
         cleanText(entry.description) ||
         cleanText(readString(entry, ["content", "details", "활동내용", "내용"]));
       const resolvedStartDate = normalizeMonthInputValue(startDate) || periodStartDate;
@@ -1509,19 +1904,17 @@ function normalizeUploadEntries(entries: unknown, type: ResumeEntryKind) {
         subtitleText,
         titleText,
       );
-      return {
+      return normalizeActivityEntry({
         ...entry,
         title: cleanText(entry.title) || activityName,
-        subtitle: [description, formatMonthRangeLabel(resolvedStartDate, resolvedEndDate) || formatMonthLabel(activityDate), issuer]
-          .filter(Boolean)
-          .join(" · "),
+        subtitle: subtitleText,
         activityName,
-        description,
+        description: rawDescription,
         issuer,
         activityDate,
         startDate: resolvedStartDate,
         endDate: resolvedEndDate,
-      };
+      });
     }
 
     if (type === "language") {
@@ -1596,7 +1989,7 @@ function isImportableUploadEntry(entry: ResumeEntryDto, type: ResumeEntryKind) {
   }
 
   if (type === "activity") {
-    const title = cleanText(entry.activityName || entry.title);
+    const title = cleanText(entry.activityName || entry.title || entry.description);
     return Boolean(title && !isImportNoiseText(title));
   }
 
@@ -1637,6 +2030,27 @@ function removeAt<T>(items: T[], index: number) {
   return items.filter((_, itemIndex) => itemIndex !== index);
 }
 
+function replaceAt<T>(items: T[], index: number, nextItem: T) {
+  return items.map((item, itemIndex) => (itemIndex === index ? nextItem : item));
+}
+
+function moveEntry<T>(items: T[], fromIndex: number, toIndex: number) {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= items.length ||
+    toIndex >= items.length
+  ) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  const [movedItem] = nextItems.splice(fromIndex, 1);
+  nextItems.splice(toIndex, 0, movedItem);
+  return nextItems;
+}
+
 function formatBytes(value?: number) {
   if (!value) return "0KB";
   if (value < 1024 * 1024) return `${Math.round(value / 1024)}KB`;
@@ -1645,7 +2059,7 @@ function formatBytes(value?: number) {
 
 function isAcceptedResumeFile(file: File) {
   const extension = file.name.split(".").pop()?.toLowerCase() || "";
-  return ACCEPTED_UPLOAD_EXTENSIONS.has(extension);
+  return ACCEPTED_UPLOAD_EXTENSIONS.has(extension) || ACCEPTED_UPLOAD_MIME_TYPES.has(file.type);
 }
 
 function selectPreferredEducation(entries?: ResumeEntryDto[]) {
