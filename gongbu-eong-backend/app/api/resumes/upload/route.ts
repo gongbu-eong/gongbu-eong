@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
         educationSummary: extracted.educationSummary || "",
         careerSummary: extracted.careerSummary || "",
         certificationSummary: extracted.certificationSummary || "",
+        additionalNotes: extracted.additionalNotes || "",
         educations: extracted.educations || [],
         experiences: extracted.experiences || [],
         certifications: extracted.certifications || [],

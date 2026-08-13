@@ -47,6 +47,7 @@ export type ResumePayloadDto = {
   educationSummary?: string | null;
   careerSummary?: string | null;
   certificationSummary?: string | null;
+  additionalNotes?: string | null;
   completionPercent?: number;
   extractedPayload?: Record<string, unknown>;
   educations?: ResumeEntryDto[];

@@ -907,6 +907,317 @@
   box-shadow: 0 0.75rem 1.5rem rgba(26, 34, 51, 0.12);
 }
 
+.bottomSheetBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100vw;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.bottomSheetScrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+}
+
+.dateSheet {
+  position: relative;
+  display: flex;
+  width: min(100vw, 600px);
+  height: min(519px, calc(100dvh - 8px));
+  box-sizing: border-box;
+  padding: 0 16px calc(40px + env(safe-area-inset-bottom));
+  flex-direction: column;
+  border-radius: 15px 15px 0 0;
+  background: #fff;
+  color: #1a2233;
+  font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
+  box-shadow: 0 -1rem 2rem rgba(26, 34, 51, 0.16);
+}
+
+.dateSheet button,
+.dateSheet select {
+  font-family: inherit;
+  letter-spacing: 0;
+}
+
+.dateSheetMonth {
+  height: min(325px, calc(100dvh - 8px));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+
+.dateSheetHandle {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: #e4e8ef;
+  transform: translateX(-50%);
+}
+
+.dateSheetHeader {
+  display: flex;
+  height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 -16px;
+  padding: 0 16px;
+  border-bottom: 1px solid #e4e8ef;
+}
+
+.dateSheetHeader h2 {
+  margin: 0;
+  color: #1a2233;
+  font-size: 1.25rem;
+  line-height: 1.35;
+  font-weight: 900;
+}
+
+.dateSheetClose {
+  display: inline-grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #5a6580;
+  font-size: 2rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.dateSheetMonthNav {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr 2.75rem;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-top: 2.5rem;
+}
+
+.dateSheetMonthNav > button:not(.dateSheetMonthTitle) {
+  display: grid;
+  height: 2.75rem;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #9aa4b8;
+  font-size: 2.25rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.dateSheetMonthNav > button:first-child {
+  color: #1a2233;
+}
+
+.dateSheetMonthNav .dateSheetMonthTitle {
+  display: inline-flex !important;
+  width: auto;
+  min-width: 8.25rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 0;
+  background: transparent;
+  justify-self: center;
+  color: #1a2233;
+  font-size: 1.5rem;
+  line-height: 1.35;
+  font-weight: 900;
+  opacity: 1;
+}
+
+.dateSheetMonthNav .dateSheetMonthTitle span {
+  color: #5a6580;
+  font-size: 1.125rem;
+}
+
+.dayPickerWeekdays,
+.dayPickerGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.dayPickerWeekdays {
+  margin-top: 1.5rem;
+}
+
+.dayPickerWeekdays span {
+  display: grid;
+  height: 2rem;
+  place-items: center;
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.dayPickerWeekdays span:first-child {
+  color: #e8544d;
+}
+
+.dayPickerGrid {
+  margin-top: 0.625rem;
+  row-gap: 0;
+}
+
+.dayPickerDay {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 42px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: #fff;
+  color: #1a2233;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.dayPickerDay:nth-child(7n + 1) {
+  color: #e8544d;
+}
+
+.dayPickerDay:nth-child(7n) {
+  color: #2f7ff0;
+}
+
+.dayPickerDayMuted {
+  color: rgba(154, 164, 184, 0.5) !important;
+}
+
+.dayPickerDaySelected {
+  background: #2f7ff0;
+  color: #fff !important;
+}
+
+.dayPickerDaySelected i {
+  position: absolute;
+  bottom: 7px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  transform: translateX(-50%);
+}
+
+.dateSheetActions {
+  display: grid;
+  grid-template-columns: 0.8fr 1fr;
+  gap: 0.875rem;
+  margin-top: auto;
+  padding-top: 0.875rem;
+  flex: 0 0 auto;
+}
+
+.dateSheetMonth .dateSheetActions {
+  grid-template-columns: 1fr;
+}
+
+.dateSheetReset,
+.dateSheetConfirm {
+  height: 52px;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.dateSheetReset {
+  border: 1px solid #e4e8ef;
+  background: #fff;
+  color: #5a6580;
+}
+
+.dateSheetConfirm {
+  border: 0;
+  background: #2f7ff0;
+  color: #fff;
+}
+
+.monthPicker {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  padding-top: 2.75rem;
+  flex-direction: column;
+}
+
+.monthPickerTitle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  background: transparent;
+  color: #1a2233;
+  font-size: 1.5rem;
+  line-height: 1.35;
+  font-weight: 900;
+}
+
+.monthPickerTitle span {
+  color: #5a6580;
+  font-size: 1.125rem;
+}
+
+.monthPickerFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.monthPickerFields label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  color: #1a2233;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.monthPickerFields label span {
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.monthPickerFields select {
+  width: 100%;
+  height: 40px;
+  padding: 0 2.5rem 0 1rem;
+  border: 1px solid #e4e8ef;
+  border-radius: 5px;
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, #5a6580 50%) calc(100% - 18px) 50% / 6px 6px no-repeat,
+    linear-gradient(135deg, #5a6580 50%, transparent 50%) calc(100% - 13px) 50% / 6px 6px no-repeat,
+    #fff;
+  color: #1a2233;
+  font-size: 1rem;
+  line-height: 1.35;
+  font-weight: 500;
+}
+
+@media (max-width: 599px) {
+  .dateSheet {
+    width: 100vw;
+    max-width: none;
+  }
+}
+
 .dateRange {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1146,6 +1457,9 @@
 
 .resumeFormFrame .uploadFile,
 .resumeFormFrame .uploadDropzone {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 5.125rem;
   border: 1px solid #e4e8ef;
   border-radius: 0.5rem;
@@ -1154,6 +1468,7 @@
 }
 
 .resumeFormFrame .uploadFile {
+  flex-wrap: wrap;
   gap: 0.75rem;
   padding: 0.9375rem;
 }
@@ -1186,6 +1501,7 @@
 }
 
 .resumeFormFrame .smallButton {
+  flex: 0 0 auto;
   height: 2.0625rem;
   padding: 0 0.875rem;
   border: 0;
@@ -1204,6 +1520,9 @@
 }
 
 .resumeFormFrame .completionCard {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   margin: 1.25rem 0;
   padding: 0.875rem 1rem;
   border-radius: 0.5rem;
@@ -1229,6 +1548,9 @@
 }
 
 .resumeFormFrame .form {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   gap: 1.375rem;
 }
 
@@ -1262,6 +1584,8 @@
 .resumeFormFrame .inputButton,
 .resumeFormFrame .dateRangeInput,
 .resumeFormFrame .datePickerControl {
+  max-width: 100%;
+  box-sizing: border-box;
   border: 0;
   border-radius: 0.375rem;
   background: #f5f7fa;
@@ -1407,6 +1731,22 @@
 
 .resumeFormFrame .saveButton {
   margin-top: 0.75rem;
+}
+
+@media (max-width: 480px) {
+  .resumeFormFrame {
+    overflow-x: hidden;
+  }
+
+  .resumeFormFrame .uploadFile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .resumeFormFrame .uploadFile .smallButton {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
 }
 
 @media (min-width: 600px) {

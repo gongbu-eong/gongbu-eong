@@ -29,6 +29,7 @@ type ResumeRow = {
   education_summary: string | null;
   career_summary: string | null;
   certification_summary: string | null;
+  additional_notes: string | null;
   completion_percent: number;
   is_selected: boolean;
   extracted_payload: Record<string, unknown>;
@@ -164,12 +165,13 @@ export async function createResume(userId: string, payload: ResumePayloadDto) {
           education_summary,
           career_summary,
           certification_summary,
+          additional_notes,
           completion_percent,
           extracted_payload
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
         )
         RETURNING id
       `,
@@ -194,6 +196,7 @@ export async function createResume(userId: string, payload: ResumePayloadDto) {
         normalizeText(payload.educationSummary),
         normalizeText(payload.careerSummary),
         normalizeText(payload.certificationSummary),
+        normalizeText(payload.additionalNotes),
         payload.completionPercent ?? calculateCompletion(payload),
         JSON.stringify(payload.extractedPayload || {}),
       ],
@@ -248,8 +251,9 @@ export async function updateResume(userId: string, resumeId: string, payload: Re
           education_summary = $19,
           career_summary = $20,
           certification_summary = $21,
-          completion_percent = $22,
-          extracted_payload = COALESCE($23::jsonb, extracted_payload),
+          additional_notes = $22,
+          completion_percent = $23,
+          extracted_payload = COALESCE($24::jsonb, extracted_payload),
           updated_at = NOW()
         WHERE user_id = $1
           AND id = $2
@@ -276,6 +280,7 @@ export async function updateResume(userId: string, resumeId: string, payload: Re
         normalizeText(payload.educationSummary),
         normalizeText(payload.careerSummary),
         normalizeText(payload.certificationSummary),
+        normalizeText(payload.additionalNotes),
         payload.completionPercent ?? calculateCompletion(payload),
         JSON.stringify(payload.extractedPayload || {}),
       ],
@@ -562,6 +567,7 @@ function mapResume(row: ResumeRow): ResumeDto {
     educationSummary: row.education_summary,
     careerSummary: row.career_summary,
     certificationSummary: row.certification_summary,
+    additionalNotes: row.additional_notes,
     completionPercent: row.completion_percent,
     isSelected: row.is_selected,
     extractedPayload: row.extracted_payload || {},
@@ -807,19 +813,16 @@ function calculateCompletion(payload: ResumePayloadDto) {
   const fields = [
     payload.title,
     payload.name,
-    payload.birthYear,
-    payload.email,
+    payload.birthDate,
     payload.desiredJob,
     payload.highestEducation,
-    payload.gpa,
-    payload.schoolMajor,
+    payload.gpaScore,
+    payload.gpaMax,
+    payload.graduationStatus,
+    payload.educationStartDate,
+    payload.educationEndDate,
   ];
   const filled = fields.filter((field) => normalizeText(field)).length;
-  const listFilled = [
-    payload.educations?.length,
-    payload.experiences?.length,
-    payload.certifications?.length,
-  ].filter(Boolean).length;
 
-  return Math.min(100, Math.round(((filled + listFilled) / 11) * 100));
+  return Math.min(100, Math.round((filled / fields.length) * 100));
 }

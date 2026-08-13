@@ -6,6 +6,22 @@ import pg from "pg";
 const { Client } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const envPath = path.join(__dirname, "..", ".env");
+
+if (fs.existsSync(envPath)) {
+  const envText = fs.readFileSync(envPath, "utf8");
+  for (const line of envText.split(/\r?\n/)) {
+    const match = line.match(/^\s*([^#][^=]+)=(.*)$/);
+    if (!match) continue;
+
+    const key = match[1].trim();
+    const value = match[2].trim().replace(/^(['"])(.*)\1$/, "$2");
+    if (!process.env[key]) {
+      process.env[key] = value;
+    }
+  }
+}
+
 const databaseUrl =
   process.env.DATABASE_URL || "postgresql://postgres:1234@localhost:5432/postgres";
 
@@ -14,6 +30,8 @@ async function main() {
   const files = [
     "schema.sql",
     "alter_user_resumes.sql",
+    "20260806_resume_profile_details.sql",
+    "20260812_user_resume_additional_notes.sql",
     "seed_diagnosis.sql",
     "alter_job_category_recommendations.sql",
   ];

@@ -490,6 +490,28 @@ CREATE TABLE IF NOT EXISTS public.user_resumes (
   file_name VARCHAR(255) NOT NULL,
   file_url TEXT,
   extracted_text TEXT,
+  user_file_id UUID,
+  source_type TEXT NOT NULL DEFAULT 'manual',
+  title TEXT,
+  name TEXT,
+  birth_year TEXT,
+  birth_date TEXT,
+  email TEXT,
+  desired_job TEXT,
+  highest_education TEXT,
+  gpa TEXT,
+  gpa_score TEXT,
+  gpa_max TEXT,
+  school_major TEXT,
+  graduation_status TEXT,
+  education_start_date TEXT,
+  education_end_date TEXT,
+  education_summary TEXT,
+  career_summary TEXT,
+  certification_summary TEXT,
+  additional_notes TEXT,
+  completion_percent SMALLINT NOT NULL DEFAULT 0,
+  extracted_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
   is_selected BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -736,7 +758,13 @@ CREATE INDEX IF NOT EXISTS idx_diagnosis_results_type_created ON public.diagnosi
 CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_run ON public.diagnosis_login_conversions(diagnosis_run_id);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_user_created ON public.diagnosis_login_conversions(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_result_user ON public.diagnosis_login_conversions(diagnosis_result_id, user_id);
-CREATE INDEX IF NOT EXISTS idx_job_posting_categories_category_posting ON public.job_posting_categories(job_category_id, job_posting_id);
+DO $$
+BEGIN
+  IF to_regclass('public.job_posting_categories') IS NOT NULL THEN
+    CREATE INDEX IF NOT EXISTS idx_job_posting_categories_category_posting
+      ON public.job_posting_categories(job_category_id, job_posting_id);
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_job_postings_announcement_created ON public.job_postings(announcement_at DESC, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_created ON public.ai_usage_events(user_id, created_at DESC);

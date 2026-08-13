@@ -16,14 +16,26 @@ type ResumeEntryType =
   | "activity"
   | "language";
 
+type StructuredResumeDocument = {
+  text: string;
+  tables: ResumeDocumentTable[];
+};
+
+type ResumeDocumentTable = {
+  section: string;
+  headers: string[];
+  rows: string[][];
+};
+
 export async function extractResumeWithClaude(args: {
   file: File;
   buffer: Buffer;
 }): Promise<Partial<ResumePayloadDto>> {
   const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
   const mediaType = guessMediaType(args.file.name);
-  const officeText = await extractOfficeText(args.file.name, args.buffer);
-  const deterministic = normalizeResumePayload(parseResumeFromText(officeText));
+  const officeDocument = await extractOfficeDocument(args.file.name, args.buffer);
+  const officeText = officeDocument.text;
+  const deterministic = normalizeResumePayload(parseResumeFromDocument(officeDocument));
 
   if (!officeText && mediaType !== "application/pdf") {
     throw new Error("자동 분석을 지원하지 않는 파일 형식입니다.");
@@ -40,7 +52,7 @@ export async function extractResumeWithClaude(args: {
     ? [
         {
           type: "text",
-          text: `${prompt}\n\n이력서 원문:\n${officeText.slice(0, MAX_CLAUDE_TEXT_LENGTH)}`,
+          text: `${prompt}\n\n${formatAiSourceInput(officeDocument)}`,
         },
       ]
     : [
@@ -116,6 +128,7 @@ function buildAiExtractionPrompt() {
 - 희망 직무/지원 분야/지원 직무는 앱에서 사용자가 직접 선택하는 값입니다. 문서에 있어도 desiredJob은 항상 빈 문자열입니다.
 - 자기소개서, 경력기술서의 서술형 문장, 지원동기, 입사 후 포부, 성장과정 등 자유 서술 영역에서 경력/수상/활동/자격증/어학 항목을 추론하지 않습니다.
 - 표, 목록, 명확한 항목 라벨이 있는 이력서 영역에서만 추출합니다.
+- 입력에 "구조화 표 JSON"이 있으면 원문 텍스트보다 그 표의 headers/rows를 우선합니다. 한 항목의 값은 반드시 같은 row 안에서만 가져옵니다.
 - 섹션 헤더와 컬럼명(예: 기간, 기관, 시험, 점수, 근무회사, 담당직무, 자격증/면허증, 상세 내용)은 항목이 아닙니다.
 - 값이 원문에 명확하지 않으면 빈 문자열 또는 빈 배열로 둡니다.
 - 각 스칼라 값과 각 배열 항목에는 반드시 evidence 필드를 넣고, evidence에는 원문에서 해당 값을 확인할 수 있는 짧은 문구를 넣습니다.
@@ -125,7 +138,7 @@ function buildAiExtractionPrompt() {
 - educations: 학력/학력사항/교육사항 중 학교 학력만. 고등학교, 대학교, 대학원 등 학교명과 전공, 학점, 입학/졸업 기간.
 - experiences: 실제 근무/재직/인턴 경력만. 학교 학력, 교육/연수, 동아리, 봉사활동, 프로젝트, 자기소개서 문장 제외.
 - activities: 교육/연수, 대외활동, 기타활동, 봉사, 동아리, 서포터즈, 프로젝트 활동. 기관 칸이 있으면 issuer에 넣습니다. 실제 근무 경력과 자격증/어학 제외.
-- activities 표 제약: 활동명/과정명 칸이 있으면 activityName에 넣습니다. 활동명/과정명 칸이 없고 "활동 내용" 칸만 있으면 그 값은 description에 넣고 activityName은 빈 문자열입니다. 같은 행의 "기관" 칸만 issuer입니다. 같은 행의 "기간" 칸만 startDate/endDate/activityDate입니다. 인접 행의 기간/기관을 절대 가져오지 않습니다.
+- activities 표 제약: "활동명" 칸이 있을 때만 activityName에 넣습니다. "과정명", "활동 내용", "교육 내용", "세부 내용"은 description에 넣고 activityName은 빈 문자열입니다. 같은 행의 "기관" 칸만 issuer입니다. 같은 행의 "기간" 칸만 startDate/endDate/activityDate입니다. 인접 행의 기간/기관을 절대 가져오지 않습니다.
 - awards: 수상/수상내용/포상 섹션의 실제 수상 항목만. 기관 칸이 있으면 issuer에 넣습니다.
 - certifications: 자격증/면허증/면허 섹션의 실제 자격 항목만.
 - languages: 어학/외국어 섹션의 언어, 시험명, 점수/급수, 취득일, 기관. 언어 칸이 없으면 language는 빈 문자열로 둡니다. TOEIC/JLPT 같은 시험명으로 언어를 추론하지 않습니다.
@@ -388,22 +401,66 @@ function finalizeExtractedResume(
     desiredJob: EMPTY,
     extractedPayload,
   };
-  finalized.educations = dedupeEntries(finalized.educations || [], (entry) => resumeEntryDedupeKey(entry, "education"));
-  finalized.experiences = dedupeEntries(finalized.experiences || [], (entry) => resumeEntryDedupeKey(entry, "experience"))
+  finalized.educations = dedupeEntries(
+    (finalized.educations || []).map((entry) => repairResumeEntry(entry, "education")),
+    (entry) => resumeEntryDedupeKey(entry, "education"),
+  );
+  finalized.experiences = dedupeEntries(
+    (finalized.experiences || []).map((entry) => repairResumeEntry(entry, "experience")),
+    (entry) => resumeEntryDedupeKey(entry, "experience"),
+  )
     .filter((entry) => isAllowedEntryForType(entry, "experience"));
-  finalized.awards = dedupeEntries(finalized.awards || [], (entry) => resumeEntryDedupeKey(entry, "award"));
-  finalized.activities = dedupeEntries(finalized.activities || [], (entry) => resumeEntryDedupeKey(entry, "activity"));
-  finalized.certifications = dedupeEntries(finalized.certifications || [], (entry) => resumeEntryDedupeKey(entry, "certification"));
-  finalized.languages = dedupeEntries(finalized.languages || [], (entry) => resumeEntryDedupeKey(entry, "language"));
+  finalized.awards = dedupeEntries(
+    (finalized.awards || []).map((entry) => repairResumeEntry(entry, "award")),
+    (entry) => resumeEntryDedupeKey(entry, "award"),
+  );
+  finalized.activities = dedupeEntries(
+    (finalized.activities || []).map((entry) => repairResumeEntry(entry, "activity")),
+    (entry) => resumeEntryDedupeKey(entry, "activity"),
+  );
+  finalized.certifications = dedupeEntries(
+    (finalized.certifications || []).map((entry) => repairResumeEntry(entry, "certification")),
+    (entry) => resumeEntryDedupeKey(entry, "certification"),
+  );
+  finalized.languages = dedupeEntries(
+    (finalized.languages || []).map((entry) => repairResumeEntry(entry, "language")),
+    (entry) => resumeEntryDedupeKey(entry, "language"),
+  );
 
   const preferredEducation = findPreferredEducation(finalized.educations || []);
   finalized.highestEducation = summarizeHighestEducation(finalized.educations || []) || finalized.highestEducation || EMPTY;
   finalized.graduationStatus = preferredEducation?.graduationStatus || finalized.graduationStatus || EMPTY;
   finalized.educationStartDate = preferredEducation?.startDate || finalized.educationStartDate || EMPTY;
   finalized.educationEndDate = preferredEducation?.endDate || finalized.educationEndDate || EMPTY;
-  finalized.schoolMajor = [preferredEducation?.schoolName, preferredEducation?.major].filter(Boolean).join(" ") || finalized.schoolMajor || EMPTY;
+  finalized.schoolMajor = formatSchoolMajorLabel(preferredEducation) || dedupeSchoolMajorText(finalized.schoolMajor) || EMPTY;
   finalized.birthYear = normalizeBirthYear(finalized.birthDate) || finalized.birthYear || EMPTY;
   return finalized;
+}
+
+function repairResumeEntry(entry: ResumeEntryDto, type: ResumeEntryType): ResumeEntryDto {
+  if (type !== "activity") return entry;
+
+  const activityName = cleanText(entry.activityName);
+  const issuer = isDateLikeValue(cleanText(entry.issuer)) ? EMPTY : cleanText(entry.issuer);
+  const period = parseMonthRange(entry.activityDate) || [entry.startDate || EMPTY, entry.endDate || EMPTY] as [string, string];
+  const startDate = normalizeMonthOrEmpty(period[0]) || normalizeMonthOrEmpty(entry.startDate) || EMPTY;
+  const endDate = period[1] === "현재"
+    ? "현재"
+    : normalizeMonthOrEmpty(period[1]) || normalizeMonthOrEmpty(entry.endDate) || EMPTY;
+  const descriptionSource = cleanText(entry.description) || (!activityName ? cleanText(entry.title) : EMPTY);
+  const description = cleanActivityDescription(descriptionSource, activityName, issuer, startDate, endDate);
+
+  return {
+    ...entry,
+    title: activityName,
+    activityName,
+    description,
+    issuer,
+    startDate,
+    endDate,
+    activityDate: formatMonthRangeLabel(startDate, endDate),
+    subtitle: description,
+  };
 }
 
 function unwrapResumePayload(raw: unknown) {
@@ -463,9 +520,7 @@ function normalizeResumePayload(raw: unknown): Partial<ResumePayloadDto> {
     preferredEducation?.gpaMax,
   );
   const resolvedGpa = gpa.score || gpa.max ? gpa : educationGpa;
-  const schoolMajor = [preferredEducation?.schoolName, preferredEducation?.major]
-    .filter(Boolean)
-    .join(" ");
+  const schoolMajor = formatSchoolMajorLabel(preferredEducation);
 
   return {
     title: EMPTY,
@@ -486,7 +541,7 @@ function normalizeResumePayload(raw: unknown): Partial<ResumePayloadDto> {
     gpaScore: resolvedGpa.score,
     gpaMax: resolvedGpa.max,
     gpa: resolvedGpa.display,
-    schoolMajor: pickString(data, ["schoolMajor", "major", "학교전공", "학교·전공", "전공"]) || schoolMajor,
+    schoolMajor: dedupeSchoolMajorText(pickString(data, ["schoolMajor", "major", "학교전공", "학교·전공", "전공"]) || schoolMajor),
     educationSummary: summarizeEntries(educations),
     careerSummary: summarizeEntries(experiences),
     certificationSummary: summarizeEntries([...certifications, ...languages]),
@@ -551,7 +606,7 @@ function mergeResumePayload(
   merged.graduationStatus ||= preferredEducation?.graduationStatus;
   merged.educationStartDate ||= preferredEducation?.startDate;
   merged.educationEndDate ||= preferredEducation?.endDate;
-  merged.schoolMajor ||= [preferredEducation?.schoolName, preferredEducation?.major].filter(Boolean).join(" ");
+  merged.schoolMajor = formatSchoolMajorLabel(preferredEducation) || dedupeSchoolMajorText(merged.schoolMajor);
   if (!merged.gpaScore && preferredEducation?.gpaScore) merged.gpaScore = preferredEducation.gpaScore;
   if (!merged.gpaMax && preferredEducation?.gpaMax) merged.gpaMax = preferredEducation.gpaMax;
   if (!merged.gpa && (merged.gpaScore || merged.gpaMax)) {
@@ -830,37 +885,385 @@ function normalizeEntry(item: unknown, type: ResumeEntryType): ResumeEntryDto {
   };
 }
 
-async function extractOfficeText(filename: string, buffer: Buffer) {
+async function extractOfficeDocument(filename: string, buffer: Buffer): Promise<StructuredResumeDocument> {
   const lower = filename.toLowerCase();
   if (lower.endsWith(".docx") || lower.endsWith(".docm") || lower.endsWith(".dotx") || lower.endsWith(".dotm")) {
-    return normalizeExtractedText((await mammoth.extractRawText({ buffer })).value);
+    const [text, tables] = await Promise.all([
+      mammoth.extractRawText({ buffer }).then((result) => normalizeExtractedText(result.value)),
+      extractDocxTables(buffer),
+    ]);
+    return { text, tables };
   }
   if (lower.endsWith(".hwpx") || lower.endsWith(".hml")) {
-    return extractHwpxText(buffer);
+    return extractHwpxDocument(buffer);
   }
   if (lower.endsWith(".hwp") || lower.endsWith(".hwt")) {
-    return extractHwpText(buffer);
+    return { text: extractHwpText(buffer), tables: [] };
   }
   if (lower.endsWith(".rtf")) {
-    return normalizeExtractedText(buffer.toString("utf8").replace(/\\'[0-9a-f]{2}/gi, " ").replace(/\\[a-z]+\d* ?/gi, " "));
+    return {
+      text: normalizeExtractedText(buffer.toString("utf8").replace(/\\'[0-9a-f]{2}/gi, " ").replace(/\\[a-z]+\d* ?/gi, " ")),
+      tables: [],
+    };
   }
+  return { text: EMPTY, tables: [] };
+}
+
+function parseResumeFromDocument(document: StructuredResumeDocument): Partial<ResumePayloadDto> {
+  const tablePayload = parseResumeTables(document.tables);
+  const textPayload = parseResumeFromText(document.text);
+  return hasExtractedResumeFields(tablePayload)
+    ? mergeResumePayload(tablePayload, textPayload)
+    : textPayload;
+}
+
+function parseResumeTables(tables: ResumeDocumentTable[]): Partial<ResumePayloadDto> {
+  const educations: ResumeEntryDto[] = [];
+  const experiences: ResumeEntryDto[] = [];
+  const awards: ResumeEntryDto[] = [];
+  const activities: ResumeEntryDto[] = [];
+  const certifications: ResumeEntryDto[] = [];
+  const languages: ResumeEntryDto[] = [];
+
+  for (const table of tables) {
+    const type = inferTableEntryType(table);
+    if (!type) continue;
+
+    for (const row of table.rows) {
+      const entry = parseResumeTableRow(table.headers, row, type);
+      if (!entry || !isImportableResumeEntry(entry, type) || !isAllowedEntryForType(entry, type)) continue;
+      if (type === "education") educations.push(entry);
+      if (type === "experience") experiences.push(entry);
+      if (type === "award") awards.push(entry);
+      if (type === "activity") activities.push(entry);
+      if (type === "certification") certifications.push(entry);
+      if (type === "language") languages.push(entry);
+    }
+  }
+
+  const preferredEducation = findPreferredEducation(educations);
+  const gpa = normalizeGpa(
+    [preferredEducation?.gpaScore, preferredEducation?.gpaMax].filter(Boolean).join(" / "),
+    preferredEducation?.gpaScore,
+    preferredEducation?.gpaMax,
+  );
+
+  return {
+    title: EMPTY,
+    desiredJob: EMPTY,
+    highestEducation: summarizeHighestEducation(educations),
+    graduationStatus: preferredEducation?.graduationStatus || EMPTY,
+    educationStartDate: preferredEducation?.startDate || EMPTY,
+    educationEndDate: preferredEducation?.endDate || EMPTY,
+    gpaScore: gpa.score,
+    gpaMax: gpa.max,
+    gpa: gpa.display,
+    schoolMajor: formatSchoolMajorLabel(preferredEducation),
+    educations: dedupeEntries(educations, (entry) => resumeEntryDedupeKey(entry, "education")),
+    experiences: dedupeEntries(experiences, (entry) => resumeEntryDedupeKey(entry, "experience")),
+    awards: dedupeEntries(awards, (entry) => resumeEntryDedupeKey(entry, "award")),
+    activities: dedupeEntries(activities, (entry) => resumeEntryDedupeKey(entry, "activity")),
+    certifications: dedupeEntries(certifications, (entry) => resumeEntryDedupeKey(entry, "certification")),
+    languages: dedupeEntries(languages, (entry) => resumeEntryDedupeKey(entry, "language")),
+  };
+}
+
+function inferTableEntryType(table: ResumeDocumentTable): ResumeEntryType | "" {
+  if (table.section !== "unknown") return table.section as ResumeEntryType;
+  const headerText = table.headers.join(" ").replace(/\s/g, "");
+  if (/근무회사|근무부서|담당직무|직위/.test(headerText)) return "experience";
+  if (/학교명|전공|학점|재학기간/.test(headerText)) return "education";
+  if (/자격|면허|발급처/.test(headerText)) return "certification";
+  if (/시험|점수|어학시험/.test(headerText)) return "language";
+  if (/수상|상세내용/.test(headerText)) return "award";
+  if (/활동명|활동내용|과정명|교육내용|연수|기관/.test(headerText)) return "activity";
   return EMPTY;
 }
 
-async function extractHwpxText(buffer: Buffer) {
+function parseResumeTableRow(
+  headers: string[],
+  row: string[],
+  type: ResumeEntryType,
+): ResumeEntryDto | null {
+  if (type === "education") return parseEducationTableRow(headers, row);
+  if (type === "experience") return parseExperienceTableRow(headers, row);
+  if (type === "award") return parseAwardTableRow(headers, row);
+  if (type === "activity") return parseActivityTableRow(headers, row);
+  if (type === "certification") return parseCertificationTableRow(headers, row);
+  return parseLanguageTableRow(headers, row);
+}
+
+function parseEducationTableRow(headers: string[], row: string[]): ResumeEntryDto | null {
+  const period = splitTablePeriod(rowValue(headers, row, [/재학\s*기간/, /기간/]));
+  const schoolMajor = rowValue(headers, row, [/학교.*전공/, /학교명/, /전공/]);
+  const schoolName = cleanText(
+    schoolMajor.match(/(.+?(?:고등학교|대학교|대학원|대학|고교|학교))/)?.[1] || schoolMajor,
+  );
+  if (!schoolName || isImportNoiseText(schoolName)) return null;
+  const major = cleanText(rowValue(headers, row, [/^전공$/]) || schoolMajor.replace(schoolName, ""));
+  const gpa = normalizeGpa(rowValue(headers, row, [/학점/]));
+  const graduationStatus = rowValue(headers, row, [/졸업/, /상태/]) || "졸업";
+  return {
+    title: schoolName,
+    schoolName,
+    degree: normalizeHighestEducation(schoolName),
+    major,
+    gpaScore: gpa.score,
+    gpaMax: gpa.max,
+    graduationStatus,
+    startDate: period[0],
+    endDate: period[1],
+    subtitle: [major, graduationStatus, gpa.display, formatMonthRangeLabel(period[0], period[1])].filter(Boolean).join(" · "),
+  };
+}
+
+function parseExperienceTableRow(headers: string[], row: string[]): ResumeEntryDto | null {
+  const period = splitTablePeriod(rowValue(headers, row, [/근무\s*기간/, /재직\s*기간/, /기간/]));
+  const companyName = rowValue(headers, row, [/근무\s*회사/, /회사.*기관/, /회사명/, /기관명/]);
+  if (!companyName || isImportNoiseText(companyName)) return null;
+  const department = rowValue(headers, row, [/근무\s*부서/, /부서/]);
+  const position = rowValue(headers, row, [/직위/, /직급/, /직책/]);
+  const duties = rowValue(headers, row, [/담당\s*직무/, /담당\s*업무/, /업무/]);
+  return {
+    title: companyName,
+    companyName,
+    position,
+    duties,
+    startDate: period[0],
+    endDate: period[1],
+    subtitle: [department, position, duties, formatCareerRangeLabel(period[0], period[1])].filter(Boolean).join(" · "),
+  };
+}
+
+function parseAwardTableRow(headers: string[], row: string[]): ResumeEntryDto | null {
+  const awardedDate = splitTablePeriod(rowValue(headers, row, [/수상\s*일자/, /수상\s*일/, /일자/, /기간/]))[0];
+  const detail = rowValue(headers, row, [/상세\s*내용/, /수상\s*내용/, /공모전명/, /대회명/, /내용/]);
+  if (!detail || isImportNoiseText(detail)) return null;
+  const issuer = rowValue(headers, row, [/기관/, /주관/, /발급처/]);
+  const awardName = rowValue(headers, row, [/수상명/, /상명/]) ||
+    detail.match(/(대상|최우수상|우수상|금상|은상|동상|장려상|입상|참가상)/)?.[1] ||
+    detail;
+  return {
+    title: detail,
+    contestName: detail,
+    awardName,
+    issuer,
+    awardedDate,
+    subtitle: [awardName, formatMonthLabel(awardedDate), issuer].filter(Boolean).join(" · "),
+  };
+}
+
+function parseActivityTableRow(headers: string[], row: string[]): ResumeEntryDto | null {
+  const period = splitTablePeriod(rowValue(headers, row, [/활동\s*기간/, /교육\s*기간/, /연수\s*기간/, /기간/, /일자/]));
+  const explicitActivityName = rowValue(headers, row, [/^활동\s*명$/]);
+  const descriptionSource =
+    rowValue(headers, row, [/과정\s*명/, /활동\s*내용/, /교육\s*내용/, /연수\s*내용/, /세부\s*내용/, /내용/]) ||
+    (!explicitActivityName ? rowValue(headers, row, [/명칭/, /이름/]) : EMPTY);
+  const issuer = rowValue(headers, row, [/기관/, /주관/, /소속/]);
+  const description = cleanActivityDescription(descriptionSource, explicitActivityName, issuer, period[0], period[1]);
+  if (!explicitActivityName && !description) return null;
+  return {
+    title: explicitActivityName,
+    activityName: explicitActivityName,
+    description,
+    issuer,
+    activityDate: formatMonthRangeLabel(period[0], period[1]),
+    startDate: period[0],
+    endDate: period[1],
+    subtitle: description,
+  };
+}
+
+function parseCertificationTableRow(headers: string[], row: string[]): ResumeEntryDto | null {
+  const acquiredDate = splitTablePeriod(rowValue(headers, row, [/취득\s*일자/, /취득\s*일/, /취득\s*년월/, /일자/]))[0];
+  const certificationName = rowValue(headers, row, [/자격증.*면허증/, /자격.*면허/, /자격증명/, /면허증명/, /자격명/]);
+  if (!certificationName || isImportNoiseText(certificationName)) return null;
+  const grade = rowValue(headers, row, [/등급/, /급수/]);
+  const issuer = rowValue(headers, row, [/발급처/, /발급기관/, /시행기관/, /기관/]);
+  return {
+    title: certificationName,
+    certificationName,
+    issuer,
+    acquiredDate,
+    subtitle: [grade, issuer, formatMonthLabel(acquiredDate)].filter(Boolean).join(" · "),
+  };
+}
+
+function parseLanguageTableRow(headers: string[], row: string[]): ResumeEntryDto | null {
+  const acquiredDate = splitTablePeriod(rowValue(headers, row, [/취득\s*년월/, /취득\s*일자/, /취득\s*일/, /기간/, /일자/]))[0];
+  const language = rowValue(headers, row, [/^언어$/, /외국어/]);
+  const testName = rowValue(headers, row, [/어학\s*시험명/, /시험\s*명/, /시험/]);
+  if (!testName || isImportNoiseText(testName)) return null;
+  const levelOrScore = rowValue(headers, row, [/급수/, /점수/, /공인점수/]);
+  const issuer = rowValue(headers, row, [/기관/, /발급처/, /시행기관/]);
+  return {
+    title: testName,
+    language,
+    testName,
+    levelOrScore,
+    issuer,
+    acquiredDate,
+    subtitle: [language, testName, levelOrScore, formatMonthLabel(acquiredDate), issuer].filter(Boolean).join(" · "),
+  };
+}
+
+function rowValue(headers: string[], row: string[], patterns: RegExp[]) {
+  const index = headers.findIndex((header) => patterns.some((pattern) => pattern.test(header.replace(/\s/g, ""))));
+  return cleanText(index >= 0 ? row[index] : EMPTY);
+}
+
+function formatSchoolMajorLabel(entry?: ResumeEntryDto | null) {
+  return formatSchoolMajorText(entry?.schoolName || entry?.title, entry?.major);
+}
+
+function formatSchoolMajorText(schoolName?: string | null, major?: string | null) {
+  const school = cleanText(schoolName);
+  const field = dedupeSchoolMajorText(major);
+  if (!school) return field;
+  if (!field) return school;
+
+  const compactSchool = school.replace(/\s/g, "");
+  const compactField = field.replace(/\s/g, "");
+  return compactField.includes(compactSchool) ? field : `${school} ${field}`;
+}
+
+function dedupeSchoolMajorText(value?: string | null) {
+  const text = cleanText(value);
+  const schoolName = text.match(/(.+?(?:고등학교|대학교|대학원|대학|고교|학교))/)?.[1];
+  if (!schoolName) return text;
+
+  const duplicatePrefix = `${schoolName} ${schoolName}`;
+  return text.startsWith(duplicatePrefix)
+    ? cleanText(`${schoolName} ${text.slice(duplicatePrefix.length)}`)
+    : text;
+}
+
+function splitTablePeriod(value?: string | null): [string, string] {
+  const parsed = parseMonthRange(cleanText(value));
+  if (parsed) return parsed;
+  const month = normalizeMonthOrEmpty(value);
+  return [month, EMPTY];
+}
+
+async function extractDocxTables(buffer: Buffer) {
+  const zip = await JSZip.loadAsync(buffer);
+  const documentXml = await zip.file("word/document.xml")?.async("text");
+  return documentXml ? extractXmlTables(documentXml) : [];
+}
+
+async function extractHwpxDocument(buffer: Buffer): Promise<StructuredResumeDocument> {
   const zip = await JSZip.loadAsync(buffer);
   const files = Object.values(zip.files).filter(
     (file) => !file.dir && file.name.toLowerCase().endsWith(".xml"),
   );
   const texts = await Promise.all(files.map((file) => file.async("text")));
-  return normalizeExtractedText(
-    texts
-      .join("\n")
-      .replace(/<[^>]+>/g, "\n")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&amp;/g, "&"),
-  );
+  const joinedXml = texts.join("\n");
+  return {
+    text: normalizeExtractedText(
+      joinedXml
+        .replace(/<[^>]+>/g, "\n")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&"),
+    ),
+    tables: texts.flatMap(extractXmlTables),
+  };
+}
+
+function formatAiSourceInput(document: StructuredResumeDocument) {
+  const tablePreview = document.tables
+    .filter((table) => table.headers.length && table.rows.length)
+    .slice(0, 40);
+  const tableText = tablePreview.length
+    ? `구조화 표 JSON:\n${JSON.stringify(tablePreview, null, 2).slice(0, 18000)}\n\n`
+    : "";
+  return `${tableText}이력서 원문:\n${document.text.slice(0, MAX_CLAUDE_TEXT_LENGTH)}`;
+}
+
+function extractXmlTables(xml: string): ResumeDocumentTable[] {
+  const tables: ResumeDocumentTable[] = [];
+  const tableBlocks = xml.match(/<(?:[\w.-]+:)?tbl\b[\s\S]*?<\/(?:[\w.-]+:)?tbl>/gi) || [];
+
+  for (const tableBlock of tableBlocks) {
+    const rows = (tableBlock.match(/<(?:[\w.-]+:)?tr\b[\s\S]*?<\/(?:[\w.-]+:)?tr>/gi) || [])
+      .map((rowBlock) =>
+        (rowBlock.match(/<(?:[\w.-]+:)?tc\b[\s\S]*?<\/(?:[\w.-]+:)?tc>/gi) || [])
+          .map(extractXmlCellText)
+          .map((cell) => cleanText(cell))
+          .filter((cell) => cell || true),
+      )
+      .filter((row) => row.some(Boolean));
+
+    if (rows.length < 2) continue;
+    const headerIndex = rows.findIndex((row) => isHeaderLikeRow(row));
+    if (headerIndex < 0) continue;
+    const headers = rows[headerIndex].map((header) => cleanText(header));
+    const dataRows = rows
+      .slice(headerIndex + 1)
+      .map((row) => normalizeTableRowLength(row, headers.length))
+      .filter((row) => row.some((cell) => cleanText(cell) && !isImportNoiseText(cell)));
+    if (!headers.length || !dataRows.length) continue;
+    tables.push({
+      section: inferTableSection(headers),
+      headers,
+      rows: dataRows,
+    });
+  }
+
+  return dedupeTables(tables);
+}
+
+function extractXmlCellText(cellXml: string) {
+  const paragraphBlocks = cellXml.match(/<(?:[\w.-]+:)?p\b[\s\S]*?<\/(?:[\w.-]+:)?p>/gi) || [cellXml];
+  const paragraphs = paragraphBlocks
+    .map((paragraphXml) =>
+      Array.from(paragraphXml.matchAll(/<(?:[\w.-]+:)?t(?:\s[^>]*)?>([\s\S]*?)<\/(?:[\w.-]+:)?t>/gi))
+        .map((match) => decodeXmlText(match[1]))
+        .join(""),
+    )
+    .filter(Boolean);
+  return normalizeExtractedText(paragraphs.join("\n")).replace(/\n/g, " ");
+}
+
+function decodeXmlText(value: string) {
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'");
+}
+
+function isHeaderLikeRow(row: string[]) {
+  const cells = row.map((cell) => cleanText(cell).replace(/\s/g, "")).filter(Boolean);
+  if (cells.length < 2) return false;
+  const compact = cells.join("|");
+  return /(기간|일자|년월|기관|회사|학교|시험|점수|자격|면허|활동|과정|수상|상세|내용|직위|직무)/.test(compact);
+}
+
+function normalizeTableRowLength(row: string[], length: number) {
+  return Array.from({ length }, (_, index) => cleanText(row[index]));
+}
+
+function inferTableSection(headers: string[]) {
+  const compact = headers.join(" ").replace(/\s/g, "");
+  if (/근무회사|근무부서|담당직무|직위/.test(compact)) return "experience";
+  if (/학교명|전공|학점|재학기간/.test(compact)) return "education";
+  if (/시험|점수|어학/.test(compact)) return "language";
+  if (/수상|상세내용/.test(compact)) return "award";
+  if (/자격|면허|발급/.test(compact)) return "certification";
+  if (/활동|과정|연수|기관/.test(compact)) return "activity";
+  return "unknown";
+}
+
+function dedupeTables(tables: ResumeDocumentTable[]) {
+  const seen = new Set<string>();
+  return tables.filter((table) => {
+    const key = JSON.stringify(table);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function extractHwpText(buffer: Buffer) {
@@ -1020,7 +1423,7 @@ function parseResumeFromText(text: string): Partial<ResumePayloadDto> {
     gpaScore: gpa.score,
     gpaMax: gpa.max,
     gpa: gpa.display,
-    schoolMajor: [preferredEducation?.schoolName, preferredEducation?.major].filter(Boolean).join(" "),
+    schoolMajor: formatSchoolMajorLabel(preferredEducation),
     educations,
     experiences,
     awards,
@@ -1181,7 +1584,7 @@ function parseClassicKoreanResume(text: string): Partial<ResumePayloadDto> {
     gpaScore: schoolMajor?.gpaScore || EMPTY,
     gpaMax: schoolMajor?.gpaMax || EMPTY,
     gpa: schoolMajor?.gpaScore && schoolMajor?.gpaMax ? `${schoolMajor.gpaScore} / ${schoolMajor.gpaMax}` : EMPTY,
-    schoolMajor: [schoolMajor?.schoolName, schoolMajor?.major].filter(Boolean).join(" "),
+    schoolMajor: formatSchoolMajorLabel(schoolMajor),
     educations,
     experiences,
     awards,
@@ -1227,7 +1630,7 @@ function parseStructuredKoreanResume(lines: string[], text: string): Partial<Res
       preferredEducation?.gpaScore || preferredEducation?.gpaMax
         ? [preferredEducation?.gpaScore, preferredEducation?.gpaMax].filter(Boolean).join(" / ")
         : EMPTY,
-    schoolMajor: [preferredEducation?.schoolName, preferredEducation?.major].filter(Boolean).join(" "),
+    schoolMajor: formatSchoolMajorLabel(preferredEducation),
     educations,
     experiences: parseExperienceRows(experienceLines),
     awards: parseAwardRows(awardLines),

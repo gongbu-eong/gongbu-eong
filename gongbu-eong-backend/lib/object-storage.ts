@@ -1,3 +1,5 @@
+import { createHash, createHmac } from "crypto";
+
 export async function uploadToObjectStorage(args: {
   key: string;
   buffer: Buffer;
@@ -11,6 +13,19 @@ export async function uploadToObjectStorage(args: {
       publicUrl: null,
       reason: config.reason,
     };
+  }
+
+  if (config.method === "s3") {
+    return uploadWithS3Signature({
+      endpoint: config.endpoint,
+      region: config.region,
+      bucket: config.bucket,
+      accessKey: config.accessKey,
+      secretKey: config.secretKey,
+      key: args.key,
+      buffer: args.buffer,
+      contentType: args.contentType || "application/octet-stream",
+    });
   }
 
   const swift = await resolveSwiftConfig(config);
@@ -32,6 +47,15 @@ export async function uploadToObjectStorage(args: {
 }
 
 type ObjectStorageConfig =
+  | {
+      ok: true;
+      method: "s3";
+      endpoint: string;
+      region: string;
+      bucket: string;
+      accessKey: string;
+      secretKey: string;
+    }
   | {
       ok: true;
       method: "swift";
@@ -70,10 +94,32 @@ function getObjectStorageConfig(): ObjectStorageConfig {
     process.env.NHN_OS_PASSWORD ||
     process.env.NHN_OBJECT_STORAGE_PASSWORD ||
     process.env.NHN_API_PASSWORD;
+  const s3AccessKey = process.env.NHN_AWS_S3_ACCESS_KEY || process.env.NHN_S3_ACCESS_KEY || process.env.AWS_ACCESS_KEY_ID;
+  const s3SecretKey =
+    process.env.NHN_AWS_S3_SECRET_ACCESS_KEY ||
+    process.env.NHN_S3_SECRET_ACCESS_KEY ||
+    process.env.AWS_SECRET_ACCESS_KEY;
+  const s3Region = process.env.NHN_AWS_S3_REGION || process.env.NHN_S3_REGION || process.env.AWS_REGION || "kr1";
+  const s3Endpoint =
+    process.env.NHN_AWS_S3_ENDPOINT ||
+    process.env.NHN_S3_ENDPOINT ||
+    process.env.AWS_S3_ENDPOINT ||
+    deriveS3Endpoint(storageUrl);
 
-  // NHN Cloud Object Storage is consumed through its Swift container API.
-  // Do not silently switch to S3: a configured `gongbueong` container must
-  // use the same object path and credentials in local and deployed builds.
+  if (s3Endpoint && container && s3AccessKey && s3SecretKey) {
+    return {
+      ok: true,
+      method: "s3",
+      endpoint: s3Endpoint,
+      region: s3Region,
+      bucket: container,
+      accessKey: s3AccessKey,
+      secretKey: s3SecretKey,
+    };
+  }
+
+  // Swift credentials are still supported for environments that use the
+  // object-store token API instead of NHN's S3-compatible access keys.
   if (storageUrl && container && (swiftToken || (swiftUserId && swiftPassword))) {
     return {
       ok: true,
@@ -95,7 +141,7 @@ function getObjectStorageConfig(): ObjectStorageConfig {
   return {
     ok: false,
     reason:
-      "NHN_OS_STORAGE_URL, NHN_OS_CONTAINER, NHN_OS_USERID, NHN_OS_API_PASSWORD 또는 실제 NHN_OS_TOKEN이 설정되지 않았습니다. NHN AWS S3 키와 AUTH_... 스토리지 계정값은 업로드 인증 토큰으로 사용하지 않습니다.",
+      "NHN Object Storage 설정이 올바르지 않습니다. S3 방식은 NHN_AWS_S3_ACCESS_KEY/NHN_AWS_S3_SECRET_ACCESS_KEY/NHN_OS_CONTAINER가 필요하고, Swift 방식은 NHN_OS_USERID/NHN_OS_API_PASSWORD 또는 실제 NHN_OS_TOKEN이 필요합니다.",
   };
 }
 
@@ -235,6 +281,92 @@ function appendContainer(storageUrl: string, container: string) {
     : `${normalized}/${encodedContainer}`;
 }
 
+function deriveS3Endpoint(storageUrl?: string) {
+  if (!storageUrl) return undefined;
+
+  try {
+    return new URL(storageUrl).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+async function uploadWithS3Signature(args: {
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKey: string;
+  secretKey: string;
+  key: string;
+  buffer: Buffer;
+  contentType: string;
+}) {
+  const endpoint = args.endpoint.replace(/\/$/, "");
+  const canonicalUri = `/${encodeURIComponent(args.bucket)}/${encodeObjectPath(args.key)}`;
+  const url = `${endpoint}${canonicalUri}`;
+  const now = new Date();
+  const amzDate = toAmzDate(now);
+  const dateStamp = amzDate.slice(0, 8);
+  const payloadHash = sha256Hex(args.buffer);
+  const host = new URL(endpoint).host;
+  const headers = {
+    "content-type": args.contentType,
+    host,
+    "x-amz-content-sha256": payloadHash,
+    "x-amz-date": amzDate,
+  };
+  const signedHeaders = Object.keys(headers).sort().join(";");
+  const canonicalHeaders = Object.keys(headers)
+    .sort()
+    .map((key) => `${key}:${headers[key as keyof typeof headers]}\n`)
+    .join("");
+  const credentialScope = `${dateStamp}/${args.region}/s3/aws4_request`;
+  const canonicalRequest = [
+    "PUT",
+    canonicalUri,
+    "",
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join("\n");
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    sha256Hex(canonicalRequest),
+  ].join("\n");
+  const signingKey = getSignatureKey(args.secretKey, dateStamp, args.region, "s3");
+  const signature = hmacHex(signingKey, stringToSign);
+  const authorization = `AWS4-HMAC-SHA256 Credential=${args.accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  const response = await fetch(url, {
+    method: "PUT",
+    cache: "no-store",
+    headers: {
+      Authorization: authorization,
+      "Content-Type": args.contentType,
+      "X-Amz-Content-Sha256": payloadHash,
+      "X-Amz-Date": amzDate,
+    },
+    body: new Uint8Array(args.buffer),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    return {
+      uploaded: false,
+      publicUrl: null,
+      reason: `NHN S3 Object Storage upload failed: ${response.status}${detail ? ` ${detail.slice(0, 200)}` : ""}`,
+    };
+  }
+
+  return {
+    uploaded: true,
+    publicUrl: url,
+    reason: null,
+  };
+}
+
 async function uploadWithSwiftToken(args: {
   publicBaseUrl: string;
   token: string;
@@ -275,4 +407,27 @@ function encodeObjectPath(path: string) {
     .filter(Boolean)
     .map((part) => encodeURIComponent(part))
     .join("/");
+}
+
+function toAmzDate(date: Date) {
+  return date.toISOString().replace(/[:-]|\.\d{3}/g, "");
+}
+
+function sha256Hex(value: Buffer | string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function hmac(key: Buffer | string, value: string) {
+  return createHmac("sha256", key).update(value).digest();
+}
+
+function hmacHex(key: Buffer | string, value: string) {
+  return createHmac("sha256", key).update(value).digest("hex");
+}
+
+function getSignatureKey(secretKey: string, dateStamp: string, regionName: string, serviceName: string) {
+  const dateKey = hmac(`AWS4${secretKey}`, dateStamp);
+  const dateRegionKey = hmac(dateKey, regionName);
+  const dateRegionServiceKey = hmac(dateRegionKey, serviceName);
+  return hmac(dateRegionServiceKey, "aws4_request");
 }

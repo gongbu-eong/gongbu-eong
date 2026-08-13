@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import {
   ChangeEvent,
   FormEvent,
-  forwardRef,
   useEffect,
   useMemo,
   useRef,
@@ -13,14 +12,11 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import DatePicker, { registerLocale } from "react-datepicker";
-import { ko } from "date-fns/locale";
+import { createPortal } from "react-dom";
 import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
 import { createResume, getResume, getResumeParseJob, updateResume, uploadResumeFile } from "../my.api";
 import type { ResumeEntryDto, ResumePayloadDto } from "../my.dto";
 import styles from "./My.module.css";
-
-registerLocale("ko", ko);
 
 const emptyPayload: ResumePayloadDto = {
   title: "",
@@ -42,6 +38,7 @@ const emptyPayload: ResumePayloadDto = {
   educationSummary: "",
   careerSummary: "",
   certificationSummary: "",
+  additionalNotes: "",
   educations: [],
   experiences: [],
   certifications: [],
@@ -83,6 +80,19 @@ const RESUME_ACCEPT_MIME_TYPES = [
   "application/vnd.hancom.hwp",
   "application/vnd.hancom.hwpx",
 ];
+const MIN_PICKER_YEAR = 1900;
+
+type RequiredResumeField =
+  | "title"
+  | "name"
+  | "birthDate"
+  | "desiredJob"
+  | "highestEducation"
+  | "gpaScore"
+  | "gpaMax"
+  | "graduationStatus"
+  | "educationStartDate"
+  | "educationEndDate";
 const RESUME_FILE_PICKER_TYPES = [
   {
     description: "이력서 문서",
@@ -282,13 +292,15 @@ export function MyResumeForm({
       setUploadedFile({ name: file.name, size: file.size });
       setPendingUploadFile(file);
       const nextPayload = toUploadPayload(response.extracted, response.file.id);
-      replacePayload((current) => mergeUploadPayload(current, nextPayload));
+      let mergedUploadPayload = mergeUploadPayload(payload, nextPayload);
+      replacePayload(mergedUploadPayload);
       setParseJobMessage("분석이 완료됐어요. 저장하기를 누르면 파일이 보관됩니다.");
 
       if (response.job?.id && response.job.status !== "completed") {
         const parsedPayload = await waitForParseJob(response.job.id, response.file.id);
         if (parsedPayload) {
-          replacePayload((current) => mergeUploadPayload(current, parsedPayload));
+          mergedUploadPayload = mergeUploadPayload(mergedUploadPayload, parsedPayload);
+          replacePayload(mergedUploadPayload);
         }
       }
       setParseJobMessage("분석이 완료됐어요. 저장하기를 누르면 파일이 보관됩니다.");
@@ -364,17 +376,19 @@ export function MyResumeForm({
     setError(null);
     setIsSaving(true);
 
-    if (!cleanText(payload.title)) {
-      setError("이력서 제목을 입력해 주세요.");
-      setIsSaving(false);
-      return;
-    }
-
     const cleaned = cleanPayload({
       ...payload,
       sourceType: payload.sourceType || (tab === "upload" ? "upload" : "manual"),
       completionPercent,
     });
+    const requiredIssue = getFirstRequiredResumeIssue(cleaned);
+    if (requiredIssue) {
+      scrollToRequiredField(requiredIssue.field);
+      window.alert(requiredIssue.message);
+      scrollToRequiredField(requiredIssue.field);
+      setIsSaving(false);
+      return;
+    }
 
     try {
       const fileToUpload = cleaned.sourceType === "upload" ? pendingUploadFile : null;
@@ -531,12 +545,12 @@ export function MyResumeForm({
           {(mode === "edit" || tab === "manual" || payload.fileId) ? (
             <>
               <CompletionCard percent={completionPercent} />
-              <TextField label="이력서 제목" value={payload.title} placeholder="이력서 제목을 입력하세요." onChange={(title) => patchPayload({ title })} />
+              <TextField fieldKey="title" label="이력서 제목" value={payload.title} placeholder="이력서 제목을 입력하세요." onChange={(title) => patchPayload({ title })} />
 
               <h2 className={styles.resumeSectionTitle}>기본 정보</h2>
-              <TextField label="이름" value={payload.name || ""} placeholder="이름을 입력하세요." onChange={(name) => patchPayload({ name })} />
-              <DatePickerField label="생년월일" value={payload.birthDate || ""} placeholder="연도-월-일" onChange={(birthDate) => patchPayload({ birthDate, birthYear: birthDate.slice(0, 4) })} />
-              <div className={styles.fieldGroup}>
+              <TextField fieldKey="name" label="이름" value={payload.name || ""} placeholder="이름을 입력하세요." onChange={(name) => patchPayload({ name })} />
+              <DatePickerField fieldKey="birthDate" label="생년월일" value={payload.birthDate || ""} placeholder="연도-월-일" onChange={(birthDate) => patchPayload({ birthDate, birthYear: birthDate.slice(0, 4) })} />
+              <div className={styles.fieldGroup} data-required-field="desiredJob">
                 <label>희망 직무·분야</label>
                 <button
                   type="button"
@@ -561,6 +575,7 @@ export function MyResumeForm({
                 value={normalizeHighestEducationValue(
                   payload.highestEducation || formatHighestEducationFromEntry(selectPreferredEducation(payload.educations)),
                 )}
+                fieldKey="highestEducation"
                 onChange={(highestEducation) => patchPayload({ highestEducation })}
                 options={["", "고등학교", "대학교", "대학원", "기타"]}
               />
@@ -569,6 +584,7 @@ export function MyResumeForm({
                 <div className={styles.gpaFields}>
                   <input
                     className={styles.input}
+                    data-required-field="gpaScore"
                     value={payload.gpaScore || ""}
                     placeholder="예: 3.7"
                     onChange={(event) => {
@@ -578,6 +594,7 @@ export function MyResumeForm({
                   />
                   <select
                     className={styles.select}
+                    data-required-field="gpaMax"
                     value={payload.gpaMax || ""}
                     onChange={(event) => {
                       const gpaMax = event.target.value;
@@ -589,11 +606,13 @@ export function MyResumeForm({
                   </select>
                 </div>
               </div>
-              <TextField label="학교·전공 (선택)" value={payload.schoolMajor || ""} placeholder="예: OO대학교 전기공학과" onChange={(schoolMajor) => patchPayload({ schoolMajor })} />
-              <SelectField label="졸업 여부" value={payload.graduationStatus || ""} onChange={(graduationStatus) => patchPayload({ graduationStatus })} options={["졸업", "졸업 예정", "중퇴"]} />
+              <TextField label="학교·전공 (선택)" value={dedupeSchoolMajorText(payload.schoolMajor || "")} placeholder="예: OO대학교 전기공학과" onChange={(schoolMajor) => patchPayload({ schoolMajor })} />
+              <SelectField fieldKey="graduationStatus" label="졸업 여부" value={payload.graduationStatus || ""} onChange={(graduationStatus) => patchPayload({ graduationStatus })} options={["졸업", "졸업 예정", "중퇴"]} />
               <DateRangeField
                 startLabel="입학년월"
                 endLabel="졸업년월"
+                startFieldKey="educationStartDate"
+                endFieldKey="educationEndDate"
                 startValue={payload.educationStartDate || ""}
                 endValue={payload.educationEndDate || ""}
                 type="month"
@@ -650,6 +669,13 @@ export function MyResumeForm({
                 onEdit={(entry, index) => openEntryEditor("language", entry, index)}
                 onRemove={(index) => updateEntryList("language", (entries) => removeAt(entries, index))}
                 onReorder={(fromIndex, toIndex) => reorderEntries("language", fromIndex, toIndex)}
+              />
+
+              <TextAreaField
+                label="기타 추가사항"
+                value={payload.additionalNotes || ""}
+                placeholder="기타 추가사항을 입력하세요."
+                onChange={(additionalNotes) => patchPayload({ additionalNotes })}
               />
 
               <button type="submit" className={`${styles.primaryButton} ${styles.saveButton}`} disabled={isSaving || isUploading}>
@@ -771,6 +797,27 @@ export function MyResumeForm({
 }
 
 function TextField({
+  fieldKey,
+  label,
+  value,
+  placeholder,
+  onChange,
+}: {
+  fieldKey?: RequiredResumeField;
+  label: string;
+  value: string;
+  placeholder?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className={styles.fieldGroup} data-required-field={fieldKey}>
+      <label>{label}</label>
+      <input className={styles.input} type="text" value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+    </div>
+  );
+}
+
+function TextAreaField({
   label,
   value,
   placeholder,
@@ -784,18 +831,20 @@ function TextField({
   return (
     <div className={styles.fieldGroup}>
       <label>{label}</label>
-      <input className={styles.input} type="text" value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
+      <textarea className={styles.textarea} value={value} placeholder={placeholder} onChange={(event) => onChange(event.target.value)} />
     </div>
   );
 }
 
 function DatePickerField({
+  fieldKey,
   label,
   value,
   placeholder = "연도-월-일",
   type = "date",
   onChange,
 }: {
+  fieldKey?: RequiredResumeField;
   label: string;
   value: string;
   placeholder?: string;
@@ -803,7 +852,7 @@ function DatePickerField({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className={styles.fieldGroup}>
+    <div className={styles.fieldGroup} data-required-field={fieldKey}>
       <label>{label}</label>
       <DatePickerControl
         ariaLabel={label}
@@ -821,6 +870,8 @@ function DateRangeField({
   labelAddon,
   startLabel,
   endLabel,
+  startFieldKey,
+  endFieldKey,
   startValue,
   endValue,
   type = "date",
@@ -833,6 +884,8 @@ function DateRangeField({
   labelAddon?: ReactNode;
   startLabel: string;
   endLabel: string;
+  startFieldKey?: RequiredResumeField;
+  endFieldKey?: RequiredResumeField;
   startValue: string;
   endValue: string;
   type?: PickerMode;
@@ -855,6 +908,7 @@ function DateRangeField({
         <DatePickerControl
           ariaLabel={startLabel}
           value={startValue}
+          fieldKey={startFieldKey}
           placeholder={type === "month" ? "YYYY-MM" : "YYYY-MM-DD"}
           type={type}
           compact
@@ -864,6 +918,7 @@ function DateRangeField({
         <DatePickerControl
           ariaLabel={endLabel}
           value={endValue}
+          fieldKey={endFieldKey}
           placeholder={type === "month" ? "YYYY-MM" : "YYYY-MM-DD"}
           type={type}
           compact
@@ -879,6 +934,7 @@ function DateRangeField({
 function DatePickerControl({
   ariaLabel,
   value,
+  fieldKey,
   placeholder,
   type = "date",
   compact = false,
@@ -888,6 +944,7 @@ function DatePickerControl({
 }: {
   ariaLabel: string;
   value: string;
+  fieldKey?: RequiredResumeField;
   placeholder: string;
   type?: PickerMode;
   compact?: boolean;
@@ -895,85 +952,237 @@ function DatePickerControl({
   displayValue?: string;
   onChange: (value: string) => void;
 }) {
-  const selected = parsePickerDate(value, type);
+  const [open, setOpen] = useState(false);
+  const selected = parsePickerDate(value, type) || new Date();
+  const shownValue = displayValue || formatPickerDisplayValue(value, type) || "";
 
   return (
     <div className={`${styles.datePickerControl} ${compact ? styles.datePickerControlCompact : ""} ${disabled ? styles.datePickerControlDisabled : ""}`}>
-      <DatePicker
+      <button
+        type="button"
+        className={styles.datePickerInput}
+        data-required-field={fieldKey}
         aria-label={ariaLabel}
-        selected={selected}
         disabled={disabled}
-        locale="ko"
-        dateFormat={type === "month" ? "yyyy.MM" : "yyyy.MM.dd"}
-        showMonthYearPicker={type === "month"}
-        showYearDropdown={type === "date"}
-        showMonthDropdown={type === "date"}
-        dropdownMode="select"
-        showPopperArrow={false}
-        customInput={<DatePickerButton ariaLabel={ariaLabel} placeholder={placeholder} disabled={disabled} displayValue={displayValue} />}
-        portalId="datepicker-root"
-        enableTabLoop={false}
-        shouldCloseOnSelect
-        placeholderText={placeholder}
-        wrapperClassName={styles.datePickerWrapper}
-        calendarClassName={styles.datePickerCalendar}
-        popperClassName={styles.datePickerPopper}
-        popperPlacement="bottom-end"
-        openToDate={selected || new Date()}
-        onChange={(date: Date | null) => {
-          if (disabled) return;
-          onChange(formatPickerDate(date, type));
+        onClick={() => {
+          if (!disabled) setOpen(true);
         }}
-      />
+      >
+        <span className={!shownValue ? styles.datePickerPlaceholder : undefined}>
+          {shownValue || placeholder}
+        </span>
+      </button>
       <span className={styles.dateRangeCalendar} aria-hidden="true">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
           <path d="M7 2v3M17 2v3M4 9h16M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
+      {open && typeof document !== "undefined" ? createPortal(
+        <BottomDatePicker
+          type={type}
+          initialDate={selected}
+          onClose={() => setOpen(false)}
+          onConfirm={(date) => {
+            onChange(formatPickerDate(date, type));
+            setOpen(false);
+          }}
+          onReset={() => {
+            onChange("");
+            setOpen(false);
+          }}
+        />
+      , document.body) : null}
     </div>
   );
 }
 
-const DatePickerButton = forwardRef<
-  HTMLButtonElement,
-  {
-    value?: string;
-    onClick?: () => void;
-    placeholder?: string;
-    ariaLabel: string;
-    disabled?: boolean;
-    displayValue?: string;
-  }
->(({ value, onClick, placeholder, ariaLabel, disabled = false, displayValue }, ref) => (
-  <button
-    ref={ref}
-    type="button"
-    className={styles.datePickerInput}
-    onClick={onClick}
-    aria-label={ariaLabel}
-    disabled={disabled}
-  >
-    <span className={!(displayValue || value) ? styles.datePickerPlaceholder : undefined}>
-      {displayValue || value || placeholder}
-    </span>
-  </button>
-));
+function BottomDatePicker({
+  type,
+  initialDate,
+  onClose,
+  onConfirm,
+  onReset,
+}: {
+  type: PickerMode;
+  initialDate: Date;
+  onClose: () => void;
+  onConfirm: (date: Date) => void;
+  onReset: () => void;
+}) {
+  const [draftDate, setDraftDate] = useState(initialDate);
+  const [view, setView] = useState<PickerMode>(type === "month" ? "month" : "date");
 
-DatePickerButton.displayName = "DatePickerButton";
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyTop = document.body.style.top;
+    const previousBodyWidth = document.body.style.width;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.position = previousBodyPosition;
+      document.body.style.top = previousBodyTop;
+      document.body.style.width = previousBodyWidth;
+      document.body.style.overflow = previousBodyOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  return (
+    <div className={styles.bottomSheetBackdrop} role="dialog" aria-modal="true" aria-label="날짜선택">
+      <button type="button" className={styles.bottomSheetScrim} aria-label="닫기" onClick={onClose} />
+      <div className={`${styles.dateSheet} ${view === "month" ? styles.dateSheetMonth : ""}`}>
+        <span className={styles.dateSheetHandle} aria-hidden="true" />
+        <div className={styles.dateSheetHeader}>
+          <h2>날짜선택</h2>
+          <button type="button" className={styles.dateSheetClose} aria-label="닫기" onClick={onClose}>×</button>
+        </div>
+        {view === "month" ? (
+          <MonthPickerSheet date={draftDate} onChange={setDraftDate} />
+        ) : (
+          <DayPickerSheet date={draftDate} onChange={setDraftDate} onTitleClick={() => setView("month")} />
+        )}
+        <div className={styles.dateSheetActions}>
+          {view === "date" ? (
+            <button type="button" className={styles.dateSheetReset} onClick={onReset}>초기화</button>
+          ) : null}
+          <button
+            type="button"
+            className={styles.dateSheetConfirm}
+            onClick={() => {
+              if (type === "date" && view === "month") {
+                setView("date");
+                return;
+              }
+              onConfirm(draftDate);
+            }}
+          >
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DayPickerSheet({
+  date,
+  onChange,
+  onTitleClick,
+}: {
+  date: Date;
+  onChange: (date: Date) => void;
+  onTitleClick: () => void;
+}) {
+  const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+  const calendarStart = new Date(monthStart);
+  calendarStart.setDate(monthStart.getDate() - monthStart.getDay());
+  const days = Array.from({ length: 42 }, (_, index) => {
+    const next = new Date(calendarStart);
+    next.setDate(calendarStart.getDate() + index);
+    return next;
+  });
+
+  const moveMonth = (offset: number) => {
+    onChange(clampDayToMonth(date.getFullYear(), date.getMonth() + offset, date.getDate()));
+  };
+
+  return (
+    <div className={styles.dayPicker}>
+      <div className={styles.dateSheetMonthNav}>
+        <button type="button" aria-label="이전 달" onClick={() => moveMonth(-1)}>‹</button>
+        <button type="button" className={styles.dateSheetMonthTitle} onClick={onTitleClick}>
+          {date.getFullYear()}.{String(date.getMonth() + 1).padStart(2, "0")} <span aria-hidden="true">⌄</span>
+        </button>
+        <button type="button" aria-label="다음 달" onClick={() => moveMonth(1)}>›</button>
+      </div>
+      <div className={styles.dayPickerWeekdays}>
+        {["일", "월", "화", "수", "목", "금", "토"].map((weekday) => <span key={weekday}>{weekday}</span>)}
+      </div>
+      <div className={styles.dayPickerGrid}>
+        {days.map((day) => {
+          const selected = isSameDate(day, date);
+          const muted = day.getMonth() !== date.getMonth();
+          return (
+            <button
+              type="button"
+              key={day.toISOString()}
+              className={`${styles.dayPickerDay} ${selected ? styles.dayPickerDaySelected : ""} ${muted ? styles.dayPickerDayMuted : ""}`}
+              onClick={() => onChange(day)}
+            >
+              <span>{day.getDate()}</span>
+              {selected ? <i aria-hidden="true" /> : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MonthPickerSheet({
+  date,
+  onChange,
+}: {
+  date: Date;
+  onChange: (date: Date) => void;
+}) {
+  const currentYear = new Date().getFullYear();
+  const minYear = Math.min(MIN_PICKER_YEAR, date.getFullYear());
+  const maxYear = Math.max(currentYear, date.getFullYear());
+  const years = Array.from({ length: maxYear - minYear + 1 }, (_, index) => maxYear - index);
+  const months = Array.from({ length: 12 }, (_, index) => index + 1);
+
+  return (
+    <div className={styles.monthPicker}>
+      <button type="button" className={styles.monthPickerTitle} aria-label="선택한 년월">
+        {date.getFullYear()}.{String(date.getMonth() + 1).padStart(2, "0")} <span aria-hidden="true">⌃</span>
+      </button>
+      <div className={styles.monthPickerFields}>
+        <label>
+          <select value={date.getFullYear()} onChange={(event) => onChange(clampDayToMonth(Number(event.target.value), date.getMonth(), 1))}>
+            {years.map((year) => <option key={year} value={year}>{year}</option>)}
+          </select>
+          <span>년</span>
+        </label>
+        <label>
+          <select value={date.getMonth() + 1} onChange={(event) => onChange(clampDayToMonth(date.getFullYear(), Number(event.target.value) - 1, 1))}>
+            {months.map((month) => <option key={month} value={month}>{String(month).padStart(2, "0")}</option>)}
+          </select>
+          <span>월</span>
+        </label>
+      </div>
+    </div>
+  );
+}
 
 function SelectField({
+  fieldKey,
   label,
   value,
   options,
   onChange,
 }: {
+  fieldKey?: RequiredResumeField;
   label: string;
   value: string;
   options: string[];
   onChange: (value: string) => void;
 }) {
   return (
-    <div className={styles.fieldGroup}>
+    <div className={styles.fieldGroup} data-required-field={fieldKey}>
       <label>{label}</label>
       <select className={styles.select} value={value} onChange={(event) => onChange(event.target.value)}>
         <option value="">선택</option>
@@ -1143,7 +1352,6 @@ function EntryEditor({
           <div className={styles.emptyEntry}>{emptyText}</div>
         ) : entries.map((entry, index) => {
           const display = formatEntryDisplay(kind, entry);
-          const requiredTitlePlaceholder = getRequiredTitlePlaceholder(kind);
           return (
             <div
               key={`${kind}-${display.title}-${index}`}
@@ -1169,9 +1377,7 @@ function EntryEditor({
               onPointerCancel={resetPointerDrag}
             >
               <span className={styles.entryContent}>
-                <strong className={!display.title ? styles.entryMissingTitle : undefined}>
-                  {display.title || requiredTitlePlaceholder}
-                </strong>
+                {display.title ? <strong>{display.title}</strong> : null}
                 {display.lines.map((line) => (
                   <small key={line}>{line}</small>
                 ))}
@@ -1204,73 +1410,61 @@ function calculateCompletion(payload: ResumePayloadDto) {
     payload.birthDate,
     payload.desiredJob,
     payload.highestEducation,
-    payload.schoolMajor,
+    payload.gpaScore,
+    payload.gpaMax,
     payload.graduationStatus,
     payload.educationStartDate,
     payload.educationEndDate,
-    payload.gpaScore,
-    payload.gpaMax,
   ];
-  const sectionScores = [
-    entrySectionCompletion(payload.experiences || [], "experience"),
-    entrySectionCompletion(payload.awards || [], "award"),
-    entrySectionCompletion(payload.activities || [], "activity"),
-    entrySectionCompletion(payload.certifications || [], "certification"),
-    entrySectionCompletion(payload.languages || [], "language"),
-  ];
-  const total = scalarChecks.length + sectionScores.length;
-  const filled = scalarChecks.filter(isFilled).length + sectionScores.reduce((sum, score) => sum + score, 0);
+  const total = scalarChecks.length;
+  const filled = scalarChecks.filter(isFilled).length;
   return Math.round((filled / total) * 100);
+}
+
+function getFirstRequiredResumeIssue(payload: ResumePayloadDto) {
+  const scalarFields: Array<{
+    field: RequiredResumeField;
+    message: string;
+    value: string | null | undefined;
+  }> = [
+    { field: "title", message: "이력서 제목을 입력해주세요.", value: payload.title },
+    { field: "name", message: "이름을 입력해주세요.", value: payload.name },
+    { field: "birthDate", message: "생년월일을 입력해주세요.", value: payload.birthDate },
+    { field: "desiredJob", message: "희망 직무·분야를 선택해주세요.", value: payload.desiredJob },
+    { field: "highestEducation", message: "최종 학력을 선택해주세요.", value: payload.highestEducation },
+    { field: "gpaScore", message: "학점을 입력해주세요.", value: payload.gpaScore },
+    { field: "gpaMax", message: "최대 학점을 선택해주세요.", value: payload.gpaMax },
+    { field: "graduationStatus", message: "졸업 여부를 선택해주세요.", value: payload.graduationStatus },
+    { field: "educationStartDate", message: "입학년월을 선택해주세요.", value: payload.educationStartDate },
+    { field: "educationEndDate", message: "졸업년월을 선택해주세요.", value: payload.educationEndDate },
+  ];
+
+  for (const issue of scalarFields) {
+    if (!isFilled(issue.value)) return issue;
+  }
+
+  return null;
+}
+
+function scrollToRequiredField(field: RequiredResumeField) {
+  if (typeof document === "undefined") return;
+
+  const target = document.querySelector<HTMLElement>(`[data-required-field="${field}"]`);
+  if (!target) return;
+
+  target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  window.setTimeout(() => {
+    const focusTarget = target.matches("input, select, textarea, button")
+      ? target
+      : target.querySelector<HTMLElement>("input, select, textarea, button");
+    focusTarget?.focus({ preventScroll: true });
+  }, 250);
 }
 
 function formatSelectedJobLabel(jobs: string[]) {
   const [first, ...rest] = jobs;
   if (!first) return "";
   return rest.length ? `${first} 외 ${rest.length}개` : first;
-}
-
-function entrySectionCompletion(entries: ResumeEntryDto[], kind: ResumeEntryKind) {
-  if (!entries.length) return 0;
-  const completeCount = entries.filter((entry) => isCompleteEntry(entry, kind)).length;
-  if (completeCount === entries.length) return 1;
-  return completeCount > 0 || entries.some((entry) => hasEntryContent(entry, kind)) ? 0.5 : 0;
-}
-
-function isCompleteEntry(entry: ResumeEntryDto, kind: ResumeEntryKind) {
-  const normalized = normalizeEntryLabels(cleanEntry(entry), kind);
-  if (kind === "experience") {
-    return [
-      normalized.companyName || normalized.title,
-      normalized.position,
-      normalized.duties,
-      normalized.startDate,
-      normalized.endDate,
-    ].every(isFilled);
-  }
-  if (kind === "award") {
-    return [
-      normalized.contestName || normalized.title,
-      normalized.awardName,
-      normalized.awardedDate || normalized.startDate,
-    ].every(isFilled);
-  }
-  if (kind === "activity") {
-    return [
-      normalized.activityName || normalized.title || normalized.description,
-      normalized.startDate || normalized.activityDate,
-    ].every(isFilled);
-  }
-  if (kind === "certification") {
-    return [
-      normalized.certificationName || normalized.title,
-      normalized.acquiredDate || normalized.startDate,
-    ].every(isFilled);
-  }
-  return [
-    normalized.testName,
-    normalized.levelOrScore,
-    normalized.acquiredDate || normalized.startDate,
-  ].every(isFilled);
 }
 
 function cleanPayload(payload: ResumePayloadDto): ResumePayloadDto {
@@ -1288,13 +1482,14 @@ function cleanPayload(payload: ResumePayloadDto): ResumePayloadDto {
     gpa: [gpaScore, gpaMax].filter(Boolean).join(" / ") || cleanText(payload.gpa),
     gpaScore,
     gpaMax,
-    schoolMajor: cleanText(payload.schoolMajor),
+    schoolMajor: dedupeSchoolMajorText(payload.schoolMajor),
     graduationStatus: cleanText(payload.graduationStatus),
     educationStartDate: cleanText(payload.educationStartDate),
     educationEndDate: cleanText(payload.educationEndDate),
     educationSummary: cleanText(payload.educationSummary),
     careerSummary: cleanText(payload.careerSummary),
     certificationSummary: cleanText(payload.certificationSummary),
+    additionalNotes: cleanText(payload.additionalNotes),
     educations: (payload.educations || []).map((entry) => cleanEntry(entry, "education")).filter((entry) => hasEntryContent(entry, "education")),
     experiences: (payload.experiences || []).map((entry) => cleanEntry(entry, "experience")).filter((entry) => hasEntryContent(entry, "experience")),
     certifications: (payload.certifications || []).map((entry) => cleanEntry(entry, "certification")).filter((entry) => hasEntryContent(entry, "certification")),
@@ -1446,10 +1641,11 @@ function formatEntryDisplay(kind: ResumeEntryKind, entry: ResumeEntryDto) {
 
   if (kind === "activity") {
     const activity = normalizeActivityEntry(normalized);
+    const title = activity.activityName || activity.title || activity.description;
     return {
-      title: activity.activityName || activity.title,
+      title,
       lines: compactLines([
-        activity.description,
+        title === activity.description ? "" : activity.description,
         activity.issuer,
         formatMonthRangeLabel(activity.startDate, activity.endDate) || formatDateLabel(activity.activityDate || activity.startDate),
       ]),
@@ -1475,15 +1671,6 @@ function formatEntryDisplay(kind: ResumeEntryKind, entry: ResumeEntryDto) {
 
 function compactLines(lines: Array<string | null | undefined>) {
   return lines.map((line) => cleanText(line)).filter(Boolean);
-}
-
-function getRequiredTitlePlaceholder(kind: ResumeEntryKind) {
-  if (kind === "experience") return "회사·기관명을 입력해주세요.";
-  if (kind === "award") return "공모전명을 입력해주세요.";
-  if (kind === "activity") return "활동명을 입력해주세요.";
-  if (kind === "certification") return "자격증명을 입력해주세요.";
-  if (kind === "language") return "어학시험명을 입력해주세요.";
-  return "학교명을 입력해주세요.";
 }
 
 function hasEntryContent(entry: ResumeEntryDto, kind: ResumeEntryKind) {
@@ -1682,6 +1869,22 @@ function formatPickerDate(date: Date | null, type: PickerMode = "date") {
   return `${year}-${month}-${day}`;
 }
 
+function formatPickerDisplayValue(value?: string | null, type: PickerMode = "date") {
+  const normalized = type === "month" ? normalizeMonthInputValue(value) : normalizeDateInputValue(value);
+  return normalized ? normalized.replace(/-/g, ".") : "";
+}
+
+function clampDayToMonth(year: number, monthIndex: number, day: number) {
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+  return new Date(year, monthIndex, Math.min(day, lastDay));
+}
+
+function isSameDate(left: Date, right: Date) {
+  return left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate();
+}
+
 function normalizeGraduationStatus(value?: string | null) {
   const text = cleanText(value).replace(/\s/g, "");
   if (text.includes("예정")) return "졸업 예정";
@@ -1781,6 +1984,7 @@ const RESUME_SCALAR_KEYS = [
   "educationSummary",
   "careerSummary",
   "certificationSummary",
+  "additionalNotes",
 ] as const;
 
 function normalizeUploadEntries(entries: unknown, type: ResumeEntryKind) {
@@ -2127,6 +2331,32 @@ function formatHighestEducationFromEntry(entry?: ResumeEntryDto) {
   return level;
 }
 
+function formatSchoolMajorLabel(entry?: ResumeEntryDto) {
+  return formatSchoolMajorText(entry?.schoolName || entry?.title, entry?.major);
+}
+
+function formatSchoolMajorText(schoolName?: string | null, major?: string | null) {
+  const school = cleanText(schoolName);
+  const field = dedupeSchoolMajorText(major);
+  if (!school) return field;
+  if (!field) return school;
+
+  const compactSchool = school.replace(/\s/g, "");
+  const compactField = field.replace(/\s/g, "");
+  return compactField.includes(compactSchool) ? field : `${school} ${field}`;
+}
+
+function dedupeSchoolMajorText(value?: string | null) {
+  const text = cleanText(value);
+  const schoolName = text.match(/(.+?(?:고등학교|대학교|대학원|대학|고교|학교))/)?.[1];
+  if (!schoolName) return text;
+
+  const duplicatePrefix = `${schoolName} ${schoolName}`;
+  return text.startsWith(duplicatePrefix)
+    ? cleanText(`${schoolName} ${text.slice(duplicatePrefix.length)}`)
+    : text;
+}
+
 function normalizeHighestEducationValue(value?: string | null) {
   const text = cleanText(value);
   if (!text) return "";
@@ -2262,9 +2492,7 @@ function toUploadPayload(
   const gpaScore = cleanText(source.gpaScore) || parsedGpa.score || nestedGpa.score || cleanText(preferredEducation?.gpaScore);
   const gpaMax = cleanText(source.gpaMax) || parsedGpa.max || nestedGpa.max || cleanText(preferredEducation?.gpaMax);
   const birthDate = normalizeDateInputValue(source.birthDate);
-  const educationSchoolMajor = [preferredEducation?.schoolName, preferredEducation?.major]
-    .filter(Boolean)
-    .join(" ");
+  const educationSchoolMajor = formatSchoolMajorLabel(preferredEducation);
   const highestEducation = resolveHighestEducationValue(source.highestEducation, preferredEducation);
   return {
     ...emptyPayload,
@@ -2281,13 +2509,14 @@ function toUploadPayload(
     gpa: [gpaScore, gpaMax].filter(Boolean).join(" / ") || cleanText(source.gpa),
     gpaScore,
     gpaMax,
-    schoolMajor: cleanText(source.schoolMajor) || educationSchoolMajor,
+    schoolMajor: dedupeSchoolMajorText(cleanText(source.schoolMajor) || educationSchoolMajor),
     graduationStatus: normalizeGraduationStatus(source.graduationStatus || preferredEducation?.graduationStatus),
     educationStartDate: normalizeMonthInputValue(source.educationStartDate || preferredEducation?.startDate),
     educationEndDate: normalizeMonthInputValue(source.educationEndDate || preferredEducation?.endDate),
     educationSummary: cleanText(source.educationSummary),
     careerSummary: cleanText(source.careerSummary),
     certificationSummary: cleanText(source.certificationSummary),
+    additionalNotes: cleanText(source.additionalNotes),
     educations,
     experiences,
     certifications,
@@ -2319,9 +2548,9 @@ function mergeUploadPayload(current: ResumePayloadDto, incoming: ResumePayloadDt
   const preferredEducation = selectPreferredEducation(merged.educations);
   if (preferredEducation) {
     const preferredHighestEducation = formatHighestEducationFromEntry(preferredEducation);
-    const educationSchoolMajor = [preferredEducation.schoolName, preferredEducation.major].filter(Boolean).join(" ");
+    const educationSchoolMajor = formatSchoolMajorLabel(preferredEducation);
     merged.highestEducation = preferredHighestEducation || cleanText(merged.highestEducation);
-    merged.schoolMajor = educationSchoolMajor || cleanText(merged.schoolMajor);
+    merged.schoolMajor = educationSchoolMajor || dedupeSchoolMajorText(merged.schoolMajor);
     merged.graduationStatus =
       normalizeGraduationStatus(preferredEducation.graduationStatus) || cleanText(merged.graduationStatus);
     merged.educationStartDate = normalizeMonthInputValue(preferredEducation.startDate) || cleanText(merged.educationStartDate);
