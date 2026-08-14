@@ -909,6 +909,11 @@ async function extractOfficeDocument(filename: string, buffer: Buffer): Promise<
   return { text: EMPTY, tables: [] };
 }
 
+export async function extractResumeDocumentText(filename: string, buffer: Buffer) {
+  const document = await extractOfficeDocument(filename, buffer);
+  return formatAiSourceInput(document);
+}
+
 function parseResumeFromDocument(document: StructuredResumeDocument): Partial<ResumePayloadDto> {
   const tablePayload = parseResumeTables(document.tables);
   const textPayload = parseResumeFromText(document.text);

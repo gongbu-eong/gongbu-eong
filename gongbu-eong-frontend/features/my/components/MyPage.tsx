@@ -9,6 +9,7 @@ import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { listResumes } from "../my.api";
+import { listCoachingHistory } from "@/features/coaching/coaching.api";
 import styles from "./My.module.css";
 
 export function MyPage() {
@@ -18,7 +19,7 @@ export function MyPage() {
   const [resumeCount, setResumeCount] = useState(0);
   const [diagnosisCount, setDiagnosisCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const coverLetterCoachingCount = 0;
+  const [coverLetterCoachingCount, setCoverLetterCoachingCount] = useState(0);
   const interviewCoachingCount = 0;
 
   useEffect(() => {
@@ -29,12 +30,14 @@ export function MyPage() {
       getHomeJobs().catch(() => null),
       listResumes().catch(() => null),
       getDiagnosisResultHistory(undefined, 1).catch(() => null),
-    ]).then(([userResponse, jobsResponse, resumesResponse, diagnosisResponse]) => {
+      listCoachingHistory().catch(() => null),
+    ]).then(([userResponse, jobsResponse, resumesResponse, diagnosisResponse, coachingResponse]) => {
       if (!alive) return;
       setUser(userResponse?.authenticated ? userResponse.user : null);
       setBookmarkCount(jobsResponse?.bookmarkCount ?? 0);
       setResumeCount(resumesResponse?.resumes.length ?? 0);
       setDiagnosisCount(diagnosisResponse?.totalCount ?? 0);
+      setCoverLetterCoachingCount(coachingResponse?.items.length ?? 0);
     });
 
     return () => {
@@ -117,7 +120,7 @@ export function MyPage() {
             count={bookmarkCount}
           />
           <MyMenuItem
-            href="#"
+            href="/my/coaching"
             iconSrc="/my/activity-cover-letter.png"
             iconWidth={28}
             iconHeight={30}

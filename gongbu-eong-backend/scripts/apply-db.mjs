@@ -34,6 +34,7 @@ async function main() {
     "20260812_user_resume_additional_notes.sql",
     "seed_diagnosis.sql",
     "alter_job_category_recommendations.sql",
+    "alter_resume_coaching.sql",
   ];
 
   await client.connect();

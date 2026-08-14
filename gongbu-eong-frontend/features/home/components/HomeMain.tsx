@@ -24,7 +24,7 @@ const aiTools = [
     imageAlt: "강점·성향 진단",
   },
   {
-    href: "#",
+    href: "/ai-tools/coaching",
     tag: "첫 1회 무료",
     title: "Ai NCS 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",
@@ -663,7 +663,7 @@ export function HomeMenuDrawer({
             title="AI 도구"
             label="BEST"
             items={["AI 도구 모음", "직무 성향 진단", "AI 자소서 코칭", "AI 면접 코칭", "심리·직무 테스트 모음"]}
-            hrefs={user ? [] : ["/login", "/login", "/login", "/login", "/login"]}
+            hrefs={user ? ["#", "/ai-tools/diagnosis", "/ai-tools/coaching", "#", "#"] : ["/login", "/login", "/login", "/login", "/login"]}
             onNavigate={onClose}
           />
           <DrawerSection
