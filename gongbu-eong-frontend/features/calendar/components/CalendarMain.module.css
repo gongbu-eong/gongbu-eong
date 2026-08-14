@@ -295,9 +295,10 @@
   font-weight: 400;
 }
 
-.activeFilterControl select {
-  border-color: #2f7ff0;
-  color: #2f7ff0;
+.filterControl select:focus {
+  outline: none;
+  border-color: #e4e8ef;
+  color: #5a6580;
 }
 
 .loading {
@@ -330,6 +331,10 @@
   color: #1a2233;
   text-decoration: none;
   box-shadow: none;
+}
+
+.jobCardWithoutBadge {
+  grid-template-columns: minmax(0, 1fr) 1.5625rem;
 }
 
 .jobCopy {

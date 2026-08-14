@@ -152,6 +152,7 @@ export function CalendarMain({
   }, [range.endDate, range.startDate, scope]);
 
   const jobEvents = useMemo(() => buildJobEvents(jobs), [jobs]);
+  const bookmarkedJobEvents = useMemo(() => buildBookmarkedJobEvents(jobs), [jobs]);
   const monthEvents = useMemo(() => groupEventsByDate(jobEvents), [jobEvents]);
   const monthDays = useMemo(
     () => buildMonthDays(month, monthEvents),
@@ -298,12 +299,13 @@ export function CalendarMain({
                 <p className={styles.loading}>캘린더 공고를 불러오고 있어요.</p>
               ) : (
                 <JobList
-                  events={jobEvents}
+                  events={bookmarkedJobEvents}
                   emptyLabel="아직 찜한 공고가 없어요."
                   emptyDescription="채용 공고에서 별표를 눌러 나만의 캘린더에 담아보세요."
                   emptyVariant="bookmark"
                   onToggleBookmark={toggleBookmark}
                   pendingBookmarkId={bookmarkPendingId}
+                  showEventBadge={false}
                 />
               )}
             </>
@@ -539,21 +541,6 @@ function FilterRow({
         </label>
         <label className={styles.filterControl}>
           <select
-            value={filters.sort}
-            onChange={(event) => {
-              onChange({ ...filters, sort: event.target.value as SortFilter });
-            }}
-          >
-            <option value="latest">최신순</option>
-            <option value="deadline">마감순</option>
-          </select>
-        </label>
-        <label
-          className={`${styles.filterControl} ${
-            filters.region !== "all" ? styles.activeFilterControl : ""
-          }`}
-        >
-          <select
             value={filters.region}
             onChange={(event) => {
               onChange({ ...filters, region: event.target.value });
@@ -594,6 +581,7 @@ function JobList({
   emptyVariant = "schedule",
   onToggleBookmark,
   pendingBookmarkId,
+  showEventBadge = true,
 }: {
   events: CalendarJobEvent[];
   emptyLabel: string;
@@ -601,6 +589,7 @@ function JobList({
   emptyVariant?: EmptyVariant;
   onToggleBookmark: (job: JobPostingDto) => void;
   pendingBookmarkId: string | null;
+  showEventBadge?: boolean;
 }) {
   if (events.length === 0) {
     return (
@@ -620,6 +609,7 @@ function JobList({
           event={event}
           onToggleBookmark={onToggleBookmark}
           isBookmarkPending={pendingBookmarkId === event.job.id}
+          showEventBadge={showEventBadge}
         />
       ))}
     </div>
@@ -682,24 +672,28 @@ function CalendarJobCard({
   event,
   onToggleBookmark,
   isBookmarkPending,
+  showEventBadge,
 }: {
   event: CalendarJobEvent;
   onToggleBookmark: (job: JobPostingDto) => void;
   isBookmarkPending: boolean;
+  showEventBadge: boolean;
 }) {
   const { job } = event;
 
   return (
-    <Link href={`/jobs/${job.id}`} className={styles.jobCard}>
-      <span className={getEventBadgeClass(event.kind)}>
-        {event.kind === "start" ? "시작" : "마감"}
-      </span>
+    <Link href={`/jobs/${job.id}`} className={`${styles.jobCard} ${!showEventBadge ? styles.jobCardWithoutBadge : ""}`}>
+      {showEventBadge ? (
+        <span className={getEventBadgeClass(event.kind)}>
+          {event.kind === "start" ? "시작" : "마감"}
+        </span>
+      ) : null}
       <span className={styles.jobCopy}>
         <small className={styles.company}>{job.institutionName}</small>
         <strong>{job.title}</strong>
         <span className={styles.tags}>
           {job.employmentType ? <small>{job.employmentType}</small> : null}
-          {job.region ? <small>{job.region}</small> : null}
+          {job.region ? <small>{formatRegionLabel(job.region)}</small> : null}
           {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
           {job.matchScore != null ? <em>유형추천</em> : null}
         </span>
@@ -839,6 +833,26 @@ function buildJobEvents(jobs: JobPostingDto[]) {
   return events;
 }
 
+function buildBookmarkedJobEvents(jobs: JobPostingDto[]) {
+  const seen = new Set<string>();
+  return jobs
+    .filter((job) => {
+      if (seen.has(job.id)) return false;
+      seen.add(job.id);
+      return true;
+    })
+    .map((job) => ({
+      id: `${job.id}-bookmarked`,
+      kind: "end" as CalendarEventKind,
+      dateKey: job.applicationEndAt
+        ? toDateKey(new Date(job.applicationEndAt))
+        : job.applicationStartAt
+          ? toDateKey(new Date(job.applicationStartAt))
+          : toDateKey(new Date()),
+      job,
+    }));
+}
+
 function groupEventsByDate(events: CalendarJobEvent[]) {
   return events.reduce<Record<string, CalendarJobEvent[]>>((acc, event) => {
     acc[event.dateKey] = [...(acc[event.dateKey] || []), event];
@@ -911,6 +925,12 @@ function splitDelimitedOption(value: string | null | undefined) {
     .split(/[,.\/·|]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function formatRegionLabel(value: string | null | undefined) {
+  const regions = splitDelimitedOption(value);
+  if (regions.length <= 3) return regions.join(" · ") || "";
+  return `${regions.slice(0, 3).join(" · ")} 외 ${regions.length - 3}개`;
 }
 
 function getWeekendClass(date: Date) {
