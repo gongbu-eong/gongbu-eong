@@ -602,20 +602,27 @@
 
 .mineYearHeader label {
   position: relative;
+  display: block;
+  width: 7.5rem;
+  height: 2.25rem;
 }
 
 .mineYearHeader label::after {
-  content: "⌄";
+  content: "";
   position: absolute;
   top: 50%;
-  right: 1rem;
-  color: #5a6580;
-  transform: translateY(-50%);
+  right: 1.05rem;
+  width: 0.4375rem;
+  height: 0.4375rem;
+  border: solid #5a6580;
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-65%) rotate(45deg);
   pointer-events: none;
 }
 
 .mineYearHeader select {
   appearance: none;
+  -webkit-appearance: none;
   width: 7.5rem;
   height: 2.25rem;
   padding: 0 2.25rem 0 1rem;
@@ -625,6 +632,7 @@
   color: #5a6580;
   font: inherit;
   font-size: 0.875rem;
+  line-height: 1;
 }
 
 @media (max-width: 420px) {
