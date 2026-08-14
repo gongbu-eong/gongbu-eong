@@ -686,6 +686,296 @@
   }
 }
 
+.resumeListPage,
+.resumeViewPage {
+  background: #fff;
+  color: #1a2233;
+  font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
+}
+
+.resumeListFrame,
+.resumeViewFrame {
+  max-width: var(--gb-container-pc);
+  min-height: calc(100dvh - 3rem);
+  padding: 1rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  border: 0;
+  background: #fff;
+}
+
+.resumeListFrame .title,
+.resumeViewFrame .title {
+  margin: 0;
+  color: #1a2233;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.resumeListFrame .subtitle {
+  margin: 0.625rem 0 1.25rem;
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.resumeListFrame .emptyBox {
+  display: flex;
+  width: 100%;
+  min-height: 9.25rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.125rem;
+  margin: 1.25rem 0 0;
+  border: 1px dashed #1c5fc4;
+  border-radius: 0.625rem;
+  background: #e8f1ff;
+}
+
+.resumeListFrame .emptyBox strong {
+  color: #1c5fc4;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.resumeListFrame .emptyBox a {
+  display: inline-flex;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  background: #2f7ff0;
+  color: #fff;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.resumeListFrame .resumeList {
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.resumeListFrame .resumeCard {
+  min-height: 6.9375rem;
+  padding: 1rem;
+  border: 1px solid #e4e8ef;
+  border-radius: 0.625rem;
+  background: #fff;
+}
+
+.resumeListFrame .resumeTitle {
+  padding-right: 5.5rem;
+  color: #1a2233;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.resumeListFrame .resumeDate {
+  margin-top: 0.625rem;
+  color: #5a6580;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.resumeListFrame .selectedMark {
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1fb573;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.resumeListFrame .cardActions {
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.resumeListFrame .smallButton {
+  height: 1.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid #e4e8ef;
+  border-radius: 0.4375rem;
+  background: #fff;
+  color: #9aa4b8;
+  font-size: 0.8125rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.resumeListFrame .addButton {
+  width: 100%;
+  height: 3.25rem;
+  margin-top: 1.5rem;
+  border: 1px solid #2f7ff0;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #2f7ff0;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.resumeListPage .modalBackdrop {
+  z-index: 1200;
+  padding: 1rem;
+  background: rgb(0 0 0 / 50%);
+}
+
+.resumeListPage .modal {
+  width: min(calc(100vw - 2rem), 22.5625rem);
+  min-height: 10.0625rem;
+  padding: 1.5rem 1rem;
+  border-radius: 0.625rem;
+  text-align: center;
+}
+
+.resumeListPage .modal h2 {
+  color: #1a2233;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.resumeListPage .modal p {
+  margin: 0.75rem 0 1.5rem;
+  color: #1a2233;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.resumeListPage .modalActions {
+  gap: 0.5625rem;
+}
+
+.resumeListPage .modalActions .ghostButton,
+.resumeListPage .modalActions .dangerButton {
+  height: 2.875rem;
+  border: 0;
+  border-radius: 0.625rem;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+
+.resumeListPage .modalActions .ghostButton {
+  background: #9aa4b8;
+}
+
+.resumeListPage .modalActions .dangerButton {
+  background: #e8544d;
+}
+
+.resumeViewFrame .title {
+  margin-bottom: 1.3125rem;
+}
+
+.resumeViewFrame .detailSection {
+  margin-top: 2.5rem;
+}
+
+.resumeViewFrame .detailSection:first-of-type {
+  margin-top: 0;
+}
+
+.resumeViewFrame .detailSection h2 {
+  margin: 0 0 1rem;
+  color: #1a2233;
+  font-size: 1.0625rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.resumeViewFrame .surfaceBox,
+.resumeViewFrame .entryCard {
+  border-radius: 0.4375rem;
+  background: #f5f7fa;
+  color: #1a2233;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.resumeViewFrame .surfaceBox {
+  min-height: 2.5625rem;
+  padding: 0.75rem 1rem;
+}
+
+.resumeViewFrame .detailSection:last-of-type .surfaceBox {
+  min-height: 6.25rem;
+}
+
+.resumeViewFrame .entryList {
+  gap: 0.5rem;
+}
+
+.resumeViewFrame .entryCard {
+  min-height: 6.125rem;
+  padding: 1rem;
+}
+
+.resumeViewFrame .entryCardEducation {
+  min-height: 7.8125rem;
+}
+
+.resumeViewFrame .entryCardTall {
+  min-height: 7.375rem;
+}
+
+.resumeViewFrame .entryCard strong {
+  color: #1a2233;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.resumeViewFrame .entryCard span {
+  margin-top: 0.375rem;
+  color: #5a6580;
+  font-size: 0.875rem;
+  line-height: 1.43;
+  font-weight: 400;
+}
+
+.resumeViewFrame .entryCard strong + span {
+  margin-top: 0.625rem;
+}
+
+.resumeViewFrame .entryCardAccent {
+  color: #2f7ff0 !important;
+}
+
+.resumeViewFrame .saveButton {
+  width: 100%;
+  height: 3.25rem;
+  margin-top: 2.5rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #5a6580;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+@media (min-width: 600px) {
+  .resumeListFrame,
+  .resumeViewFrame {
+    border-left: 0;
+    border-right: 0;
+  }
+}
+
 .inputButton {
   display: flex;
   width: 100%;
@@ -1287,7 +1577,7 @@
 
 .resumeFormPage .modal {
   display: grid;
-  width: min(calc(100vw - 2rem), 22.5625rem);
+  width: min(calc(100vw - 2rem), 30rem);
   max-height: calc(100dvh - 2rem);
   gap: 1.0625rem;
   overflow: auto;
@@ -1500,6 +1790,70 @@
   font-weight: 500;
 }
 
+.resumeFormFrame .reuploadDropzone {
+  display: grid;
+  min-height: 9.625rem;
+  align-content: start;
+  justify-items: stretch;
+  padding: 1.5rem 1rem 1rem;
+  border: 1px dashed #1c5fc4;
+  border-radius: 0.625rem;
+  background: #e8f1ff;
+  color: #1a2233;
+  text-align: left;
+}
+
+.resumeFormFrame .reuploadDropzone strong {
+  margin: 0;
+  color: #1a2233;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.resumeFormFrame .reuploadDropzone span {
+  margin-top: 0.625rem;
+  color: #1a2233;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.resumeFormFrame .reuploadDropzone small {
+  margin-top: 0.25rem;
+  color: #9aa4b8;
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.resumeFormFrame .reuploadDropzone b {
+  display: inline-flex;
+  width: 100%;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.75rem;
+  border-radius: 0.5rem;
+  background: #1c5fc4;
+  color: #fff;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.resumeFormFrame .reuploadHint {
+  margin: -0.875rem 0 0;
+  color: #5a6580;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.resumeFormFrame .reuploadHint + .completionCard {
+  margin-top: 0;
+}
+
 .resumeFormFrame .smallButton {
   flex: 0 0 auto;
   height: 2.0625rem;
@@ -1601,8 +1955,8 @@
 .resumeFormFrame .datePickerControl,
 .resumeFormFrame .datePickerInput,
 .resumeFormFrame .dateRangeInput {
-  min-height: 2.875rem;
-  height: 2.875rem;
+  min-height: 2.5625rem;
+  height: 2.5625rem;
 }
 
 .resumeFormFrame .input,
@@ -1629,8 +1983,15 @@
 }
 
 .resumeFormFrame .gpaFields {
-  grid-template-columns: minmax(0, 1fr) 9.5rem;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.5rem;
+}
+
+.resumeFormFrame .textarea {
+  min-height: 6.25rem;
+  border: 1px solid #e4e8ef;
+  border-radius: 0.125rem;
+  background: #fff;
 }
 
 .resumeFormFrame .pillButton {
@@ -1754,4 +2115,234 @@
     border-left: 0;
     border-right: 0;
   }
+}
+
+.myPage {
+  min-height: 100dvh;
+  background: #fff;
+  font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
+}
+
+.myPage > header,
+.myPage > footer {
+  max-width: var(--gb-container-pc);
+}
+
+.myPage .frame {
+  max-width: var(--gb-container-pc);
+  min-height: 100dvh;
+  padding: 1rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  border: 0;
+}
+
+.myPage .title {
+  margin: 0;
+  color: #1a2233;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.myPage .profile {
+  position: relative;
+  display: grid;
+  grid-template-columns: 4rem minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 4rem;
+  margin: 1rem 0 0;
+}
+
+.myPage .avatar {
+  position: relative;
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 2.625rem;
+  line-height: 1;
+}
+
+.myPage .avatar img {
+  position: absolute;
+  inset: 0;
+  width: 4rem;
+  height: 4rem;
+}
+
+.myPage .avatar span {
+  position: relative;
+  z-index: 1;
+  transform: translateY(0.0625rem);
+}
+
+.myPage .profileName {
+  color: #1a2233;
+  font-size: 1.0625rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.myPage .profileText {
+  margin: 0.25rem 0 0;
+  color: #5a6580;
+  font-size: 0.875rem;
+  line-height: 1.357;
+  font-weight: 400;
+}
+
+.myPage .editButton {
+  display: inline-flex;
+  min-width: 2.375rem;
+  height: 1.375rem;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0;
+  padding: 0 0.5625rem;
+  border: 1px solid #e4e8ef;
+  border-radius: 999px;
+  background: #fff;
+  color: #9aa4b8;
+  font-size: 0.6875rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.myPage .stats {
+  display: grid;
+  height: 5.3125rem;
+  grid-template-columns: repeat(3, 1fr);
+  align-items: center;
+  margin: 1rem 0 0;
+  padding: 0;
+  border-radius: 0.625rem;
+  background: #f5f7fa;
+}
+
+.myPage .stat {
+  position: relative;
+  display: grid;
+  gap: 0.125rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.myPage .stat + .stat {
+  border-left: 0;
+}
+
+.myPage .stat + .stat::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 1px;
+  height: 2.8125rem;
+  background: #e4e8ef;
+  transform: translateY(-50%);
+}
+
+.myPage .stat strong {
+  color: #2f7ff0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.myPage .stat span {
+  margin: 0;
+  color: #5a6580;
+  font-size: 0.875rem;
+  line-height: 1.357;
+  font-weight: 400;
+}
+
+.myPage .sectionTitle {
+  margin: 1.5rem 0 1rem;
+  color: #5a6580;
+  font-size: 1.0625rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.myPage .menuList {
+  display: grid;
+  gap: 1rem;
+}
+
+.myPage .menuItem {
+  display: grid;
+  grid-template-columns: 2.875rem minmax(0, 1fr) auto;
+  gap: 1.125rem;
+  min-height: 3.875rem;
+  align-items: center;
+  border-bottom: 1px solid #e4e8ef;
+  color: #1a2233;
+  text-decoration: none;
+}
+
+.myPage .menuIcon {
+  display: grid;
+  width: 2.875rem;
+  height: 2.875rem;
+  place-items: center;
+  border-radius: 0.3125rem;
+  background: #f5f7fa;
+  font-size: 0;
+}
+
+.myPage .menuIcon img {
+  display: block;
+  max-width: none;
+  object-fit: contain;
+}
+
+.myPage .menuTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.5rem;
+  color: #1a2233;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.myPage .countBadge {
+  display: inline-flex;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0;
+  padding: 0 0.5625rem;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #2f7ff0;
+  font-size: 0.6875rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.myPage .chevron {
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.myPage .logoutButton {
+  width: 100%;
+  height: 3.25rem;
+  margin-top: 2.5rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #f5f7fa;
+  color: #5a6580;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
 }

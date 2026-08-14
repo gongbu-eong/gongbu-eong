@@ -35,6 +35,63 @@
   cursor: pointer;
 }
 
+.headerTicketStatus {
+  position: absolute;
+  top: 0.75rem;
+  left: calc(50% - 3.46875rem);
+  display: flex;
+  height: 1.5rem;
+  align-items: center;
+}
+
+.headerTicketProgress {
+  width: 5.5rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: #e4e8ef;
+}
+
+.headerTicketIcon {
+  width: 1.4375rem;
+  height: 0.75rem;
+  margin-left: 0.5rem;
+  object-fit: cover;
+  transform: rotate(45deg);
+}
+
+.headerTicketCount {
+  margin-left: 0.25rem;
+  color: #1a2233;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.headerTicketAlert {
+  position: relative;
+  display: grid;
+  width: 1rem;
+  height: 1rem;
+  margin-left: 0.5rem;
+  place-items: center;
+}
+
+.headerTicketAlert img {
+  position: absolute;
+  inset: 0;
+  width: 1rem;
+  height: 1rem;
+}
+
+.headerTicketAlert b {
+  position: relative;
+  z-index: 1;
+  color: #5a6580;
+  font-size: 0.6875rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
 .figmaHeaderIcon {
   position: relative;
   display: block;

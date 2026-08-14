@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MouseEvent, PointerEvent } from "react";
+import { AppFooter, AppTicketStatus } from "@/features/layout/components/AppChrome";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "../home.api";
 import type {
   CurrentUserDto,
@@ -18,14 +19,14 @@ const aiTools = [
     href: "/ai-tools/diagnosis",
     tag: "완전 무료",
     title: "강점·성향 진단",
-    description: "16문항이면 끝, 내 강점 유형을 알려드려요.",
+    description: "10문항이면 끝, 내 강점 유형을 알려드려요.",
     image: "/home/home-tool-match.png",
     imageAlt: "강점·성향 진단",
   },
   {
     href: "#",
     tag: "첫 1회 무료",
-    title: "Ai 자소서 코칭",
+    title: "Ai NCS 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",
     image: "/home/home-tool-diagnosis.png",
     imageAlt: "Ai 자소서 코칭",
@@ -296,12 +297,11 @@ const ignoreClickAfterDrag = (
           <Link href="/" className={styles.logoLink} aria-label="공부엉이 홈">
             <span className={styles.logoAccent}>공</span>부엉이
           </Link>
+          <AppTicketStatus />
           <div className={styles.headerActions}>
-            {user ? (
-              <Link href="#" aria-label="알림" className={styles.iconButton}>
-                <BellIcon />
-              </Link>
-            ) : null}
+            <Link href="#" aria-label="알림" className={styles.iconButton}>
+              <BellIcon />
+            </Link>
             <button
               type="button"
               aria-label="메뉴 열기"
@@ -314,7 +314,7 @@ const ignoreClickAfterDrag = (
         </header>
 
         <Link href="#" className={styles.searchBar} aria-label="공고 검색">
-          <span>공공·기관 검색</span>
+          <span>{user ? "공고명, 기업명을 검색하세요." : "공공·기관 검색"}</span>
           <SearchIcon />
         </Link>
 
@@ -367,7 +367,7 @@ const ignoreClickAfterDrag = (
             )}
           </section>
 
-        <SectionHrefNoneHeader icon="🔥" title="Hot 공고" />
+        <SectionHeader title="마감 임박 공고" href={user ? "/jobs" : "/login"} />
         <div
           ref={hotListRef}
           className={styles.hotList}
@@ -393,7 +393,7 @@ const ignoreClickAfterDrag = (
         ))}
         </div>
 
-        <SectionHeader title="AI 취업 도구" href={user ? "#" : "/login"} />
+        <SectionHeader title="Ai 취업 도구" href={user ? "#" : "/login"} />
         <div className={styles.toolList}>
           {aiTools.map((tool) => {
             const content = (
@@ -458,19 +458,20 @@ const ignoreClickAfterDrag = (
                 key={job.id}
                 className={styles.listItem}
               >
-                <span className={styles.recommendTop}>
-                  <small className={styles.company}>{job.institutionName}</small>
-                  <span className={`${styles.recommendDday} ${isUrgentDday(job.dday) ? styles.recommendDdayUrgent : ""}`}>
-                    {job.dday}
-                  </span>
-                </span>
+                <small className={styles.company}>{job.institutionName}</small>
                 <strong>{job.title}</strong>
                 <span className={styles.recommendTags}>
                   {job.employmentType ? <small>{job.employmentType}</small> : null}
                   {job.region ? <small>{job.region}</small> : null}
                   {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
                 </span>
-                <small className={styles.recommendDate}>{toEndDate(job.applicationEndAt)}</small>
+                <span className={styles.recommendFooter}>
+                  <small className={styles.recommendDate}>{toEndDate(job.applicationEndAt)}</small>
+                  <span className={`${styles.recommendDday} ${isUrgentDday(job.dday) ? styles.recommendDdayUrgent : ""}`}>
+                    {job.dday}
+                  </span>
+                </span>
+                <span className={styles.recommendStar} aria-hidden="true">☆</span>
               </Link>
             ))}
             {user && jobs.recommendedJobs.length === 0 ? (
@@ -502,8 +503,9 @@ const ignoreClickAfterDrag = (
                 <strong>{post.title}</strong>
                 <p>{post.description}</p>
                 <span className={styles.communityMeta}>
-                  <span>♡ 1,204</span>
-                  <span>♧ 32</span>
+                  <span>조회수 : 1,204</span>
+                  <span>추천수 : 20</span>
+                  <span>댓글 : 10</span>
                   <time>2시간 전</time>
                 </span>
               </Link>
@@ -511,31 +513,7 @@ const ignoreClickAfterDrag = (
           </div>
         </div>
 
-        <footer className={styles.footerNav} aria-label="하단 메뉴">
-          <Link href="/" className={styles.footerActive}>
-            <HomeIcon />
-            <span>홈</span>
-          </Link>
-          <Link href={user ? "/calendar" : "/login"}>
-            <CalendarIcon />
-            <span>캘린더</span>
-          </Link>
-          <Link href={user ? "/ai-tools/diagnosis" : "/login"}>
-            <span className={styles.footerAiIcon}>
-              <AiIcon />
-              <small>BEST</small>
-            </span>
-            <span>AI 도구</span>
-          </Link>
-          <Link href={user ? "#" : "/login"}>
-            <CommunityIcon />
-            <span>커뮤니티</span>
-          </Link>
-          <Link href={user ? "/my" : "/login"}>
-            <MyIcon />
-            <span>MY</span>
-          </Link>
-        </footer>
+        <AppFooter active="home" />
 
         {isMenuOpen ? (
           <HomeMenuDrawer
@@ -562,9 +540,11 @@ const ignoreClickAfterDrag = (
               aria-modal="true"
               aria-labelledby="coming-soon-title"
             >
-              <span className={styles.noticeIcon} aria-hidden="true">AI</span>
-              <h2 id="coming-soon-title">준비중인 메뉴예요</h2>
-              <p>탈락사례 분석 메뉴는 준비중 입니다.</p>
+              <span className={styles.noticeOwlStage} aria-hidden="true">
+                <Image src="/diagnosis-progress-owl.png" alt="" width={112} height={112} />
+              </span>
+              <h2 id="coming-soon-title">아직 준비중입니다.</h2>
+              <p>조금만 기다려주세요.</p>
               <button type="button" onClick={() => setIsComingSoonOpen(false)}>
                 확인
               </button>
@@ -893,85 +873,5 @@ function SectionHeader({ icon, title, href }: { icon?: string; title: string; hr
       </h2>
       <Link href={href}>전체 보기 &gt;</Link>
     </div>
-  );
-}
-
-function SectionHrefNoneHeader({ icon, title }: { icon?: string; title: string; }) {
-  return (
-    <div className={styles.sectionHeader}>
-      <h2>
-        {icon ? <span aria-hidden="true">{icon}</span> : null}
-        {title}
-      </h2>
-    </div>
-  );
-}
-
-
-export function HomeIcon() {
-  return (
-    <svg viewBox="0 0 24.9305 26" aria-hidden="true">
-      <path d="M2.3252 9.2021h16.1773c1.281 0 2.3223 1.0412 2.3223 2.3223v12.1592c0 1.2782-1.0356 2.3138-2.3139 2.3138H2.3139C1.0356 25.9974 0 24.9618 0 23.6836V11.5244c0-1.2811 1.0412-2.3223 2.3223-2.3223h.0029Z" fill="#2F7FF0" transform="translate(2.0515 0)" />
-      <path d="M12.4667 0 0 11.7782h24.9305L12.4667 0Z" fill="#2F7FF0" />
-      <path d="M1.0017 0h5.8947c.5531 0 1.0046.4487 1.0046 1.0046v10.3814H0V1.0046C0 .4515.4487 0 1.0046 0h-.0029Z" fill="#FFFFFF" transform="translate(8.5162 15.6185)" />
-    </svg>
-  );
-}
-
-export function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24.0014 26.1" aria-hidden="true">
-      <path d="M2.4192 17.6963C1.0856 17.6963 0 16.6107 0 15.2771V0h23.699v15.2771c0 1.3336-1.0856 2.4192-2.4192 2.4192H2.4192Z" fill="#FFFFFF" transform="translate(.1542 8.2543)" />
-      <path d="M23.699.3024v15.1259c0 1.252-1.0191 2.268-2.268 2.268H2.5734c-1.2519 0-2.268-1.0191-2.268-2.268V.3024H23.699ZM24.0014 0H0v15.4283c0 1.4213 1.1521 2.5704 2.5704 2.5704h18.8575c1.4213 0 2.5704-1.1521 2.5704-2.5704V0h.0031Z" fill="#E3ECE1" transform="translate(0 8.1)" />
-      <path d="M2.6278 0h18.7457c1.4515 0 2.6279 1.1763 2.6279 2.6278v3.6379H0V2.6278C0 1.1763 1.1763 0 2.6278 0Z" fill="#2F7FF0" transform="translate(0 2.1439)" />
-      <path d="M.8588 0h-.003C.3831 0 0 .3832 0 .8558v2.5734c0 .4726.3831.8558.8558.8558h.003c.4726 0 .8558-.3832.8558-.8558V.8558C1.7146.3832 1.3314 0 .8588 0Z" fill="#155ABC" transform="translate(5.3283)" />
-      <path d="M.8588 0h-.003C.3831 0 0 .3832 0 .8558v2.5734c0 .4726.3831.8558.8558.8558h.003c.4726 0 .8558-.3832.8558-.8558V.8558C1.7146.3832 1.3314 0 .8588 0Z" fill="#155ABC" transform="translate(17.3577)" />
-      <path d="M3.3415 0H.4294C.1923 0 0 .1923 0 .4294v2.9121c0 .2372.1923.4294.4294.4294h2.9121c.2372 0 .4294-.1922.4294-.4294V.4294C3.7709.1923 3.5787 0 3.3415 0Z" fill="#E6E7E5" transform="translate(4.1126 11.7664)" />
-      <path d="M3.3415 0H.4294C.1923 0 0 .1922 0 .4294v2.9121c0 .2371.1923.4294.4294.4294h2.9121c.2372 0 .4294-.1923.4294-.4294V.4294C3.7709.1922 3.5787 0 3.3415 0Z" fill="#E6E7E5" transform="translate(4.1126 17.4241)" />
-      <path d="M3.3415 0H.4294C.1923 0 0 .1923 0 .4294v2.9121c0 .2372.1923.4294.4294.4294h2.9121c.2372 0 .4294-.1922.4294-.4294V.4294C3.7709.1923 3.5787 0 3.3415 0Z" fill="#E6E7E5" transform="translate(9.7705 11.7664)" />
-      <path d="m5.9757 3.7948-.6956.6804c-.6078.5625-1.2247 1.0977-1.8627 1.633C2.7702 5.5669 2.1473 5.0226 1.5304 4.4541c-.2177-.1996-.4203-.3962-.626-.6079C.5325 3.4592.221 3.0419.0759 2.5278-.0693 2.0137-.0058 1.4452.2633.9704.7895.0451 1.9628-.2875 2.873.284c.2147.1361.3901.3054.5413.511.5323-.7348 1.4636-1.0009 2.2831-.6259.5232.2389.9072.7015 1.0615 1.2549.1149.4083.0967.8316-.0424 1.2308-.1481.4354-.4203.7983-.7408 1.14Z" fill="#FF5C5C" transform="translate(13.9403 17.1038)" />
-    </svg>
-  );
-}
-
-export function AiIcon() {
-  return (
-    <svg viewBox="0 0 27.0087 26.8701" aria-hidden="true">
-      <path d="M24.9804 0H2.0283C.9081 0 0 .9081 0 2.0283V6.105c0 1.1202.9081 2.0283 2.0283 2.0283h22.9521c1.1202 0 2.0283-.9081 2.0283-2.0283V2.0283C27.0087.9081 26.1006 0 24.9804 0Z" fill="#2F7FF0" transform="translate(0 12.4902)" />
-      <path d="M.3207 0H0v4.643h.3207V0Z" fill="#FFFFFF" transform="translate(13.344 2.943)" />
-      <path d="M.8986 0H0v5.2209h.8986V0Z" fill="#C0D1E3" transform="translate(13.0551 2.6541)" />
-      <path d="M10.0257 20.0515C4.4957 20.0515 0 15.5529 0 10.0257 0 4.4986 4.4986 0 10.0257 0h4.2385c5.53 0 10.0257 4.4986 10.0257 10.0257 0 5.5272-4.4986 10.0258-10.0257 10.0258h-4.2385Z" fill="#FFFFFF" transform="translate(1.355 6.5308)" />
-      <path d="M14.5531.5779c5.3683 0 9.7368 4.3685 9.7368 9.7368 0 5.3682-4.3685 9.7368-9.7368 9.7368h-4.2385C4.9464 20.0515.5778 15.6829.5778 10.3147.5778 4.9464 4.9464.5779 10.3146.5779h4.2385ZM14.5531 0h-4.2385C4.617 0 0 4.6199 0 10.3147c0 5.6976 4.6199 10.3146 10.3146 10.3146h4.2385c5.6976 0 10.3147-4.6199 10.3147-10.3146C24.8678 4.617 20.2478 0 14.5531 0Z" fill="#C0D1E3" transform="translate(1.066 6.239)" />
-      <path d="M11.8893 0H6.6337C2.97 0 0 2.97 0 6.6337v.0029c0 3.6638 2.97 6.6338 6.6337 6.6338h5.2556c3.6637 0 6.6337-2.97 6.6337-6.6338v-.0029C18.523 2.97 15.553 0 11.8893 0Z" fill="#2F7FF0" transform="translate(4.2442 9.9246)" />
-      <path d="M2.0485 4.097A2.0485 2.0485 0 1 0 2.0485 0a2.0485 2.0485 0 0 0 0 4.097Z" fill="#FEC440" transform="translate(11.4559)" />
-      <path d="M.9852 3.2129c.5442 0 .9853-.7193.9853-1.6065S1.5294 0 .9852 0 0 .7192 0 1.6064s.4411 1.6065.9852 1.6065Z" fill="#FFFFFF" transform="translate(8.3355 14.0532)" />
-      <path d="M.9852 3.2129c.5442 0 .9853-.7193.9853-1.6065S1.5294 0 .9852 0 0 .7192 0 1.6064s.4411 1.6065.9852 1.6065Z" fill="#FFFFFF" transform="translate(16.7028 14.0532)" />
-      <path d="M2.8892 0c0 .6594-.5352 1.1946-1.4446 1.1946C.7853 1.1946.25.6594.25 0" fill="none" stroke="#FFFFFF" strokeWidth=".5" strokeLinecap="round" transform="translate(12.0598 17.847)" />
-    </svg>
-  );
-}
-
-export function CommunityIcon() {
-  return (
-    <svg viewBox="0 0 27.6344 24" aria-hidden="true">
-      <path d="m5.308 3.3744-.6197.605C4.1483 4.4782 3.5993 4.9533 3.0327 5.4284 2.4572 4.9474 1.9024 4.4634 1.3565 3.9588c-.1918-.1771-.3748-.3512-.5548-.5401C.4711 3.0764.1937 2.7045.0668 2.2471-.0601 1.7897-.0069 1.2851.2321.8631.7013.0426 1.7431-.2554 2.5517.2522c.1918.121.3482.2715.481.4544.4752-.6521 1.3015-.8912 2.0275-.5548.4633.2125.8056.6227.9443 1.1156.1004.3629.0856.7407-.0384 1.0948-.1328.3866-.3718.7083-.6581 1.0152v-.003Z" fill="#FF5C5C" transform="translate(10.9294)" />
-      <path d="M2.5085 5.0169A2.5085 2.5085 0 1 0 2.5085 0a2.5085 2.5085 0 0 0 0 5.0169Z" fill="#75D49F" transform="translate(2.7298 9.5067)" />
-      <path d="M2.5085 5.0169A2.5085 2.5085 0 1 0 2.5085 0a2.5085 2.5085 0 0 0 0 5.0169Z" fill="#FEC440" transform="translate(20.1946 9.5067)" />
-      <path d="M.4132 8.0536C.1476 7.3837 0 6.6134 0 5.8491 0 2.6206 2.6177 0 5.8491 0c3.2315 0 5.8492 2.6176 5.8492 5.8491 0 .7791-.1535 1.5228-.4279 2.2045H.4132Z" fill="#75D49F" transform="translate(0 15.946)" />
-      <path d="M.4132 8.0536C.1476 7.3837 0 6.6134 0 5.8491 0 2.6206 2.6177 0 5.8491 0c3.2315 0 5.8492 2.6176 5.8492 5.8491 0 .7791-.1535 1.5228-.4279 2.2045H.4132Z" fill="#FEC440" transform="translate(15.9361 15.946)" />
-      <path d="M2.9275 5.855A2.9275 2.9275 0 1 0 2.9275 0a2.9275 2.9275 0 0 0 0 5.855Z" fill="#62B2F7" transform="translate(11.0431 6.9893)" />
-      <path d="M.4958 9.6914C.1741 8.8858 0 7.9591 0 7.0384 0 3.1518 3.1518 0 7.0385 0c3.8866 0 7.0384 3.1518 7.0384 7.0384 0 .9384-.183 1.8326-.5164 2.653H.4958Z" fill="#62B2F7" transform="translate(6.9321 14.3085)" />
-    </svg>
-  );
-}
-
-export function MyIcon() {
-  return (
-    <svg viewBox="0 0 28.3207 24.46" aria-hidden="true">
-      <path d="M5.3119 10.6237A5.3119 5.3119 0 1 0 5.3119 0a5.3119 5.3119 0 0 0 0 10.6237Z" fill="#2F7FF0" transform="translate(4.8535)" />
-      <path d="M13.4572 5.822c0-1.4236.8307-3.3988 1.5959-4.4811C14.0673.6928 12.361 0 10.1618 0 4.5501 0 0 4.8258 0 10.7753h15.6874c-1.365-1.2167-2.2302-2.9816-2.2302-4.9533Z" fill="#2F7FF0" transform="translate(0 12)" />
-      <path d="M6.639 0C4.3984 0 2.4198 1.1134 1.2168 2.8162.4516 3.8986 0 5.2153 0 6.6389c0 1.9717.8652 3.7366 2.2302 4.9534 1.172 1.0444 2.7128 1.6856 4.4088 1.6856 3.6676 0 6.6389-2.9713 6.6389-6.639C13.2779 2.9713 10.3066 0 6.639 0Zm4.0364 5.5325L8.4935 7.1181c-.0724.0517-.1.1448-.0759.2275l.8342 2.5646c.0621.1895-.1551.3447-.3137.2275L6.7562 8.552c-.0724-.0517-.1689-.0517-.2413 0L5.2843 9.4448l-.9479.6894c-.1586.1172-.3758-.0414-.3137-.2275l.748-2.2957.0862-.2654c.0275-.0827 0-.1758-.0759-.2275L4.4708 6.894 2.5991 5.5325c-.1586-.1172-.0793-.3689.1206-.3689h2.6956c.0896 0 .1654-.0586.193-.1413l.8342-2.5646c.062-.1896.3275-.1896.3895 0l.8342 2.5646c.0276.0827.1068.1413.193.1413h2.6956c.1965 0 .2792.2551.1206.3689Z" fill="#FEC440" transform="translate(15.0427 11.182)" />
-      <path d="M8.1598 3.2169c.1585-.1172.0792-.3688-.1207-.3688H5.3436c-.0897 0-.1655-.0586-.1931-.1413L4.3163.1422c-.062-.1896-.3274-.1896-.3895 0l-.8342 2.5646c-.0275.0827-.1068.1413-.193.1413H.204c-.1964 0-.2792.2551-.1206.3688l1.8717 1.3616.3103.224c.0723.0518.0999.1448.0758.2275l-.0862.2655-.748 2.2957c-.062.1896.1551.3447.3137.2275l.9479-.6894 1.2306-.8928c.0724-.0517.1689-.0517.2413 0l2.182 1.5856c.1585.1172.3757-.0413.3136-.2275L5.902 5.03c-.0276-.0827 0-.1757.0758-.2275l2.182-1.5856Z" fill="#FFFFFF" transform="translate(17.5585 13.4976)" />
-    </svg>
   );
 }

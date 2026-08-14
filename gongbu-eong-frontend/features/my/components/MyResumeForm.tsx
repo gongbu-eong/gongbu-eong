@@ -13,7 +13,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
+import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { createResume, getResume, getResumeParseJob, updateResume, uploadResumeFile } from "../my.api";
 import type { ResumeEntryDto, ResumePayloadDto } from "../my.dto";
 import styles from "./My.module.css";
@@ -204,11 +204,11 @@ export function MyResumeForm({
 
     getResume(resumeId).then((response) => {
       const sourceType = response.resume.sourceType || "manual";
-      const loadedPayload = {
+      const loadedPayload = cleanPayload({
         ...emptyPayload,
         ...response.resume,
         sourceType,
-      };
+      });
       setPayload(loadedPayload);
       setTabPayloads((current) => ({
         ...current,
@@ -381,7 +381,7 @@ export function MyResumeForm({
       sourceType: payload.sourceType || (tab === "upload" ? "upload" : "manual"),
       completionPercent,
     });
-    const requiredIssue = getFirstRequiredResumeIssue(cleaned);
+    const requiredIssue = getFirstRequiredResumeIssue(cleaned, mode);
     if (requiredIssue) {
       scrollToRequiredField(requiredIssue.field);
       window.alert(requiredIssue.message);
@@ -476,14 +476,16 @@ export function MyResumeForm({
     });
   };
 
+  const isEditMode = mode === "edit";
+
   return (
     <div className={`${styles.page} ${styles.resumeFormPage}`}>
-      <JobHeader />
+      <AppHeader />
       <main className={`${styles.frame} ${styles.resumeFormFrame}`}>
-        <h1 className={styles.title}>내 이력서 관리</h1>
-        <p className={styles.subtitle}>이력서를 채워두면 Ai 도구 분석에 유용합니다.</p>
+        <h1 className={styles.title}>{isEditMode ? "이력서 수정" : "내 이력서 관리"}</h1>
+        {!isEditMode ? <p className={styles.subtitle}>이력서를 채워두면 Ai 도구 분석에 유용합니다.</p> : null}
 
-        {(mode === "new" || mode === "edit") ? (
+        {!isEditMode ? (
           <div className={styles.tabs} role="tablist">
             <button
               type="button"
@@ -509,7 +511,35 @@ export function MyResumeForm({
         {error ? <div className={styles.error}>{error}</div> : null}
 
         <form className={styles.form} onSubmit={handleSubmit}>
-          {tab === "upload" ? (
+          {isEditMode ? (
+            <>
+              <input ref={fileInputRef} hidden type="file" accept={RESUME_ACCEPT} multiple={false} onChange={handleUpload} />
+              <div
+                role="button"
+                tabIndex={0}
+                className={`${styles.uploadDropzone} ${styles.reuploadDropzone} ${isDragActive ? styles.uploadDropzoneActive : ""}`}
+                onClick={openResumeFilePicker}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openResumeFilePicker();
+                  }
+                }}
+                onDragEnter={handleDragOver}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+              >
+                <strong>{isUploading ? "이력서를 다시 분석하고 있어요." : "이력서 재업로드"}</strong>
+                <span>파일을 선택하거나 여기에 끌어다 놓으세요</span>
+                <small>HWP · HWPX · PDF · DOC · DOCX · RTF (최대 10MB)</small>
+                <b>첨부하기</b>
+              </div>
+              <p className={styles.reuploadHint}>
+                {parseJobMessage || "이력서를 재업로드시, 이력서가 다시 완성됩니다."}
+              </p>
+            </>
+          ) : tab === "upload" ? (
             <>
               <input ref={fileInputRef} hidden type="file" accept={RESUME_ACCEPT} multiple={false} onChange={handleUpload} />
               {uploadedFile ? (
@@ -547,25 +577,29 @@ export function MyResumeForm({
               <CompletionCard percent={completionPercent} />
               <TextField fieldKey="title" label="이력서 제목" value={payload.title} placeholder="이력서 제목을 입력하세요." onChange={(title) => patchPayload({ title })} />
 
-              <h2 className={styles.resumeSectionTitle}>기본 정보</h2>
-              <TextField fieldKey="name" label="이름" value={payload.name || ""} placeholder="이름을 입력하세요." onChange={(name) => patchPayload({ name })} />
-              <DatePickerField fieldKey="birthDate" label="생년월일" value={payload.birthDate || ""} placeholder="연도-월-일" onChange={(birthDate) => patchPayload({ birthDate, birthYear: birthDate.slice(0, 4) })} />
-              <div className={styles.fieldGroup} data-required-field="desiredJob">
-                <label>희망 직무·분야</label>
-                <button
-                  type="button"
-                  className={`${styles.input} ${styles.inputButton}`}
-                  onClick={() => {
-                    setJobDraft(selectedJobs);
-                    setIsJobPickerOpen(true);
-                  }}
-                >
-                  <span className={selectedJobs.length ? "" : styles.placeholder}>
-                    {selectedJobs.length ? formatSelectedJobLabel(selectedJobs) : "희망 직무·분야를 선택하세요."}
-                  </span>
-                  <span aria-hidden="true">›</span>
-                </button>
-              </div>
+              {!isEditMode ? (
+                <>
+                  <h2 className={styles.resumeSectionTitle}>기본 정보</h2>
+                  <TextField fieldKey="name" label="이름" value={payload.name || ""} placeholder="이름을 입력하세요." onChange={(name) => patchPayload({ name })} />
+                  <DatePickerField fieldKey="birthDate" label="생년월일" value={payload.birthDate || ""} placeholder="YYYY-MM-DD" onChange={(birthDate) => patchPayload({ birthDate, birthYear: birthDate.slice(0, 4) })} />
+                  <div className={styles.fieldGroup} data-required-field="desiredJob">
+                    <label>희망 직무·분야</label>
+                    <button
+                      type="button"
+                      className={`${styles.input} ${styles.inputButton}`}
+                      onClick={() => {
+                        setJobDraft(selectedJobs);
+                        setIsJobPickerOpen(true);
+                      }}
+                    >
+                      <span className={selectedJobs.length ? "" : styles.placeholder}>
+                        {selectedJobs.length ? formatSelectedJobLabel(selectedJobs) : "희망 직무·분야를 선택하세요."}
+                      </span>
+                      <span aria-hidden="true">›</span>
+                    </button>
+                  </div>
+                </>
+              ) : null}
 
               <div className={styles.formSectionHeader}>
                 <h2>학력</h2>
@@ -609,6 +643,7 @@ export function MyResumeForm({
               <TextField label="학교·전공 (선택)" value={dedupeSchoolMajorText(payload.schoolMajor || "")} placeholder="예: OO대학교 전기공학과" onChange={(schoolMajor) => patchPayload({ schoolMajor })} />
               <SelectField fieldKey="graduationStatus" label="졸업 여부" value={payload.graduationStatus || ""} onChange={(graduationStatus) => patchPayload({ graduationStatus })} options={["졸업", "졸업 예정", "중퇴"]} />
               <DateRangeField
+                label="입학년월~졸업년월"
                 startLabel="입학년월"
                 endLabel="졸업년월"
                 startFieldKey="educationStartDate"
@@ -689,7 +724,7 @@ export function MyResumeForm({
           )}
         </form>
       </main>
-      <JobFooter active="my" />
+      <AppFooter active="my" />
 
       {entryModal ? (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
@@ -1421,22 +1456,32 @@ function calculateCompletion(payload: ResumePayloadDto) {
   return Math.round((filled / total) * 100);
 }
 
-function getFirstRequiredResumeIssue(payload: ResumePayloadDto) {
-  const scalarFields: Array<{
+function getFirstRequiredResumeIssue(payload: ResumePayloadDto, mode: "new" | "edit") {
+  type RequiredIssue = {
     field: RequiredResumeField;
     message: string;
     value: string | null | undefined;
-  }> = [
+  };
+  const commonFields: RequiredIssue[] = [
     { field: "title", message: "이력서 제목을 입력해주세요.", value: payload.title },
+  ];
+  const createOnlyFields: RequiredIssue[] = [
     { field: "name", message: "이름을 입력해주세요.", value: payload.name },
     { field: "birthDate", message: "생년월일을 입력해주세요.", value: payload.birthDate },
     { field: "desiredJob", message: "희망 직무·분야를 선택해주세요.", value: payload.desiredJob },
+  ];
+  const educationFields: RequiredIssue[] = [
     { field: "highestEducation", message: "최종 학력을 선택해주세요.", value: payload.highestEducation },
     { field: "gpaScore", message: "학점을 입력해주세요.", value: payload.gpaScore },
     { field: "gpaMax", message: "최대 학점을 선택해주세요.", value: payload.gpaMax },
     { field: "graduationStatus", message: "졸업 여부를 선택해주세요.", value: payload.graduationStatus },
     { field: "educationStartDate", message: "입학년월을 선택해주세요.", value: payload.educationStartDate },
     { field: "educationEndDate", message: "졸업년월을 선택해주세요.", value: payload.educationEndDate },
+  ];
+  const scalarFields: RequiredIssue[] = [
+    ...commonFields,
+    ...(mode === "edit" ? [] : createOnlyFields),
+    ...educationFields,
   ];
 
   for (const issue of scalarFields) {
@@ -1470,6 +1515,12 @@ function formatSelectedJobLabel(jobs: string[]) {
 function cleanPayload(payload: ResumePayloadDto): ResumePayloadDto {
   const gpaScore = cleanText(payload.gpaScore);
   const gpaMax = cleanText(payload.gpaMax);
+  const schoolMajor = dedupeSchoolMajorText(payload.schoolMajor);
+  const highestEducation = cleanText(payload.highestEducation);
+  const graduationStatus = cleanText(payload.graduationStatus);
+  const educationStartDate = cleanText(payload.educationStartDate);
+  const educationEndDate = cleanText(payload.educationEndDate);
+  const educationSummary = cleanText(payload.educationSummary);
   return {
     ...payload,
     title: cleanText(payload.title),
@@ -1478,19 +1529,28 @@ function cleanPayload(payload: ResumePayloadDto): ResumePayloadDto {
     birthDate: cleanText(payload.birthDate),
     email: cleanText(payload.email),
     desiredJob: cleanText(payload.desiredJob),
-    highestEducation: cleanText(payload.highestEducation),
+    highestEducation,
     gpa: [gpaScore, gpaMax].filter(Boolean).join(" / ") || cleanText(payload.gpa),
     gpaScore,
     gpaMax,
-    schoolMajor: dedupeSchoolMajorText(payload.schoolMajor),
-    graduationStatus: cleanText(payload.graduationStatus),
-    educationStartDate: cleanText(payload.educationStartDate),
-    educationEndDate: cleanText(payload.educationEndDate),
-    educationSummary: cleanText(payload.educationSummary),
+    schoolMajor,
+    graduationStatus,
+    educationStartDate,
+    educationEndDate,
+    educationSummary,
     careerSummary: cleanText(payload.careerSummary),
     certificationSummary: cleanText(payload.certificationSummary),
     additionalNotes: cleanText(payload.additionalNotes),
-    educations: (payload.educations || []).map((entry) => cleanEntry(entry, "education")).filter((entry) => hasEntryContent(entry, "education")),
+    educations: buildVisibleEducationEntries({
+      highestEducation,
+      schoolMajor,
+      graduationStatus,
+      gpaScore,
+      gpaMax,
+      educationStartDate,
+      educationEndDate,
+      educationSummary,
+    }),
     experiences: (payload.experiences || []).map((entry) => cleanEntry(entry, "experience")).filter((entry) => hasEntryContent(entry, "experience")),
     certifications: (payload.certifications || []).map((entry) => cleanEntry(entry, "certification")).filter((entry) => hasEntryContent(entry, "certification")),
     awards: (payload.awards || []).map((entry) => cleanEntry(entry, "award")).filter((entry) => hasEntryContent(entry, "award")),
@@ -1530,6 +1590,43 @@ function cleanEntry(entry: ResumeEntryDto, kind?: ResumeEntryKind): ResumeEntryD
   };
 
   return kind ? normalizeEntryLabels(cleaned, kind) : cleaned;
+}
+
+function buildVisibleEducationEntries({
+  highestEducation,
+  schoolMajor,
+  graduationStatus,
+  gpaScore,
+  gpaMax,
+  educationStartDate,
+  educationEndDate,
+  educationSummary,
+}: {
+  highestEducation: string;
+  schoolMajor: string;
+  graduationStatus: string;
+  gpaScore: string;
+  gpaMax: string;
+  educationStartDate: string;
+  educationEndDate: string;
+  educationSummary: string;
+}) {
+  if (![highestEducation, schoolMajor, graduationStatus, gpaScore, gpaMax, educationStartDate, educationEndDate, educationSummary].some(Boolean)) {
+    return [];
+  }
+
+  const entry = cleanEntry({
+    title: schoolMajor || educationSummary || highestEducation,
+    schoolName: schoolMajor || educationSummary || highestEducation,
+    degree: highestEducation,
+    graduationStatus,
+    gpaScore,
+    gpaMax,
+    startDate: educationStartDate,
+    endDate: educationEndDate,
+  }, "education");
+
+  return hasEntryContent(entry, "education") ? [entry] : [];
 }
 
 function normalizeEntryLabels(entry: ResumeEntryDto, kind: ResumeEntryKind): ResumeEntryDto {
@@ -1680,6 +1777,7 @@ function hasEntryContent(entry: ResumeEntryDto, kind: ResumeEntryKind) {
 
 function cleanText(value?: string | null) {
   const next = value?.trim();
+  if (!next || /^(null|undefined)$/i.test(next)) return "";
   return next || "";
 }
 

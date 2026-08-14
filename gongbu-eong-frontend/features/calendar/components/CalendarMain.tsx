@@ -2,19 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import {
   getCalendarJobPostings,
   getCurrentUser,
   setJobBookmark,
 } from "@/features/home/home.api";
-import {
-  CalendarIcon,
-} from "@/features/home/components/HomeMain";
 import type {
   CurrentUserDto,
   JobPostingDto,
 } from "@/features/home/home.dto";
-import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
+import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import styles from "./CalendarMain.module.css";
 
 type CalendarScope = "all" | "mine";
@@ -22,6 +20,7 @@ type CalendarMode = "list" | "month";
 type StatusFilter = "all" | "open" | "closed";
 type SortFilter = "latest" | "deadline";
 type CalendarEventKind = "start" | "end";
+type EmptyVariant = "schedule" | "bookmark";
 
 type CalendarFilters = {
   status: StatusFilter;
@@ -38,6 +37,22 @@ type CalendarJobEvent = {
 };
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24.0014 26.1" aria-hidden="true">
+      <path d="M2.4192 17.6963C1.0856 17.6963 0 16.6107 0 15.2771V0h23.699v15.2771c0 1.3336-1.0856 2.4192-2.4192 2.4192H2.4192Z" fill="#FFFFFF" transform="translate(.1542 8.2543)" />
+      <path d="M23.699.3024v15.1259c0 1.252-1.0191 2.268-2.268 2.268H2.5734c-1.2519 0-2.268-1.0191-2.268-2.268V.3024H23.699ZM24.0014 0H0v15.4283c0 1.4213 1.1521 2.5704 2.5704 2.5704h18.8575c1.4213 0 2.5704-1.1521 2.5704-2.5704V0h.0031Z" fill="#E3ECE1" transform="translate(0 8.1)" />
+      <path d="M2.6278 0h18.7457c1.4515 0 2.6279 1.1763 2.6279 2.6278v3.6379H0V2.6278C0 1.1763 1.1763 0 2.6278 0Z" fill="#2F7FF0" transform="translate(0 2.1439)" />
+      <path d="M.8588 0h-.003C.3831 0 0 .3832 0 .8558v2.5734c0 .4726.3831.8558.8558.8558h.003c.4726 0 .8558-.3832.8558-.8558V.8558C1.7146.3832 1.3314 0 .8588 0Z" fill="#155ABC" transform="translate(5.3283)" />
+      <path d="M.8588 0h-.003C.3831 0 0 .3832 0 .8558v2.5734c0 .4726.3831.8558.8558.8558h.003c.4726 0 .8558-.3832.8558-.8558V.8558C1.7146.3832 1.3314 0 .8588 0Z" fill="#155ABC" transform="translate(17.3577)" />
+      <path d="M3.3415 0H.4294C.1923 0 0 .1923 0 .4294v2.9121c0 .2372.1923.4294.4294.4294h2.9121c.2372 0 .4294-.1922.4294-.4294V.4294C3.7709.1923 3.5787 0 3.3415 0Z" fill="#E6E7E5" transform="translate(4.1126 11.7664)" />
+      <path d="M3.3415 0H.4294C.1923 0 0 .1922 0 .4294v2.9121c0 .2371.1923.4294.4294.4294h2.9121c.2372 0 .4294-.1923.4294-.4294V.4294C3.7709.1922 3.5787 0 3.3415 0Z" fill="#E6E7E5" transform="translate(4.1126 17.4241)" />
+      <path d="M3.3415 0H.4294C.1923 0 0 .1923 0 .4294v2.9121c0 .2372.1923.4294.4294.4294h2.9121c.2372 0 .4294-.1922.4294-.4294V.4294C3.7709.1923 3.5787 0 3.3415 0Z" fill="#E6E7E5" transform="translate(9.7705 11.7664)" />
+      <path d="m5.9757 3.7948-.6956.6804c-.6078.5625-1.2247 1.0977-1.8627 1.633C2.7702 5.5669 2.1473 5.0226 1.5304 4.4541c-.2177-.1996-.4203-.3962-.626-.6079C.5325 3.4592.221 3.0419.0759 2.5278-.0693 2.0137-.0058 1.4452.2633.9704.7895.0451 1.9628-.2875 2.873.284c.2147.1361.3901.3054.5413.511.5323-.7348 1.4636-1.0009 2.2831-.6259.5232.2389.9072.7015 1.0615 1.2549.1149.4083.0967.8316-.0424 1.2308-.1481.4354-.4203.7983-.7408 1.14Z" fill="#FF5C5C" transform="translate(13.9403 17.1038)" />
+    </svg>
+  );
+}
 const STANDARD_REGIONS = [
   "서울",
   "부산",
@@ -155,22 +170,6 @@ export function CalendarMain({
     () => buildWeekDays(selectedWeekStart),
     [selectedWeekStart],
   );
-  const selectedWeekEvents = useMemo(() => {
-    const start = stripTime(selectedWeekStart).getTime();
-    const end = addDays(selectedWeekStart, 6).getTime();
-    return jobEvents.filter((event) => {
-      const time = stripTime(new Date(event.dateKey)).getTime();
-      return time >= start && time <= end;
-    });
-  }, [jobEvents, selectedWeekStart]);
-  const selectedWeekFilteredEvents = useMemo(
-    () => applyEventFilters(selectedWeekEvents, filters),
-    [filters, selectedWeekEvents],
-  );
-  const selectedWeekJobSections = useMemo(
-    () => groupEventsByWeekDays(selectedWeekDays, selectedWeekFilteredEvents),
-    [selectedWeekDays, selectedWeekFilteredEvents],
-  );
   const filterOptions = useMemo(
     () => ({
       regions: getAvailableRegions(jobs),
@@ -260,7 +259,7 @@ export function CalendarMain({
   return (
     <main className={styles.page}>
       <section className={styles.frame}>
-        <JobHeader user={user} />
+        <AppHeader user={user} />
 
         <section className={styles.content}>
           <h1 className={styles.pageTitle}>
@@ -286,13 +285,28 @@ export function CalendarMain({
           </div>
 
           {scope === "mine" ? (
-            <MineWeekSelector
-              days={selectedWeekDays}
-              canPrev={canPrevWeek}
-              canNext={canNextWeek}
-              onMove={moveWeek}
-              onSelect={selectDate}
-            />
+            <>
+              <MineYearHeader month={month} bounds={bounds} onChange={setMonth} />
+              {!user ? (
+                <EmptyState
+                  title="로그인이 필요합니다."
+                  description="찜한 공고는 로그인 후 나만의 캘린더에서 확인할 수 있어요."
+                  href="/login"
+                  action="로그인하러 가기"
+                />
+              ) : isLoading ? (
+                <p className={styles.loading}>캘린더 공고를 불러오고 있어요.</p>
+              ) : (
+                <JobList
+                  events={jobEvents}
+                  emptyLabel="아직 찜한 공고가 없어요."
+                  emptyDescription="채용 공고에서 별표를 눌러 나만의 캘린더에 담아보세요."
+                  emptyVariant="bookmark"
+                  onToggleBookmark={toggleBookmark}
+                  pendingBookmarkId={bookmarkPendingId}
+                />
+              )}
+            </>
           ) : (
             <>
               <div className={styles.monthModeRow}>
@@ -306,6 +320,7 @@ export function CalendarMain({
               </div>
               {mode === "list" ? (
                 <DateStrip
+                  mode={mode}
                   selectedDate={selectedDate}
                   selectedDateEvents={selectedDateEvents}
                   days={selectedWeekDays}
@@ -314,39 +329,13 @@ export function CalendarMain({
                   onMove={moveWeek}
                   onSelect={selectDate}
                 />
-              ) : null}
-            </>
-          )}
-
-          {scope === "mine" && !user ? (
-            <EmptyState
-              title="로그인이 필요합니다."
-              description="찜한 공고는 로그인 후 나만의 캘린더에서 확인할 수 있어요."
-              href="/login"
-              action="로그인하러 가기"
-            />
-          ) : isLoading ? (
-            <p className={styles.loading}>캘린더 공고를 불러오고 있어요.</p>
-          ) : scope === "mine" ? (
-            <>
-              <SelectedWeekHeader
-                days={selectedWeekDays}
-                count={selectedWeekFilteredEvents.length}
-              />
-              <GroupedJobList
-                sections={selectedWeekJobSections}
-                emptyLabel="선택한 주차에 찜한 공고가 없어요."
-                onToggleBookmark={toggleBookmark}
-                pendingBookmarkId={bookmarkPendingId}
-              />
-            </>
-          ) : mode === "month" ? (
-            <>
-              <MonthCalendar
-                days={monthDays}
-                selectedDate={selectedDate}
-                onSelect={selectDate}
-              />
+              ) : (
+                <MonthCalendar
+                  days={monthDays}
+                  selectedDate={selectedDate}
+                  onSelect={selectDate}
+                />
+              )}
               <SelectedDateHeader
                 date={selectedDate}
                 count={selectedDateFilteredEvents.length}
@@ -356,35 +345,23 @@ export function CalendarMain({
                 options={filterOptions}
                 onChange={setFilters}
               />
-              <JobList
-                events={selectedDateFilteredEvents}
-                emptyLabel="선택한 날짜의 시작/마감 공고가 없어요."
-                onToggleBookmark={toggleBookmark}
-                pendingBookmarkId={bookmarkPendingId}
-              />
-            </>
-          ) : (
-            <>
-              <SelectedDateHeader
-                date={selectedDate}
-                count={selectedDateFilteredEvents.length}
-              />
-              <FilterRow
-                filters={filters}
-                options={filterOptions}
-                onChange={setFilters}
-              />
-              <JobList
-                events={selectedDateFilteredEvents}
-                emptyLabel="선택한 날짜의 시작/마감 공고가 없어요."
-                onToggleBookmark={toggleBookmark}
-                pendingBookmarkId={bookmarkPendingId}
-              />
+              {isLoading ? (
+                <p className={styles.loading}>캘린더 공고를 불러오고 있어요.</p>
+              ) : (
+                <JobList
+                  events={selectedDateFilteredEvents}
+                  emptyLabel="앗, 오늘은 예정된 공고가 없어요."
+                  emptyDescription="달력에서 다른 날짜를 눌러보세요."
+                  emptyVariant="schedule"
+                  onToggleBookmark={toggleBookmark}
+                  pendingBookmarkId={bookmarkPendingId}
+                />
+              )}
             </>
           )}
         </section>
 
-        <JobFooter active="calendar" />
+        <AppFooter active="calendar" />
       </section>
     </main>
   );
@@ -441,7 +418,43 @@ function ModeTabs({
   );
 }
 
+function MineYearHeader({
+  month,
+  bounds,
+  onChange,
+}: {
+  month: Date;
+  bounds: { min: Date; max: Date };
+  onChange: (month: Date) => void;
+}) {
+  const years = Array.from(
+    { length: bounds.max.getFullYear() - bounds.min.getFullYear() + 1 },
+    (_, index) => bounds.min.getFullYear() + index,
+  );
+
+  return (
+    <div className={styles.mineYearHeader}>
+      <strong>{month.getFullYear()}</strong>
+      <label>
+        <select
+          value={month.getFullYear()}
+          onChange={(event) => {
+            onChange(new Date(Number(event.target.value), month.getMonth(), 1));
+          }}
+        >
+          {years.map((year) => (
+            <option value={year} key={year}>
+              {year}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+}
+
 function DateStrip({
+  mode,
   selectedDate,
   selectedDateEvents,
   days,
@@ -450,6 +463,7 @@ function DateStrip({
   onMove,
   onSelect,
 }: {
+  mode: CalendarMode;
   selectedDate: Date;
   selectedDateEvents: CalendarJobEvent[];
   days: Date[];
@@ -460,7 +474,7 @@ function DateStrip({
 }) {
   const selectedKey = toDateKey(selectedDate);
   return (
-    <div className={styles.dateStrip}>
+    <div className={`${styles.dateStrip} ${mode === "list" ? styles.weekDateStrip : styles.monthDateStrip}`}>
       <button type="button" onClick={() => onMove(-1)} disabled={!canPrev}>
         &lt;
       </button>
@@ -488,72 +502,12 @@ function DateStrip({
   );
 }
 
-function MineWeekSelector({
-  days,
-  canPrev,
-  canNext,
-  onMove,
-  onSelect,
-}: {
-  days: Date[];
-  canPrev: boolean;
-  canNext: boolean;
-  onMove: (amount: number) => void;
-  onSelect: (date: Date) => void;
-}) {
-  const centerWeekStart = days[0];
-  const weeks = [-3, -2, -1, 0, 1, 2, 3].map((offset) =>
-    startOfWeek(addDays(centerWeekStart, offset * 7)),
-  );
-
-  return (
-    <div className={styles.weekSelector}>
-      <button type="button" onClick={() => onMove(-1)} disabled={!canPrev}>
-        &lt;
-      </button>
-      <div>
-        {weeks.map((week) => {
-          const isSelected = toDateKey(week) === toDateKey(centerWeekStart);
-          return (
-            <button
-              type="button"
-              key={toDateKey(week)}
-              className={isSelected ? styles.selectedWeek : undefined}
-              onClick={() => onSelect(week)}
-            >
-              {formatWeekLabel(week)}
-            </button>
-          );
-        })}
-      </div>
-      <button type="button" onClick={() => onMove(1)} disabled={!canNext}>
-        &gt;
-      </button>
-    </div>
-  );
-}
-
 function SelectedDateHeader({ date, count }: { date: Date; count: number }) {
   return (
     <h2 className={styles.scheduleTitle}>
       {formatDateTitle(date)}
       <span>일정 {count}건</span>
     </h2>
-  );
-}
-
-function SelectedWeekHeader({ days, count }: { days: Date[]; count: number }) {
-  return (
-    <>
-      <h2 className={styles.weekRangeTitle}>
-        {formatDateRange(days[0], days[6])}
-      </h2>
-      <h3 className={styles.todayTitle}>
-        <span>오늘</span>
-        {formatDateTitle(days[0])}
-        <small>일정 {count}건</small>
-      </h3>
-    </>
   );
 }
 
@@ -633,55 +587,18 @@ function FilterRow({
   );
 }
 
-function GroupedJobList({
-  sections,
-  emptyLabel,
-  onToggleBookmark,
-  pendingBookmarkId,
-}: {
-  sections: Array<{ date: Date; events: CalendarJobEvent[] }>;
-  emptyLabel: string;
-  onToggleBookmark: (job: JobPostingDto) => void;
-  pendingBookmarkId: string | null;
-}) {
-  const visibleSections = sections.filter((section) => section.events.length > 0);
-
-  if (visibleSections.length === 0) {
-    return (
-      <EmptyState
-        title={emptyLabel}
-        description="채용 공고에서 별표를 눌러 나만의 캘린더에 담아보세요."
-      />
-    );
-  }
-
-  return (
-    <div className={styles.groupedJobs}>
-      {visibleSections.map((section, index) => (
-        <section className={styles.dayJobSection} key={toDateKey(section.date)}>
-          {index > 0 ? (
-            <SelectedDateHeader date={section.date} count={section.events.length} />
-          ) : null}
-          <JobList
-            events={section.events}
-            emptyLabel={emptyLabel}
-            onToggleBookmark={onToggleBookmark}
-            pendingBookmarkId={pendingBookmarkId}
-          />
-        </section>
-      ))}
-    </div>
-  );
-}
-
 function JobList({
   events,
   emptyLabel,
+  emptyDescription,
+  emptyVariant = "schedule",
   onToggleBookmark,
   pendingBookmarkId,
 }: {
   events: CalendarJobEvent[];
   emptyLabel: string;
+  emptyDescription: string;
+  emptyVariant?: EmptyVariant;
   onToggleBookmark: (job: JobPostingDto) => void;
   pendingBookmarkId: string | null;
 }) {
@@ -689,7 +606,8 @@ function JobList({
     return (
       <EmptyState
         title={emptyLabel}
-        description="다른 날짜나 월을 선택해서 일정을 확인해보세요."
+        description={emptyDescription}
+        variant={emptyVariant}
       />
     );
   }
@@ -723,6 +641,7 @@ function MonthCalendar({
   onSelect: (date: Date) => void;
 }) {
   const selectedKey = toDateKey(selectedDate);
+  const todayKey = toDateKey(new Date());
   return (
     <div className={styles.monthCalendar}>
       <div className={styles.monthWeekdays}>
@@ -733,19 +652,22 @@ function MonthCalendar({
       <div className={styles.monthGrid}>
         {days.map((day) => {
           const isSelected = day.date && toDateKey(day.date) === selectedKey;
+          const isToday = day.date && toDateKey(day.date) === todayKey;
           return (
             <button
               type="button"
               key={day.key}
               className={`${styles.monthDay} ${!day.inMonth ? styles.otherMonthDay : ""} ${
-                isSelected ? styles.selectedMonthDay : ""
-              } ${day.date ? getWeekendClass(day.date) : ""}`}
+                isToday && !isSelected ? styles.todayMonthDay : ""
+              } ${isSelected ? styles.selectedMonthDay : ""} ${
+                day.date ? getWeekendClass(day.date) : ""
+              }`}
               onClick={() => day.date && onSelect(day.date)}
             >
               {day.date ? (
                 <>
                   <span>{day.date.getDate()}</span>
-                  {day.events.length > 0 ? <i /> : null}
+                  {isSelected ? <i /> : null}
                 </>
               ) : null}
             </button>
@@ -776,18 +698,15 @@ function CalendarJobCard({
         <small className={styles.company}>{job.institutionName}</small>
         <strong>{job.title}</strong>
         <span className={styles.tags}>
-          {job.region ? <small>{job.region}</small> : null}
-          {(job.region && job.employmentType) || (job.region && job.careerRequirement) ? (
-            <i aria-hidden="true" />
-          ) : null}
           {job.employmentType ? <small>{job.employmentType}</small> : null}
+          {job.region ? <small>{job.region}</small> : null}
           {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
-          {job.matchScore ? <em>유형추천</em> : null}
+          {job.matchScore != null ? <em>유형추천</em> : null}
         </span>
       </span>
       <button
         type="button"
-        className={`${styles.starIcon} ${job.isBookmarked ? styles.starActive : ""}`}
+        className={styles.starIcon}
         aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
         disabled={isBookmarkPending}
         onClick={(clickEvent) => {
@@ -796,7 +715,12 @@ function CalendarJobCard({
           onToggleBookmark(job);
         }}
       >
-        ★
+        <Image
+          src={job.isBookmarked ? "/calendar/star-filled.svg" : "/calendar/star-outline.svg"}
+          alt=""
+          width={25}
+          height={25}
+        />
       </button>
     </Link>
   );
@@ -805,18 +729,30 @@ function CalendarJobCard({
 function EmptyState({
   title,
   description,
+  variant = "schedule",
   href,
   action,
 }: {
   title: string;
   description: string;
+  variant?: EmptyVariant;
   href?: string;
   action?: string;
 }) {
+  const image =
+    variant === "bookmark"
+      ? { src: "/calendar/empty-bookmark.png", width: 141, height: 150 }
+      : { src: "/calendar/empty-schedule.png", width: 140, height: 150 };
+
   return (
     <section className={styles.emptyState}>
-      <strong>{title}</strong>
-      <p>{description}</p>
+      <span className={styles.emptyIllustration} aria-hidden="true">
+        <Image src={image.src} alt="" width={image.width} height={image.height} />
+      </span>
+      <p>
+        <span>{title}</span>
+        <span>{description}</span>
+      </p>
       {href && action ? <Link href={href}>{action}</Link> : null}
     </section>
   );
@@ -908,14 +844,6 @@ function groupEventsByDate(events: CalendarJobEvent[]) {
     acc[event.dateKey] = [...(acc[event.dateKey] || []), event];
     return acc;
   }, {});
-}
-
-function groupEventsByWeekDays(days: Date[], events: CalendarJobEvent[]) {
-  const grouped = groupEventsByDate(events);
-  return days.map((date) => ({
-    date,
-    events: grouped[toDateKey(date)] || [],
-  }));
 }
 
 function applyEventFilters(events: CalendarJobEvent[], filters: CalendarFilters) {
@@ -1038,25 +966,8 @@ function formatMonth(date: Date) {
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
 }
 
-function formatWeekLabel(date: Date) {
-  return `${date.getMonth() + 1}월 ${getWeekOfMonth(date)}주차`;
-}
-
-function getWeekOfMonth(date: Date) {
-  return Math.floor((date.getDate() + startOfMonth(date).getDay() - 1) / 7) + 1;
-}
-
 function formatDateTitle(date: Date) {
   return `${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAYS[date.getDay()]})`;
-}
-
-function formatDateRange(start: Date, end: Date) {
-  const startLabel = `${start.getFullYear()}년 ${start.getMonth() + 1}월 ${start.getDate()}일`;
-  const endLabel =
-    start.getMonth() === end.getMonth()
-      ? `${end.getDate()}일`
-      : `${end.getMonth() + 1}월 ${end.getDate()}일`;
-  return `${startLabel} ~ ${endLabel}`;
 }
 
 function getEventBadgeClass(kind: CalendarEventKind) {

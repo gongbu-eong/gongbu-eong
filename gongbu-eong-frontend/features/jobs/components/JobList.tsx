@@ -9,7 +9,7 @@ import {
   setJobBookmark,
 } from "@/features/home/home.api";
 import type { JobListView, JobPostingDto } from "@/features/home/home.dto";
-import { JobFooter, JobHeader } from "./JobChrome";
+import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import styles from "./JobList.module.css";
 
 const NCS_OPTIONS = [
@@ -190,7 +190,7 @@ export function JobList({
   return (
     <main className={styles.page}>
       <section className={styles.frame}>
-        <JobHeader />
+        <AppHeader />
         <section className={styles.searchSection}>
           <h1>채용 공고</h1>
           <form onSubmit={submitSearch} className={styles.searchRow}>
@@ -260,7 +260,7 @@ export function JobList({
             {loadingMore ? "공고를 더 불러오는 중..." : null}
           </div>
         </div>
-        <JobFooter />
+        <AppFooter />
       </section>
 
       {filterOpen ? (

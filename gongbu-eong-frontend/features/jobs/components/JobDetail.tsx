@@ -8,7 +8,7 @@ import {
   setJobBookmark,
 } from "@/features/home/home.api";
 import type { JobPostingDetailDto } from "@/features/home/home.dto";
-import { JobFooter, JobHeader } from "./JobChrome";
+import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import styles from "./JobDetail.module.css";
 
 const backendUrl =
@@ -66,7 +66,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
   return (
     <main className={styles.page}>
       <section className={styles.frame}>
-        <JobHeader />
+        <AppHeader />
         <div className={styles.titleRow}>
           <h1>공고정보</h1>
         </div>
@@ -190,7 +190,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
             </div>
           </>
         ) : null}
-        <JobFooter />
+        <AppFooter />
       </section>
     </main>
   );

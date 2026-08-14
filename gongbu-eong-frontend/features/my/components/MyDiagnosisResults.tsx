@@ -9,7 +9,7 @@ import {
 import type { DiagnosisResultHistoryItemDto } from "@/features/diagnosis/diagnosis.dto";
 import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
-import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
+import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import styles from "./My.module.css";
 
 export function MyDiagnosisResults() {
@@ -118,7 +118,7 @@ export function MyDiagnosisResults() {
 
   return (
     <div className={styles.page}>
-      <JobHeader user={user} nickname={nickname} bookmarkCount={bookmarkCount} />
+      <AppHeader user={user} nickname={nickname} bookmarkCount={bookmarkCount} />
       <main className={styles.frame}>
         <h1 className={styles.title}>강점·성향 진단 결과</h1>
 
@@ -175,7 +175,7 @@ export function MyDiagnosisResults() {
           {loadingMore ? "이전 진단 결과를 더 불러오고 있어요." : null}
         </div>
       </main>
-      <JobFooter active="my" />
+      <AppFooter active="my" />
     </div>
   );
 }

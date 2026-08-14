@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
+import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { deleteResume, listResumes, selectResume } from "../my.api";
 import type { ResumeDto } from "../my.dto";
 import styles from "./My.module.css";
@@ -48,20 +48,16 @@ export function MyResumeList() {
   };
 
   return (
-    <div className={styles.page}>
-      <JobHeader />
-      <main className={styles.frame}>
+    <div className={`${styles.page} ${styles.resumeListPage}`}>
+      <AppHeader />
+      <main className={`${styles.frame} ${styles.resumeListFrame}`}>
         <h1 className={styles.title}>내 이력서 관리</h1>
         <p className={styles.subtitle}>이력서를 채워두면 Ai 도구 분석에 유용합니다.</p>
 
         {!loading && resumes.length === 0 ? (
           <div className={styles.emptyBox}>
-            <div>
-              <strong>등록된 이력서가 없습니다.</strong>
-              <div style={{ marginTop: "0.875rem" }}>
-                <Link href="/my/resumes/new">+ 등록하기</Link>
-              </div>
-            </div>
+            <strong>등록된 이력서가 없습니다.</strong>
+            <Link href="/my/resumes/new">+ 등록하기</Link>
           </div>
         ) : null}
 
@@ -70,7 +66,7 @@ export function MyResumeList() {
             <div className={styles.resumeList}>
               {resumes.map((resume) => (
                 <article key={resume.id} className={styles.resumeCard}>
-                  <strong className={styles.resumeTitle}>{resume.title}</strong>
+                  <strong className={styles.resumeTitle}>{formatText(resume.title) || "이력서"}</strong>
                   <time className={styles.resumeDate}>{formatDate(resume.createdAt)}</time>
                   {resume.isSelected ? <span className={styles.selectedMark}>✓ 선택됨</span> : null}
                   <div className={styles.cardActions}>
@@ -98,7 +94,7 @@ export function MyResumeList() {
           </>
         ) : null}
       </main>
-      <JobFooter active="my" />
+      <AppFooter active="my" />
 
       {deleting ? (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
@@ -130,4 +126,10 @@ function formatDate(value: string) {
   })
     .format(date)
     .replace(/\.$/, "");
+}
+
+function formatText(value?: string | null) {
+  const next = value?.trim();
+  if (!next || /^(null|undefined)$/i.test(next)) return "";
+  return next;
 }

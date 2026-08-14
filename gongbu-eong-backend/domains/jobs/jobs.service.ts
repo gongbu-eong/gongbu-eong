@@ -144,6 +144,9 @@ export async function getCalendarJobPostings(args: {
   userId?: string;
   view?: "all" | "bookmarked";
 }): Promise<JobPostingCalendarResponseDto> {
+  const diagnosisType = args.userId
+    ? await findLatestDiagnosisType(args.userId)
+    : null;
   const result =
     args.view === "bookmarked" && !args.userId
       ? { rows: [], total: 0 }
@@ -151,6 +154,7 @@ export async function getCalendarJobPostings(args: {
           startDate: args.startDate,
           endDate: args.endDate,
           userId: args.userId,
+          personalityCode: diagnosisType?.code,
           bookmarkedOnly: args.view === "bookmarked",
         });
 

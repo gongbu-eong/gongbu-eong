@@ -425,6 +425,7 @@ export async function findCalendarJobPostings(args: {
   startDate: string;
   endDate: string;
   userId?: string;
+  personalityCode?: string;
   bookmarkedOnly?: boolean;
   limit?: number;
 }) {
@@ -455,6 +456,7 @@ export async function findCalendarJobPostings(args: {
         postings.education_requirement,
         postings.hiring_count,
         postings.is_active,
+        MAX(matched_categories.fit_weight)::integer AS match_score,
         (
           $1::uuid IS NOT NULL
           AND EXISTS (
@@ -473,6 +475,33 @@ export async function findCalendarJobPostings(args: {
       FROM public.job_postings postings
       LEFT JOIN public.public_institutions institutions
         ON institutions.id = postings.institution_id
+      LEFT JOIN (
+        SELECT categories.id, categories.name, mappings.fit_weight
+        FROM public.personality_job_category_mappings mappings
+        JOIN public.personality_types personality_types
+          ON personality_types.id = mappings.personality_type_id
+        JOIN public.job_categories categories
+          ON categories.id = mappings.job_category_id
+        WHERE personality_types.code = $5
+          AND categories.is_active = TRUE
+        ORDER BY
+          mappings.fit_weight DESC,
+          mappings.sort_order ASC,
+          categories.sort_order ASC
+        LIMIT 6
+      ) matched_categories
+        ON (
+          POSITION(
+            REGEXP_REPLACE(matched_categories.name, '[[:space:]·.]', '', 'g')
+            IN REGEXP_REPLACE(COALESCE(postings.ncs_category, ''), '[[:space:]·.]', '', 'g')
+          ) > 0
+          OR EXISTS (
+            SELECT 1
+            FROM public.job_posting_categories matched_posting_categories
+            WHERE matched_posting_categories.job_posting_id = postings.id
+              AND matched_posting_categories.job_category_id = matched_categories.id
+          )
+        )
       LEFT JOIN public.job_posting_categories posting_categories
         ON posting_categories.job_posting_id = postings.id
       LEFT JOIN public.job_categories categories
@@ -492,7 +521,7 @@ export async function findCalendarJobPostings(args: {
         postings.created_at DESC
       LIMIT $4
     `,
-    [args.userId || null, args.startDate, args.endDate, limit],
+    [args.userId || null, args.startDate, args.endDate, limit, args.personalityCode || null],
   );
 
   return {

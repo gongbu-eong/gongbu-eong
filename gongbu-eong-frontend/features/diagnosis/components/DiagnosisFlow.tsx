@@ -11,7 +11,7 @@ import {
 } from "../diagnosis.api";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
-import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
+import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import {
   DiagnosisAnswerRequestDto,
   DiagnosisQuestionDto,
@@ -691,9 +691,9 @@ function AuthenticatedIntroShell({
   return (
     <main className={styles.authenticatedIntroPage}>
       <section className={styles.authenticatedIntroShell}>
-        <JobHeader user={user} nickname={nickname} />
+        <AppHeader user={user} nickname={nickname} />
         <div className={styles.authenticatedIntroContent}>{children}</div>
-        <JobFooter active="ai" />
+        <AppFooter active="ai" />
       </section>
     </main>
   );

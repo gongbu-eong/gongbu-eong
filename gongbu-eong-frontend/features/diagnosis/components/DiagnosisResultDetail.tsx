@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
-import { JobFooter, JobHeader } from "@/features/jobs/components/JobChrome";
+import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import {
   getDiagnosisResultDetail,
   getDiagnosisResultHistory,
@@ -232,7 +232,7 @@ export function DiagnosisResultDetail() {
   return (
     <main className={styles.page}>
       <article className={styles.frame}>
-        <JobHeader user={user} nickname={nickname} bookmarkCount={bookmarkCount} />
+        <AppHeader user={user} nickname={nickname} bookmarkCount={bookmarkCount} />
 
         <div className={styles.resultBody}>
           <h1 className={styles.pageTitle}>
@@ -359,7 +359,7 @@ export function DiagnosisResultDetail() {
           </div>
         </div>
 
-        <JobFooter active="ai" />
+        <AppFooter active="ai" />
       </article>
 
       {historyOpen ? (
