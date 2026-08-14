@@ -4,7 +4,7 @@ import type { JobListView } from "@/features/home/home.dto";
 export default async function JobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; resultId?: string; scope?: string }>;
+  searchParams: Promise<{ view?: string; resultId?: string; scope?: string; ncs?: string }>;
 }) {
   const params = await searchParams;
   const view: JobListView =
@@ -16,10 +16,18 @@ export default async function JobsPage({
 
   return (
     <JobList
-      key={`${view}-${params.resultId || "latest"}-${params.scope || "all"}`}
+      key={`${view}-${params.resultId || "latest"}-${params.scope || "all"}-${params.ncs || "all-ncs"}`}
       view={view}
       resultId={params.resultId}
       scope={params.scope === "monthly-regular" ? "monthly-regular" : undefined}
+      initialNcs={splitParam(params.ncs)}
     />
   );
+}
+
+function splitParam(value?: string) {
+  return (value || "")
+    .split("|")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

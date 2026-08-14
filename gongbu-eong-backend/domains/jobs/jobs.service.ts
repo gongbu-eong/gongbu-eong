@@ -47,6 +47,7 @@ export async function getHomeJobs(
           personalityCode: diagnosisType.code,
           limit: 5,
           userId,
+          regularOnly: true,
         })
       : Promise.resolve({ rows: [], total: 0 }),
     userId ? countUserJobBookmarks(userId) : Promise.resolve(0),
@@ -99,6 +100,7 @@ export async function getJobPostings(args: {
             offset,
             userId: args.userId,
             monthlyRegularOnly: args.monthlyRegularOnly,
+            ncsCategory: args.ncsCategory,
           },
         )
       : { rows: [], total: 0 };

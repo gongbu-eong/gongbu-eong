@@ -53,6 +53,25 @@ export type JobPostingFileRow = {
   file_url: string;
 };
 
+function splitMultiFilter(value?: string) {
+  return (value || "")
+    .split("|")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function buildAnyTextFilter(column: string, value: string | undefined, values: unknown[]) {
+  const filters = splitMultiFilter(value);
+  if (!filters.length) return "";
+
+  const conditions = filters.map((filter) => {
+    const param = `$${values.push(`%${filter}%`)}`;
+    return `COALESCE(${column}, '') ILIKE ${param}`;
+  });
+
+  return `AND (${conditions.join(" OR ")})`;
+}
+
 export async function findLatestDiagnosisType(userId: string) {
   const result = await query<{
     code: string;
@@ -159,6 +178,13 @@ export async function findHotJobPostings(limit: number, userId?: string) {
         ON categories.id = posting_categories.job_category_id
       WHERE postings.is_active = TRUE
         AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
+        AND (
+          postings.employment_type = '정규직'
+          OR (
+            postings.employment_type ILIKE '%정규%'
+            AND postings.employment_type NOT ILIKE '%비정규%'
+          )
+        )
       GROUP BY postings.id, institutions.name
       ORDER BY
         postings.is_featured DESC,
@@ -181,17 +207,26 @@ export async function findRecommendedJobPostings(
     offset?: number;
     userId?: string;
     monthlyRegularOnly?: boolean;
+    regularOnly?: boolean;
+    ncsCategory?: string;
   },
 ) {
-  const monthlyRegularFilter = args.monthlyRegularOnly
+  const values: unknown[] = [args.personalityCode];
+  const categoryFilter = buildAnyTextFilter("categories.name", args.ncsCategory, values);
+  const limitParam = `$${values.push(args.limit)}`;
+  const userParam = `$${values.push(args.userId || null)}`;
+  const offsetParam = `$${values.push(args.offset || 0)}`;
+  const regularEmploymentFilter = args.monthlyRegularOnly || args.regularOnly
     ? `AND (
           postings.employment_type = '정규직'
           OR (
             postings.employment_type ILIKE '%정규%'
             AND postings.employment_type NOT ILIKE '%비정규%'
           )
-        )
-        AND COALESCE(
+        )`
+    : "";
+  const monthlyDateFilter = args.monthlyRegularOnly
+    ? `AND COALESCE(
           postings.application_start_at,
           postings.announcement_at,
           postings.created_at
@@ -210,6 +245,7 @@ export async function findRecommendedJobPostings(
           ON categories.id = mappings.job_category_id
         WHERE personality_types.code = $1
           AND categories.is_active = TRUE
+          ${categoryFilter}
         ORDER BY mappings.fit_weight DESC, mappings.sort_order ASC
         LIMIT 6
       ),
@@ -242,11 +278,11 @@ export async function findRecommendedJobPostings(
         postings.is_active,
         COUNT(*) OVER() AS total_count,
         (
-          $3::uuid IS NOT NULL
+          ${userParam}::uuid IS NOT NULL
           AND EXISTS (
             SELECT 1
             FROM public.user_job_bookmarks bookmarks
-            WHERE bookmarks.user_id = $3::uuid
+            WHERE bookmarks.user_id = ${userParam}::uuid
               AND bookmarks.job_posting_id = postings.id
           )
         ) AS is_bookmarked,
@@ -259,7 +295,8 @@ export async function findRecommendedJobPostings(
         ON institutions.id = postings.institution_id
       WHERE postings.is_active = TRUE
         AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
-        ${monthlyRegularFilter}
+        ${regularEmploymentFilter}
+        ${monthlyDateFilter}
       GROUP BY postings.id, institutions.name
       ORDER BY
         postings.application_end_at ASC NULLS LAST,
@@ -272,10 +309,10 @@ export async function findRecommendedJobPostings(
         postings.view_count DESC,
         MAX(matched_categories.fit_weight) DESC,
         postings.created_at DESC
-      LIMIT $2
-      OFFSET $4
+      LIMIT ${limitParam}
+      OFFSET ${offsetParam}
     `,
-    [args.personalityCode, args.limit, args.userId || null, args.offset || 0],
+    values,
   );
 
   return {
@@ -326,21 +363,11 @@ export async function findJobPostings(args: {
         OR COALESCE(institutions.name, '') ILIKE $${values.length}
       )`
     : "";
-  const ncsFilter = args.ncsCategory
-    ? `AND COALESCE(postings.ncs_category, '') ILIKE $${values.push(`%${args.ncsCategory}%`)}`
-    : "";
-  const regionFilter = args.region
-    ? `AND COALESCE(postings.work_region, '') ILIKE $${values.push(`%${args.region}%`)}`
-    : "";
-  const employmentFilter = args.employmentType
-    ? `AND COALESCE(postings.employment_type, '') ILIKE $${values.push(`%${args.employmentType}%`)}`
-    : "";
-  const educationFilter = args.educationRequirement
-    ? `AND COALESCE(postings.education_requirement, '') ILIKE $${values.push(`%${args.educationRequirement}%`)}`
-    : "";
-  const careerFilter = args.careerRequirement
-    ? `AND COALESCE(postings.career_requirement, '') ILIKE $${values.push(`%${args.careerRequirement}%`)}`
-    : "";
+  const ncsFilter = buildAnyTextFilter("postings.ncs_category", args.ncsCategory, values);
+  const regionFilter = buildAnyTextFilter("postings.work_region", args.region, values);
+  const employmentFilter = buildAnyTextFilter("postings.employment_type", args.employmentType, values);
+  const educationFilter = buildAnyTextFilter("postings.education_requirement", args.educationRequirement, values);
+  const careerFilter = buildAnyTextFilter("postings.career_requirement", args.careerRequirement, values);
   const startDateFilter = args.startDate
     ? `AND postings.announcement_at::date >= $${values.push(args.startDate)}::date`
     : "";

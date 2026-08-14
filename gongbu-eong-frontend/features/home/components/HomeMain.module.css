@@ -110,6 +110,17 @@
 .resultBannerPrinciple { background: #bd895e; }
 .resultBannerFlexibility { background: #0d8190; }
 
+.resultBannerLink {
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.resultBannerLink:focus-visible {
+  outline: 3px solid rgba(47, 127, 240, 0.35);
+  outline-offset: 3px;
+}
+
 .resultBanner p {
   position: relative;
   z-index: 1;
@@ -168,9 +179,10 @@
   min-width: 124px;
   height: 28px;
   padding: 0;
+  border: 1px solid #ffffff;
   border-radius: 7px;
-  background: #f5b91e;
-  color: #111827;
+  background: transparent;
+  color: #ffffff;
   text-decoration: none;
   font-size: 0.8125rem;
   font-weight: 700;
@@ -199,19 +211,15 @@
   top: 116px;
   min-width: 124px;
   height: 28px;
-  border: 1px solid #ffffff;
-  border-radius: 7px;
-  background: transparent;
-  color: #ffffff;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .loggedOutResultOwl {
   position: absolute;
-  right: 36px;
+  right: 24px;
   top: 31px;
-  width: 150px;
-  height: 150px;
+  width: 133px;
+  height: 130px;
   object-fit: cover;
   object-position: center;
   pointer-events: none;
@@ -303,7 +311,7 @@
 
 .hotList {
   display: flex;
-  gap: 16px;
+  gap: 8px;
   padding: 0 16px;
   overflow-x: auto;
   cursor: grab;
@@ -333,19 +341,29 @@
 }
 
 .hotCard {
-  flex: 0 0 179px;
+  flex: 0 0 160px;
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
   height: 118px;
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 14px 16px 12px;
   border: 1px solid #e8f1ff;
   border-radius: 10px;
   background: #ffffff;
   box-shadow: none;
+  overflow: hidden;
 }
 
 .hotBadge {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
+  align-self: flex-start;
   height: 22px;
+  max-width: 100%;
   padding: 0 9px;
   border-radius: 999px;
   background: #d3f3e5;
@@ -370,20 +388,27 @@
 
 .hotCard strong {
   display: -webkit-box;
-  min-height: 2.125rem;
-  margin-top: 8px;
+  flex: 0 0 2rem;
+  width: 100%;
+  min-width: 0;
+  height: 2rem;
+  margin-top: 7px;
   overflow: hidden;
   font-size: 0.875rem;
   line-height: 1.2;
   text-overflow: ellipsis;
+  word-break: keep-all;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
 .hotCard small {
-  margin-top: 8px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 7px;
   color: #9aa4b8;
   font-size: 0.8125rem;
+  line-height: 1.15;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -440,7 +465,7 @@
   color: #ffffff;
   font-size: 0.6875rem;
   font-style: normal;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .toolCard strong {
@@ -489,7 +514,7 @@
 
 .contentBand {
   margin-top: 40px;
-  padding: 24px 0 48px;
+  padding: 24px 0 40px;
   background: #f5f7fa;
 }
 
@@ -497,8 +522,13 @@
   padding-top: 0;
 }
 
-.contentBand .sectionHeader:not(:first-child) {
-  padding-top: 28px;
+.communityBand {
+  padding: 40px 0 48px;
+  background: #ffffff;
+}
+
+.communityBand .sectionHeader {
+  padding-top: 0;
 }
 
 .listGroup {
@@ -540,7 +570,9 @@
 
 .listItem {
   position: relative;
-  min-height: 75px;
+  display: flex;
+  min-height: 164px;
+  flex-direction: column;
   padding: 16px;
   border: 1px solid #e4e8ef;
   border-radius: 10px;
@@ -550,9 +582,10 @@
 .listItem strong {
   display: -webkit-box;
   max-width: calc(100% - 40px);
+  margin-top: 9px;
   overflow: hidden;
   font-size: 0.9375rem;
-  line-height: 1.2;
+  line-height: 1.3334;
   font-weight: 500;
   text-overflow: ellipsis;
   -webkit-box-orient: vertical;
@@ -572,7 +605,13 @@
 }
 
 .recommendFooter {
-  display: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 16px;
+  padding-right: 36px;
+  border-top: 1px solid #e4e8ef;
 }
 
 .recommendDday {
@@ -581,9 +620,9 @@
   justify-content: center;
   height: 22px;
   padding: 0 8px;
-  border-radius: 999px;
-  background: #e8f1ff;
-  color: #2f7ff0;
+  border-radius: 5px;
+  background: #e8f7ec;
+  color: #1fb573;
   font-size: 0.6875rem;
   font-weight: 900;
 }
@@ -594,9 +633,10 @@
 }
 
 .recommendTags {
-  display: none;
+  display: flex;
+  flex-wrap: wrap;
   gap: 5px;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .recommendTags small {
@@ -613,18 +653,25 @@
 }
 
 .listItem .recommendDate {
-  margin-top: 10px;
-  color: #9aa4b8;
-  font-size: 0.75rem;
+  margin: 0;
+  color: #5a6580;
+  font-size: 0.875rem;
 }
 
 .recommendStar {
   position: absolute;
-  top: 16px;
   right: 16px;
-  color: #e4e8ef;
-  font-size: 1.5625rem;
-  line-height: 1;
+  bottom: 15px;
+  display: flex;
+  width: 25px;
+  height: 25px;
+  align-items: center;
+  justify-content: center;
+}
+
+.recommendStar img {
+  width: 25px;
+  height: 25px;
 }
 
 .communityItem {
@@ -666,6 +713,20 @@
   color: #5a6580;
   font-size: 0.875rem;
   line-height: 1.2;
+}
+
+.communityType {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin-bottom: 16px;
+  padding: 0 8px;
+  border: 1px solid #e8f1ff;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2f7ff0;
+  font-size: 0.6875rem;
+  font-weight: 700;
 }
 
 .communityMeta {
@@ -991,9 +1052,10 @@
 
 .noticeDialog {
   position: relative;
-  width: min(calc(100vw - 48px), 320px);
-  padding: 24px 20px 16px;
-  border-radius: 8px;
+  width: min(calc(100vw - 32px), 361px);
+  min-height: 361px;
+  padding: 30px 16px 16px;
+  border-radius: 10px;
   background: #ffffff;
   color: #1a2233;
   text-align: center;
@@ -1002,30 +1064,38 @@
 
 .noticeOwlStage {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 142px;
-  height: 112px;
+  display: block;
+  width: 207px;
+  height: 168px;
   margin: 0 auto;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e8f1ff;
+  overflow: visible;
 }
 
-.noticeOwlStage img {
-  width: 112px;
-  height: 112px;
-  object-fit: cover;
+.noticeOwlBg {
+  position: absolute;
+  left: 0;
+  top: 38px;
+  width: 207px;
+  height: 124px;
+  object-fit: contain;
+}
+
+.noticeOwl {
+  position: absolute;
+  left: 41px;
+  top: 0;
+  width: 125px;
+  height: 168px;
+  object-fit: contain;
   object-position: center;
 }
 
 .noticeDialog h2 {
-  margin: 14px 0 0;
+  margin: 16px 0 0;
   color: #1a2233;
-  font-size: 1.0625rem;
+  font-size: 1.25rem;
   line-height: 1.2;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .noticeDialog p {
@@ -1033,20 +1103,20 @@
   color: #5a6580;
   font-size: 0.875rem;
   line-height: 1.2;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .noticeDialog button {
   width: 100%;
-  height: 50px;
+  height: 52px;
   margin-top: 22px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #2f7ff0;
   color: #ffffff;
   cursor: pointer;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 

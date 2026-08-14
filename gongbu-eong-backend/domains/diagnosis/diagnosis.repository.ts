@@ -672,36 +672,13 @@ export async function findMonthlyHiringByPersonalityType(
           ) AS display_rank
         FROM category_counts
         WHERE posting_count > 0
-      ),
-      count_summary AS (
-        SELECT COUNT(*)::integer AS category_count
-        FROM ranked_counts
-      ),
-      displayed_counts AS (
-        SELECT name, posting_count, display_rank
-        FROM ranked_counts
-        WHERE display_rank <= CASE
-          WHEN (SELECT category_count FROM count_summary) <= 4 THEN 4
-          ELSE 3
-        END
-
-        UNION ALL
-
-        SELECT
-          '기타' AS name,
-          SUM(posting_count)::integer AS posting_count,
-          4 AS display_rank
-        FROM ranked_counts
-        WHERE (SELECT category_count FROM count_summary) > 4
-          AND display_rank > 3
-        HAVING SUM(posting_count) > 0
       )
       SELECT
-        displayed_counts.name,
-        displayed_counts.posting_count,
+        ranked_counts.name,
+        ranked_counts.posting_count,
         (SELECT COUNT(DISTINCT id)::integer FROM matched_postings) AS total_count
-      FROM displayed_counts
-      ORDER BY displayed_counts.display_rank ASC
+      FROM ranked_counts
+      ORDER BY ranked_counts.display_rank ASC
     `,
     [typeCode],
   );

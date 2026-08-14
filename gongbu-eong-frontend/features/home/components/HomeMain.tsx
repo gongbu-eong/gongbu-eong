@@ -18,14 +18,16 @@ const aiTools = [
   {
     href: "/ai-tools/diagnosis",
     tag: "완전 무료",
+    memberTag: "완전 무료",
     title: "강점·성향 진단",
-    description: "10문항이면 끝, 내 강점 유형을 알려드려요.",
+    description: "16문항이면 끝, 내 강점 유형을 알려드려요.",
     image: "/home/home-tool-match.png",
     imageAlt: "강점·성향 진단",
   },
   {
     href: "/ai-tools/coaching",
     tag: "첫 1회 무료",
+    memberTag: "첫 5회 무료 쿠폰 증정",
     title: "Ai NCS 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",
     image: "/home/home-tool-diagnosis.png",
@@ -34,6 +36,7 @@ const aiTools = [
   {
     href: "#",
     tag: "첫 1회 무료",
+    memberTag: "첫 3회 무료 쿠폰 증정",
     title: "Ai 면접 코칭",
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
     image: "/home/home-tool-resume.png",
@@ -42,6 +45,7 @@ const aiTools = [
   {
     href: "#",
     tag: "준비중",
+    memberTag: "준비중",
     title: "탈락사례 분석",
     description: "왜 떨어졌을까? 곧 데이터로 알려드려요.",
     image: "/home/home-tool-interview.png",
@@ -101,7 +105,15 @@ const resultCards = {
   },
 } as const;
 
-const communityPosts = [
+type CommunityPost = {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  typeLabel?: string;
+};
+
+const communityPosts: CommunityPost[] = [
   {
     id: "post-1",
     category: "후기",
@@ -119,6 +131,30 @@ const communityPosts = [
     category: "질문",
     title: "NCS 직업기초 어디서 공부하나요?",
     description: "독학 중인데 추천 자료나 강의 있을까요?",
+  },
+];
+
+const loggedInCommunityPosts: CommunityPost[] = [
+  {
+    id: "member-post-1",
+    category: "합격·면접 후기",
+    title: "공기업 면접 자주 나오는 질문 정리해봤어요",
+    description: "최종합격",
+    typeLabel: "유연 대응형",
+  },
+  {
+    id: "member-post-2",
+    category: "합격·면접 후기",
+    title: "공기업 면접 자주 나오는 질문 정리해봤어요",
+    description: "최종합격",
+    typeLabel: "유연 대응형",
+  },
+  {
+    id: "member-post-3",
+    category: "합격·면접 후기",
+    title: "공기업 면접 자주 나오는 질문 정리해봤어요",
+    description: "최종합격",
+    typeLabel: "유연 대응형",
   },
 ];
 
@@ -204,6 +240,10 @@ export function HomeMain({
       : Object.values(resultCards).find((card) =>
           card.names.some((name) => diagnosisTypeName.includes(name)),
         )) ?? resultCards.stability;
+  const resultBannerClassName = `${styles.resultBanner} ${
+    user ? resultCard.bannerClassName : styles.loggedOutResultBanner
+  }`;
+  const displayedCommunityPosts = user ? loggedInCommunityPosts : communityPosts;
 
 const DRAG_THRESHOLD = 10;
 
@@ -313,61 +353,59 @@ const ignoreClickAfterDrag = (
           </div>
         </header>
 
-        <Link href="#" className={styles.searchBar} aria-label="공고 검색">
+        <Link href="/jobs" className={styles.searchBar} aria-label="공고 검색">
           <span>{user ? "공고명, 기업명을 검색하세요." : "공공·기관 검색"}</span>
           <SearchIcon />
         </Link>
 
-          <section
-            className={`${styles.resultBanner} ${
-              user ? resultCard.bannerClassName : styles.loggedOutResultBanner
-            }`}
+        {user ? (
+          <Link
+            href="/ai-tools/diagnosis/result"
+            className={`${resultBannerClassName} ${styles.resultBannerLink}`}
+            aria-label={`${diagnosisTypeName} 진단 결과 자세히 보기`}
           >
-            {user ? (
-              <>
-                <p className={styles.resultEyebrow}>
-                  {nickname}님의 진단 결과
-                </p>
-                <strong>{diagnosisTypeName}</strong>
-              </>
-            ) : (
-              <p className={styles.resultLoginMessage}>
-                강점·성향 진단을
-                <br />
-                진행해 주세요.
-              </p>
-            )}
-            <Link
-              href={user ? "/ai-tools/diagnosis/result" : "/ai-tools/diagnosis"}
-              className={styles.resultLink}
-            >
-              <span>{user ? "결과 자세히 보기" : "진단하러 가기"}</span>
+            <p className={styles.resultEyebrow}>
+              {nickname}님의 진단 결과
+            </p>
+            <strong>{diagnosisTypeName}</strong>
+            <span className={styles.resultLink}>
+              <span>결과 자세히 보기</span>
+              <b aria-hidden="true">→</b>
+            </span>
+            <Image
+              src={resultCard.image}
+              alt=""
+              width={240}
+              height={190}
+              className={`${styles.resultOwl} ${resultCard.className}`}
+              priority
+              sizes="(max-width: 599px) 52vw, 312px"
+            />
+          </Link>
+        ) : (
+          <section className={resultBannerClassName}>
+            <p className={styles.resultLoginMessage}>
+              강점·성향 진단을
+              <br />
+              진행해 주세요.
+            </p>
+            <Link href="/ai-tools/diagnosis" className={styles.resultLink}>
+              <span>진단하러 가기</span>
               <b aria-hidden="true">→</b>
             </Link>
-            {user ? (
-              <Image
-                src={resultCard.image}
-                alt=""
-                width={240}
-                height={190}
-                className={`${styles.resultOwl} ${resultCard.className}`}
-                priority
-                sizes="(max-width: 599px) 52vw, 312px"
-              />
-            ) : (
-              <Image
-                src="/home/home-login-required-owl.png"
-                alt=""
-                width={133}
-                height={130}
-                className={styles.loggedOutResultOwl}
-                priority
-                sizes="133px"
-              />
-            )}
+            <Image
+              src="/home/home-hero-diagnosis-required.png"
+              alt=""
+              width={133}
+              height={130}
+              className={styles.loggedOutResultOwl}
+              priority
+              sizes="133px"
+            />
           </section>
+        )}
 
-        <SectionHeader title="마감 임박 공고" href={user ? "/jobs" : "/login"} />
+        <SectionHeader title="🔥 Hot 공고" />
         <div
           ref={hotListRef}
           className={styles.hotList}
@@ -399,7 +437,7 @@ const ignoreClickAfterDrag = (
             const content = (
               <>
               <span className={styles.toolCopy}>
-                <em>{tool.tag}</em>
+                <em>{user ? tool.memberTag : tool.tag}</em>
                 <strong>{tool.title}</strong>
                 <small>{tool.description}</small>
               </span>
@@ -448,7 +486,7 @@ const ignoreClickAfterDrag = (
 
         <div className={styles.contentBand}>
           <SectionHeader
-            title="진단결과 추천 공고"
+            title={user ? "진단결과 추천 공고" : "강점·성향 진단결과 추천 공고"}
             href={user ? "/jobs?view=recommended" : "/login"}
           />
           <div className={styles.listGroup}>
@@ -462,7 +500,7 @@ const ignoreClickAfterDrag = (
                 <strong>{job.title}</strong>
                 <span className={styles.recommendTags}>
                   {job.employmentType ? <small>{job.employmentType}</small> : null}
-                  {job.region ? <small>{job.region}</small> : null}
+                  {job.region ? <small>{formatRegionLabel(job.region)}</small> : null}
                   {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
                 </span>
                 <span className={styles.recommendFooter}>
@@ -471,7 +509,9 @@ const ignoreClickAfterDrag = (
                     {job.dday}
                   </span>
                 </span>
-                <span className={styles.recommendStar} aria-hidden="true">☆</span>
+                <span className={styles.recommendStar} aria-hidden="true">
+                  <Image src="/calendar/star-outline.svg" alt="" width={25} height={25} />
+                </span>
               </Link>
             ))}
             {user && jobs.recommendedJobs.length === 0 ? (
@@ -490,10 +530,12 @@ const ignoreClickAfterDrag = (
               </div>
             ) : null}
           </div>
+        </div>
 
+        <div className={styles.communityBand}>
           <SectionHeader title="커뮤니티" href={user ? "#" : "/login"} />
           <div className={styles.listGroup}>
-            {communityPosts.map((post) => (
+            {displayedCommunityPosts.map((post) => (
               <Link
                 href={user ? "#" : "/login"}
                 key={post.id}
@@ -502,6 +544,9 @@ const ignoreClickAfterDrag = (
                 <span className={styles.communityCategory}>{post.category}</span>
                 <strong>{post.title}</strong>
                 <p>{post.description}</p>
+                {"typeLabel" in post && post.typeLabel ? (
+                  <span className={styles.communityType}>{post.typeLabel}</span>
+                ) : null}
                 <span className={styles.communityMeta}>
                   <span>조회수 : 1,204</span>
                   <span>추천수 : 20</span>
@@ -541,7 +586,20 @@ const ignoreClickAfterDrag = (
               aria-labelledby="coming-soon-title"
             >
               <span className={styles.noticeOwlStage} aria-hidden="true">
-                <Image src="/diagnosis-progress-owl.png" alt="" width={112} height={112} />
+                <Image
+                  src="/home/home-coming-soon-bg.svg"
+                  alt=""
+                  width={207}
+                  height={124}
+                  className={styles.noticeOwlBg}
+                />
+                <Image
+                  src="/home/home-coming-soon-owl.png"
+                  alt=""
+                  width={125}
+                  height={168}
+                  className={styles.noticeOwl}
+                />
               </span>
               <h2 id="coming-soon-title">아직 준비중입니다.</h2>
               <p>조금만 기다려주세요.</p>
@@ -689,7 +747,7 @@ export function HomeMenuDrawer({
 }
 
 function toJobMeta(job: JobPostingDto) {
-  return [job.employmentType, job.region].filter(Boolean).join(" · ") || job.institutionName;
+  return [job.employmentType, formatRegionLabel(job.region)].filter(Boolean).join(" · ") || job.institutionName;
 }
 
 function isUrgentDday(dday: string) {
@@ -700,11 +758,31 @@ function isUrgentDday(dday: string) {
 function toEndDate(value: string | null) {
   if (!value) return "상시 채용";
 
-  return `~ ${new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(value))}`;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "상시 채용";
+
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][date.getDay()];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `~ ${year}. ${month}. ${day}(${weekday})`;
+}
+
+function splitDelimitedOption(value: string | null | undefined) {
+  if (!value) return [];
+
+  return value
+    .split(/[,.\/·|]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function formatRegionLabel(value: string | null | undefined) {
+  const regions = splitDelimitedOption(value);
+  if (regions.length <= 3) return regions.join(" · ") || "";
+
+  return `${regions.slice(0, 3).join(" · ")} 외 ${regions.length - 3}개`;
 }
 
 function DrawerSection({
@@ -864,14 +942,14 @@ function SearchIcon() {
   );
 }
 
-function SectionHeader({ icon, title, href }: { icon?: string; title: string; href: string }) {
+function SectionHeader({ icon, title, href }: { icon?: string; title: string; href?: string }) {
   return (
     <div className={styles.sectionHeader}>
       <h2>
         {icon ? <span aria-hidden="true">{icon}</span> : null}
         {title}
       </h2>
-      <Link href={href}>전체 보기 &gt;</Link>
+      {href ? <Link href={href}>전체 보기 &gt;</Link> : null}
     </div>
   );
 }

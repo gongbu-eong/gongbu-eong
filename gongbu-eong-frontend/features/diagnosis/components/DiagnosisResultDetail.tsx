@@ -209,8 +209,19 @@ export function DiagnosisResultDetail() {
 
   const { result } = detail;
   const copy = TYPE_COPY[result.typeCode];
+  const displayedJobCategories = result.jobCategories.slice(0, 6);
   const maxHiringCount = Math.max(1, ...detail.monthlyHiring.categories.map((item) => item.count));
-  const recommendedJobsHref = `/jobs?view=recommended&scope=monthly-regular&resultId=${encodeURIComponent(result.resultId)}`;
+  const recommendedJobsParams = new URLSearchParams({
+    view: "recommended",
+    scope: "monthly-regular",
+    resultId: result.resultId,
+  });
+  const recommendedNcsCategories =
+    detail.monthlyHiring.categories.map((category) => category.name).filter(Boolean);
+  if (recommendedNcsCategories.length) {
+    recommendedJobsParams.set("ncs", recommendedNcsCategories.join("|"));
+  }
+  const recommendedJobsHref = `/jobs?${recommendedJobsParams.toString()}`;
 
   const openHistory = () => {
     setHistoryOpen(true);
@@ -327,7 +338,7 @@ export function DiagnosisResultDetail() {
             <h2><FigmaSectionIcon kind="jobs" />이런 직무·기업에 강해요</h2>
             <p className={styles.sectionCaption}>{result.typeName}과 잘 맞는 직무와 공기업이에요.</p>
             <h3>{nickname}님에게 어울리는 직무</h3>
-            <div className={styles.jobChips}>{result.jobCategories.slice(0, 6).map((category) => <span key={category.name}>{category.name}</span>)}</div>
+            <div className={styles.jobChips}>{displayedJobCategories.map((category) => <span key={category.name}>{category.name}</span>)}</div>
             <h3>{nickname}님에게 어울리는 공고</h3>
             <div className={styles.postingList}>
               {detail.recommendedPostings.map((posting) => <RecommendedPosting key={posting.id} posting={posting} />)}

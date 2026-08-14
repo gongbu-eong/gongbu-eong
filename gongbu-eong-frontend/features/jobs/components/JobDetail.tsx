@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import {
@@ -8,7 +9,7 @@ import {
   setJobBookmark,
 } from "@/features/home/home.api";
 import type { JobPostingDetailDto } from "@/features/home/home.dto";
-import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { AppHeader } from "@/features/layout/components/AppChrome";
 import styles from "./JobDetail.module.css";
 
 const backendUrl =
@@ -62,6 +63,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
       setBookmarkPending(false);
     }
   };
+  const emailAddress = job ? getEmailAddress(job) : null;
 
   return (
     <main className={styles.page}>
@@ -85,26 +87,17 @@ export function JobDetail({ jobId }: { jobId: string }) {
             <article className={styles.content}>
               <section className={styles.summary}>
                 <span className={getDdayBadgeClass(job)}>
-                  {job.isClosed ? "마감" : job.dday}
+                  {job.isClosed ? "접수 마감" : job.dday}
                 </span>
                 <small>{job.institutionName}</small>
                 <h2>{job.title}</h2>
-                <button
-                  type="button"
-                  className={`${styles.bookmark} ${job.isBookmarked ? styles.bookmarked : ""}`}
-                  aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
-                  disabled={bookmarkPending}
-                  onClick={() => void toggleBookmark()}
-                >
-                  <StarIcon filled={job.isBookmarked} />
-                </button>
               </section>
 
               <section className={styles.factGrid}>
-                <Fact label="채용인원" value={toHiringCount(job.hiringCount)} />
-                <Fact label="고용형태" value={job.employmentType || "정보 없음"} />
                 <Fact label="접수 기간" value={toCompactPeriod(job.applicationStartAt, job.applicationEndAt)} />
                 <Fact label="근무지" value={job.region || "정보 없음"} />
+                <Fact label="채용인원" value={toHiringCount(job.hiringCount)} />
+                <Fact label="고용형태" value={job.employmentType || "정보 없음"} />
               </section>
 
               <div className={getDeadlineNoticeClass(job)}>
@@ -172,14 +165,14 @@ export function JobDetail({ jobId }: { jobId: string }) {
                 onClick={() => void toggleBookmark()}
               >
                 <StarIcon filled={job.isBookmarked} />
-                <span>일정 담기</span>
+                <span>공고 찜하기</span>
               </button>
-              {job.isClosed || (!job.applyUrl && !job.emailApplyAddress) ? (
+              {job.isClosed || (!job.applyUrl && !emailAddress) ? (
                 <button type="button" className={styles.disabledApply} disabled>
                   {job.isClosed ? "접수 마감" : "지원 링크 없음"}
                 </button>
-              ) : job.emailApplyAddress ? (
-                <a href={`mailto:${job.emailApplyAddress}`} className={styles.apply}>
+              ) : emailAddress ? (
+                <a href={`mailto:${emailAddress}`} className={styles.apply}>
                   이메일로 지원하기
                 </a>
               ) : (
@@ -190,7 +183,6 @@ export function JobDetail({ jobId }: { jobId: string }) {
             </div>
           </>
         ) : null}
-        <AppFooter />
       </section>
     </main>
   );
@@ -273,5 +265,22 @@ function getFileBadge(fileType: string | null, fileName: string) {
   return extension.replace(/^\./, "").slice(0, 5).toUpperCase();
 }
 
-function StarIcon({ filled }: { filled: boolean }) { return <svg viewBox="0 0 24 24"><path d="m12 2.8 2.85 5.77 6.37.93-4.61 4.49 1.09 6.34L12 17.34l-5.7 2.99 1.09-6.34L2.78 9.5l6.37-.93L12 2.8Z" fill={filled ? "currentColor" : "white"} /></svg>; }
-function DownloadIcon() { return <svg viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></svg>; }
+function getEmailAddress(job: JobPostingDetailDto) {
+  if (job.emailApplyAddress) return job.emailApplyAddress;
+  const text = [
+    job.applicationMethod,
+    job.screeningProcess,
+    job.requiredDocuments,
+    job.additionalNotice,
+    job.basicInfo,
+  ].filter(Boolean).join("\n");
+  return text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || null;
+}
+
+function StarIcon({ filled }: { filled: boolean }) {
+  if (!filled) return <Image src="/jobs/star-outline.svg" alt="" width={28} height={28} />;
+  return <svg viewBox="0 0 24 24"><path d="m12 2.8 2.85 5.77 6.37.93-4.61 4.49 1.09 6.34L12 17.34l-5.7 2.99 1.09-6.34L2.78 9.5l6.37-.93L12 2.8Z" fill="currentColor" /></svg>;
+}
+function DownloadIcon() {
+  return <Image src="/jobs/download.svg" alt="" width={24} height={24} />;
+}
