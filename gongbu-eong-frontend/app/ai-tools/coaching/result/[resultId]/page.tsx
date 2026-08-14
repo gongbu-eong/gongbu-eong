@@ -38,7 +38,7 @@ export default function CoachingResultPage() {
 }
 
 function SaveCompleteAlert({ onConfirm }: { onConfirm: () => void }) {
-  return <div className={styles.saveAlertOverlay} role="dialog" aria-modal="true" aria-labelledby="coaching-save-alert-title"><section className={styles.saveAlertBox}><Image src="/coaching/coaching-save-alert-owl.png" alt="" width={202} height={168} className={styles.saveAlertImage} priority /><h2 id="coaching-save-alert-title">축하드립니다~!</h2><p>코칭 결과가 저장되었습니다.</p><button type="button" onClick={onConfirm}>확인</button></section></div>;
+  return <div className={styles.saveAlertOverlay} role="dialog" aria-modal="true" aria-labelledby="coaching-save-alert-title"><section className={styles.saveAlertBox}><div className={styles.saveAlertVisual}><Image src="/coaching/coaching-save-alert-bg.svg" alt="" width={184} height={111} className={styles.saveAlertBg} /><Image src="/coaching/coaching-save-alert-owl.png" alt="" width={202} height={168} className={styles.saveAlertImage} priority /></div><h2 id="coaching-save-alert-title">축하드립니다~!</h2><p>코칭 결과가 저장되었습니다.</p><button type="button" onClick={onConfirm}>확인</button></section></div>;
 }
 
 function getOriginalTextForRewrite(item: CoachingHistoryItem) {
