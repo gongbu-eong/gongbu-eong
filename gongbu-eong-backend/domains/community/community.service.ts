@@ -1,4 +1,8 @@
 import { getSessionUser, requireSessionUser } from "@/domains/auth/session";
+import {
+  grantCommunityCommentMilestoneReward,
+  grantCommunityPostCreateReward,
+} from "@/domains/credits/credits.repository";
 import type { NextRequest } from "next/server";
 import {
   COMMUNITY_CATEGORIES,
@@ -107,6 +111,12 @@ export async function saveCommunityPost(
     throw error;
   }
 
+  if (!postId) {
+    await grantCommunityPostCreateReward(user.id, savedPostId).catch((error) => {
+      console.error("[Community] post credit reward failed", error);
+    });
+  }
+
   return { ok: true, post: await findCommunityPostById(savedPostId, user.id) };
 }
 
@@ -161,6 +171,10 @@ export async function saveCommunityComment(request: NextRequest, postId: string)
     error.name = "NotFoundError";
     throw error;
   }
+
+  await grantCommunityCommentMilestoneReward(user.id, commentId).catch((error) => {
+    console.error("[Community] comment credit reward failed", error);
+  });
 
   return { ok: true, post: await findCommunityPostById(postId, user.id) };
 }

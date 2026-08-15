@@ -24,6 +24,8 @@ export type CurrentUserDto = {
   diagnosisTypeName: string | null;
   diagnosisRunId: string | null;
   diagnosisResultId: string | null;
+  creditBalance?: number;
+  unreadNotificationCount?: number;
 };
 
 export type CurrentUserResponseDto = {

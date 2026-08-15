@@ -22,7 +22,7 @@ export function AppHeader({
   user: userProp,
   bookmarkCount: bookmarkCountProp,
   showTicketStatus = true,
-  ticketCount = 10,
+  ticketCount,
   hasTicketAlert = true,
 }: AppHeaderProps = {}) {
   const router = useRouter();
@@ -32,18 +32,28 @@ export function AppHeader({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    if (userProp !== undefined && bookmarkCountProp !== undefined) return;
+    const shouldFetchUser =
+      userProp === undefined ||
+      (showTicketStatus &&
+        ticketCount === undefined &&
+        userProp !== null &&
+        userProp.creditBalance === undefined);
+    const shouldFetchHome = bookmarkCountProp === undefined;
+
+    if (!shouldFetchUser && !shouldFetchHome) return;
 
     let active = true;
     Promise.all([
-      userProp === undefined ? getCurrentUser().catch(() => null) : Promise.resolve(null),
-      bookmarkCountProp === undefined ? getHomeJobs().catch(() => null) : Promise.resolve(null),
+      shouldFetchUser ? getCurrentUser().catch(() => null) : Promise.resolve(null),
+      shouldFetchHome ? getHomeJobs().catch(() => null) : Promise.resolve(null),
     ]).then(([userResponse, homeResponse]) => {
       if (!active) return;
-      if (userProp === undefined && userResponse) {
-        setFetchedUser(userResponse.authenticated ? userResponse.user : null);
+      if (userResponse?.authenticated) {
+        setFetchedUser(userResponse.user);
+      } else if (shouldFetchUser && userResponse) {
+        setFetchedUser(null);
       }
-      if (bookmarkCountProp === undefined && homeResponse) {
+      if (shouldFetchHome && homeResponse) {
         setFetchedBookmarkCount(homeResponse.bookmarkCount ?? 0);
       }
     });
@@ -51,12 +61,16 @@ export function AppHeader({
     return () => {
       active = false;
     };
-  }, [bookmarkCountProp, userProp]);
+  }, [bookmarkCountProp, showTicketStatus, ticketCount, userProp]);
 
   const user = userProp !== undefined ? userProp : fetchedUser;
   const bookmarkCount =
     bookmarkCountProp !== undefined ? bookmarkCountProp : fetchedBookmarkCount;
   const isAuthenticated = Boolean(user);
+  const effectiveTicketCount =
+    ticketCount ?? user?.creditBalance ?? fetchedUser?.creditBalance ?? 0;
+  const effectiveUnreadNotificationCount =
+    user?.unreadNotificationCount ?? fetchedUser?.unreadNotificationCount ?? 0;
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -85,12 +99,17 @@ export function AppHeader({
       </div>
       <div className={styles.headerActions}>
         {showTicketStatus && isAuthenticated ? (
-          <AppTicketStatus ticketCount={ticketCount} hasTicketAlert={hasTicketAlert} />
+          <AppTicketStatus ticketCount={effectiveTicketCount} hasTicketAlert={hasTicketAlert} />
         ) : null}
         {isAuthenticated ? (
-          <button type="button" aria-label="알림" className={styles.headerButton}>
+          <Link href="/notifications" aria-label="알림" className={`${styles.headerButton} ${styles.notificationButton}`}>
             <FigmaHeaderIcon kind="bell" />
-          </button>
+            {effectiveUnreadNotificationCount ? (
+              <span className={styles.notificationBadge}>
+                {formatBadgeCount(effectiveUnreadNotificationCount)}
+              </span>
+            ) : null}
+          </Link>
         ) : null}
         <button
           type="button"
@@ -114,6 +133,10 @@ export function AppHeader({
       ) : null}
     </header>
   );
+}
+
+function formatBadgeCount(count: number) {
+  return count > 99 ? "99+" : String(count);
 }
 
 export function AppTicketStatus({

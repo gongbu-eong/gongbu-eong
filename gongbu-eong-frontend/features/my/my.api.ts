@@ -5,6 +5,8 @@ import type {
   ResumeParseJobResponseDto,
   ResumeResponseDto,
   ResumeUploadResponseDto,
+  NotificationSettingsPayloadDto,
+  NotificationSettingsResponseDto,
   UserProfilePayloadDto,
   UserProfileResponseDto,
 } from "./my.dto";
@@ -48,6 +50,24 @@ export function updateMyProfile(payload: UserProfilePayloadDto) {
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+export function getMyNotificationSettings() {
+  return apiClient<NotificationSettingsResponseDto>(
+    "/api/users/me/notification-settings",
+  );
+}
+
+export function updateMyNotificationSettings(
+  payload: NotificationSettingsPayloadDto,
+) {
+  return apiClient<NotificationSettingsResponseDto>(
+    "/api/users/me/notification-settings",
+    {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export function getResumeParseJob(jobId: string) {

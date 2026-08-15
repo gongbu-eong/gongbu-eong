@@ -212,6 +212,10 @@ export function HomeMain({
 
 const DRAG_THRESHOLD = 10;
 
+function formatBadgeCount(count: number) {
+  return count > 99 ? "99+" : String(count);
+}
+
 const startHotDrag = (event: PointerEvent<HTMLDivElement>) => {
   // 모바일 터치는 브라우저 기본 스크롤 사용
   if (event.pointerType !== "mouse") return;
@@ -302,11 +306,16 @@ const ignoreClickAfterDrag = (
           <Link href="/" className={styles.logoLink} aria-label="공부엉이 홈">
             <span className={styles.logoAccent}>공</span>부엉이
           </Link>
-          {user ? <AppTicketStatus /> : null}
           <div className={styles.headerActions}>
+            {user ? <AppTicketStatus ticketCount={user.creditBalance ?? 0} /> : null}
             {user ? (
-              <Link href="#" aria-label="알림" className={styles.iconButton}>
+              <Link href="/notifications" aria-label="알림" className={styles.iconButton}>
                 <BellIcon />
+                {user.unreadNotificationCount ? (
+                  <span className={styles.notificationBadge}>
+                    {formatBadgeCount(user.unreadNotificationCount)}
+                  </span>
+                ) : null}
               </Link>
             ) : null}
             <button

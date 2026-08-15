@@ -157,3 +157,29 @@ export type UserProfileResponseDto = {
   ok: boolean;
   profile: UserProfileDto;
 };
+
+export type DeadlineNotificationOffset = 7 | 3 | 0;
+
+export type NotificationSettingsDto = {
+  phoneNumber: string | null;
+  kakaoConnected: boolean;
+  kakaoConnectedAt: string | null;
+  deadlineEnabled: boolean;
+  deadlineOffsets: DeadlineNotificationOffset[];
+  marketingAgreed: boolean;
+  marketingAgreedAt: string | null;
+  marketingRevokedAt: string | null;
+};
+
+export type NotificationSettingsPayloadDto = {
+  phoneNumber: string | null;
+  kakaoConnected: boolean;
+  deadlineEnabled: boolean;
+  deadlineOffsets: DeadlineNotificationOffset[];
+  marketingAgreed: boolean;
+};
+
+export type NotificationSettingsResponseDto = {
+  ok: boolean;
+  settings: NotificationSettingsDto;
+};

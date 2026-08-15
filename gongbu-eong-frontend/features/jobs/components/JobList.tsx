@@ -94,6 +94,8 @@ export function JobList({
 
   useEffect(() => {
     let mounted = true;
+    setLoading(true);
+    setMessage(null);
     getJobPostings({
       view,
       query,
@@ -302,6 +304,8 @@ export function JobList({
         <AppFooter />
       </section>
 
+      {loading ? <JobLoadingOverlay /> : null}
+
       {filterOpen ? (
         <div className={styles.filterOverlay} role="dialog" aria-modal="true" aria-label="상세 필터">
           <button className={styles.dim} aria-label="필터 닫기" onClick={() => setFilterOpen(false)} />
@@ -381,6 +385,15 @@ export function JobList({
         </div>
       ) : null}
     </main>
+  );
+}
+
+function JobLoadingOverlay() {
+  return (
+    <div className={styles.jobLoadingOverlay} role="status" aria-live="polite">
+      <span className={styles.jobLoadingSpinner} aria-hidden="true" />
+      <p className={styles.jobLoadingText}>공고를 불러오는 중이에요…</p>
+    </div>
   );
 }
 

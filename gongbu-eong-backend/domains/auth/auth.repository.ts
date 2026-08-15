@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { grantWelcomeSignupCredits } from "@/domains/credits/credits.repository";
 
 type OAuthProvider = "kakao" | "naver";
 
@@ -39,9 +40,10 @@ export async function upsertOAuthUser(args: {
     );
 
     let userId = existingAccount.rows[0]?.user_id;
+    let isNewUser = false;
 
     if (!userId) {
-      const user = await client.query<{ id: string }>(
+      const user = await client.query<{ id: string; inserted: boolean }>(
         `
           INSERT INTO public.users (
             email,
@@ -57,7 +59,7 @@ export async function upsertOAuthUser(args: {
             avatar_url = COALESCE(EXCLUDED.avatar_url, public.users.avatar_url),
             last_login_at = NOW(),
             updated_at = NOW()
-          RETURNING id
+          RETURNING id, (xmax = 0) AS inserted
         `,
         [
           args.profile.email || null,
@@ -66,6 +68,7 @@ export async function upsertOAuthUser(args: {
         ],
       );
       userId = user.rows[0].id;
+      isNewUser = Boolean(user.rows[0].inserted);
 
       await client.query(
         `
@@ -99,6 +102,10 @@ export async function upsertOAuthUser(args: {
           args.tokenExpiresAt || null,
         ],
       );
+
+      if (isNewUser) {
+        await grantWelcomeSignupCredits(client, userId);
+      }
     } else {
       await client.query(
         `
@@ -297,6 +304,8 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     diagnosis_type_name: string | null;
     diagnosis_run_id: string | null;
     diagnosis_result_id: string | null;
+    credit_balance: number | null;
+    unread_notification_count: string | number;
   }>(
     `
       SELECT
@@ -315,7 +324,9 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
         diagnosis.personality_type_code AS diagnosis_type_code,
         diagnosis.personality_type_name AS diagnosis_type_name,
         diagnosis.diagnosis_run_id,
-        diagnosis.diagnosis_result_id
+        diagnosis.diagnosis_result_id,
+        credits.balance_after AS credit_balance,
+        COALESCE(notifications.unread_count, 0)::text AS unread_notification_count
       FROM public.user_sessions sessions
       JOIN public.users users
         ON users.id = sessions.user_id
@@ -352,6 +363,19 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
           results.id DESC
         LIMIT 1
       ) diagnosis ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT balance_after
+        FROM public.credit_transactions
+        WHERE user_id = users.id
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+      ) credits ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*) AS unread_count
+        FROM public.notifications
+        WHERE user_id = users.id
+          AND read_at IS NULL
+      ) notifications ON TRUE
       WHERE sessions.session_token_hash = $1
         AND sessions.expires_at > NOW()
         AND users.status = 'active'
@@ -384,6 +408,8 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     diagnosisTypeName: user.diagnosis_type_name,
     diagnosisRunId: user.diagnosis_run_id,
     diagnosisResultId: user.diagnosis_result_id,
+    creditBalance: Number(user.credit_balance || 0),
+    unreadNotificationCount: Number(user.unread_notification_count || 0),
   };
 }
 

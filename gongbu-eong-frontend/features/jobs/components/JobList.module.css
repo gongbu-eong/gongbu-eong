@@ -7,6 +7,7 @@
 }
 
 .frame {
+  position: relative;
   width: 100%;
   max-width: 37.5rem;
   min-height: 100dvh;
@@ -407,6 +408,46 @@
   color: #7b8497;
   text-align: center;
   font-size: 0.8125rem;
+}
+
+.jobLoadingOverlay {
+  position: fixed;
+  inset-block: 0;
+  left: 50%;
+  z-index: 1100;
+  display: flex;
+  width: min(100vw, 37.5rem);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  transform: translateX(-50%);
+}
+
+.jobLoadingSpinner {
+  width: 4rem;
+  height: 4rem;
+  border: 0.375rem solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: jobLoadingSpin 0.9s linear infinite;
+}
+
+.jobLoadingText {
+  margin: 1.5rem 0 0;
+  color: #fff;
+  font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
+@keyframes jobLoadingSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .filterOverlay {
