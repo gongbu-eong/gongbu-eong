@@ -20,7 +20,6 @@ type AppHeaderProps = {
 
 export function AppHeader({
   user: userProp,
-  nickname: nicknameProp,
   bookmarkCount: bookmarkCountProp,
   showTicketStatus = true,
   ticketCount = 10,
@@ -57,7 +56,7 @@ export function AppHeader({
   const user = userProp !== undefined ? userProp : fetchedUser;
   const bookmarkCount =
     bookmarkCountProp !== undefined ? bookmarkCountProp : fetchedBookmarkCount;
-  const nickname = nicknameProp || user?.nickname || user?.displayName || "회원";
+  const isAuthenticated = Boolean(user);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -84,9 +83,11 @@ export function AppHeader({
           <FigmaHeaderIcon kind="home" />
         </Link>
       </div>
-      {showTicketStatus ? <AppTicketStatus ticketCount={ticketCount} hasTicketAlert={hasTicketAlert} /> : null}
-      <div className={styles.headerGroup}>
-        {user ? (
+      <div className={styles.headerActions}>
+        {showTicketStatus && isAuthenticated ? (
+          <AppTicketStatus ticketCount={ticketCount} hasTicketAlert={hasTicketAlert} />
+        ) : null}
+        {isAuthenticated ? (
           <button type="button" aria-label="알림" className={styles.headerButton}>
             <FigmaHeaderIcon kind="bell" />
           </button>
@@ -105,7 +106,6 @@ export function AppHeader({
       {isMenuOpen ? (
         <HomeMenuDrawer
           user={user}
-          nickname={nickname}
           bookmarkCount={bookmarkCount}
           isLoggingOut={isLoggingOut}
           onClose={() => setIsMenuOpen(false)}
@@ -143,6 +143,48 @@ export function AppFooter({
 }: {
   active?: "home" | "calendar" | "ai" | "community" | "my";
 }) {
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    getCurrentUser()
+      .then((response) => {
+        if (active) setIsAuthenticated(response.authenticated);
+      })
+      .catch(() => {
+        if (active) setIsAuthenticated(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const goProtected = async (href: string) => {
+    if (isAuthenticated === true) {
+      router.push(href);
+      return;
+    }
+
+    if (isAuthenticated === null) {
+      try {
+        const response = await getCurrentUser();
+        if (response.authenticated) {
+          setIsAuthenticated(true);
+          router.push(href);
+          return;
+        }
+      } catch {
+        // fall through to the login required alert.
+      }
+      setIsAuthenticated(false);
+    }
+
+    window.alert("로그인이 필요한 서비스입니다.");
+  };
+
   return (
     <footer className={styles.footer}>
       <Link href="/" className={active === "home" ? styles.active : undefined}>
@@ -153,21 +195,29 @@ export function AppFooter({
         <Image src="/diagnosis/result-detail/footer-calendar.svg" alt="" width={24} height={26} />
         <span>캘린더</span>
       </Link>
-      <Link href="/ai-tools/diagnosis" className={active === "ai" ? styles.active : undefined}>
+      <button
+        type="button"
+        className={active === "ai" ? styles.active : undefined}
+        onClick={() => goProtected("/ai-tools/diagnosis")}
+      >
         <span className={styles.footerIconWrap}>
           <Image src="/diagnosis/result-detail/footer-ai.svg" alt="" width={27} height={27} />
           <b className={styles.footerBest}>BEST</b>
         </span>
         <span>AI 도구</span>
-      </Link>
-      <Link href="#" className={active === "community" ? styles.active : undefined}>
+      </button>
+      <Link href="/community" className={active === "community" ? styles.active : undefined}>
         <Image src="/diagnosis/result-detail/footer-community.svg" alt="" width={28} height={24} />
         <span>커뮤니티</span>
       </Link>
-      <Link href="/my" className={active === "my" ? styles.active : undefined}>
+      <button
+        type="button"
+        className={active === "my" ? styles.active : undefined}
+        onClick={() => goProtected("/my")}
+      >
         <Image src="/diagnosis/result-detail/footer-my.svg" alt="" width={28} height={25} />
         <span>MY</span>
-      </Link>
+      </button>
     </footer>
   );
 }

@@ -108,3 +108,52 @@ export type ResumeParseJobResponseDto = {
   ok: boolean;
   job: ResumeParseJobDto;
 };
+
+export type ProfileAvatarKey =
+  | "fox"
+  | "lion"
+  | "cat"
+  | "penguin"
+  | "chick"
+  | "monkey"
+  | "cow"
+  | "bear"
+  | "chicken"
+  | "mouse";
+
+export type ProfileGender = "female" | "male";
+
+export type ProfileAgeGroup =
+  | "teens"
+  | "early_20s"
+  | "late_20s"
+  | "early_30s"
+  | "late_30s"
+  | "over_40";
+
+export type UserProfileDto = {
+  id: string;
+  email: string | null;
+  nickname: string | null;
+  displayName: string | null;
+  communityNickname: string | null;
+  profileStatusMessage: string | null;
+  profileAvatarKey: ProfileAvatarKey;
+  profileBackgroundColor: string;
+  gender: ProfileGender | null;
+  ageGroup: ProfileAgeGroup | null;
+};
+
+export type UserProfilePayloadDto = {
+  communityNickname: string;
+  profileStatusMessage: string | null;
+  profileAvatarKey: ProfileAvatarKey;
+  profileBackgroundColor: string;
+  gender: ProfileGender | null;
+  ageGroup: ProfileAgeGroup | null;
+};
+
+export type UserProfileResponseDto = {
+  ok: boolean;
+  profile: UserProfileDto;
+};

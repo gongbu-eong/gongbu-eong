@@ -38,20 +38,49 @@ export function CoachingPage() {
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
+  const loginRedirectedRef = useRef(false);
 
   useEffect(() => {
-    Promise.all([getCurrentUser().catch(() => null), listResumes().catch(() => null), getDiagnosisResultHistory(undefined, 20).catch(() => null)]).then(([user, resumeResponse, diagnosisResponse]) => {
-      setHasDiagnosis(Boolean(user?.user?.diagnosisResultId));
+    let active = true;
+
+    async function loadCoaching() {
+      const user = await getCurrentUser().catch(() => null);
+
+      if (!active) return;
+
+      if (!user?.authenticated || !user.user) {
+        if (!loginRedirectedRef.current) {
+          loginRedirectedRef.current = true;
+          window.alert("로그인이 필요한 서비스입니다.");
+          router.replace("/login");
+        }
+        return;
+      }
+
+      const [resumeResponse, diagnosisResponse] = await Promise.all([
+        listResumes().catch(() => null),
+        getDiagnosisResultHistory(undefined, 20).catch(() => null),
+      ]);
+
+      if (!active) return;
+
+      setHasDiagnosis(Boolean(user.user.diagnosisResultId));
       const nextResumes = resumeResponse?.resumes || [];
       const selected = nextResumes.find((item) => item.isSelected) || nextResumes[0];
       setResumes(nextResumes);
       setHasResume(Boolean(selected));
       setResumeId(selected?.id || null);
       setDiagnoses(diagnosisResponse?.items || []);
-      setSelectedDiagnosisId(diagnosisResponse?.selectedResultId || user?.user?.diagnosisResultId || null);
+      setSelectedDiagnosisId(diagnosisResponse?.selectedResultId || user.user.diagnosisResultId || null);
       setLoading(false);
-    });
-  }, []);
+    }
+
+    void loadCoaching();
+
+    return () => {
+      active = false;
+    };
+  }, [router]);
 
   const searchJobs = async () => {
     setSearching(true);
@@ -103,6 +132,7 @@ export function CoachingPage() {
     finally { setCoaching(false); }
   };
 
+  if (loading) return null;
   if (feedback) return <CoachingResult feedback={feedback} job={job} inputType={inputType} fileName={fileName} onRetry={() => setFeedback(null)} />;
   if (coaching) return <CoachingLoadingScreen />;
 

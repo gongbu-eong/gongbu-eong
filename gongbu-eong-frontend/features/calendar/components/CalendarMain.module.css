@@ -231,6 +231,15 @@
   color: #2f7ff0;
 }
 
+.dateButton.selectedDate.sunday span,
+.dateButton.selectedDate.sunday strong,
+.dateButton.selectedDate.saturday span,
+.dateButton.selectedDate.saturday strong,
+.monthDay.selectedMonthDay.sunday,
+.monthDay.selectedMonthDay.saturday {
+  color: #fff;
+}
+
 .scheduleTitle {
   display: flex;
   align-items: center;

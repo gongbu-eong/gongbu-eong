@@ -5,6 +5,8 @@ import type {
   ResumeParseJobResponseDto,
   ResumeResponseDto,
   ResumeUploadResponseDto,
+  UserProfilePayloadDto,
+  UserProfileResponseDto,
 } from "./my.dto";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
@@ -34,6 +36,17 @@ export function deleteResume(resumeId: string) {
 export function selectResume(resumeId: string) {
   return apiClient<{ ok: boolean }>(`/api/resumes/${resumeId}/select`, {
     method: "POST",
+  });
+}
+
+export function getMyProfile() {
+  return apiClient<UserProfileResponseDto>("/api/users/me/profile");
+}
+
+export function updateMyProfile(payload: UserProfilePayloadDto) {
+  return apiClient<UserProfileResponseDto>("/api/users/me/profile", {
+    method: "PUT",
+    body: JSON.stringify(payload),
   });
 }
 

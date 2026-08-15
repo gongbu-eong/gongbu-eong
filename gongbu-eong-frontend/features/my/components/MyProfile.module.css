@@ -1,0 +1,280 @@
+.page {
+  width: 100%;
+  min-height: 100dvh;
+  background: #ffffff;
+  color: #1a2233;
+  font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
+  word-break: keep-all;
+}
+
+.frame {
+  width: min(100%, 600px);
+  min-height: calc(100dvh - 48px);
+  margin: 0 auto;
+  padding: 16px 16px calc(106px + env(safe-area-inset-bottom));
+  background: #ffffff;
+}
+
+.frame h1 {
+  margin: 0;
+  color: #1a2233;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.profileSummary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.summaryAvatar {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f5f7fa;
+  overflow: hidden;
+}
+
+.summaryAvatar img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.profileSummary strong {
+  display: block;
+  color: #1a2233;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.profileSummary p {
+  margin: 8px 0 0;
+  color: #5a6580;
+  font-size: 14px;
+  line-height: 19px;
+  font-weight: 400;
+}
+
+.fieldSection {
+  margin-top: 32px;
+}
+
+.fieldSection h2,
+.choiceSection h2 {
+  margin: 0 0 12px;
+  color: #5a6580;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.avatarGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 64px);
+  gap: 8px 8px;
+}
+
+.avatarGrid button {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #f5f7fa;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.avatarGrid button img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.avatarGrid .selectedAvatar {
+  outline: 2px solid #2f7ff0;
+  outline-offset: 2px;
+}
+
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(8, 38px);
+  gap: 8px;
+}
+
+.colorGrid button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.colorGrid .selectedColor {
+  outline: 2px solid #2f7ff0;
+  outline-offset: 2px;
+}
+
+.textField {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 9px 8px;
+  margin-top: 30px;
+}
+
+.textField label {
+  color: #5a6580;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 600;
+}
+
+.textField > span {
+  color: #9aa4b8;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.textField input {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: 41px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: #f5f7fa;
+  color: #1a2233;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  outline: none;
+}
+
+.textField input::placeholder {
+  color: #9aa4b8;
+}
+
+.textField input:focus {
+  box-shadow: 0 0 0 1px #2f7ff0;
+}
+
+.textField p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #5a6580;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.choiceSection {
+  margin-top: 33px;
+}
+
+.choiceSection div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choiceSection button {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 32px;
+  background: #f5f7fa;
+  color: #9aa4b8;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.choiceSection .selectedChip {
+  background: #2f7ff0;
+  color: #ffffff;
+}
+
+.privateNotice {
+  min-height: 64px;
+  margin-top: 28px;
+  padding: 15px 8px 0;
+  border-radius: 7px;
+  background: #f5f7fa;
+  color: #5a6580;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 400;
+}
+
+.message {
+  margin: 16px 0 0;
+  color: #5a6580;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.saveButton {
+  width: 100%;
+  height: 52px;
+  margin-top: 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #2f7ff0;
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.saveButton:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+@media (max-width: 380px) {
+  .avatarGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .avatarGrid button {
+    width: 100%;
+    aspect-ratio: 1;
+    height: auto;
+  }
+
+  .colorGrid {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+  }
+
+  .colorGrid button {
+    width: 100%;
+    aspect-ratio: 1;
+    height: auto;
+  }
+}
+
+@media (min-width: 431px) {
+  .avatarGrid,
+  .colorGrid {
+    justify-content: space-between;
+  }
+}

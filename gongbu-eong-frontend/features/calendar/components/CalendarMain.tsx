@@ -431,7 +431,7 @@ function MineYearHeader({
 }) {
   const years = Array.from(
     { length: bounds.max.getFullYear() - bounds.min.getFullYear() + 1 },
-    (_, index) => bounds.min.getFullYear() + index,
+    (_, index) => bounds.max.getFullYear() - index,
   );
 
   return (
@@ -850,7 +850,8 @@ function buildBookmarkedJobEvents(jobs: JobPostingDto[]) {
           ? toDateKey(new Date(job.applicationStartAt))
           : toDateKey(new Date()),
       job,
-    }));
+    }))
+    .sort((a, b) => toTime(b.dateKey) - toTime(a.dateKey));
 }
 
 function groupEventsByDate(events: CalendarJobEvent[]) {

@@ -19,36 +19,56 @@ export function MyPage() {
   const [resumeCount, setResumeCount] = useState(0);
   const [diagnosisCount, setDiagnosisCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [coverLetterCoachingCount, setCoverLetterCoachingCount] = useState(0);
   const interviewCoachingCount = 0;
 
   useEffect(() => {
     let alive = true;
 
-    Promise.all([
-      getCurrentUser().catch(() => null),
-      getHomeJobs().catch(() => null),
-      listResumes().catch(() => null),
-      getDiagnosisResultHistory(undefined, 1).catch(() => null),
-      listCoachingHistory().catch(() => null),
-    ]).then(([userResponse, jobsResponse, resumesResponse, diagnosisResponse, coachingResponse]) => {
+    async function loadMyPage() {
+      const userResponse = await getCurrentUser().catch(() => null);
+
       if (!alive) return;
-      setUser(userResponse?.authenticated ? userResponse.user : null);
+
+      if (!userResponse?.authenticated || !userResponse.user) {
+        window.alert("로그인이 필요한 서비스입니다.");
+        router.replace("/login");
+        return;
+      }
+
+      setUser(userResponse.user);
+
+      const [jobsResponse, resumesResponse, diagnosisResponse, coachingResponse] = await Promise.all([
+        getHomeJobs().catch(() => null),
+        listResumes().catch(() => null),
+        getDiagnosisResultHistory(undefined, 1).catch(() => null),
+        listCoachingHistory().catch(() => null),
+      ]);
+
+      if (!alive) return;
+
       setBookmarkCount(jobsResponse?.bookmarkCount ?? 0);
       setResumeCount(resumesResponse?.resumes.length ?? 0);
       setDiagnosisCount(diagnosisResponse?.totalCount ?? 0);
       setCoverLetterCoachingCount(coachingResponse?.items.length ?? 0);
-    });
+      setIsCheckingAuth(false);
+    }
+
+    void loadMyPage();
 
     return () => {
       alive = false;
     };
-  }, []);
+  }, [router]);
 
   const nickname = useMemo(
-    () => user?.nickname || user?.displayName || "회원",
+    () => user?.communityNickname || "프로필 닉네임 설정",
     [user],
   );
+  const profileStatusMessage = user?.profileStatusMessage || "프로필을 수정 할 수 있습니다.";
+  const profileAvatarSrc = toProfileAvatarSrc(user?.profileAvatarKey);
+  const profileBackgroundColor = user?.profileBackgroundColor || "#f5f7fa";
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -62,6 +82,10 @@ export function MyPage() {
     }
   };
 
+  if (isCheckingAuth) {
+    return null;
+  }
+
   return (
     <div className={`${styles.page} ${styles.myPage}`}>
       <AppHeader
@@ -73,17 +97,16 @@ export function MyPage() {
         <h1 className={styles.title}>마이페이지</h1>
 
         <section className={styles.profile} aria-label="프로필">
-          <div className={styles.avatar} aria-hidden="true">
-            <Image src="/my/profile-avatar-bg.svg" alt="" width={64} height={64} />
-            <span>🐵</span>
+          <div className={styles.avatar} style={{ backgroundColor: profileBackgroundColor }} aria-hidden="true">
+            <Image src={profileAvatarSrc} alt="" width={64} height={64} unoptimized />
           </div>
           <div>
             <strong className={styles.profileName}>{nickname}</strong>
-            <p className={styles.profileText}>프로필을 수정 할 수 있습니다.</p>
+            <p className={styles.profileText}>{profileStatusMessage}</p>
           </div>
-          <button type="button" className={styles.editButton}>
+          <Link href="/my/profile" className={styles.editButton}>
             편집
-          </button>
+          </Link>
         </section>
 
         <section className={styles.stats} aria-label="활동 요약">
@@ -162,9 +185,9 @@ export function MyPage() {
 
         <h2 className={styles.sectionTitle}>커뮤니티</h2>
         <nav className={styles.menuList} aria-label="커뮤니티">
-          <MyMenuItem href="#" iconSrc="/my/community-post.png" iconWidth={26} iconHeight={26} title="내 글 확인하기" />
-          <MyMenuItem href="#" iconSrc="/my/community-comment.png" iconWidth={28} iconHeight={27} title="내 댓글 확인하기" />
-          <MyMenuItem href="#" iconSrc="/my/community-scrap.png" iconWidth={19} iconHeight={26} title="스크랩한 글 보기" />
+          <MyMenuItem href="/community/activity?tab=posts" iconSrc="/my/community-post.png" iconWidth={26} iconHeight={26} title="내 글 확인하기" />
+          <MyMenuItem href="/community/activity?tab=comments" iconSrc="/my/community-comment.png" iconWidth={28} iconHeight={27} title="내 댓글 확인하기" />
+          <MyMenuItem href="/community/activity?tab=scraps" iconSrc="/my/community-scrap.png" iconWidth={19} iconHeight={26} title="스크랩한 글 보기" />
         </nav>
 
         <button type="button" className={styles.logoutButton} onClick={handleLogout} disabled={isLoggingOut}>
@@ -174,6 +197,32 @@ export function MyPage() {
       <AppFooter active="my" />
     </div>
   );
+}
+
+function toProfileAvatarSrc(key: string | null | undefined) {
+  switch (key) {
+    case "fox":
+      return "/my/avatars/fox-profile.png?v=3";
+    case "lion":
+      return "/my/avatars/lion-profile.png?v=3";
+    case "cat":
+      return "/my/avatars/cat-profile.png?v=3";
+    case "penguin":
+      return "/my/avatars/penguin-profile.png?v=3";
+    case "chick":
+      return "/my/avatars/chick-profile.png?v=3";
+    case "cow":
+      return "/my/avatars/cow-profile.png?v=3";
+    case "bear":
+      return "/my/avatars/bear-profile.png?v=3";
+    case "chicken":
+      return "/my/avatars/chicken-profile.png?v=3";
+    case "mouse":
+      return "/my/avatars/mouse-profile.png?v=3";
+    case "monkey":
+    default:
+      return "/my/avatars/monkey-profile.png?v=3";
+  }
 }
 
 function MyMenuItem({

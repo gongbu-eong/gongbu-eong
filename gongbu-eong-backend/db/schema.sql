@@ -131,8 +131,16 @@ CREATE TABLE IF NOT EXISTS public.users (
   email CITEXT UNIQUE,
   nickname VARCHAR(50),
   display_name VARCHAR(100),
+  community_nickname VARCHAR(12),
   phone VARCHAR(30),
   avatar_url TEXT,
+  profile_status_message VARCHAR(30),
+  profile_avatar_key VARCHAR(30) NOT NULL DEFAULT (
+    (ARRAY['fox','lion','cat','penguin','chick','monkey','cow','bear','chicken','mouse'])[FLOOR(RANDOM() * 10 + 1)::integer]
+  ) CHECK (profile_avatar_key IN ('fox','lion','cat','penguin','chick','monkey','cow','bear','chicken','mouse')),
+  profile_background_color VARCHAR(20) NOT NULL DEFAULT '#c4c6ca' CHECK (profile_background_color IN ('#c6d5ff','#b9c9ff','#d1c2ff','#f5bfd9','#c7ecdc','#f5d2b0','#c9d6d8','#c4c6ca')),
+  gender VARCHAR(20) CHECK (gender IS NULL OR gender IN ('female','male')),
+  age_group VARCHAR(20) CHECK (age_group IS NULL OR age_group IN ('teens','early_20s','late_20s','early_30s','late_30s','over_40')),
   selected_diagnosis_result_id UUID,
   status public.user_status NOT NULL DEFAULT 'active',
   last_login_at TIMESTAMPTZ,

@@ -4,6 +4,12 @@ export type CurrentUserDto = {
   nickname: string | null;
   displayName: string | null;
   avatarUrl: string | null;
+  communityNickname: string | null;
+  profileStatusMessage: string | null;
+  profileAvatarKey: string | null;
+  profileBackgroundColor: string | null;
+  gender: string | null;
+  ageGroup: string | null;
   provider: "kakao" | "naver" | null;
   diagnosisTypeCode:
     | "stability"

@@ -286,6 +286,12 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     nickname: string | null;
     display_name: string | null;
     avatar_url: string | null;
+    community_nickname: string | null;
+    profile_status_message: string | null;
+    profile_avatar_key: string | null;
+    profile_background_color: string | null;
+    gender: string | null;
+    age_group: string | null;
     provider: OAuthProvider | null;
     diagnosis_type_code: string | null;
     diagnosis_type_name: string | null;
@@ -299,6 +305,12 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
         users.nickname,
         users.display_name,
         users.avatar_url,
+        users.community_nickname,
+        users.profile_status_message,
+        users.profile_avatar_key,
+        users.profile_background_color,
+        users.gender,
+        users.age_group,
         oauth.provider,
         diagnosis.personality_type_code AS diagnosis_type_code,
         diagnosis.personality_type_name AS diagnosis_type_name,
@@ -361,6 +373,12 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     nickname: user.nickname,
     displayName: user.display_name,
     avatarUrl: user.avatar_url,
+    communityNickname: user.community_nickname,
+    profileStatusMessage: user.profile_status_message,
+    profileAvatarKey: user.profile_avatar_key,
+    profileBackgroundColor: user.profile_background_color,
+    gender: user.gender,
+    ageGroup: user.age_group,
     provider: user.provider,
     diagnosisTypeCode: user.diagnosis_type_code,
     diagnosisTypeName: user.diagnosis_type_name,

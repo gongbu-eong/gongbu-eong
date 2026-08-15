@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MouseEvent, PointerEvent } from "react";
 import { AppFooter, AppTicketStatus } from "@/features/layout/components/AppChrome";
+import { getCommunityPosts } from "@/features/community/community.api";
+import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "../home.api";
 import type {
   CurrentUserDto,
@@ -105,59 +107,6 @@ const resultCards = {
   },
 } as const;
 
-type CommunityPost = {
-  id: string;
-  category: string;
-  title: string;
-  description: string;
-  typeLabel?: string;
-};
-
-const communityPosts: CommunityPost[] = [
-  {
-    id: "post-1",
-    category: "후기",
-    title: "○○공사 필기 난이도 정리해봤어요",
-    description: "문제 유형이 작년이랑 좀 달라졌어요. 자료해석 파트가 특…",
-  },
-  {
-    id: "post-2",
-    category: "합격",
-    title: "안정형인데 이 기관 붙었습니다 🎉",
-    description: "진단에서 나온 유형 그대로 지원했더니 잘 맞더라고요.",
-  },
-  {
-    id: "post-3",
-    category: "질문",
-    title: "NCS 직업기초 어디서 공부하나요?",
-    description: "독학 중인데 추천 자료나 강의 있을까요?",
-  },
-];
-
-const loggedInCommunityPosts: CommunityPost[] = [
-  {
-    id: "member-post-1",
-    category: "합격·면접 후기",
-    title: "공기업 면접 자주 나오는 질문 정리해봤어요",
-    description: "최종합격",
-    typeLabel: "유연 대응형",
-  },
-  {
-    id: "member-post-2",
-    category: "합격·면접 후기",
-    title: "공기업 면접 자주 나오는 질문 정리해봤어요",
-    description: "최종합격",
-    typeLabel: "유연 대응형",
-  },
-  {
-    id: "member-post-3",
-    category: "합격·면접 후기",
-    title: "공기업 면접 자주 나오는 질문 정리해봤어요",
-    description: "최종합격",
-    typeLabel: "유연 대응형",
-  },
-];
-
 export function HomeMain({
   initialUser = null,
   authResolved = false,
@@ -176,6 +125,7 @@ export function HomeMain({
     recommendationTypeName: null,
     bookmarkCount: 0,
   });
+  const [communityPreview, setCommunityPreview] = useState<CommunityPostSummaryDto[]>([]);
   const hotListRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
   const draggedRef = useRef(false);
@@ -229,6 +179,22 @@ export function HomeMain({
     };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+
+    getCommunityPosts({ limit: 3, sort: "latest" })
+      .then((response) => {
+        if (mounted) setCommunityPreview(response.items);
+      })
+      .catch(() => {
+        if (mounted) setCommunityPreview([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const nickname = useMemo(() => {
     if (isLoading) return "";
     return user?.nickname || user?.displayName || "회원";
@@ -243,7 +209,6 @@ export function HomeMain({
   const resultBannerClassName = `${styles.resultBanner} ${
     user ? resultCard.bannerClassName : styles.loggedOutResultBanner
   }`;
-  const displayedCommunityPosts = user ? loggedInCommunityPosts : communityPosts;
 
 const DRAG_THRESHOLD = 10;
 
@@ -337,11 +302,13 @@ const ignoreClickAfterDrag = (
           <Link href="/" className={styles.logoLink} aria-label="공부엉이 홈">
             <span className={styles.logoAccent}>공</span>부엉이
           </Link>
-          <AppTicketStatus />
+          {user ? <AppTicketStatus /> : null}
           <div className={styles.headerActions}>
-            <Link href="#" aria-label="알림" className={styles.iconButton}>
-              <BellIcon />
-            </Link>
+            {user ? (
+              <Link href="#" aria-label="알림" className={styles.iconButton}>
+                <BellIcon />
+              </Link>
+            ) : null}
             <button
               type="button"
               aria-label="메뉴 열기"
@@ -389,7 +356,7 @@ const ignoreClickAfterDrag = (
               <br />
               진행해 주세요.
             </p>
-            <Link href="/ai-tools/diagnosis" className={styles.resultLink}>
+            <Link href="/login" className={styles.resultLink}>
               <span>진단하러 가기</span>
               <b aria-hidden="true">→</b>
             </Link>
@@ -469,11 +436,9 @@ const ignoreClickAfterDrag = (
             return (
               <Link
                 href={
-                  tool.href === "/ai-tools/diagnosis"
+                  user
                     ? tool.href
-                    : user
-                      ? tool.href
-                      : "/login"
+                    : "/login"
                 }
                 key={tool.title}
                 className={styles.toolCard}
@@ -524,7 +489,7 @@ const ignoreClickAfterDrag = (
                   <br />
                   강점·성향 진단 테스트를 진행하면 나옵니다.
                 </p>
-                <Link href="/ai-tools/diagnosis">
+                <Link href="/login">
                   강점·성향 진단 테스트 하기 <span aria-hidden="true">→</span>
                 </Link>
               </div>
@@ -533,28 +498,31 @@ const ignoreClickAfterDrag = (
         </div>
 
         <div className={styles.communityBand}>
-          <SectionHeader title="커뮤니티" href={user ? "#" : "/login"} />
+          <SectionHeader title="커뮤니티" href={user ? "/community" : "/login"} />
           <div className={styles.listGroup}>
-            {displayedCommunityPosts.map((post) => (
+            {communityPreview.map((post) => (
               <Link
-                href={user ? "#" : "/login"}
+                href={user ? `/community/${post.id}` : "/login"}
                 key={post.id}
                 className={styles.communityItem}
               >
                 <span className={styles.communityCategory}>{post.category}</span>
                 <strong>{post.title}</strong>
-                <p>{post.description}</p>
-                {"typeLabel" in post && post.typeLabel ? (
-                  <span className={styles.communityType}>{post.typeLabel}</span>
+                <p>{post.contentPreview}</p>
+                {post.author.diagnosisTypeName ? (
+                  <span className={styles.communityType}>{post.author.diagnosisTypeName}</span>
                 ) : null}
                 <span className={styles.communityMeta}>
-                  <span>조회수 : 1,204</span>
-                  <span>추천수 : 20</span>
-                  <span>댓글 : 10</span>
-                  <time>2시간 전</time>
+                  <span>조회수 : {post.viewCount.toLocaleString("ko-KR")}</span>
+                  <span>추천수 : {post.recommendCount.toLocaleString("ko-KR")}</span>
+                  <span>댓글 : {post.commentCount.toLocaleString("ko-KR")}</span>
+                  <time>{formatCommunityTime(post.createdAt)}</time>
                 </span>
               </Link>
             ))}
+            {!communityPreview.length ? (
+              <p className={styles.emptyJobs}>등록된 커뮤니티 글이 없습니다.</p>
+            ) : null}
           </div>
         </div>
 
@@ -563,7 +531,6 @@ const ignoreClickAfterDrag = (
         {isMenuOpen ? (
           <HomeMenuDrawer
             user={user}
-            nickname={nickname}
             bookmarkCount={jobs.bookmarkCount ?? 0}
             isLoggingOut={isLoggingOut}
             onClose={closeMenu}
@@ -616,20 +583,22 @@ const ignoreClickAfterDrag = (
 
 export function HomeMenuDrawer({
   user,
-  nickname,
   bookmarkCount = 0,
   isLoggingOut = false,
   onClose,
   onLogout,
 }: {
   user: CurrentUserDto | null;
-  nickname: string;
   bookmarkCount?: number;
   isLoggingOut?: boolean;
   onClose: () => void;
   onLogout: () => void | Promise<void>;
 }) {
   const portalRoot = typeof document === "undefined" ? null : document.body;
+  const profileNickname = user?.communityNickname || "프로필 닉네임 설정";
+  const profileStatusMessage = user?.profileStatusMessage || "프로필을 수정 할 수 있습니다.";
+  const profileAvatarSrc = toProfileAvatarSrc(user?.profileAvatarKey);
+  const profileBackgroundColor = user?.profileBackgroundColor || "#f5f7fa";
 
 
   useEffect(() => {
@@ -671,17 +640,21 @@ export function HomeMenuDrawer({
       <button type="button" className={styles.menuDim} aria-label="메뉴 닫기" onClick={onClose} />
       <div className={styles.drawer}>
         <header className={styles.drawerHeader}>
-          <div className={styles.drawerAvatar} aria-hidden="true">
-            {user?.avatarUrl ? (
-              <Image src={user.avatarUrl} alt="" width={64} height={64} />
+          <div
+            className={styles.drawerAvatar}
+            style={user ? { backgroundColor: profileBackgroundColor } : undefined}
+            aria-hidden="true"
+          >
+            {user ? (
+              <Image src={profileAvatarSrc} alt="" width={64} height={64} unoptimized />
             ) : (
-              <span>{user ? "🙉" : "☺️"}</span>
+              <span>☺️</span>
             )}
           </div>
           <div>
-            <strong>{user ? nickname : "로그인을 해주세요."}</strong>
+            <strong>{user ? profileNickname : "로그인을 해주세요."}</strong>
             {user ? (
-              <p>프로필을 수정 할 수 있습니다.</p>
+              <p>{profileStatusMessage}</p>
             ) : (
               <Link href="/login" className={styles.drawerLoginLink} onClick={onClose}>
                 로그인 하기 →
@@ -728,7 +701,7 @@ export function HomeMenuDrawer({
             icon="community"
             title="커뮤니티"
             items={["인기글", "내 또래 인기글", "내 글 · 댓글"]}
-            hrefs={user ? [] : ["/login", "/login", "/login"]}
+            hrefs={user ? ["/community?sort=popular", "/community?sort=popular", "/community/activity"] : ["/login", "/login", "/login"]}
             onNavigate={onClose}
           />
           <DrawerSection icon="my" title="마이페이지" titleHref={user ? "/my" : "/login"} onNavigate={onClose} />
@@ -769,6 +742,20 @@ function toEndDate(value: string | null) {
   return `~ ${year}. ${month}. ${day}(${weekday})`;
 }
 
+function formatCommunityTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const diff = Date.now() - date.getTime();
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diff < hour) return `${Math.max(1, Math.floor(diff / minute))}분 전`;
+  if (diff < day) return `${Math.floor(diff / hour)}시간 전`;
+  if (diff < day * 7) return `${Math.floor(diff / day)}일 전`;
+  return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
+}
+
 function splitDelimitedOption(value: string | null | undefined) {
   if (!value) return [];
 
@@ -783,6 +770,32 @@ function formatRegionLabel(value: string | null | undefined) {
   if (regions.length <= 3) return regions.join(" · ") || "";
 
   return `${regions.slice(0, 3).join(" · ")} 외 ${regions.length - 3}개`;
+}
+
+function toProfileAvatarSrc(key: string | null | undefined) {
+  switch (key) {
+    case "fox":
+      return "/my/avatars/fox-profile.png?v=3";
+    case "lion":
+      return "/my/avatars/lion-profile.png?v=3";
+    case "cat":
+      return "/my/avatars/cat-profile.png?v=3";
+    case "penguin":
+      return "/my/avatars/penguin-profile.png?v=3";
+    case "chick":
+      return "/my/avatars/chick-profile.png?v=3";
+    case "cow":
+      return "/my/avatars/cow-profile.png?v=3";
+    case "bear":
+      return "/my/avatars/bear-profile.png?v=3";
+    case "chicken":
+      return "/my/avatars/chicken-profile.png?v=3";
+    case "mouse":
+      return "/my/avatars/mouse-profile.png?v=3";
+    case "monkey":
+    default:
+      return "/my/avatars/monkey-profile.png?v=3";
+  }
 }
 
 function DrawerSection({
