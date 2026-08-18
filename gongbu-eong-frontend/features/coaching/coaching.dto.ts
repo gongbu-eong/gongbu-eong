@@ -1,9 +1,9 @@
-export type CoachingGrade = "A+" | "A-" | "B+" | "B-" | "C+" | "C-" | "D+" | "D-" | "F";
 export type CoachingFramework = "PREP" | "CAR" | "PAP" | "STAR";
 export type CoachingReviewSeverity = "check" | "fix" | "keep";
 export type CoachingQuestionInput = { question: string; characterLimit?: number | null };
 export type CoachingQuestionReview = {
   question: string;
+  tabTitle?: string;
   answer: string;
   characterLimit: number | null;
   characterCount: number;
@@ -12,6 +12,12 @@ export type CoachingQuestionReview = {
   editCount: number;
   methodComment: string;
   resumeEvidence: string[];
+  ncsEvaluations?: Array<{ name: string; comment: string; score: number }>;
+  coachingPoints?: { strengths: string[]; improvements: string[]; ncsSuggestions: string[] };
+  structureChecks?: Array<{ framework: CoachingFramework; status: "good" | "needs_work"; comment: string }>;
+  comparisonEdits?: Array<{ original: string; improved: string; reason: string }>;
+  majorRevisions?: string[];
+  factualChecks?: string[];
   highlights: Array<{ original: string; severity: CoachingReviewSeverity; label: string; note: string }>;
   edits: Array<{ index: number; frameworkPart: string; severity: CoachingReviewSeverity; title: string; issue: string; suggestion: string; replacement?: string }>;
 };
@@ -19,11 +25,13 @@ export type CoachingSubmissionReview = {
   preSubmitChecks: number;
   fixSuggestions: number;
   keepCount: number;
+  strongestQuestion?: { questionIndex: number; title: string; ncsName: string; comment: string };
+  priorityImprovement?: { questionIndex: number; title: string; ncsName: string; comment: string };
+  overallAssessment?: { strengths: string; firstFix: string; principle: string };
   questions: CoachingQuestionReview[];
 };
 
 export type CoachingFeedback = {
-  grade: CoachingGrade;
   score: number;
   summary: string;
   evaluationScores: Array<{ label: string; score: number }>;

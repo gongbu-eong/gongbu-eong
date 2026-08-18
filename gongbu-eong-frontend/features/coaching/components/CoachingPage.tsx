@@ -16,6 +16,9 @@ import styles from "./CoachingPage.module.css";
 
 type QuestionRow = { id: string; question: string; characterLimit: string };
 type ConnectedJob = CoachingJob & { duty: string };
+const MAX_QUESTION_COUNT = 5;
+const MIN_CHARACTER_LIMIT = 100;
+const MAX_CHARACTER_LIMIT = 2000;
 
 export function CoachingPage() {
   const router = useRouter();
@@ -80,7 +83,7 @@ export function CoachingPage() {
   const searchJobs = async () => {
     setSearching(true);
     try {
-      const result = await getJobPostings({ query, limit: 20, sort: "closing" });
+      const result = await getJobPostings({ query, limit: 20, sort: "closing", employmentType: "정규직" });
       setJobs(result.items.filter((item) => !item.isClosed).map((item) => ({ id: item.id, institutionName: item.institutionName, title: item.title, applicationEndAt: item.applicationEndAt })));
     } finally {
       setSearching(false);
@@ -116,9 +119,10 @@ export function CoachingPage() {
 
   const submit = async () => {
     const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || null }));
-    if (!hasDiagnosis) return setError("강점·성향 진단을 먼저 완료해 주세요.");
-    if (!hasResume) return setError("이력서를 먼저 등록해 주세요.");
+    if (!hasDiagnosis || !selectedDiagnosisId) return setError("강점·성향 진단을 먼저 완료해 주세요.");
+    if (!hasResume || !resumeId) return setError("이력서를 먼저 등록해 주세요.");
     if (normalizedQuestions.some((item) => !item.question || !item.characterLimit)) return setError("자소서 문항과 글자 수 제한을 입력해 주세요.");
+    if (normalizedQuestions.some((item) => item.characterLimit! < MIN_CHARACTER_LIMIT || item.characterLimit! > MAX_CHARACTER_LIMIT)) return setError("글자 수 제한은 100자 이상 2000자 이하로 입력해 주세요.");
     if (inputType === "text" && !text.trim()) return setError("자소서를 입력해 주세요.");
     if (inputType === "file" && !file) return setError("자소서 파일을 첨부해 주세요.");
     if (!termsConfirmed) return setError("자소서 약관동의를 완료해 주세요.");
@@ -141,11 +145,23 @@ export function CoachingPage() {
     }
   };
 
+  const addQuestion = () => {
+    if (questions.length >= MAX_QUESTION_COUNT) {
+      window.alert("자소서 문항은 최대 5개까지 추가할 수 있습니다.");
+      return;
+    }
+    setQuestions((items) => [...items, makeQuestionRow()]);
+  };
+
   if (loading) return null;
   if (coaching) return <CoachingLoadingScreen />;
 
   const selectedDiagnosis = diagnoses.find((item) => item.resultId === selectedDiagnosisId);
   const selectedResume = resumes.find((item) => item.id === resumeId);
+  const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || 0 }));
+  const questionsReady = normalizedQuestions.length > 0 && normalizedQuestions.every((item) => item.question && item.characterLimit >= MIN_CHARACTER_LIMIT && item.characterLimit <= MAX_CHARACTER_LIMIT);
+  const coverLetterReady = inputType === "text" ? Boolean(text.trim()) : Boolean(file);
+  const formReady = Boolean(selectedDiagnosisId) && Boolean(resumeId) && questionsReady && coverLetterReady && termsConfirmed;
 
   return <div className={styles.page}>
     <AppHeader />
@@ -157,13 +173,14 @@ export function CoachingPage() {
       <StatusCard title="내 이력서" ready={hasResume} empty="현재 등록된 이력서가 없습니다." action="이력서 등록하기 →" href="/my/resumes/new" onChange={() => setPicker("resume")} selected={selectedResume?.file?.originalFilename || selectedResume?.title} />
 
       <section className={styles.questionSection}>
-        <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={() => setQuestions((items) => [...items, makeQuestionRow()])}>+ 추가</button></div>
+        <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={addQuestion} disabled={questions.length >= MAX_QUESTION_COUNT}>+ 추가</button></div>
         {questions.map((item, index) => <div className={styles.questionRow} key={item.id}>
-          <label>자소서 문항</label>
-          {index > 0 ? <button type="button" onClick={() => setQuestions((items) => items.filter((entry) => entry.id !== item.id))}>삭제</button> : null}
-          <textarea value={item.question} onChange={(event) => updateQuestion(setQuestions, item.id, "question", event.target.value)} placeholder="자소서 문항을 입력하세요." />
-          <label>글자 수 제한</label>
-          <input value={item.characterLimit} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", event.target.value.replace(/\D/g, "").slice(0, 5))} inputMode="numeric" placeholder="글자 수 제한을 입력하세요." />
+          <textarea aria-label={`자소서 문항 ${index + 1}`} value={item.question} onChange={(event) => updateQuestion(setQuestions, item.id, "question", event.target.value)} placeholder="자소서 문항을 입력하세요." />
+          <div className={styles.questionLimitRow}>
+            <label htmlFor={`question-limit-${item.id}`}>글자 수 제한</label>
+            <input id={`question-limit-${item.id}`} value={item.characterLimit} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", normalizeCharacterLimit(event.target.value))} inputMode="numeric" placeholder="000" />
+            {index > 0 ? <button className={styles.questionDelete} type="button" onClick={() => setQuestions((items) => items.filter((entry) => entry.id !== item.id))}>삭제</button> : null}
+          </div>
         </div>)}
       </section>
 
@@ -171,7 +188,7 @@ export function CoachingPage() {
       {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
       <button type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsOpen(true)}><span>{termsConfirmed ? "✓" : ""}</span>자소서 약관동의를 해주세요.</button>
       {error ? <p className={styles.error}>{error}</p> : null}
-      <button className={styles.primaryButton} type="button" onClick={submit} disabled={coaching || loading || !termsConfirmed}>Ai NCS 자소서 코칭 받기</button>
+      <button className={styles.primaryButton} type="button" onClick={submit} disabled={coaching || loading || !formReady}>Ai NCS 자소서 코칭 받기</button>
     </main>
     <AppFooter active="ai" />
     {termsOpen ? <TermsSheet onConfirm={() => { setTermsConfirmed(true); setTermsOpen(false); }} onClose={() => setTermsOpen(false)} /> : null}
@@ -205,11 +222,28 @@ function JobDutySheet({ job, onBack, onClose, onConfirm }: { job: CoachingJob; o
 
 function TermsSheet({ onConfirm, onClose }: { onConfirm: () => void; onClose: () => void }) {
   const [readAll, setReadAll] = useState(false);
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.termsSheet}`}><div className={styles.sheetHandle} /><header><h2>약관동의</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.termsScroll} onScroll={(event) => { const element = event.currentTarget; if (element.scrollTop + element.clientHeight >= element.scrollHeight - 4) setReadAll(true); }}><h3>NCS 자소서 첨삭 기준</h3><p>NCS 기반 채용은 학벌이나 인상이 아니라 &quot;이 사람이 실제로 무엇을 해봤고, 그래서 무엇이 달라졌는가&quot;를 근거로 사람을 뽑는 방식입니다. 이 코칭은 제출 전 스스로 문항 구조와 표현을 점검할 수 있도록 돕습니다.</p><MethodText method="PREP" title="주장 → 이유 → 사례 → 재강조" /><MethodText method="CAR" title="배경 → 행동 → 결과" /><MethodText method="PAP" title="문제 → 접근 → 해결" /><MethodText method="STAR" title="상황 → 과제 → 행동 → 결과" /><h3>참고사항</h3><p>이 결과는 합격 여부를 예측하지 않습니다. 문항과 글자수는 입력하신 값 기준이며, 사실 확인은 본인 몫입니다. 수정 예시는 예시일 뿐이고, 동의가 안 되는 지적은 넘기셔도 됩니다. 작성한 글은 개인정보입니다.</p></div><button className={styles.primaryButton} type="button" disabled={!readAll} onClick={onConfirm}>약관 확인하기</button></section></div>;
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (element && element.scrollHeight <= element.clientHeight + 4) setReadAll(true);
+  }, []);
+
+  const handleScroll = () => {
+    const element = scrollRef.current;
+    if (!element) return;
+    if (element.scrollTop + element.clientHeight >= element.scrollHeight - 4) setReadAll(true);
+  };
+
+  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.termsSheet}`}><div className={styles.sheetHandle} /><header><h2>약관동의</h2><button type="button" onClick={onClose} aria-label="약관 닫기">×</button></header><div ref={scrollRef} className={styles.termsScroll} onScroll={handleScroll}><section className={styles.termsBlock}><h3>NCS 자소서 첨삭 기준</h3><p className={styles.termsIntro}>NCS 기반 채용은 학벌이나 인상이 아니라 &quot;이 사람이 실제로 무엇을 해봤고, 그래서 무엇이 달라졌는가&quot;를 근거로 사람을 뽑는 방식입니다. 그래서 서류 이후의 경험면접은 자소서에 적힌 행동을 그대로 파고들어 확인합니다.<br /><br />평가자가 채점 근거로 삼을 수 있는 건 감상이 아니라 상황·역할·행동·결과가 드러난 문장입니다. &quot;많이 배웠습니다&quot;는 확인할 수가 없고, &quot;무엇을 어떻게 해서 무엇이 몇 건 줄었다&quot;는 확인할 수 있습니다. 아래 네 가지 틀은 그 네 가지 정보가 빠지지 않게 잡아주는 점검용 격자입니다.</p><MethodText method="PREP" title="주장 → 이유 → 사례 → 재강조">지원동기·가치관·포부처럼 생각과 판단을 묻는 문항. 조직이해와 직업윤리 항목에서 판단 근거를 봅니다.</MethodText><MethodText method="CAR" title="배경 → 행동 → 결과">프로젝트·직무 경험처럼 성과를 짧게 보여야 하는 문항. 분량이 빠듯할 때 상황 설명을 줄이는 데 유리합니다.</MethodText><MethodText method="PAP" title="주장 → 이유 → 사례 → 재강조">갈등·위기·문제해결 문항. 문제해결능력과 대인관계능력을 볼 때 평가자는 문제를 어떻게 정의했는지부터 봅니다.</MethodText><MethodText method="STAR" title="상황 → 과제 → 행동 → 결과">위 셋에 딱 맞지 않는 일반 경험형 문항의 기본값. 면접관 교육에서 가장 널리 쓰이는 구조입니다.</MethodText><div className={styles.termsNote}><p>이 네 가지는 기관이 공개한 채점표가 아닙니다.<br />실제 평가표는 기관마다 다르고 외부에 공개되지 않습니다.<br />다만 어느 기관이든 행동과 결과가 비어 있는 글에 점수를 줄 근거가 없다는 점은 같습니다.</p><p>그래서 이 틀을 점수 기준이 아니라 빠진 정보를 찾는 도구로만 씁니다. 모든 지적에 원문을 그대로 인용해 두었으니, 동의가 안 되는 지적은 넘기셔도 됩니다.</p></div></section><section className={styles.termsReference}><h3>참고사항</h3><TermsReference title="이 결과는 합격 여부를 예측하지 않습니다">기관의 실제 평가표는 공개되지 않아 점수나 확률을 낼 근거가 없습니다. 여기서 한 일은 문항이 요구한 것을 빠뜨렸는지, 글자수가 맞는지, 확인할 수 없는 표현이 있는지를 짚어드린 것까지입니다.</TermsReference><TermsReference title="문항과 글자수는 입력하신 값 기준입니다">지원 사이트에서 문항이 수정되거나 공백 제외로 세는 경우가 있으니, 제출 직전에 실제 입력창에서 한 번 더 확인해 주세요.</TermsReference><TermsReference title="사실 확인은 본인 몫입니다">냉방 지원 사업, 52건에서 20건, 최종 상위 평가 세 가지는 저희가 진위를 확인할 수 없습니다. 공고문에 허위 기재 시 합격 취소 조항이 있으니 근거가 없다면 문구를 낮추시는 편이 안전합니다.</TermsReference><TermsReference title="수정 예시는 예시일 뿐입니다">그대로 붙여넣으면 다른 지원자의 글과 비슷해질 수 있습니다. 뜻만 가져가서 본인 표현으로 다시 쓰시길 권합니다.</TermsReference><TermsReference title="동의가 안 되는 지적은 넘기세요.">모든 지적에 원문을 그대로 인용해 둔 이유가 그것입니다. 판단이 갈리는 부분은 &apos;선택&apos;으로 표시했고, 최종 결정은 지원자 본인이 하는 게 맞습니다.</TermsReference><TermsReference title="작성한 글은 개인정보입니다">분석에 사용한 원문의 보관 기간과 학습 활용 여부는 개인정보 처리방침에서 확인하실 수 있습니다.</TermsReference></section></div><button className={styles.primaryButton} type="button" disabled={!readAll} onClick={onConfirm}>약관 확인하기</button></section></div>;
 }
 
-function MethodText({ method, title }: { method: string; title: string }) {
-  return <div className={styles.termsMethod}><b>{method}</b><strong>{title}</strong></div>;
+function MethodText({ method, title, children }: { method: string; title: string; children: string }) {
+  return <div className={styles.termsMethod}><b>{method}</b><span><strong>{title}</strong><p>{children}</p></span></div>;
+}
+
+function TermsReference({ title, children }: { title: string; children: string }) {
+  return <article className={styles.termsReferenceItem}><strong>{title}</strong><p>{children}</p></article>;
 }
 
 function DiagnosisPicker({ items, selectedId, onPick, onClose }: { items: DiagnosisResultHistoryItemDto[]; selectedId: string | null; onPick: (item: DiagnosisResultHistoryItemDto) => void; onClose: () => void }) {
@@ -226,6 +260,12 @@ function makeQuestionRow(): QuestionRow {
 
 function updateQuestion(setter: (updater: (items: QuestionRow[]) => QuestionRow[]) => void, id: string, key: "question" | "characterLimit", value: string) {
   setter((items) => items.map((item) => item.id === id ? { ...item, [key]: value } : item));
+}
+
+function normalizeCharacterLimit(value: string) {
+  const numericValue = value.replace(/\D/g, "");
+  if (!numericValue) return "";
+  return String(Math.min(Number(numericValue), MAX_CHARACTER_LIMIT));
 }
 
 function formatDate(value?: string | null) {

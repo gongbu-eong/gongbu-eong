@@ -25,6 +25,10 @@ export async function POST(request: NextRequest) {
     if (inputType === "text" && !text) return jsonWithCors(request, { ok: false, message: "자소서를 입력해 주세요." }, { status: 400 });
     if (inputType === "text" && text.length > 10000) return jsonWithCors(request, { ok: false, message: "자소서는 10,000자까지 입력할 수 있습니다." }, { status: 400 });
     if (inputType === "file" && !file) return jsonWithCors(request, { ok: false, message: "자소서 파일을 첨부해 주세요." }, { status: 400 });
+    if (!resumeId) return jsonWithCors(request, { ok: false, message: "이력서를 먼저 등록해 주세요." }, { status: 400 });
+    if (!questions.length || questions.length > 5 || questions.some((item) => !item.question || !item.characterLimit || item.characterLimit < 100 || item.characterLimit > 2000)) {
+      return jsonWithCors(request, { ok: false, message: "자소서 문항과 100자 이상 2000자 이하의 글자 수 제한을 입력해 주세요." }, { status: 400 });
+    }
     if (file && !allowedCoachingExtensions.has(file.name.split(".").pop()?.toLowerCase() || "")) return jsonWithCors(request, { ok: false, message: "HWP, HWPX, PDF, DOC, DOCX 파일만 첨부할 수 있습니다." }, { status: 400 });
     if (file && validateResumeFile(file)) return jsonWithCors(request, { ok: false, message: validateResumeFile(file) }, { status: 400 });
     const selectedResume = resumeId ? await findResume(user.id, resumeId) : null;
@@ -50,7 +54,7 @@ function parseQuestionInputs(value: FormDataEntryValue | null): CoachingQuestion
         const record = item as Record<string, unknown>;
         const question = typeof record.question === "string" ? record.question.trim().slice(0, 500) : "";
         const rawLimit = Number(record.characterLimit);
-        const characterLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(10000, Math.round(rawLimit)) : null;
+        const characterLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(2000, Math.round(rawLimit)) : null;
         return question || characterLimit ? { question, characterLimit } : null;
       })
       .filter(Boolean) as CoachingQuestionInput[];

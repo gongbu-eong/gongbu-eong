@@ -3,6 +3,8 @@ type OpenAiContentPart =
   | { type: "input_file"; filename: string; file_data: string; detail?: "low" | "high" | "auto" };
 
 type OpenAiResponseBody = {
+  status?: string;
+  incomplete_details?: { reason?: string };
   output_text?: string;
   output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
   error?: { message?: string };
@@ -59,6 +61,11 @@ export async function createOpenAiJsonResponse(args: CreateJsonResponseArgs) {
     throw new Error("AI 응답을 해석하지 못했습니다.");
   }
 
+  if (body.status === "incomplete") {
+    console.error("Incomplete OpenAI response", body.incomplete_details || {}, bodyText.slice(0, 1000));
+    throw new Error(body.incomplete_details?.reason === "max_output_tokens" ? "AI 응답이 너무 길어 중단되었습니다." : "AI 응답이 완료되지 않았습니다.");
+  }
+
   const text = extractOpenAiOutputText(body);
   if (!text) {
     console.error("Empty OpenAI response body", bodyText.slice(0, 1000));
@@ -85,10 +92,20 @@ function extractOpenAiOutputText(body: OpenAiResponseBody) {
 function parseJsonFromText(text: string) {
   try {
     return JSON.parse(text);
-  } catch {
+  } catch (error) {
     const json = extractJsonObject(text);
     if (!json) throw new Error("JSON object not found in OpenAI response");
-    return JSON.parse(json);
+    try {
+      return JSON.parse(json);
+    } catch {
+      console.error("Invalid JSON output from OpenAI", {
+        message: error instanceof Error ? error.message : String(error),
+        length: text.length,
+        head: text.slice(0, 500),
+        tail: text.slice(-500),
+      });
+      throw error;
+    }
   }
 }
 
