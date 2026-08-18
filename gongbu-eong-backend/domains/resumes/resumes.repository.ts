@@ -55,6 +55,16 @@ type ResumeParseJobRow = {
   updated_at: string;
 };
 
+export type UserFileDownloadInfo = {
+  id: string;
+  originalFilename: string;
+  storageObjectKey: string;
+  publicUrl: string | null;
+  contentType: string | null;
+  sizeBytes: number | null;
+  uploadStatus: string;
+};
+
 type EntryRow = {
   id: string;
   title: string;
@@ -452,6 +462,50 @@ export async function updateUserFileStorage(args: {
         publicUrl: row.public_url,
       }
     : null;
+}
+
+export async function findUserFileForDownload(
+  userId: string,
+  fileId: string,
+): Promise<UserFileDownloadInfo | null> {
+  const result = await db.query<{
+    id: string;
+    original_filename: string;
+    storage_object_key: string;
+    public_url: string | null;
+    content_type: string | null;
+    size_bytes: string | null;
+    upload_status: string;
+  }>(
+    `
+      SELECT
+        id,
+        original_filename,
+        storage_object_key,
+        public_url,
+        content_type,
+        size_bytes,
+        upload_status
+      FROM public.user_files
+      WHERE user_id = $1
+        AND id = $2
+      LIMIT 1
+    `,
+    [userId, fileId],
+  );
+  const row = result.rows[0];
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    originalFilename: row.original_filename,
+    storageObjectKey: row.storage_object_key,
+    publicUrl: row.public_url,
+    contentType: row.content_type,
+    sizeBytes: row.size_bytes ? Number(row.size_bytes) : null,
+    uploadStatus: row.upload_status,
+  };
 }
 
 export async function createResumeParseJob(userId: string, fileId: string) {

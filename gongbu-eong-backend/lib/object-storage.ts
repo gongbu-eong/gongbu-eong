@@ -46,6 +46,44 @@ export async function uploadToObjectStorage(args: {
   });
 }
 
+export async function downloadFromObjectStorage(args: { key: string }) {
+  const config = getObjectStorageConfig();
+
+  if (!config.ok) {
+    return {
+      downloaded: false as const,
+      status: 500,
+      reason: config.reason,
+    };
+  }
+
+  if (config.method === "s3") {
+    return downloadWithS3Signature({
+      endpoint: config.endpoint,
+      region: config.region,
+      bucket: config.bucket,
+      accessKey: config.accessKey,
+      secretKey: config.secretKey,
+      key: args.key,
+    });
+  }
+
+  const swift = await resolveSwiftConfig(config);
+  if (!swift.ok) {
+    return {
+      downloaded: false as const,
+      status: 500,
+      reason: swift.reason,
+    };
+  }
+
+  return downloadWithSwiftToken({
+    publicBaseUrl: swift.publicBaseUrl,
+    token: swift.token,
+    key: args.key,
+  });
+}
+
 type ObjectStorageConfig =
   | {
       ok: true;
@@ -367,6 +405,78 @@ async function uploadWithS3Signature(args: {
   };
 }
 
+async function downloadWithS3Signature(args: {
+  endpoint: string;
+  region: string;
+  bucket: string;
+  accessKey: string;
+  secretKey: string;
+  key: string;
+}) {
+  const endpoint = args.endpoint.replace(/\/$/, "");
+  const canonicalUri = `/${encodeURIComponent(args.bucket)}/${encodeObjectPath(args.key)}`;
+  const url = `${endpoint}${canonicalUri}`;
+  const now = new Date();
+  const amzDate = toAmzDate(now);
+  const dateStamp = amzDate.slice(0, 8);
+  const payloadHash = sha256Hex(Buffer.alloc(0));
+  const host = new URL(endpoint).host;
+  const headers = {
+    host,
+    "x-amz-content-sha256": payloadHash,
+    "x-amz-date": amzDate,
+  };
+  const signedHeaders = Object.keys(headers).sort().join(";");
+  const canonicalHeaders = Object.keys(headers)
+    .sort()
+    .map((key) => `${key}:${headers[key as keyof typeof headers]}\n`)
+    .join("");
+  const credentialScope = `${dateStamp}/${args.region}/s3/aws4_request`;
+  const canonicalRequest = [
+    "GET",
+    canonicalUri,
+    "",
+    canonicalHeaders,
+    signedHeaders,
+    payloadHash,
+  ].join("\n");
+  const stringToSign = [
+    "AWS4-HMAC-SHA256",
+    amzDate,
+    credentialScope,
+    sha256Hex(canonicalRequest),
+  ].join("\n");
+  const signingKey = getSignatureKey(args.secretKey, dateStamp, args.region, "s3");
+  const signature = hmacHex(signingKey, stringToSign);
+  const authorization = `AWS4-HMAC-SHA256 Credential=${args.accessKey}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      Authorization: authorization,
+      "X-Amz-Content-Sha256": payloadHash,
+      "X-Amz-Date": amzDate,
+    },
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    return {
+      downloaded: false as const,
+      status: response.status,
+      reason: `NHN S3 Object Storage download failed: ${response.status}${detail ? ` ${detail.slice(0, 200)}` : ""}`,
+    };
+  }
+
+  return {
+    downloaded: true as const,
+    body: new Uint8Array(await response.arrayBuffer()),
+    contentType: response.headers.get("content-type"),
+    contentLength: response.headers.get("content-length"),
+  };
+}
+
 async function uploadWithSwiftToken(args: {
   publicBaseUrl: string;
   token: string;
@@ -398,6 +508,37 @@ async function uploadWithSwiftToken(args: {
     uploaded: true,
     publicUrl: url,
     reason: null,
+  };
+}
+
+async function downloadWithSwiftToken(args: {
+  publicBaseUrl: string;
+  token: string;
+  key: string;
+}) {
+  const url = `${args.publicBaseUrl}/${encodeObjectPath(args.key)}`;
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      "X-Auth-Token": args.token,
+    },
+  });
+
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    return {
+      downloaded: false as const,
+      status: response.status,
+      reason: `NHN Object Storage download failed: ${response.status}${detail ? ` ${detail.slice(0, 200)}` : ""}`,
+    };
+  }
+
+  return {
+    downloaded: true as const,
+    body: new Uint8Array(await response.arrayBuffer()),
+    contentType: response.headers.get("content-type"),
+    contentLength: response.headers.get("content-length"),
   };
 }
 
