@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireSessionUser } from "@/domains/auth/session";
-import { extractResumeWithClaude } from "@/domains/resumes/resumes.ai";
+import { extractResumeWithOpenAI } from "@/domains/resumes/resumes.ai";
 import type { ResumePayloadDto } from "@/domains/resumes/resumes.dto";
 import { createPendingResumeFile, validateResumeFile } from "@/domains/resumes/resume-file-storage";
 import {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     let extracted: Partial<ResumePayloadDto> = {};
     let completedJob = parseJob;
     try {
-      extracted = await extractResumeWithClaude({ file, buffer });
+      extracted = await extractResumeWithOpenAI({ file, buffer });
       completedJob =
         (await completeResumeParseJob(user.id, parseJob.id, {
           ...extracted,

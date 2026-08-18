@@ -1775,8 +1775,8 @@ function hasEntryContent(entry: ResumeEntryDto, kind: ResumeEntryKind) {
   return Boolean(display.title || display.lines.length);
 }
 
-function cleanText(value?: string | null) {
-  const next = value?.trim();
+function cleanText(value?: unknown) {
+  const next = typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
   if (!next || /^(null|undefined)$/i.test(next)) return "";
   return next || "";
 }
@@ -2324,8 +2324,8 @@ function isImportNoiseText(value?: string | null) {
   return false;
 }
 
-function isFilled(value?: string | null) {
-  return Boolean(value?.trim());
+function isFilled(value?: unknown) {
+  return Boolean(cleanText(value));
 }
 
 function removeAt<T>(items: T[], index: number) {

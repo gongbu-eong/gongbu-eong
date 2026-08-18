@@ -3,9 +3,10 @@ import JSZip from "jszip";
 import mammoth from "mammoth";
 import { inflateRawSync } from "zlib";
 import type { ResumeEntryDto, ResumePayloadDto } from "./resumes.dto";
+import { createOpenAiJsonResponse, makeOpenAiFileDataUrl } from "@/lib/openai";
 
 const EMPTY = "";
-const MAX_CLAUDE_TEXT_LENGTH = 30000;
+const MAX_AI_TEXT_LENGTH = 30000;
 const SOURCE_TEXT_PREVIEW_LENGTH = 5000;
 
 type ResumeEntryType =
@@ -27,11 +28,10 @@ type ResumeDocumentTable = {
   rows: string[][];
 };
 
-export async function extractResumeWithClaude(args: {
+export async function extractResumeWithOpenAI(args: {
   file: File;
   buffer: Buffer;
 }): Promise<Partial<ResumePayloadDto>> {
-  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
   const mediaType = guessMediaType(args.file.name);
   const officeDocument = await extractOfficeDocument(args.file.name, args.buffer);
   const officeText = officeDocument.text;
@@ -41,9 +41,9 @@ export async function extractResumeWithClaude(args: {
     throw new Error("자동 분석을 지원하지 않는 파일 형식입니다.");
   }
 
-  if (!apiKey) {
+  if (!process.env.GPT_API_KEY && !process.env.OPENAI_API_KEY) {
     if (hasExtractedResumeFields(deterministic)) return deterministic;
-    throw new Error("ANTHROPIC_API_KEY가 설정되지 않아 이력서를 분석할 수 없습니다.");
+    throw new Error("GPT_API_KEY가 설정되지 않아 이력서를 분석할 수 없습니다.");
   }
 
   const prompt = buildAiExtractionPrompt();
@@ -51,59 +51,26 @@ export async function extractResumeWithClaude(args: {
   const content = officeText
     ? [
         {
-          type: "text",
+          type: "input_text",
           text: `${prompt}\n\n${formatAiSourceInput(officeDocument)}`,
         },
       ]
     : [
         {
-          type: "document",
-          source: {
-            type: "base64",
-            media_type: mediaType,
-            data: args.buffer.toString("base64"),
-          },
+          type: "input_file",
+          filename: args.file.name,
+          file_data: makeOpenAiFileDataUrl(mediaType, args.buffer),
+          detail: "low",
         },
-        { type: "text", text: prompt },
+        { type: "input_text", text: prompt },
       ];
 
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "anthropic-version": "2023-06-01",
-      "x-api-key": apiKey,
-    },
-    body: JSON.stringify({
-      model: getClaudeModel(),
-      max_tokens: 8000,
-      temperature: 0,
-      messages: [{ role: "user", content }],
-    }),
-  });
-
-  if (!response.ok) {
-    if (hasExtractedResumeFields(deterministic)) return deterministic;
-    const detail = await response.text().catch(() => "");
-    throw new Error(
-      `이력서 AI 분석 요청에 실패했습니다. (${response.status})${
-        detail ? ` ${detail.slice(0, 240)}` : ""
-      }`,
-    );
-  }
-
-  const body = (await response.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text = body.content?.find((item) => item.type === "text")?.text || "";
-  const jsonText = text.match(/\{[\s\S]*\}/)?.[0];
-  if (!jsonText) {
-    if (hasExtractedResumeFields(deterministic)) return deterministic;
-    throw new Error("AI 분석 결과에서 이력서 JSON을 찾지 못했습니다.");
-  }
-
   try {
-    const rawAiPayload = unwrapResumePayload(JSON.parse(jsonText));
+    const rawAiPayload = unwrapResumePayload(await createOpenAiJsonResponse({
+      content: content as Array<{ type: "input_text"; text: string } | { type: "input_file"; filename: string; file_data: string; detail?: "low" | "high" | "auto" }>,
+      schemaName: "resume_payload",
+      maxOutputTokens: 8000,
+    }));
     const sanitizedAiPayload = sanitizeAiResumePayload(rawAiPayload, officeText);
     const aiPayload = normalizeResumePayload(sanitizedAiPayload);
     const merged = finalizeExtractedResume(mergeResumePayload(aiPayload, deterministic), {
@@ -724,7 +691,7 @@ function hasExtractedResumeFields(payload: Partial<ResumePayloadDto>) {
       payload.highestEducation,
       payload.gpa,
       payload.schoolMajor,
-    ].some((v) => Boolean(v?.trim())) ||
+    ].some((value) => Boolean(cleanText(value))) ||
     Boolean(
       payload.educations?.length ||
         payload.experiences?.length ||
@@ -1182,7 +1149,7 @@ function formatAiSourceInput(document: StructuredResumeDocument) {
   const tableText = tablePreview.length
     ? `구조화 표 JSON:\n${JSON.stringify(tablePreview, null, 2).slice(0, 18000)}\n\n`
     : "";
-  return `${tableText}이력서 원문:\n${document.text.slice(0, MAX_CLAUDE_TEXT_LENGTH)}`;
+  return `${tableText}이력서 원문:\n${document.text.slice(0, MAX_AI_TEXT_LENGTH)}`;
 }
 
 function extractXmlTables(xml: string): ResumeDocumentTable[] {
@@ -2440,16 +2407,13 @@ function pickString(record: Record<string, unknown>, keys: string[]) {
   return typeof value === "string" ? value.trim() : typeof value === "number" ? String(value) : EMPTY;
 }
 
-function cleanText(value?: string | null) {
-  return value?.replace(/\s+/g, " ").trim() || EMPTY;
+function cleanText(value?: unknown) {
+  if (typeof value === "string" || typeof value === "number") return String(value).replace(/\s+/g, " ").trim();
+  return EMPTY;
 }
 
 function guessMediaType(filename: string) {
   const lower = filename.toLowerCase();
   if (lower.endsWith(".pdf")) return "application/pdf";
   return "application/octet-stream";
-}
-
-function getClaudeModel() {
-  return "claude-sonnet-5";
 }

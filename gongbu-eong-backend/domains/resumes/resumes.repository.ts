@@ -821,8 +821,11 @@ async function replaceEntries(
   await Promise.all((payload.languages || []).map((entry, index) => client.query(`INSERT INTO public.user_resume_languages (resume_id, language_name, test_name, level_or_score, issuer, acquired_date, sort_order) VALUES ($1, $2, $3, $4, $5, $6, $7)`, [resumeId, normalizeText(entry.language), normalizeText(entry.testName || entry.title), normalizeText(entry.levelOrScore || entry.subtitle), normalizeText(entry.issuer), normalizeText(entry.acquiredDate || entry.startDate), index + 1])));
 }
 
-function normalizeText(value?: string | null) {
-  const normalized = value?.trim();
+function normalizeText(value?: unknown) {
+  const normalized =
+    typeof value === "string" || typeof value === "number"
+      ? String(value).trim()
+      : "";
   return normalized ? normalized : null;
 }
 

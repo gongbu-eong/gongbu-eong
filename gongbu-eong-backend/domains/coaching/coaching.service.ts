@@ -1,13 +1,14 @@
 import { createCoachingRequest, createCoachingResult, findCoachingResult, listCoachingHistory } from "./coaching.repository";
 import type { CoachingFeedback, CoachingGrade, CoachingInputType, CoachingJobDto, CoachingSection } from "./coaching.dto";
 import { extractResumeDocumentText } from "@/domains/resumes/resumes.ai";
+import { createOpenAiJsonResponse, getOpenAiModel, makeOpenAiFileDataUrl } from "@/lib/openai";
 export type CoachResumeArgs = { userId: string; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; job?: CoachingJobDto | null; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null };
 
 export async function coachResume(args: CoachResumeArgs) {
   const prepared = await prepareCoachingSource(args);
   const requestId = await createCoachingRequest({ ...args, inputText: prepared.storageText, jobPostingId: args.job?.id, jobSnapshot: args.job, sourceFilename: args.file?.name });
   const feedback = await requestAiFeedback(args, prepared);
-  const resultId = await createCoachingResult(requestId, feedback, "claude");
+  const resultId = await createCoachingResult(requestId, feedback, getOpenAiModel());
   return { resultId, requestId, feedback };
 }
 
@@ -23,36 +24,31 @@ async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoa
         storageText: "",
         originalText: "",
         content: [
-          { type: "document", source: { type: "base64", media_type: "application/pdf", data: args.file.buffer.toString("base64") } },
-          { type: "text", text: `${prompt}\n\n첨부한 PDF 문서 전체가 자소서 원문입니다. 파일명이 아니라 문서 내부의 자기소개서 문장을 읽고 분석하세요.` },
+          { type: "input_file", filename: args.file.name, file_data: makeOpenAiFileDataUrl("application/pdf", args.file.buffer), detail: "low" },
+          { type: "input_text", text: `${prompt}\n\n첨부한 PDF 문서 전체가 자소서 원문입니다. 파일명이 아니라 문서 내부의 자기소개서 문장을 읽고 분석하세요.` },
         ],
       };
     }
     const extractedText = await extractResumeDocumentText(args.file.name, args.file.buffer);
     if (!extractedText.trim()) throw new Error("첨부 파일에서 텍스트를 읽지 못했습니다. PDF 또는 텍스트 추출이 가능한 문서로 첨부해 주세요.");
-    return { storageText: limitStoredInput(extractedText), originalText: extractedText, content: [{ type: "text", text: `${prompt}\n\n첨부한 자소서 원문:\n${extractedText}` }] };
+    return { storageText: limitStoredInput(extractedText), originalText: extractedText, content: [{ type: "input_text", text: `${prompt}\n\n첨부한 자소서 원문:\n${extractedText}` }] };
   }
-  return { storageText: args.inputText, originalText: args.inputText, content: [{ type: "text", text: `${prompt}\n\n자소서 원문:\n${args.inputText}` }] };
+  return { storageText: args.inputText, originalText: args.inputText, content: [{ type: "input_text", text: `${prompt}\n\n자소서 원문:\n${args.inputText}` }] };
 }
 
 async function requestAiFeedback(args: CoachResumeArgs, prepared: PreparedCoachingSource): Promise<CoachingFeedback> {
-  const apiKey = process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY;
-  if (!apiKey) throw new Error("AI 자소서 코칭 설정이 필요합니다.");
-  const response = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "content-type": "application/json", "anthropic-version": "2023-06-01", "x-api-key": apiKey }, body: JSON.stringify({ model: process.env.ANTHROPIC_MODEL || process.env.CLAUDE_MODEL || "claude-3-5-sonnet-latest", max_tokens: 12000, tools: [coachingFeedbackTool], tool_choice: { type: "tool", name: coachingFeedbackTool.name }, messages: [{ role: "user", content: prepared.content }] }) });
-  if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    console.error("Anthropic coaching request failed", response.status, detail);
-    throw new Error("AI 자소서 코칭 요청에 실패했습니다.");
-  }
-  const body = await response.json() as { content?: Array<{ type: string; text?: string; name?: string; input?: unknown }> };
   try {
-    const payload = getStructuredFeedbackPayload(body);
+    const payload = await createOpenAiJsonResponse({
+      content: prepared.content as Array<{ type: "input_text"; text: string } | { type: "input_file"; filename: string; file_data: string; detail?: "low" | "high" | "auto" }>,
+      schemaName: "coaching_feedback",
+      schema: coachingFeedbackTool.input_schema,
+      maxOutputTokens: 12000,
+    });
     const feedback = normalizeFeedback(payload, prepared.originalText);
     assertCompleteAiFeedback(feedback);
     return feedback;
   } catch (error) {
-    const text = body.content?.find((item) => item.type === "text")?.text || "";
-    console.error("Invalid coaching response payload", error, text.slice(0, 500));
+    console.error("Invalid coaching response payload", error);
     throw new Error("AI 자소서 코칭 결과를 해석하지 못했습니다. 다시 시도해 주세요.");
   }
 }
@@ -97,7 +93,7 @@ function buildPrompt(job?: CoachingJobDto | null, resumeAdditionalNotes?: string
   const notes = resumeAdditionalNotes?.trim() ? `\n\n사용자가 이력서 관리의 기타 항목에 작성한 내용:\n${resumeAdditionalNotes.trim()}` : "";
   return `한국어 NCS 자기소개서 코치입니다. ${job ? `지원 공고: ${job.institutionName} / ${job.title}` : "지원 공고가 없는 일반 코칭"} 기준으로 제출 자소서를 분석하세요.
 
-반드시 submit_coaching_feedback 도구의 입력값으로만 결과를 제출하세요. markdown, 코드블록, 설명 문장은 금지합니다.
+반드시 지정된 JSON 스키마에 맞는 JSON 객체 하나로만 결과를 제출하세요. markdown, 코드블록, 설명 문장은 금지합니다.
 파일 첨부인 경우 파일명은 분석 대상이 아닙니다. 문서 내부의 자기소개서 문장만 분석하세요.
 모든 피드백, 점수, 개선 제안, 문장별 첨삭, 개선 예시문은 제출 원문과 공고 내용을 근거로 AI가 새로 작성해야 합니다. 샘플 문장이나 고정 문구를 반복하지 마세요.
 originalTextExcerpt는 문장별 첨삭에 그대로 보여줄 제출 원문 핵심 문단 500~1000자입니다. sentenceEdits[].original은 반드시 originalTextExcerpt 안에 포함되는 정확한 연속 부분 문자열이어야 하며, 요약·새 문장·비슷한 표현으로 바꾸면 안 됩니다.
