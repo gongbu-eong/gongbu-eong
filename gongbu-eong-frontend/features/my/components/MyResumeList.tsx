@@ -37,9 +37,13 @@ export function MyResumeList() {
 
   const handleDelete = async () => {
     if (!deleting) return;
-    await deleteResume(deleting.id);
-    setDeleting(null);
-    refresh();
+    try {
+      await deleteResume(deleting.id);
+      setDeleting(null);
+      refresh();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "이력서 삭제에 실패했습니다.");
+    }
   };
 
   const handleSelect = async (resumeId: string) => {

@@ -1,11 +1,13 @@
-import type { CoachingFeedback, CoachingHistoryItem, CoachingJob } from "./coaching.dto";
+import type { CoachingFeedback, CoachingHistoryItem, CoachingJob, CoachingQuestionInput } from "./coaching.dto";
 
-export async function coachResume(args: { inputType: "text" | "file"; inputText: string; file?: File | null; jobPostingId?: string | null; resumeId?: string | null }) {
+export async function coachResume(args: { inputType: "text" | "file"; inputText: string; file?: File | null; jobPostingId?: string | null; resumeId?: string | null; jobDuty?: string | null; questions?: CoachingQuestionInput[] }) {
   const form = new FormData();
   form.set("inputType", args.inputType);
   form.set("inputText", args.inputText);
   if (args.jobPostingId) form.set("jobPostingId", args.jobPostingId);
   if (args.resumeId) form.set("resumeId", args.resumeId);
+  if (args.jobDuty) form.set("jobDuty", args.jobDuty);
+  if (args.questions?.length) form.set("questions", JSON.stringify(args.questions));
   if (args.file) form.set("file", args.file);
   const response = await fetch("/api/coaching", { method: "POST", body: form, credentials: "include", cache: "no-store" });
   const body = await response.json() as { ok: boolean; message?: string; resultId: string; requestId: string; feedback: CoachingFeedback; sourceFile?: { id: string; originalFilename: string } };

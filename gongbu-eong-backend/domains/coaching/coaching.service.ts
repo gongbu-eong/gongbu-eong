@@ -1,12 +1,12 @@
 import { createCoachingRequest, createCoachingResult, findCoachingResult, listCoachingHistory } from "./coaching.repository";
-import type { CoachingFeedback, CoachingGrade, CoachingInputType, CoachingJobDto, CoachingSection } from "./coaching.dto";
+import type { CoachingFeedback, CoachingFramework, CoachingGrade, CoachingInputType, CoachingJobDto, CoachingQuestionInput, CoachingQuestionReview, CoachingReviewSeverity, CoachingSection, CoachingSubmissionReview } from "./coaching.dto";
 import { extractResumeDocumentText } from "@/domains/resumes/resumes.ai";
 import { createOpenAiJsonResponse, getOpenAiModel, makeOpenAiFileDataUrl } from "@/lib/openai";
-export type CoachResumeArgs = { userId: string; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; job?: CoachingJobDto | null; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null };
+export type CoachResumeArgs = { userId: string; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; job?: CoachingJobDto | null; jobDuty?: string | null; questions?: CoachingQuestionInput[]; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null };
 
 export async function coachResume(args: CoachResumeArgs) {
   const prepared = await prepareCoachingSource(args);
-  const requestId = await createCoachingRequest({ ...args, inputText: prepared.storageText, jobPostingId: args.job?.id, jobSnapshot: args.job, sourceFilename: args.file?.name });
+  const requestId = await createCoachingRequest({ ...args, inputText: prepared.storageText, jobPostingId: args.job?.id, jobSnapshot: args.job ? { ...args.job, jobDuty: args.jobDuty || null, questions: args.questions || [] } as CoachingJobDto : null, sourceFilename: args.file?.name });
   const feedback = await requestAiFeedback(args, prepared);
   const resultId = await createCoachingResult(requestId, feedback, getOpenAiModel());
   return { resultId, requestId, feedback };
@@ -17,7 +17,7 @@ export { listCoachingHistory, findCoachingResult };
 type PreparedCoachingSource = { content: Array<Record<string, unknown>>; storageText: string; originalText: string };
 
 async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoachingSource> {
-  const prompt = buildPrompt(args.job, args.resumeAdditionalNotes);
+  const prompt = buildPrompt(args.job, args.resumeAdditionalNotes, args.questions || [], args.jobDuty);
   if (args.inputType === "file" && args.file) {
     if (args.file.name.toLowerCase().endsWith(".pdf")) {
       return {
@@ -44,7 +44,7 @@ async function requestAiFeedback(args: CoachResumeArgs, prepared: PreparedCoachi
       schema: coachingFeedbackTool.input_schema,
       maxOutputTokens: 12000,
     });
-    const feedback = normalizeFeedback(payload, prepared.originalText);
+    const feedback = normalizeFeedback(payload, prepared.originalText, args.questions || []);
     assertCompleteAiFeedback(feedback);
     return feedback;
   } catch (error) {
@@ -84,14 +84,74 @@ const coachingFeedbackTool = {
       improvementSuggestions: { type: "array", items: { type: "string" } },
       sentenceEdits: { type: "array", items: { type: "object", additionalProperties: true } },
       sections: { type: "array", items: { type: "object", additionalProperties: true } },
+      submissionReview: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          preSubmitChecks: { type: "number", minimum: 0 },
+          fixSuggestions: { type: "number", minimum: 0 },
+          keepCount: { type: "number", minimum: 0 },
+          questions: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: true,
+              properties: {
+                question: { type: "string" },
+                answer: { type: "string" },
+                characterLimit: { type: ["number", "null"] },
+                characterCount: { type: "number" },
+                exceededBy: { type: "number" },
+                frameworks: { type: "array", items: { type: "string", enum: ["PREP", "CAR", "PAP", "STAR"] } },
+                editCount: { type: "number" },
+                methodComment: { type: "string" },
+                resumeEvidence: { type: "array", items: { type: "string" } },
+                highlights: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: true,
+                    properties: {
+                      original: { type: "string" },
+                      severity: { type: "string", enum: ["check", "fix", "keep"] },
+                      label: { type: "string" },
+                      note: { type: "string" },
+                    },
+                  },
+                },
+                edits: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    additionalProperties: true,
+                    properties: {
+                      index: { type: "number" },
+                      frameworkPart: { type: "string" },
+                      severity: { type: "string", enum: ["check", "fix", "keep"] },
+                      title: { type: "string" },
+                      issue: { type: "string" },
+                      suggestion: { type: "string" },
+                      replacement: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       rewrittenText: { type: "string" },
     },
   },
 } as const;
 
-function buildPrompt(job?: CoachingJobDto | null, resumeAdditionalNotes?: string | null) {
+function buildPrompt(job?: CoachingJobDto | null, resumeAdditionalNotes?: string | null, questions: CoachingQuestionInput[] = [], jobDuty?: string | null) {
   const notes = resumeAdditionalNotes?.trim() ? `\n\n사용자가 이력서 관리의 기타 항목에 작성한 내용:\n${resumeAdditionalNotes.trim()}` : "";
-  return `한국어 NCS 자기소개서 코치입니다. ${job ? `지원 공고: ${job.institutionName} / ${job.title}` : "지원 공고가 없는 일반 코칭"} 기준으로 제출 자소서를 분석하세요.
+  const duty = jobDuty?.trim() ? `\n사용자가 이 공고에서 지원하려는 직무: ${jobDuty.trim()}` : "";
+  const questionGuide = questions.length
+    ? `\n\n사용자가 입력한 자소서 문항과 글자 수 제한입니다. submissionReview.questions는 반드시 이 순서와 개수 그대로 반환하세요.\n${questions.map((item, index) => `${index + 1}. 문항: ${item.question || "문항 미입력"} / 글자 수 제한: ${item.characterLimit || "없음"}`).join("\n")}`
+    : "\n\n사용자가 별도 문항을 입력하지 않았습니다. submissionReview.questions에는 제출 원문 전체를 하나의 일반 문항으로 분석한 항목 1개를 반환하세요.";
+  return `한국어 NCS 자기소개서 코치입니다. ${job ? `지원 공고: ${job.institutionName} / ${job.title}` : "지원 공고가 없는 일반 코칭"} 기준으로 제출 자소서를 분석하세요.${duty}
 
 반드시 지정된 JSON 스키마에 맞는 JSON 객체 하나로만 결과를 제출하세요. markdown, 코드블록, 설명 문장은 금지합니다.
 파일 첨부인 경우 파일명은 분석 대상이 아닙니다. 문서 내부의 자기소개서 문장만 분석하세요.
@@ -112,9 +172,10 @@ status는 "good" 또는 "needs_work"입니다. sentenceEdits[].good은 잘 쓴 �
 문장별 첨삭은 화면에서 한 문단 안에 보완 표현과 좋은 표현을 밑줄/배경색으로 표시합니다. 따라서 sentenceEdits[].original은 화면에 표시할 원문 문장 안에서 정확히 찾을 수 있는 짧거나 중간 길이의 구절로 선택하세요.
 sentenceEdits[].improved는 보완이 필요한 표현이면 대체 문장을, 잘 쓴 표현이면 왜 유지하면 좋은지에 맞춘 개선 방향을 작성하세요.
 questionFeedback에는 "전체 문항"을 넣지 마세요.${notes}
+${questionGuide}
 
 반환 JSON 필드:
-grade, score, summary, originalTextExcerpt, evaluationScores, detailEvaluation, jobConnection, questionFeedback, improvementSuggestions, sentenceEdits, sections, rewrittenText
+grade, score, summary, originalTextExcerpt, evaluationScores, detailEvaluation, jobConnection, questionFeedback, improvementSuggestions, sentenceEdits, sections, rewrittenText, submissionReview
 
 evaluationScores는 반드시 아래 4개 항목을 이 순서로 반환하세요. 각 score는 제출 자소서와 지원 공고를 AI가 판단한 0~100점 숫자입니다.
 [
@@ -137,10 +198,21 @@ sections 형식:
 
 grade는 반드시 다음 점수 구간에 맞춰 반환하세요.
 A+: 95~100점, A-: 90~94점, B+: 85~89점, B-: 80~84점, C+: 75~79점, C-: 70~74점, D+: 60~69점, D-: 50~59점, F: 50점 미만.
-A/B/C/D처럼 보통 등급만 판단한 경우에는 각각 A-, B-, C-, D-로 반환하세요.`;
+A/B/C/D처럼 보통 등급만 판단한 경우에는 각각 A-, B-, C-, D-로 반환하세요.
+
+submissionReview는 새 결과 화면의 핵심 데이터입니다.
+submissionReview.preSubmitChecks는 제출 전 반드시 확인해야 하는 지적 수, fixSuggestions는 고치면 좋은 곳 수, keepCount는 그대로 두어도 좋은 표현 수입니다.
+submissionReview.questions[].answer는 해당 문항에 대응되는 제출 원문을 가능한 한 원문 순서대로 그대로 담으세요. 문항별 구분이 불분명하면 제출 원문 전체에서 가장 관련 있는 문단을 사용하세요.
+submissionReview.questions[].characterCount는 answer의 실제 글자 수, exceededBy는 characterLimit을 초과한 글자 수입니다. 제한이 없거나 초과하지 않으면 0입니다.
+submissionReview.questions[].frameworks는 해당 문항에 적용되는 PREP, CAR, PAP, STAR 중 하나 이상입니다. 여러 개면 모두 넣으세요.
+PREP는 주장→이유→사례→재강조, CAR는 배경→행동→결과, PAP는 문제/갈등→해결 접근→재강조, STAR는 상황→과제→행동→결과입니다.
+submissionReview.questions[].highlights는 화면에서 원문 answer 안에 밑줄과 배경색으로 표시할 정확한 연속 부분 문자열입니다. original은 반드시 answer 안에서 찾을 수 있어야 합니다. severity는 "check"(제출 전 확인), "fix"(고치면 좋은 곳), "keep"(그대로 두세요) 중 하나입니다.
+각 질문마다 highlights에는 가능한 한 fix와 keep을 모두 포함하세요. 정말 유지할 표현이 없을 때만 keep을 생략하세요.
+submissionReview.questions[].edits는 하이라이트와 연결되는 첨삭 카드입니다. frameworkPart는 "P · 주장", "R · 이유", "E · 사례", "C · 배경", "A · 행동", "R · 결과", "S · 상황", "T · 과제"처럼 방법론 단계가 보이게 작성하세요.
+edits[].issue는 왜 문제인지 또는 왜 유지하면 좋은지, suggestion은 어떻게 바꾸거나 유지하면 좋은지, replacement는 대체 문장이 있을 때만 작성하세요.`;
 }
 
-function normalizeFeedback(value: Partial<CoachingFeedback>, sourceText = ""): CoachingFeedback {
+function normalizeFeedback(value: Partial<CoachingFeedback>, sourceText = "", questions: CoachingQuestionInput[] = []): CoachingFeedback {
   const score = Math.max(0, Math.min(100, Number(value.score) || 0));
   const grade = normalizeGrade(value.grade, score);
   const originalTextExcerpt = makeOriginalExcerpt(value.originalTextExcerpt || sourceText);
@@ -165,7 +237,175 @@ function normalizeFeedback(value: Partial<CoachingFeedback>, sourceText = ""): C
   });
   const rewrittenText = readString(value.rewrittenText) || sections.map((item) => item.example).filter(Boolean).join("\n\n");
   const evaluationScores = normalizeEvaluationScores(value.evaluationScores, score);
-  return { grade, score, summary: readString(value.summary) || "자소서의 흐름과 직무 연결을 중심으로 코칭했어요.", originalTextExcerpt, evaluationScores, detailEvaluation: normalizeStringList(value.detailEvaluation), jobConnection, questionFeedback, improvementSuggestions: normalizeStringList(value.improvementSuggestions), sentenceEdits: globalEdits, sections, rewrittenText };
+  const submissionReview = normalizeSubmissionReview(value.submissionReview, sourceText || originalTextExcerpt, questions, [...jobConnection.sentenceEdits || [], ...sections.flatMap((item) => item.sentenceEdits || [])]);
+  return { grade, score, summary: readString(value.summary) || "자소서의 흐름과 직무 연결을 중심으로 코칭했어요.", originalTextExcerpt, evaluationScores, detailEvaluation: normalizeStringList(value.detailEvaluation), jobConnection, questionFeedback, improvementSuggestions: normalizeStringList(value.improvementSuggestions), sentenceEdits: globalEdits, sections, rewrittenText, submissionReview };
+}
+
+function normalizeSubmissionReview(value: unknown, sourceText: string, questions: CoachingQuestionInput[], fallbackEdits: Array<{ original: string; improved: string; reason: string; good?: boolean }>): CoachingSubmissionReview {
+  const record = asRecord(value);
+  const rawQuestions = normalizeUnknownArray(record?.questions);
+  const source = sourceText.trim();
+  const questionInputs = questions.length ? questions : [{ question: "자소서 문항", characterLimit: null }];
+  const reviews = questionInputs.map((input, index) => normalizeQuestionReview(rawQuestions[index], input, index, source, fallbackEdits));
+  const fallbackFixCount = reviews.reduce((sum, item) => sum + item.highlights.filter((highlight) => highlight.severity === "fix").length, 0);
+  const fallbackKeepCount = reviews.reduce((sum, item) => sum + item.highlights.filter((highlight) => highlight.severity === "keep").length, 0);
+  const fallbackCheckCount = reviews.reduce((sum, item) => sum + item.highlights.filter((highlight) => highlight.severity === "check").length + (item.exceededBy > 0 ? 1 : 0), 0);
+  return {
+    preSubmitChecks: Math.max(0, Math.round(Number(record?.preSubmitChecks) || fallbackCheckCount)),
+    fixSuggestions: Math.max(0, Math.round(Number(record?.fixSuggestions) || fallbackFixCount)),
+    keepCount: Math.max(0, Math.round(Number(record?.keepCount) || fallbackKeepCount)),
+    questions: reviews,
+  };
+}
+
+function normalizeQuestionReview(rawValue: unknown, input: CoachingQuestionInput, index: number, sourceText: string, fallbackEdits: Array<{ original: string; improved: string; reason: string; good?: boolean }>): CoachingQuestionReview {
+  const raw = asRecord(rawValue);
+  const answer = readString(raw?.answer) || pickQuestionAnswer(sourceText, index);
+  const characterLimit = normalizeCharacterLimit(raw?.characterLimit ?? input.characterLimit);
+  const characterCount = Math.max(0, Math.round(Number(raw?.characterCount) || countKoreanChars(answer)));
+  const exceededBy = Math.max(0, Math.round(Number(raw?.exceededBy) || (characterLimit ? characterCount - characterLimit : 0)));
+  const frameworks = normalizeFrameworks(raw?.frameworks);
+  const highlights = normalizeQuestionHighlights(raw?.highlights, answer, fallbackEdits);
+  const edits = normalizeQuestionEdits(raw?.edits, highlights);
+  return {
+    question: readString(raw?.question) || input.question || `문항 ${index + 1}`,
+    answer,
+    characterLimit,
+    characterCount,
+    exceededBy,
+    frameworks: frameworks.length ? frameworks : inferFrameworks(input.question, answer),
+    editCount: Math.max(0, Math.round(Number(raw?.editCount) || edits.length || highlights.length)),
+    methodComment: readString(raw?.methodComment) || "문항의 요구와 원문 흐름을 기준으로 NCS 작성 틀을 적용했어요.",
+    resumeEvidence: normalizeStringList(raw?.resumeEvidence).slice(0, 4),
+    highlights,
+    edits,
+  };
+}
+
+function normalizeQuestionHighlights(value: unknown, answer: string, fallbackEdits: Array<{ original: string; improved: string; reason: string; good?: boolean }>) {
+  const fromAi = normalizeUnknownArray(value).map((item) => {
+    const record = asRecord(item);
+    if (!record) return null;
+    const original = readString(record.original) || readString(record.text);
+    if (!original || !findTextRange(answer, original)) return null;
+    return {
+      original,
+      severity: normalizeReviewSeverity(record.severity),
+      label: readString(record.label) || defaultSeverityLabel(normalizeReviewSeverity(record.severity)),
+      note: readString(record.note) || readString(record.reason),
+    };
+  }).filter(Boolean) as CoachingQuestionReview["highlights"];
+  if (fromAi.length) return fromAi.slice(0, 8);
+  const picked = fallbackEdits.filter((edit) => edit.original && findTextRange(answer, edit.original)).slice(0, 4);
+  if (picked.length) {
+    return picked.map((edit) => ({ original: edit.original, severity: edit.good ? "keep" as const : "fix" as const, label: edit.good ? "그대로 두세요" : "고치면 좋은 곳", note: edit.reason }));
+  }
+  const sentences = answer.split(/\n|(?<=[.!?。])\s+/).map((item) => item.trim()).filter((item) => item.length >= 10);
+  return sentences.slice(0, 2).map((sentence, idx) => ({ original: sentence.slice(0, 120), severity: idx === 0 ? "fix" as const : "keep" as const, label: idx === 0 ? "고치면 좋은 곳" : "그대로 두세요", note: idx === 0 ? "더 구체적인 근거를 붙이면 좋아요." : "지원자의 태도가 드러나는 표현입니다." }));
+}
+
+function normalizeQuestionEdits(value: unknown, highlights: CoachingQuestionReview["highlights"]) {
+  const fromAi = normalizeUnknownArray(value).map((item, index) => {
+    const record = asRecord(item);
+    if (!record) return null;
+    return {
+      index: Math.max(1, Math.round(Number(record.index) || index + 1)),
+      frameworkPart: readString(record.frameworkPart) || "P · 주장",
+      severity: normalizeReviewSeverity(record.severity),
+      title: readString(record.title) || defaultSeverityLabel(normalizeReviewSeverity(record.severity)),
+      issue: readString(record.issue) || readString(record.reason) || "원문 표현을 기준으로 확인이 필요합니다.",
+      suggestion: readString(record.suggestion) || "문항의 요구와 공고의 직무에 맞춰 더 구체적으로 다듬어 보세요.",
+      replacement: readString(record.replacement) || undefined,
+    };
+  }).filter(Boolean) as CoachingQuestionReview["edits"];
+  if (fromAi.length) return fromAi.slice(0, 10);
+  return highlights.map((highlight, index) => ({
+    index: index + 1,
+    frameworkPart: frameworkPartByIndex(index),
+    severity: highlight.severity,
+    title: highlight.label,
+    issue: highlight.note || "원문에서 확인한 표현입니다.",
+    suggestion: highlight.severity === "keep" ? "이 표현은 유지하고 앞뒤 문장과 자연스럽게 연결해 주세요." : "구체적인 역할, 행동, 결과가 드러나도록 보완해 주세요.",
+  }));
+}
+
+function normalizeFrameworks(value: unknown): CoachingFramework[] {
+  const allowed = new Set<CoachingFramework>(["PREP", "CAR", "PAP", "STAR"]);
+  return normalizeUnknownArray(value).map((item) => readString(item).toUpperCase()).filter((item): item is CoachingFramework => allowed.has(item as CoachingFramework));
+}
+
+function inferFrameworks(question: string, answer: string): CoachingFramework[] {
+  const text = `${question} ${answer}`;
+  const result: CoachingFramework[] = [];
+  if (/지원|동기|가치|포부|생각|의견|목표/.test(text)) result.push("PREP");
+  if (/프로젝트|업무|경험|성과|결과|개선|수행/.test(text)) result.push("CAR");
+  if (/문제|갈등|위기|해결|어려움|극복/.test(text)) result.push("PAP");
+  if (/상황|과제|행동|역할|결과|경험/.test(text)) result.push("STAR");
+  return result.length ? [...new Set(result)] : ["PREP"];
+}
+
+function normalizeReviewSeverity(value: unknown): CoachingReviewSeverity {
+  const text = readString(value).toLowerCase();
+  if (["keep", "good", "그대로", "좋아요", "잘쓴표현"].includes(text)) return "keep";
+  if (["check", "warning", "확인", "제출전확인"].includes(text)) return "check";
+  return "fix";
+}
+
+function defaultSeverityLabel(severity: CoachingReviewSeverity) {
+  if (severity === "keep") return "그대로 두세요";
+  if (severity === "check") return "제출 전 확인";
+  return "고치면 좋은 곳";
+}
+
+function frameworkPartByIndex(index: number) {
+  return ["P · 주장", "R · 이유", "E · 사례", "A · 행동"][index % 4];
+}
+
+function normalizeCharacterLimit(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? Math.round(number) : null;
+}
+
+function countKoreanChars(value: string) {
+  return Array.from(value.replace(/\s/g, "")).length;
+}
+
+function pickQuestionAnswer(sourceText: string, index: number) {
+  const blocks = sourceText.split(/\n{2,}/).map((item) => item.trim()).filter(Boolean);
+  return (blocks[index] || sourceText || "제출한 자소서 원문을 기준으로 분석했습니다.").trim();
+}
+
+function findTextRange(text: string, target: string) {
+  const exactStart = text.indexOf(target);
+  if (exactStart >= 0) return { start: exactStart, end: exactStart + target.length };
+  const source = normalizeForMatch(text);
+  const needle = normalizeForMatch(target).text.trim();
+  if (!needle) return null;
+  const normalizedStart = source.text.indexOf(needle);
+  if (normalizedStart < 0) return null;
+  const normalizedEnd = normalizedStart + needle.length - 1;
+  const start = source.map[normalizedStart];
+  const end = source.map[normalizedEnd] + 1;
+  return Number.isInteger(start) && Number.isInteger(end) && end > start ? { start, end } : null;
+}
+
+function normalizeForMatch(value: string) {
+  let text = "";
+  const map: number[] = [];
+  let previousSpace = false;
+  Array.from(value).forEach((char, index) => {
+    if (/\s/.test(char)) {
+      if (previousSpace) return;
+      text += " ";
+      map.push(index);
+      previousSpace = true;
+      return;
+    }
+    text += char;
+    map.push(index);
+    previousSpace = false;
+  });
+  return { text, map };
 }
 
 function normalizeGrade(value: unknown, score: number): CoachingGrade {
@@ -358,21 +598,6 @@ function makeOriginalExcerpt(value = "") {
 
 function limitStoredInput(value: string) {
   return value.trim().slice(0, 10000);
-}
-
-function getStructuredFeedbackPayload(body: { content?: Array<{ type: string; text?: string; name?: string; input?: unknown }> }) {
-  const toolInput = body.content?.find((item) => item.type === "tool_use" && item.name === coachingFeedbackTool.name)?.input;
-  if (toolInput && typeof toolInput === "object") return toolInput as Partial<CoachingFeedback>;
-  const text = body.content?.find((item) => item.type === "text")?.text || "";
-  const json = extractJsonObject(text);
-  if (!json) throw new Error("Coaching JSON object not found");
-  return JSON.parse(json) as Partial<CoachingFeedback>;
-}
-
-function extractJsonObject(text: string) {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  return start >= 0 && end > start ? text.slice(start, end + 1) : "";
 }
 
 function assertCompleteAiFeedback(feedback: CoachingFeedback) {

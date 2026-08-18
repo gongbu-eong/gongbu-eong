@@ -22,11 +22,6 @@ const emptyPayload: ResumePayloadDto = {
   title: "",
   sourceType: "manual",
   fileId: null,
-  name: "",
-  birthYear: "",
-  birthDate: "",
-  email: "",
-  desiredJob: "",
   highestEducation: "",
   gpa: "",
   gpaScore: "",
@@ -84,9 +79,6 @@ const MIN_PICKER_YEAR = 1900;
 
 type RequiredResumeField =
   | "title"
-  | "name"
-  | "birthDate"
-  | "desiredJob"
   | "highestEducation"
   | "gpaScore"
   | "gpaMax"
@@ -134,33 +126,6 @@ type ResumeFilePickerWindow = Window & {
   }) => Promise<Array<{ getFile: () => Promise<File> }>>;
 };
 
-const JOB_CATEGORIES = [
-  "건설",
-  "경비·청소",
-  "경영·회계·사무",
-  "교육·자연·사회과학",
-  "금융·보험",
-  "기계",
-  "농림어업",
-  "문화·예술·디자인·방송",
-  "법률·경찰·소방·교도·국방",
-  "보건·의료",
-  "사업관리",
-  "사회복지·종교",
-  "섬유·의복",
-  "식품가공",
-  "연구",
-  "영업·판매",
-  "운전·운송",
-  "음식서비스",
-  "이용·숙박·여행·오락·스포츠",
-  "인쇄·목재·가구·공예",
-  "재료",
-  "전기·전자",
-  "정보통신",
-  "화학",
-  "환경·에너지·안전",
-];
 const GPA_MAX_OPTIONS = ["4.5", "4.3", "4.0", "100"];
 
 type EntryModalState =
@@ -172,6 +137,10 @@ type EntryModalState =
   | null;
 
 type PickerMode = "date" | "month";
+type EntryDisplayLine = {
+  text: string;
+  missing?: boolean;
+};
 
 export function MyResumeForm({
   mode,
@@ -191,8 +160,6 @@ export function MyResumeForm({
   const [uploadedFile, setUploadedFile] = useState<{ name: string; size?: number } | null>(null);
   const [pendingUploadFile, setPendingUploadFile] = useState<File | null>(null);
   const [entryModal, setEntryModal] = useState<EntryModalState>(null);
-  const [isJobPickerOpen, setIsJobPickerOpen] = useState(false);
-  const [jobDraft, setJobDraft] = useState<string[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [parseJobMessage, setParseJobMessage] = useState<string | null>(null);
@@ -245,7 +212,6 @@ export function MyResumeForm({
   }, [mode, tab]);
 
   const completionPercent = useMemo(() => calculateCompletion(payload), [payload]);
-  const selectedJobs = useMemo(() => parseDesiredJobs(payload.desiredJob), [payload.desiredJob]);
 
   const replacePayload = (nextPayloadOrUpdater: ResumePayloadDto | ((current: ResumePayloadDto) => ResumePayloadDto)) => {
     setPayload((current) => {
@@ -381,7 +347,7 @@ export function MyResumeForm({
       sourceType: payload.sourceType || (tab === "upload" ? "upload" : "manual"),
       completionPercent,
     });
-    const requiredIssue = getFirstRequiredResumeIssue(cleaned, mode);
+    const requiredIssue = getFirstRequiredResumeIssue(cleaned);
     if (requiredIssue) {
       scrollToRequiredField(requiredIssue.field);
       window.alert(requiredIssue.message);
@@ -576,30 +542,6 @@ export function MyResumeForm({
             <>
               <CompletionCard percent={completionPercent} />
               <TextField fieldKey="title" label="이력서 제목" value={payload.title} placeholder="이력서 제목을 입력하세요." onChange={(title) => patchPayload({ title })} />
-
-              {!isEditMode ? (
-                <>
-                  <h2 className={styles.resumeSectionTitle}>기본 정보</h2>
-                  <TextField fieldKey="name" label="이름" value={payload.name || ""} placeholder="이름을 입력하세요." onChange={(name) => patchPayload({ name })} />
-                  <DatePickerField fieldKey="birthDate" label="생년월일" value={payload.birthDate || ""} placeholder="YYYY-MM-DD" onChange={(birthDate) => patchPayload({ birthDate, birthYear: birthDate.slice(0, 4) })} />
-                  <div className={styles.fieldGroup} data-required-field="desiredJob">
-                    <label>희망 직무·분야</label>
-                    <button
-                      type="button"
-                      className={`${styles.input} ${styles.inputButton}`}
-                      onClick={() => {
-                        setJobDraft(selectedJobs);
-                        setIsJobPickerOpen(true);
-                      }}
-                    >
-                      <span className={selectedJobs.length ? "" : styles.placeholder}>
-                        {selectedJobs.length ? formatSelectedJobLabel(selectedJobs) : "희망 직무·분야를 선택하세요."}
-                      </span>
-                      <span aria-hidden="true">›</span>
-                    </button>
-                  </div>
-                </>
-              ) : null}
 
               <div className={styles.formSectionHeader}>
                 <h2>학력</h2>
@@ -798,31 +740,6 @@ export function MyResumeForm({
             <div className={styles.modalButtonStack}>
               <button type="button" className={styles.primaryButton} onClick={addEntry}>저장</button>
               <button type="button" className={styles.ghostButton} onClick={() => setEntryModal(null)}>닫기</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {isJobPickerOpen ? (
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true" aria-labelledby="job-picker-title">
-          <div className={`${styles.modal} ${styles.jobPickerModal}`}>
-            <h2 id="job-picker-title">희망 직무·분야</h2>
-            <p className={styles.modalHint}>관심 있는 직무·분야를 선택해 주세요.</p>
-            <div className={styles.jobChecklist}>
-              {JOB_CATEGORIES.map((job) => (
-                <label key={job} className={styles.jobCheckItem}>
-                  <input
-                    type="checkbox"
-                    checked={jobDraft.includes(job)}
-                    onChange={(event) => setJobDraft((current) => event.target.checked ? [...current, job] : current.filter((item) => item !== job))}
-                  />
-                  <span>{job}</span>
-                </label>
-              ))}
-            </div>
-            <div className={styles.modalButtonStack}>
-              <button type="button" className={styles.primaryButton} onClick={() => { patchPayload({ desiredJob: jobDraft.join(", ") }); setIsJobPickerOpen(false); }}>선택하기</button>
-              <button type="button" className={styles.ghostButton} onClick={() => setIsJobPickerOpen(false)}>닫기</button>
             </div>
           </div>
         </div>
@@ -1240,7 +1157,7 @@ function CompletionCard({ percent }: { percent: number }) {
         <div className={styles.progressBar} style={{ width: `${percent}%` }} />
       </div>
       <p className={styles.completionHint}>
-        {percent >= 100 ? "이력서를 모두 채웠어요! 코칭 정확도가 높아져요 🎉" : "기본 정보와 희망 직무부터 채워보세요."}
+        {percent >= 100 ? "이력서를 모두 채웠어요! 코칭 정확도가 높아져요 🎉" : "이력서 제목과 학력 정보를 먼저 채워보세요."}
       </p>
     </div>
   );
@@ -1412,9 +1329,9 @@ function EntryEditor({
               onPointerCancel={resetPointerDrag}
             >
               <span className={styles.entryContent}>
-                {display.title ? <strong>{display.title}</strong> : null}
+                {display.title ? <strong className={display.titleMissing ? styles.entryMissingTitle : undefined}>{display.title}</strong> : null}
                 {display.lines.map((line) => (
-                  <small key={line}>{line}</small>
+                  <small key={line.text} className={line.missing ? styles.entryMissingTitle : undefined}>{line.text}</small>
                 ))}
               </span>
               <button
@@ -1441,9 +1358,6 @@ function EntryEditor({
 function calculateCompletion(payload: ResumePayloadDto) {
   const scalarChecks = [
     payload.title,
-    payload.name,
-    payload.birthDate,
-    payload.desiredJob,
     payload.highestEducation,
     payload.gpaScore,
     payload.gpaMax,
@@ -1456,7 +1370,7 @@ function calculateCompletion(payload: ResumePayloadDto) {
   return Math.round((filled / total) * 100);
 }
 
-function getFirstRequiredResumeIssue(payload: ResumePayloadDto, mode: "new" | "edit") {
+function getFirstRequiredResumeIssue(payload: ResumePayloadDto) {
   type RequiredIssue = {
     field: RequiredResumeField;
     message: string;
@@ -1464,11 +1378,6 @@ function getFirstRequiredResumeIssue(payload: ResumePayloadDto, mode: "new" | "e
   };
   const commonFields: RequiredIssue[] = [
     { field: "title", message: "이력서 제목을 입력해주세요.", value: payload.title },
-  ];
-  const createOnlyFields: RequiredIssue[] = [
-    { field: "name", message: "이름을 입력해주세요.", value: payload.name },
-    { field: "birthDate", message: "생년월일을 입력해주세요.", value: payload.birthDate },
-    { field: "desiredJob", message: "희망 직무·분야를 선택해주세요.", value: payload.desiredJob },
   ];
   const educationFields: RequiredIssue[] = [
     { field: "highestEducation", message: "최종 학력을 선택해주세요.", value: payload.highestEducation },
@@ -1480,7 +1389,6 @@ function getFirstRequiredResumeIssue(payload: ResumePayloadDto, mode: "new" | "e
   ];
   const scalarFields: RequiredIssue[] = [
     ...commonFields,
-    ...(mode === "edit" ? [] : createOnlyFields),
     ...educationFields,
   ];
 
@@ -1506,12 +1414,6 @@ function scrollToRequiredField(field: RequiredResumeField) {
   }, 250);
 }
 
-function formatSelectedJobLabel(jobs: string[]) {
-  const [first, ...rest] = jobs;
-  if (!first) return "";
-  return rest.length ? `${first} 외 ${rest.length}개` : first;
-}
-
 function cleanPayload(payload: ResumePayloadDto): ResumePayloadDto {
   const gpaScore = cleanText(payload.gpaScore);
   const gpaMax = cleanText(payload.gpaMax);
@@ -1524,11 +1426,6 @@ function cleanPayload(payload: ResumePayloadDto): ResumePayloadDto {
   return {
     ...payload,
     title: cleanText(payload.title),
-    name: cleanText(payload.name),
-    birthYear: cleanText(payload.birthYear),
-    birthDate: cleanText(payload.birthDate),
-    email: cleanText(payload.email),
-    desiredJob: cleanText(payload.desiredJob),
     highestEducation,
     gpa: [gpaScore, gpaMax].filter(Boolean).join(" / ") || cleanText(payload.gpa),
     gpaScore,
@@ -1706,64 +1603,88 @@ function formatEntryDisplay(kind: ResumeEntryKind, entry: ResumeEntryDto) {
   const normalized = normalizeEntryLabels(cleanEntry(entry), kind);
 
   if (kind === "education") {
+    const range = formatMonthRangeLabel(normalized.startDate, normalized.endDate);
     return {
-      title: normalized.schoolName || normalized.title,
-      lines: compactLines([
-        [normalized.degree, normalizeGraduationStatus(normalized.graduationStatus)].filter(Boolean).join(" · "),
-        normalized.major,
-        normalized.gpaScore && normalized.gpaMax ? `학점 ${normalized.gpaScore} / ${normalized.gpaMax}` : "",
-        formatMonthRangeLabel(normalized.startDate, normalized.endDate),
+      title: normalized.schoolName || normalized.title || "학교·전공을 입력해주세요.",
+      titleMissing: !(normalized.schoolName || normalized.title),
+      lines: compactDisplayLines([
+        {
+          text: [normalized.degree, normalizeGraduationStatus(normalized.graduationStatus)].filter(Boolean).join(" · ") || "최종 학력과 졸업 여부를 입력해주세요.",
+          missing: !(normalized.degree || normalized.graduationStatus),
+        },
+        { text: normalized.major || "전공을 입력해주세요.", missing: !normalized.major },
+        {
+          text: normalized.gpaScore && normalized.gpaMax ? `학점 ${normalized.gpaScore} / ${normalized.gpaMax}` : "학점을 입력해주세요.",
+          missing: !(normalized.gpaScore && normalized.gpaMax),
+        },
+        { text: range || "입학년월~졸업년월을 입력해주세요.", missing: !range },
       ]),
     };
   }
 
   if (kind === "experience") {
+    const dutyLine = [normalized.position, normalized.duties || normalized.subtitle].filter(Boolean).join(" · ");
+    const range = formatCareerRangeLabel(normalized.startDate, normalized.endDate);
     return {
-      title: normalized.companyName || normalized.title,
-      lines: compactLines([
-        [normalized.position, normalized.duties || normalized.subtitle].filter(Boolean).join(" · "),
-        formatCareerRangeLabel(normalized.startDate, normalized.endDate),
+      title: normalized.companyName || normalized.title || "회사·기관명을 입력해주세요.",
+      titleMissing: !(normalized.companyName || normalized.title),
+      lines: compactDisplayLines([
+        { text: dutyLine || "직위와 담당 업무를 입력해주세요.", missing: !dutyLine },
+        { text: range || "근무 기간을 입력해주세요.", missing: !range },
       ]),
     };
   }
 
   if (kind === "award") {
+    const awardLine = [normalized.awardName || normalized.subtitle, formatDateLabel(normalized.awardedDate || normalized.startDate), normalized.issuer].filter(Boolean).join(" · ");
     return {
-      title: normalized.contestName || normalized.title,
-      lines: compactLines([
-        [normalized.awardName || normalized.subtitle, formatDateLabel(normalized.awardedDate || normalized.startDate), normalized.issuer].filter(Boolean).join(" · "),
+      title: normalized.contestName || normalized.title || "공모전명을 입력해주세요.",
+      titleMissing: !(normalized.contestName || normalized.title),
+      lines: compactDisplayLines([
+        { text: awardLine || "수상명, 수상기관, 수상 일자를 입력해주세요.", missing: !awardLine },
       ]),
     };
   }
 
   if (kind === "activity") {
     const activity = normalizeActivityEntry(normalized);
-    const title = activity.activityName || activity.title || activity.description;
+    const range = formatMonthRangeLabel(activity.startDate, activity.endDate) || formatDateLabel(activity.activityDate || activity.startDate);
     return {
-      title,
-      lines: compactLines([
-        title === activity.description ? "" : activity.description,
-        activity.issuer,
-        formatMonthRangeLabel(activity.startDate, activity.endDate) || formatDateLabel(activity.activityDate || activity.startDate),
+      title: activity.activityName || activity.title || "활동명을 입력해주세요.",
+      titleMissing: !(activity.activityName || activity.title),
+      lines: compactDisplayLines([
+        { text: activity.description || "활동내용을 입력해주세요.", missing: !activity.description },
+        { text: activity.issuer || "활동기관을 입력해주세요.", missing: !activity.issuer },
+        { text: range || "활동 기간을 입력해주세요.", missing: !range },
       ]),
     };
   }
 
   if (kind === "certification") {
+    const issuer = normalized.issuer || normalized.subtitle;
+    const acquiredDate = formatDateLabel(normalized.acquiredDate || normalized.startDate);
     return {
-      title: normalized.certificationName || normalized.title,
-      lines: compactLines([
-        [normalized.issuer || normalized.subtitle, formatDateLabel(normalized.acquiredDate || normalized.startDate)].filter(Boolean).join(" · "),
+      title: normalized.certificationName || normalized.title || "자격증명을 입력해주세요.",
+      titleMissing: !(normalized.certificationName || normalized.title),
+      lines: compactDisplayLines([
+        { text: issuer || "발급기관을 입력해주세요.", missing: !issuer },
+        { text: acquiredDate || "취득일을 입력해주세요.", missing: !acquiredDate },
       ]),
     };
   }
 
+  const languageLine = [normalized.language, normalized.levelOrScore, formatDateLabel(normalized.acquiredDate || normalized.startDate), normalized.issuer].filter(Boolean).join(" · ");
   return {
-    title: normalized.testName || normalized.title || normalized.language,
-    lines: compactLines([
-      [normalized.language, normalized.levelOrScore, formatDateLabel(normalized.acquiredDate || normalized.startDate), normalized.issuer].filter(Boolean).join(" · "),
+    title: normalized.testName || normalized.title || normalized.language || "어학시험명을 입력해주세요.",
+    titleMissing: !(normalized.testName || normalized.title || normalized.language),
+    lines: compactDisplayLines([
+      { text: languageLine || "언어, 점수, 발급기관, 취득일을 입력해주세요.", missing: !languageLine },
     ]),
   };
+}
+
+function compactDisplayLines(lines: EntryDisplayLine[]) {
+  return lines.filter((line) => Boolean(cleanText(line.text)));
 }
 
 function compactLines(lines: Array<string | null | undefined>) {
@@ -1771,8 +1692,22 @@ function compactLines(lines: Array<string | null | undefined>) {
 }
 
 function hasEntryContent(entry: ResumeEntryDto, kind: ResumeEntryKind) {
-  const display = formatEntryDisplay(kind, entry);
-  return Boolean(display.title || display.lines.length);
+  if (kind === "education") {
+    return [entry.title, entry.schoolName, entry.degree, entry.major, entry.gpaScore, entry.gpaMax, entry.graduationStatus, entry.startDate, entry.endDate].some(isFilled);
+  }
+  if (kind === "experience") {
+    return [entry.title, entry.companyName, entry.position, entry.duties, entry.subtitle, entry.startDate, entry.endDate].some(isFilled);
+  }
+  if (kind === "award") {
+    return [entry.title, entry.contestName, entry.awardName, entry.issuer, entry.awardedDate, entry.startDate, entry.subtitle].some(isFilled);
+  }
+  if (kind === "activity") {
+    return [entry.title, entry.activityName, entry.description, entry.issuer, entry.activityDate, entry.startDate, entry.endDate, entry.subtitle].some(isFilled);
+  }
+  if (kind === "certification") {
+    return [entry.title, entry.certificationName, entry.issuer, entry.acquiredDate, entry.startDate, entry.subtitle].some(isFilled);
+  }
+  return [entry.title, entry.language, entry.testName, entry.levelOrScore, entry.issuer, entry.acquiredDate, entry.startDate, entry.subtitle].some(isFilled);
 }
 
 function cleanText(value?: unknown) {
@@ -1893,13 +1828,6 @@ function isSameCleanText(left?: string | null, right?: string | null) {
 
 function isCurrentEndDate(value?: string | null) {
   return /^(현재|재직중|진행중)$/.test(cleanText(value).replace(/\s/g, ""));
-}
-
-function parseDesiredJobs(value?: string | null) {
-  return (value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function normalizeDateInputValue(value?: string | null) {
@@ -2065,12 +1993,28 @@ const RESUME_ENTRY_ARRAY_KEYS = [
   "languages",
 ] as const;
 
-const RESUME_SCALAR_KEYS = [
+const RESUME_PERSONAL_KEYS = new Set([
   "name",
+  "fullName",
   "birthYear",
   "birthDate",
+  "dateOfBirth",
   "email",
   "desiredJob",
+  "성명",
+  "이름",
+  "생년",
+  "생년월일",
+  "출생일",
+  "주민등록번호",
+  "이메일",
+  "이메일주소",
+  "희망직무",
+  "지원직무",
+  "지원분야",
+]);
+
+const RESUME_SCALAR_KEYS = [
   "highestEducation",
   "gpa",
   "gpaScore",
@@ -2589,20 +2533,14 @@ function toUploadPayload(
   );
   const gpaScore = cleanText(source.gpaScore) || parsedGpa.score || nestedGpa.score || cleanText(preferredEducation?.gpaScore);
   const gpaMax = cleanText(source.gpaMax) || parsedGpa.max || nestedGpa.max || cleanText(preferredEducation?.gpaMax);
-  const birthDate = normalizeDateInputValue(source.birthDate);
   const educationSchoolMajor = formatSchoolMajorLabel(preferredEducation);
   const highestEducation = resolveHighestEducationValue(source.highestEducation, preferredEducation);
   return {
     ...emptyPayload,
-    ...source,
+    ...stripResumePersonalFields(source),
     sourceType: "upload",
     fileId,
     title: "",
-    name: cleanText(source.name),
-    birthYear: cleanText(source.birthYear) || birthDate.slice(0, 4),
-    birthDate,
-    email: cleanText(source.email),
-    desiredJob: "",
     highestEducation,
     gpa: [gpaScore, gpaMax].filter(Boolean).join(" / ") || cleanText(source.gpa),
     gpaScore,
@@ -2621,7 +2559,7 @@ function toUploadPayload(
     awards,
     activities,
     languages,
-    extractedPayload: source.extractedPayload || source || {},
+    extractedPayload: stripResumePersonalFields(source.extractedPayload || source || {}),
   };
 }
 
@@ -2658,10 +2596,22 @@ function mergeUploadPayload(current: ResumePayloadDto, incoming: ResumePayloadDt
   }
 
   merged.gpa = [merged.gpaScore, merged.gpaMax].map((value) => cleanText(value)).filter(Boolean).join(" / ") || cleanText(merged.gpa);
-  merged.birthDate = normalizeDateInputValue(merged.birthDate);
-  merged.birthYear = cleanText(merged.birthYear) || cleanText(merged.birthDate).slice(0, 4);
-  merged.extractedPayload = incoming.extractedPayload || current.extractedPayload || {};
+  merged.extractedPayload = stripResumePersonalFields(incoming.extractedPayload || current.extractedPayload || {});
   return merged;
+}
+
+function stripResumePersonalFields<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripResumePersonalFields(item)) as T;
+  }
+  if (!isPlainRecord(value)) return value;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (RESUME_PERSONAL_KEYS.has(key)) continue;
+    result[key] = stripResumePersonalFields(item);
+  }
+  return result as T;
 }
 
 function pickEntryList(source: Record<string, unknown>, keys: string[]) {
@@ -2823,11 +2773,7 @@ async function waitForParseJob(jobId: string, fileId: string) {
 
 function hasMeaningfulExtractedPayload(payload: ResumePayloadDto) {
   return Boolean(
-    cleanText(payload.name) ||
-      cleanText(payload.birthDate) ||
-      cleanText(payload.email) ||
-      cleanText(payload.desiredJob) ||
-      cleanText(payload.highestEducation) ||
+    cleanText(payload.highestEducation) ||
       cleanText(payload.schoolMajor) ||
       cleanText(payload.gpaScore) ||
       cleanText(payload.gpaMax) ||

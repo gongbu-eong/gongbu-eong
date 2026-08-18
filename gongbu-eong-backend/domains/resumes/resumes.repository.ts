@@ -13,11 +13,6 @@ type ResumeRow = {
   user_file_id: string | null;
   source_type: "upload" | "manual";
   title: string;
-  name: string | null;
-  birth_year: string | null;
-  birth_date: string | null;
-  email: string | null;
-  desired_job: string | null;
   highest_education: string | null;
   gpa: string | null;
   gpa_score: string | null;
@@ -159,11 +154,6 @@ export async function createResume(userId: string, payload: ResumePayloadDto) {
           user_file_id,
           source_type,
           title,
-          name,
-          birth_year,
-          birth_date,
-          email,
-          desired_job,
           highest_education,
           gpa,
           gpa_score,
@@ -181,7 +171,7 @@ export async function createResume(userId: string, payload: ResumePayloadDto) {
         )
         VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+          $11, $12, $13, $14, $15, $16, $17, $18
         )
         RETURNING id
       `,
@@ -190,11 +180,6 @@ export async function createResume(userId: string, payload: ResumePayloadDto) {
         payload.fileId || null,
         payload.sourceType,
         title,
-        normalizeText(payload.name),
-        normalizeText(payload.birthYear),
-        normalizeText(payload.birthDate),
-        normalizeText(payload.email),
-        normalizeText(payload.desiredJob),
         normalizeText(payload.highestEducation),
         normalizeText(payload.gpa),
         normalizeText(payload.gpaScore),
@@ -213,6 +198,7 @@ export async function createResume(userId: string, payload: ResumePayloadDto) {
     );
 
     await replaceEntries(client, result.rows[0].id, payload);
+    await ensureSelectedResume(client, userId, result.rows[0].id);
     await client.query("COMMIT");
 
     return findResume(userId, result.rows[0].id);
@@ -245,25 +231,20 @@ export async function updateResume(userId: string, resumeId: string, payload: Re
           title = $3,
           user_file_id = $4,
           source_type = $5,
-          name = $6,
-          birth_year = $7,
-          birth_date = $8,
-          email = $9,
-          desired_job = $10,
-          highest_education = $11,
-          gpa = $12,
-          gpa_score = $13,
-          gpa_max = $14,
-          school_major = $15,
-          graduation_status = $16,
-          education_start_date = $17,
-          education_end_date = $18,
-          education_summary = $19,
-          career_summary = $20,
-          certification_summary = $21,
-          additional_notes = $22,
-          completion_percent = $23,
-          extracted_payload = COALESCE($24::jsonb, extracted_payload),
+          highest_education = $6,
+          gpa = $7,
+          gpa_score = $8,
+          gpa_max = $9,
+          school_major = $10,
+          graduation_status = $11,
+          education_start_date = $12,
+          education_end_date = $13,
+          education_summary = $14,
+          career_summary = $15,
+          certification_summary = $16,
+          additional_notes = $17,
+          completion_percent = $18,
+          extracted_payload = COALESCE($19::jsonb, extracted_payload),
           updated_at = NOW()
         WHERE user_id = $1
           AND id = $2
@@ -274,11 +255,6 @@ export async function updateResume(userId: string, resumeId: string, payload: Re
         title,
         payload.fileId || null,
         payload.sourceType,
-        normalizeText(payload.name),
-        normalizeText(payload.birthYear),
-        normalizeText(payload.birthDate),
-        normalizeText(payload.email),
-        normalizeText(payload.desiredJob),
         normalizeText(payload.highestEducation),
         normalizeText(payload.gpa),
         normalizeText(payload.gpaScore),
@@ -309,42 +285,37 @@ export async function updateResume(userId: string, resumeId: string, payload: Re
 }
 
 export async function deleteResume(userId: string, resumeId: string) {
-  await db.query(
-    `
-      DELETE FROM public.user_resumes
-      WHERE user_id = $1
-        AND id = $2
-    `,
-    [userId, resumeId],
-  );
-}
-
-export async function selectResume(userId: string, resumeId: string) {
   const client = await db.connect();
 
   try {
     await client.query("BEGIN");
     await client.query(
-      `UPDATE public.user_resumes SET is_selected = FALSE WHERE user_id = $1`,
-      [userId],
+      `
+        UPDATE public.resume_coaching_requests
+        SET resume_id = NULL
+        WHERE resume_id = $1
+          AND user_id = $2
+      `,
+      [resumeId, userId],
     );
     await client.query(
       `
-        UPDATE public.user_resumes
-        SET is_selected = TRUE, updated_at = NOW()
+        UPDATE public.interview_coaching_sessions
+        SET resume_id = NULL
+        WHERE resume_id = $1
+          AND user_id = $2
+      `,
+      [resumeId, userId],
+    );
+    await client.query(
+      `
+        DELETE FROM public.user_resumes
         WHERE user_id = $1
           AND id = $2
       `,
       [userId, resumeId],
     );
-    await client.query(
-      `
-        UPDATE public.users
-        SET selected_resume_id = $2, updated_at = NOW()
-        WHERE id = $1
-      `,
-      [userId, resumeId],
-    );
+    await ensureSelectedResume(client, userId);
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
@@ -352,6 +323,120 @@ export async function selectResume(userId: string, resumeId: string) {
   } finally {
     client.release();
   }
+}
+
+export async function selectResume(userId: string, resumeId: string) {
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+    await setSelectedResume(client, userId, resumeId);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function ensureSelectedResume(
+  client: PoolClient,
+  userId: string,
+  preferredResumeId?: string,
+) {
+  const selected = await client.query<{ id: string }>(
+    `
+      SELECT id
+      FROM public.user_resumes
+      WHERE user_id = $1
+        AND is_selected = TRUE
+      LIMIT 1
+    `,
+    [userId],
+  );
+
+  if (selected.rows[0]) {
+    await client.query(
+      `
+        UPDATE public.users
+        SET selected_resume_id = $2, updated_at = NOW()
+        WHERE id = $1
+      `,
+      [userId, selected.rows[0].id],
+    );
+    return;
+  }
+
+  const fallback = preferredResumeId
+    ? await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM public.user_resumes
+          WHERE user_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [userId, preferredResumeId],
+      )
+    : await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM public.user_resumes
+          WHERE user_id = $1
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1
+        `,
+        [userId],
+      );
+
+  const fallbackId = fallback.rows[0]?.id || null;
+  if (!fallbackId) {
+    await client.query(
+      `
+        UPDATE public.users
+        SET selected_resume_id = NULL, updated_at = NOW()
+        WHERE id = $1
+      `,
+      [userId],
+    );
+    return;
+  }
+
+  await setSelectedResume(client, userId, fallbackId);
+}
+
+async function setSelectedResume(
+  client: PoolClient,
+  userId: string,
+  resumeId: string,
+) {
+  await client.query(
+    `UPDATE public.user_resumes SET is_selected = FALSE WHERE user_id = $1`,
+    [userId],
+  );
+  const selectedResult = await client.query(
+    `
+      UPDATE public.user_resumes
+      SET is_selected = TRUE, updated_at = NOW()
+      WHERE user_id = $1
+        AND id = $2
+    `,
+    [userId, resumeId],
+  );
+
+  if (selectedResult.rowCount !== 1) {
+    throw new Error("이력서를 찾을 수 없습니다.");
+  }
+
+  await client.query(
+    `
+      UPDATE public.users
+      SET selected_resume_id = $2, updated_at = NOW()
+      WHERE id = $1
+    `,
+    [userId, resumeId],
+  );
 }
 
 export async function createUserFile(args: {
@@ -605,11 +690,6 @@ function mapResume(row: ResumeRow): ResumeDto {
     fileId: row.user_file_id,
     sourceType: row.source_type,
     title: row.title,
-    name: row.name,
-    birthYear: row.birth_year,
-    birthDate: row.birth_date,
-    email: row.email,
-    desiredJob: row.desired_job,
     highestEducation: row.highest_education,
     gpa: row.gpa,
     gpaScore: row.gpa_score,
@@ -869,9 +949,6 @@ async function resolveUniqueResumeTitle(
 function calculateCompletion(payload: ResumePayloadDto) {
   const fields = [
     payload.title,
-    payload.name,
-    payload.birthDate,
-    payload.desiredJob,
     payload.highestEducation,
     payload.gpaScore,
     payload.gpaMax,

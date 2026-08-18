@@ -10,6 +10,7 @@ import styles from "./My.module.css";
 type ViewEntryLine = {
   text: string;
   tone?: "sub" | "accent";
+  missing?: boolean;
 };
 
 type ViewEntry = {
@@ -92,7 +93,12 @@ function ResumeEntrySection({
               >
                 <strong>{display.title || "-"}</strong>
                 {display.lines.map((line) => (
-                  <span key={line.text} className={line.tone === "accent" ? styles.entryCardAccent : ""}>{line.text}</span>
+                  <span
+                    key={line.text}
+                    className={`${line.tone === "accent" ? styles.entryCardAccent : ""} ${line.missing ? styles.entryMissingTitle : ""}`}
+                  >
+                    {line.text}
+                  </span>
                 ))}
               </div>
               );
@@ -168,64 +174,81 @@ function formatResumeEntry(
   entry: ResumeEntryDto,
 ): ViewEntry {
   if (kind === "experience") {
+    const dutyLine = [formatDisplayText(entry.position), formatDisplayText(entry.duties) || formatDisplayText(entry.subtitle)].filter(Boolean).join("·");
+    const range = formatCareerRange(entry.startDate, entry.endDate);
     return {
-      title: formatDisplayText(entry.companyName) || formatDisplayText(entry.title),
+      title: formatDisplayText(entry.companyName) || formatDisplayText(entry.title) || "회사·기관명을 입력해주세요.",
       lines: compactLines([
-        [formatDisplayText(entry.position), formatDisplayText(entry.duties) || formatDisplayText(entry.subtitle)].filter(Boolean).join("·"),
-        formatCareerRange(entry.startDate, entry.endDate),
+        { text: dutyLine || "직위와 담당 업무를 입력해주세요.", missing: !dutyLine },
+        { text: range || "근무 기간을 입력해주세요.", missing: !range },
       ]),
       size: "regular",
     };
   }
 
   if (kind === "award") {
+    const awardLine = [formatDisplayText(entry.awardName) || formatDisplayText(entry.subtitle), formatDateText(entry.awardedDate || entry.startDate)].filter(Boolean).join("·");
     return {
-      title: formatDisplayText(entry.contestName) || formatDisplayText(entry.title),
+      title: formatDisplayText(entry.contestName) || formatDisplayText(entry.title) || "공모전명을 입력해주세요.",
       lines: compactLines([
-        formatDisplayText(entry.issuer),
-        [formatDisplayText(entry.awardName) || formatDisplayText(entry.subtitle), formatDateText(entry.awardedDate || entry.startDate)].filter(Boolean).join("·"),
+        { text: formatDisplayText(entry.issuer) || "수상기관을 입력해주세요.", missing: !formatDisplayText(entry.issuer) },
+        { text: awardLine || "수상명과 수상 일자를 입력해주세요.", missing: !awardLine },
       ]),
       size: "regular",
     };
   }
 
   if (kind === "activity") {
+    const range = formatRange(entry.startDate || entry.activityDate, entry.endDate);
     return {
-      title: formatDisplayText(entry.activityName) || formatDisplayText(entry.title),
-      lines: compactLines([formatDisplayText(entry.description) || formatDisplayText(entry.subtitle), formatDisplayText(entry.issuer), formatRange(entry.startDate || entry.activityDate, entry.endDate)]),
-      size: "tall",
-    };
-  }
-
-  if (kind === "certification") {
-    return {
-      title: formatDisplayText(entry.certificationName) || formatDisplayText(entry.title),
-      lines: compactLines([formatDisplayText(entry.issuer) || formatDisplayText(entry.subtitle), formatDateText(entry.acquiredDate || entry.startDate)]),
-      size: "regular",
-    };
-  }
-
-  if (kind === "language") {
-    return {
-      title: formatDisplayText(entry.testName) || formatDisplayText(entry.title),
+      title: formatDisplayText(entry.activityName) || formatDisplayText(entry.title) || "활동명을 입력해주세요.",
       lines: compactLines([
-        formatDisplayText(entry.issuer),
-        [formatDisplayText(entry.levelOrScore), formatDisplayText(entry.language)].filter(Boolean).join("·"),
-        formatDateText(entry.acquiredDate || entry.startDate),
+        { text: formatDisplayText(entry.description) || formatDisplayText(entry.subtitle) || "활동내용을 입력해주세요.", missing: !(formatDisplayText(entry.description) || formatDisplayText(entry.subtitle)) },
+        { text: formatDisplayText(entry.issuer) || "활동기관을 입력해주세요.", missing: !formatDisplayText(entry.issuer) },
+        { text: range || "활동 기간을 입력해주세요.", missing: !range },
       ]),
       size: "tall",
     };
   }
 
+  if (kind === "certification") {
+    const acquiredDate = formatDateText(entry.acquiredDate || entry.startDate);
+    return {
+      title: formatDisplayText(entry.certificationName) || formatDisplayText(entry.title) || "자격증명을 입력해주세요.",
+      lines: compactLines([
+        { text: formatDisplayText(entry.issuer) || formatDisplayText(entry.subtitle) || "발급기관을 입력해주세요.", missing: !(formatDisplayText(entry.issuer) || formatDisplayText(entry.subtitle)) },
+        { text: acquiredDate || "취득일을 입력해주세요.", missing: !acquiredDate },
+      ]),
+      size: "regular",
+    };
+  }
+
+  if (kind === "language") {
+    const languageLine = [formatDisplayText(entry.levelOrScore), formatDisplayText(entry.language)].filter(Boolean).join("·");
+    const acquiredDate = formatDateText(entry.acquiredDate || entry.startDate);
+    return {
+      title: formatDisplayText(entry.testName) || formatDisplayText(entry.title) || "어학시험명을 입력해주세요.",
+      lines: compactLines([
+        { text: formatDisplayText(entry.issuer) || "발급기관을 입력해주세요.", missing: !formatDisplayText(entry.issuer) },
+        { text: languageLine || "어학시험 급수or점수와 언어를 입력해주세요.", missing: !languageLine },
+        { text: acquiredDate || "취득일을 입력해주세요.", missing: !acquiredDate },
+      ]),
+      size: "tall",
+    };
+  }
+
+  const status = formatEducationStatus(entry.degree, entry.graduationStatus);
+  const major = formatEducationMajor(entry);
+  const gpa = formatGpa(entry);
   const range = formatEducationRange(entry.startDate, entry.endDate);
   const educationLines = compactLines([
-    formatEducationStatus(entry.degree, entry.graduationStatus),
-    formatEducationMajor(entry),
-    formatGpa(entry),
-    range,
+    status || { text: "최종 학력과 졸업 여부를 입력해주세요.", missing: true },
+    { text: major || "전공을 입력해주세요.", missing: !major },
+    { text: gpa || "학점을 입력해주세요.", missing: !gpa },
+    range || { text: "입학년월~졸업년월을 입력해주세요.", missing: true },
   ]);
   return {
-    title: formatDisplayText(entry.schoolName) || formatDisplayText(entry.title),
+    title: formatDisplayText(entry.schoolName) || formatDisplayText(entry.title) || "학교·전공을 입력해주세요.",
     lines: educationLines.length ? educationLines : compactLines([formatDisplayText(entry.subtitle)]),
     size: "education",
   };

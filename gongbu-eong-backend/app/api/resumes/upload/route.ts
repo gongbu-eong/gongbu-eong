@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     let extracted: Partial<ResumePayloadDto> = {};
     let completedJob = parseJob;
     try {
-      extracted = await extractResumeWithOpenAI({ file, buffer });
+      extracted = omitBlindResumePersonalFields(await extractResumeWithOpenAI({ file, buffer }));
       completedJob =
         (await completeResumeParseJob(user.id, parseJob.id, {
           ...extracted,
@@ -63,11 +63,6 @@ export async function POST(request: NextRequest) {
         title: "",
         sourceType: "upload",
         fileId: savedFile.id,
-        name: extracted.name || "",
-        birthYear: extracted.birthYear || "",
-        birthDate: extracted.birthDate || "",
-        email: extracted.email || "",
-        desiredJob: extracted.desiredJob || "",
         highestEducation: extracted.highestEducation || "",
         gpa: extracted.gpa || "",
         gpaScore: extracted.gpaScore || "",
@@ -101,4 +96,39 @@ export function OPTIONS(request: NextRequest) {
     status: 204,
     headers: jsonWithCors(request, null).headers,
   });
+}
+
+const BLIND_RESUME_PERSONAL_KEYS = new Set([
+  "name",
+  "fullName",
+  "birthYear",
+  "birthDate",
+  "dateOfBirth",
+  "email",
+  "desiredJob",
+  "성명",
+  "이름",
+  "생년",
+  "생년월일",
+  "출생일",
+  "주민등록번호",
+  "이메일",
+  "이메일주소",
+  "희망직무",
+  "지원직무",
+  "지원분야",
+]);
+
+function omitBlindResumePersonalFields<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => omitBlindResumePersonalFields(item)) as T;
+  }
+  if (!value || typeof value !== "object") return value;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (BLIND_RESUME_PERSONAL_KEYS.has(key)) continue;
+    result[key] = omitBlindResumePersonalFields(item);
+  }
+  return result as T;
 }

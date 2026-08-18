@@ -78,11 +78,6 @@ function normalizeResumeSavePayload(payload: ResumePayloadDto): ResumePayloadDto
     title: normalizeString(payload.title),
     sourceType: payload.sourceType === "upload" ? "upload" : "manual",
     fileId: normalizeNullableString(payload.fileId),
-    name: normalizeNullableString(payload.name),
-    birthYear: normalizeNullableString(payload.birthYear),
-    birthDate: normalizeNullableString(payload.birthDate),
-    email: normalizeNullableString(payload.email),
-    desiredJob: normalizeNullableString(payload.desiredJob),
     highestEducation: normalizeNullableString(payload.highestEducation),
     gpa: normalizeNullableString(payload.gpa),
     gpaScore: normalizeNullableString(payload.gpaScore),
@@ -95,6 +90,7 @@ function normalizeResumeSavePayload(payload: ResumePayloadDto): ResumePayloadDto
     careerSummary: normalizeNullableString(payload.careerSummary),
     certificationSummary: normalizeNullableString(payload.certificationSummary),
     additionalNotes: normalizeNullableString(payload.additionalNotes),
+    extractedPayload: stripBlindResumePersonalFields(payload.extractedPayload || {}),
     educations: normalizeEntries(payload.educations),
     experiences: normalizeEntries(payload.experiences),
     certifications: normalizeEntries(payload.certifications),
@@ -145,6 +141,41 @@ function normalizeEntry(value: unknown): ResumeEntryDto {
 
 function normalizeNullableString(value: unknown) {
   return normalizeString(value) || null;
+}
+
+const BLIND_RESUME_PERSONAL_KEYS = new Set([
+  "name",
+  "fullName",
+  "birthYear",
+  "birthDate",
+  "dateOfBirth",
+  "email",
+  "desiredJob",
+  "성명",
+  "이름",
+  "생년",
+  "생년월일",
+  "출생일",
+  "주민등록번호",
+  "이메일",
+  "이메일주소",
+  "희망직무",
+  "지원직무",
+  "지원분야",
+]);
+
+function stripBlindResumePersonalFields<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => stripBlindResumePersonalFields(item)) as T;
+  }
+  if (!value || typeof value !== "object") return value;
+
+  const result: Record<string, unknown> = {};
+  for (const [key, item] of Object.entries(value)) {
+    if (BLIND_RESUME_PERSONAL_KEYS.has(key)) continue;
+    result[key] = stripBlindResumePersonalFields(item);
+  }
+  return result as T;
 }
 
 function normalizeString(value: unknown) {

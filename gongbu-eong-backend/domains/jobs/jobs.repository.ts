@@ -72,6 +72,31 @@ function buildAnyTextFilter(column: string, value: string | undefined, values: u
   return `AND (${conditions.join(" OR ")})`;
 }
 
+function buildEmploymentTypeFilter(value: string | undefined, values: unknown[]) {
+  const filters = splitMultiFilter(value);
+  if (!filters.length) return "";
+
+  const conditions = filters.map((filter) => {
+    if (filter === "정규직") {
+      return `(
+        ${employmentColumn()} = '정규직'
+        OR (
+          ${employmentColumn()} ILIKE '%정규%'
+          AND ${employmentColumn()} NOT ILIKE '%비정규%'
+        )
+      )`;
+    }
+    const param = `$${values.push(`%${filter}%`)}`;
+    return `COALESCE(postings.employment_type, '') ILIKE ${param}`;
+  });
+
+  return `AND (${conditions.join(" OR ")})`;
+}
+
+function employmentColumn() {
+  return "COALESCE(postings.employment_type, '')";
+}
+
 export async function findLatestDiagnosisType(userId: string) {
   const result = await query<{
     code: string;
@@ -177,7 +202,7 @@ export async function findHotJobPostings(limit: number, userId?: string) {
       LEFT JOIN public.job_categories categories
         ON categories.id = posting_categories.job_category_id
       WHERE postings.is_active = TRUE
-        AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
+        AND (postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE)
         AND (
           postings.employment_type = '정규직'
           OR (
@@ -294,7 +319,7 @@ export async function findRecommendedJobPostings(
       LEFT JOIN public.public_institutions institutions
         ON institutions.id = postings.institution_id
       WHERE postings.is_active = TRUE
-        AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
+        AND (postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE)
         ${regularEmploymentFilter}
         ${monthlyDateFilter}
       GROUP BY postings.id, institutions.name
@@ -365,7 +390,7 @@ export async function findJobPostings(args: {
     : "";
   const ncsFilter = buildAnyTextFilter("postings.ncs_category", args.ncsCategory, values);
   const regionFilter = buildAnyTextFilter("postings.work_region", args.region, values);
-  const employmentFilter = buildAnyTextFilter("postings.employment_type", args.employmentType, values);
+  const employmentFilter = buildEmploymentTypeFilter(args.employmentType, values);
   const educationFilter = buildAnyTextFilter("postings.education_requirement", args.educationRequirement, values);
   const careerFilter = buildAnyTextFilter("postings.career_requirement", args.careerRequirement, values);
   const startDateFilter = args.startDate
@@ -423,7 +448,7 @@ export async function findJobPostings(args: {
       LEFT JOIN public.job_categories categories
         ON categories.id = posting_categories.job_category_id
       WHERE postings.is_active = TRUE
-        AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
+        AND (postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE)
         ${categoryFilter}
         ${bookmarkFilter}
         ${queryFilter}
@@ -685,7 +710,7 @@ export async function countUserJobBookmarks(userId: string) {
         ON postings.id = bookmarks.job_posting_id
       WHERE bookmarks.user_id = $1
         AND postings.is_active = TRUE
-        AND (postings.application_end_at IS NULL OR postings.application_end_at >= NOW())
+        AND (postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE)
     `,
     [userId],
   );

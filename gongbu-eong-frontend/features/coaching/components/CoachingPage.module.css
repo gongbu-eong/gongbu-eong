@@ -95,3 +95,106 @@
 .resultScreen .sentenceEditText{font-size:14px!important;line-height:19px!important;white-space:pre-wrap!important}
 .resultScreen .annotationLegend{font-size:13px!important;line-height:normal!important}
 .resultScreen .resultActions button{font-size:16px!important;font-weight:800!important}
+
+/* 2079 coaching input redesign */
+.newCoachingFrame{padding:24px 24px 108px;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.newCoachingFrame h1{margin:0 0 24px;color:#1a2233;font-size:20px;font-weight:800;line-height:1.25}
+.newCoachingFrame .intro{margin-bottom:24px}
+.newCoachingFrame .intro strong{display:block;color:#1a2233;font-size:17px;font-weight:800}
+.newCoachingFrame .intro p{margin:8px 0 0;color:#5a6580;font-size:14px;line-height:20px}
+.connectedJobCard{position:relative;margin:0 0 24px;padding:16px;border:1px solid #d8e8ff;border-radius:8px;background:#f3f8ff;color:#1a2233}
+.connectedJobCard>button{position:absolute;right:12px;top:10px;border:0;background:transparent;color:#8a94a8;font-size:22px}
+.connectedJobCard span,.connectedJobCard em{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:#2f7ff0;color:#fff;font-size:12px;font-style:normal;font-weight:800}
+.connectedJobCard strong{display:block;margin:10px 28px 12px 0;font-size:14px;line-height:20px}
+.connectedJobCard em{background:#fff;color:#2f7ff0;border:1px solid #d8e8ff}
+.connectedJobCard p{display:inline;margin-left:8px;color:#1a2233;font-size:14px;font-weight:700}
+.connectedJobCard small{display:block;margin-top:12px;color:#1fb573;font-size:13px}
+.questionSection{margin-top:28px}
+.questionRow{position:relative;display:grid;gap:8px;margin-top:12px;padding:14px 0 18px;border-bottom:1px solid #edf1f7}
+.questionRow label{color:#3f4b64;font-size:14px;font-weight:700}
+.questionRow>button{position:absolute;right:0;top:10px;border:0;background:transparent;color:#e8544d;font-size:13px;font-weight:700}
+.questionRow textarea,.questionRow input{width:100%;box-sizing:border-box;border:0;border-radius:6px;background:#f5f7fa;color:#1a2233;font:inherit;font-size:14px}
+.questionRow textarea{min-height:86px;resize:vertical;padding:14px;line-height:20px}
+.questionRow input{height:44px;padding:0 14px}
+.questionRow textarea::placeholder,.questionRow input::placeholder{color:#9aa4b8}
+.termsCheck{display:flex;align-items:center;gap:8px;width:100%;margin-top:22px;border:0;background:transparent;color:#3f4b64;font-size:14px;font-weight:700;text-align:left}
+.termsCheck span{display:grid;place-items:center;width:18px;height:18px;border:1px solid #cbd3e2;border-radius:4px;background:#fff;color:#fff;font-size:12px}
+.termsCheck[aria-pressed="true"] span{border-color:#2f7ff0;background:#2f7ff0}
+.coachingSheet{min-height:auto;max-height:min(82vh,720px);padding:0 16px 16px;border-radius:16px 16px 0 0}
+.coachingSheet .sheetHandle,.termsSheet .sheetHandle{margin-top:8px}
+.coachingSheet header,.termsSheet header{height:56px;border-bottom:1px solid #e8edf5}
+.coachingSheet header h2,.termsSheet header h2{margin:0;color:#1a2233;font-size:17px;font-weight:800}
+.coachingSheet .search{margin:18px 0 12px}
+.coachingSheet .search input{height:44px;border:0;background:#f5f7fa}
+.coachingSheet .search button{height:44px;border-radius:8px}
+.jobDutySelected{margin:18px 0;padding:14px;border-radius:8px;background:#f3f8ff}
+.jobDutySelected span{display:block;color:#5a6580;font-size:12px}
+.jobDutySelected strong{display:block;margin-top:6px;color:#1a2233;font-size:14px;line-height:20px}
+.jobDutyLabel{display:block;margin:0 0 8px;color:#3f4b64;font-size:14px;font-weight:800}
+.jobDutyInput{width:100%;height:48px;box-sizing:border-box;margin-bottom:18px;border:0;border-radius:6px;background:#f5f7fa;padding:0 14px;color:#1a2233;font:inherit}
+.termsSheet{min-height:auto;max-height:min(84vh,760px);padding:0 16px 16px;border-radius:16px 16px 0 0}
+.termsScroll{height:460px;overflow:auto;padding:18px 2px;color:#5a6580;font-size:14px;line-height:21px}
+.termsScroll h3{margin:0 0 10px;color:#1a2233;font-size:16px;font-weight:800}
+.termsScroll p{margin:0 0 18px}
+.termsMethod{display:flex;align-items:center;gap:10px;padding:14px 0;border-top:1px dashed #dfe6f0}
+.termsMethod b{display:inline-flex;align-items:center;justify-content:center;min-width:54px;height:30px;border-radius:999px;background:#2467c9;color:#fff;font-size:14px}
+.termsMethod strong{color:#3f4b64;font-size:15px}
+
+/* 2079 coaching result redesign */
+.newResultScreen{padding:24px 24px 112px;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif;text-align:left}
+.newResultScreen h1{margin:0;color:#1a2233;font-size:20px;font-weight:800;line-height:1.25}
+.newResultSubtitle{margin:10px 0 22px;color:#3f4b64;font-size:14px;font-weight:700;line-height:20px}
+.submittedBlock{margin-bottom:20px}
+.submittedBlock h2,.questionListBlock h2,.resultTermsInfo h2{margin:0 0 10px;color:#1a2233;font-size:16px;font-weight:800}
+.submittedFile,.submittedDetails{box-sizing:border-box;width:100%;min-height:52px;border:1px solid #e1e7f0;border-radius:8px;background:#fff;padding:14px 16px;color:#1a2233;font-size:14px;font-weight:800}
+.submittedFile{display:flex;align-items:center;gap:7px}
+.submittedFile small{margin-left:auto;color:#8a94a8;font-size:12px;font-weight:500}
+.submittedDetails summary{display:flex;align-items:center;gap:7px;cursor:pointer}
+.submittedDetails p{margin:12px 0 0;white-space:pre-wrap;color:#5a6580;font-size:14px;font-weight:400;line-height:20px}
+.fileDocIcon{display:inline-block;width:16px;height:18px;border-radius:2px;background:#eef2f8;box-shadow:inset 0 0 0 1px #dbe2ee}
+.reviewStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0 24px}
+.reviewStat{min-height:78px;border-radius:10px;padding:12px 8px;text-align:center}
+.reviewStat strong{display:block;font-size:26px;font-weight:900;line-height:1}
+.reviewStat span{display:block;margin-top:8px;font-size:12px;font-weight:800}
+.reviewStat_check{background:#fff7e0;color:#d99100}.reviewStat_fix{background:#fff0eb;color:#f5692d}.reviewStat_keep{background:#e8f7ec;color:#1fb573}
+.questionListBlock{margin-bottom:26px}
+.questionList{display:grid;gap:8px}
+.questionList a{display:block;border:1px solid #e1e7f0;border-radius:8px;background:#fff;padding:13px 14px;text-decoration:none}
+.questionList span{color:#2f7ff0;font-size:12px;font-weight:800}
+.questionList strong{display:block;margin-top:6px;color:#1a2233;font-size:14px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.questionList em{display:block;margin-top:6px;color:#8a94a8;font-size:12px;font-style:normal}
+.resultTermsInfo{padding:18px 0;border-top:1px solid #e8edf5;border-bottom:1px solid #e8edf5}
+.methodRow{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:16px 0;border-bottom:1px dashed #dfe6f0}
+.methodRow b{display:inline-flex;align-items:center;justify-content:center;width:58px;height:32px;border-radius:999px;background:#2467c9;color:#fff;font-size:14px;font-weight:800}
+.methodRow strong{display:block;color:#3f4b64;font-size:16px;font-weight:800}
+.methodRow p{margin:8px 0 0;color:#5a6580;font-size:14px;line-height:21px}
+.resultTermsNote{margin:16px 0 0;border-radius:8px;background:#f5f7fa;padding:14px;color:#5a6580;font-size:13px;line-height:20px}
+.questionReview{padding:24px 0;border-bottom:1px solid #e8edf5}
+.questionReview header span{color:#2f7ff0;font-size:13px;font-weight:800}
+.questionReview header h2{margin:8px 0 6px;color:#1a2233;font-size:18px;font-weight:800;line-height:24px}
+.questionReview header p{margin:0;color:#8a94a8;font-size:13px}
+.charNotice{margin:14px 0;border-radius:8px;padding:12px 14px;font-size:14px;line-height:20px}
+.charOk{background:#e8f7ec;color:#168d59}.charOver{background:#fff0eb;color:#e8544d}
+.resumeEvidence{margin:12px 0;border-radius:8px;background:#f5f7fa;padding:14px}
+.resumeEvidence h3{margin:0 0 8px;color:#2f7ff0;font-size:14px}
+.resumeEvidence p{margin:4px 0;color:#5a6580;font-size:13px;line-height:19px}
+.methodTags{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 8px}
+.methodTags span{height:26px;padding:0 10px;border-radius:999px;background:#2467c9;color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center}
+.methodComment{margin:0 0 12px;color:#5a6580;font-size:14px;line-height:20px}
+.answerCard{white-space:pre-wrap;border-radius:8px;background:#f5f7fa;padding:14px;color:#5a6580;font-size:14px;line-height:21px}
+.newHighlight{padding:0 2px;border-bottom:1px solid;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.newHighlight_check{background:#fff7e0;border-color:#d99100}.newHighlight_fix{background:#fff3d3;border-color:#f5b91e}.newHighlight_keep{background:#d0ffeb;border-color:#1fb573}
+.editCards{display:grid;gap:10px;margin-top:12px}
+.editCard{border-radius:8px;background:#f5f7fa;padding:14px}
+.editCard h3{display:flex;align-items:center;gap:8px;margin:0 0 8px}
+.editCard h3 b{color:#2f7ff0;font-size:14px}
+.editCard h3 span{border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800}
+.editTone_check{background:#fff7e0;color:#d99100}.editTone_fix{background:#ffecdf;color:#f5692d}.editTone_keep{background:#e8f7ec;color:#1fb573}
+.editCard p,.editCard strong,.editCard em{display:block;margin:0;color:#5a6580;font-size:14px;line-height:20px;font-style:normal}
+.editCard strong{margin-top:8px;color:#1a2233}
+.editCard em{margin-top:8px;border-radius:6px;background:#e8f7ec;padding:10px;color:#168d59}
+.newLegend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;color:#8a94a8;font-size:12px}
+.newLegend span{position:relative;padding-left:18px}
+.newLegend span::before{content:"";position:absolute;left:0;top:50%;width:13px;height:13px;border-radius:3px;transform:translateY(-50%)}
+.legendCheck::before{background:#fff7e0}.legendFix::before{background:#fff3d3}.legendKeep::before{background:#1fb573}
+@media (min-width:37.5rem){.newCoachingFrame,.newResultScreen{padding-left:32px;padding-right:32px}.overlay{align-items:center}.coachingSheet,.termsSheet{border-radius:16px;max-width:600px}.termsScroll{height:520px}}
