@@ -3,7 +3,6 @@ import { requireSessionUser } from "@/domains/auth/session";
 import { randomUUID } from "crypto";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
 import { createPendingResumeFile, validateResumeFile } from "@/domains/resumes/resume-file-storage";
-import { findResume } from "@/domains/resumes/resumes.repository";
 import { coachResume } from "@/domains/coaching/coaching.service";
 import {
   consumeCoachingCredit,
@@ -22,7 +21,6 @@ export async function POST(request: NextRequest) {
     const text = String(form.get("inputText") || "").trim();
     const jobId = String(form.get("jobPostingId") || "").trim() || null;
     const jobDuty = String(form.get("jobDuty") || "").trim() || null;
-    const resumeId = String(form.get("resumeId") || "").trim() || null;
     const questions = parseQuestionInputs(form.get("questions"));
     const fileEntry = form.get("file");
     const file = fileEntry instanceof File ? fileEntry : null;
@@ -36,8 +34,6 @@ export async function POST(request: NextRequest) {
     if (file && !allowedCoachingExtensions.has(file.name.split(".").pop()?.toLowerCase() || "")) return jsonWithCors(request, { ok: false, message: "HWP, HWPX, PDF, DOC, DOCX 파일만 첨부할 수 있습니다." }, { status: 400 });
     const fileValidationMessage = file ? validateResumeFile(file) : null;
     if (fileValidationMessage) return jsonWithCors(request, { ok: false, message: fileValidationMessage }, { status: 400 });
-    const selectedResume = resumeId ? await findResume(user.id, resumeId) : null;
-    if (resumeId && !selectedResume) return jsonWithCors(request, { ok: false, message: "선택한 이력서를 찾을 수 없습니다." }, { status: 400 });
     const posting = jobId ? await findJobPostingById(jobId, user.id) : null;
     if (jobId && (!posting || (posting.application_end_at && new Date(posting.application_end_at).getTime() < Date.now()))) return jsonWithCors(request, { ok: false, message: "마감된 공고는 연결할 수 없습니다." }, { status: 400 });
     const savedFile = file ? await createPendingResumeFile(user.id, file) : null;
@@ -56,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const result = await coachResume({ userId: user.id, inputType, inputText: inputType === "file" ? file!.name : text, file: file ? { name: file.name, type: file.type, buffer: Buffer.from(await file.arrayBuffer()) } : undefined, job: posting ? { id: posting.id, institutionName: posting.institution_name, title: posting.title, applicationEndAt: posting.application_end_at ? new Date(posting.application_end_at).toISOString() : null } : null, jobDuty, questions, resumeId, resumeAdditionalNotes: selectedResume?.additionalNotes, sourceFileId: savedFile?.id });
+      const result = await coachResume({ userId: user.id, inputType, inputText: inputType === "file" ? file!.name : text, file: file ? { name: file.name, type: file.type, buffer: Buffer.from(await file.arrayBuffer()) } : undefined, job: posting ? { id: posting.id, institutionName: posting.institution_name, title: posting.title, applicationEndAt: posting.application_end_at ? new Date(posting.application_end_at).toISOString() : null } : null, jobDuty, questions, resumeId: null, resumeAdditionalNotes: null, sourceFileId: savedFile?.id });
       return jsonWithCors(request, { ok: true, ...result, sourceFile: savedFile, creditBalance: creditUsage.balanceAfter });
     } catch (error) {
       await refundCoachingCredit(user.id, creditSourceId).catch((refundError) => {

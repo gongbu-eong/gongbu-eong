@@ -5,9 +5,18 @@
 --   id    = ba8155b2-1149-42ea-a1e5-d2c176922174
 --   email = freesetting@naver.com
 --
--- This deletes account data, OAuth links, sessions, logs, diagnosis results,
+-- This deletes account data, OAuth links, sessions, diagnosis results,
 -- resumes/files, AI coaching history, community activity, notifications,
 -- credit/payment history, and finally the public.users row.
+--
+-- Job posting/batch source tables are intentionally preserved:
+--   public.job_postings
+--   public.job_posting_details
+--   public.job_posting_files
+--   public.job_posting_stages
+--   public.job_posting_sync_runs
+--   public.job_posting_view_events
+--   public.job_posting_daily_stats
 
 BEGIN;
 
@@ -153,6 +162,18 @@ WHERE applications.id = target_applications.id;
 DELETE FROM public.user_calendar_items items
 USING _target_user target
 WHERE items.user_id = target.id;
+
+DO $$
+BEGIN
+  IF to_regclass('public.job_posting_view_events') IS NOT NULL THEN
+    EXECUTE '
+      UPDATE public.job_posting_view_events events
+      SET user_id = NULL
+      FROM _target_user target
+      WHERE events.user_id = target.id
+    ';
+  END IF;
+END $$;
 
 DELETE FROM public.community_reports reports
 USING _target_user target

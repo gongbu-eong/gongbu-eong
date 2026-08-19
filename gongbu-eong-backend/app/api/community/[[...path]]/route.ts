@@ -11,6 +11,7 @@ import {
   reviewCommunityReport,
   saveCommunityComment,
   saveCommunityPost,
+  toggleCommunityCommentReaction,
   toggleCommunityPostReaction,
 } from "@/domains/community/community.service";
 import { jsonWithCors } from "@/lib/cors";
@@ -87,6 +88,10 @@ export async function POST(request: NextRequest, context: Context) {
 
     if (first === "comments" && isUuid(second || "") && path[2] === "report") {
       return jsonWithCors(request, await reportCommunityTarget(request, "comment", second));
+    }
+
+    if (first === "comments" && isUuid(second || "") && path[2] === "reaction") {
+      return jsonWithCors(request, await toggleCommunityCommentReaction(request, second));
     }
 
     return jsonWithCors(request, { ok: false, message: "요청 경로를 찾을 수 없습니다." }, { status: 404 });

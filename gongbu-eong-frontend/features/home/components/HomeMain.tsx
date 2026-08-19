@@ -10,6 +10,7 @@ import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
 import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAlert";
 import { getCommunityPosts } from "@/features/community/community.api";
 import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
+import { PostItem } from "@/features/community/components/CommunityShared";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "../home.api";
 import type {
   CurrentUserDto,
@@ -30,6 +31,7 @@ const aiTools = [
   },
   {
     href: "/ai-tools/coaching",
+    requiresAuth: true,
     tag: "첫 1회 무료",
     memberTag: "첫 5회 무료 쿠폰 증정",
     title: "Ai NCS 자소서 코칭",
@@ -230,6 +232,9 @@ export function HomeMain({
     if (isLoading) return "";
     return user?.nickname || user?.displayName || "회원";
   }, [isLoading, user]);
+  const hasDiagnosisResult = Boolean(
+    user?.diagnosisResultId && user?.diagnosisTypeCode && user?.diagnosisTypeName,
+  );
   const diagnosisTypeName = user?.diagnosisTypeName || "진단 결과 확인";
   const resultCard =
     (user?.diagnosisTypeCode
@@ -238,7 +243,7 @@ export function HomeMain({
           card.names.some((name) => diagnosisTypeName.includes(name)),
         )) ?? resultCards.stability;
   const resultBannerClassName = `${styles.resultBanner} ${
-    user ? resultCard.bannerClassName : styles.loggedOutResultBanner
+    hasDiagnosisResult ? resultCard.bannerClassName : styles.loggedOutResultBanner
   }`;
 
 const DRAG_THRESHOLD = 10;
@@ -314,6 +319,12 @@ const endHotDrag = (event: PointerEvent<HTMLDivElement>) => {
     }
   };
 
+  const alertLoginRequired = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    window.alert("로그인이 필요한 서비스입니다.");
+    window.location.href = "/login";
+  };
+
 const ignoreClickAfterDrag = (
   event: MouseEvent<HTMLAnchorElement>,
 ) => {
@@ -331,7 +342,7 @@ const ignoreClickAfterDrag = (
       <section className={styles.mobileFrame} aria-label="공부엉이 메인">
         <header className={styles.header}>
           <Link href="/" className={styles.logoLink} aria-label="공부엉이 홈">
-            <Image src="/tickets/main-logo.png" alt="공부엉이" width={59} height={26} priority />
+            <Image src="/tickets/main-logo.png" alt="공부엉이" width={88} height={39} priority />
           </Link>
           <div className={styles.headerActions}>
             {user ? <AppTicketStatus ticketCount={user.creditBalance ?? 0} /> : null}
@@ -363,7 +374,7 @@ const ignoreClickAfterDrag = (
           <SearchIcon />
         </Link>
 
-        {user ? (
+        {hasDiagnosisResult ? (
           <Link
             href="/ai-tools/diagnosis/result"
             className={`${resultBannerClassName} ${styles.resultBannerLink}`}
@@ -394,7 +405,7 @@ const ignoreClickAfterDrag = (
               <br />
               진행해 주세요.
             </p>
-            <Link href="/login" className={styles.resultLink}>
+            <Link href="/ai-tools/diagnosis" className={styles.resultLink}>
               <span>진단하러 가기</span>
               <b aria-hidden="true">→</b>
             </Link>
@@ -436,7 +447,7 @@ const ignoreClickAfterDrag = (
         ))}
         </div>
 
-        <SectionHeader title="Ai 취업 도구" href={user ? "#" : "/login"} />
+        <SectionHeader title="Ai 취업 도구" />
         <div className={styles.toolList}>
           {aiTools.map((tool) => {
             const content = (
@@ -473,13 +484,10 @@ const ignoreClickAfterDrag = (
 
             return (
               <Link
-                href={
-                  user
-                    ? tool.href
-                    : "/login"
-                }
+                href={!tool.requiresAuth || user ? tool.href : "/login"}
                 key={tool.title}
                 className={styles.toolCard}
+                onClick={!tool.requiresAuth || user ? undefined : alertLoginRequired}
               >
                 {content}
               </Link>
@@ -527,7 +535,7 @@ const ignoreClickAfterDrag = (
                   <br />
                   강점·성향 진단 테스트를 진행하면 나옵니다.
                 </p>
-                <Link href="/login">
+                <Link href="/ai-tools/diagnosis">
                   강점·성향 진단 테스트 하기 <span aria-hidden="true">→</span>
                 </Link>
               </div>
@@ -539,26 +547,7 @@ const ignoreClickAfterDrag = (
           <SectionHeader title="커뮤니티" href={user ? "/community" : "/login"} />
           <div className={styles.listGroup}>
             {communityPreview.map((post) => (
-              <Link
-                href={user ? `/community/${post.id}` : "/login"}
-                key={post.id}
-                className={styles.communityItem}
-              >
-                <span className={styles.communityCategory}>{post.category}</span>
-                <strong>{post.title}</strong>
-                <span className={styles.communityAuthor}>
-                  {post.author.nickname}
-                  {post.author.diagnosisTypeName ? (
-                    <b className={styles.communityType}>{post.author.diagnosisTypeName}</b>
-                  ) : null}
-                </span>
-                <span className={styles.communityMeta}>
-                  <span>조회수 : {post.viewCount.toLocaleString("ko-KR")}</span>
-                  <span>추천수 : {post.recommendCount.toLocaleString("ko-KR")}</span>
-                  <span>댓글 : {post.commentCount.toLocaleString("ko-KR")}</span>
-                  <time>{formatCommunityTime(post.createdAt)}</time>
-                </span>
-              </Link>
+              <PostItem key={post.id} post={post} />
             ))}
             {!communityPreview.length ? (
               <p className={styles.emptyJobs}>등록된 커뮤니티 글이 없습니다.</p>
@@ -721,7 +710,7 @@ export function HomeMenuDrawer({
               // "#",
             ] : [
               // "/login",
-              "/login",
+              "/ai-tools/diagnosis",
               "/login",
               // "/login",
               // "/login",
@@ -783,20 +772,6 @@ function toEndDate(value: string | null) {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `~ ${year}. ${month}. ${day}(${weekday})`;
-}
-
-function formatCommunityTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const diff = Date.now() - date.getTime();
-  const minute = 60 * 1000;
-  const hour = 60 * minute;
-  const day = 24 * hour;
-
-  if (diff < hour) return `${Math.max(1, Math.floor(diff / minute))}분 전`;
-  if (diff < day) return `${Math.floor(diff / hour)}시간 전`;
-  if (diff < day * 7) return `${Math.floor(diff / day)}일 전`;
-  return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
 }
 
 function splitDelimitedOption(value: string | null | undefined) {

@@ -8,8 +8,6 @@ import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser, getJobPostings } from "@/features/home/home.api";
 import { getDiagnosisResultHistory, selectDiagnosisResult } from "@/features/diagnosis/diagnosis.api";
 import type { DiagnosisResultHistoryItemDto } from "@/features/diagnosis/diagnosis.dto";
-import { listResumes } from "@/features/my/my.api";
-import type { ResumeDto } from "@/features/my/my.dto";
 import { coachResume } from "../coaching.api";
 import type { CoachingJob } from "../coaching.dto";
 import styles from "./CoachingPage.module.css";
@@ -28,11 +26,8 @@ export function CoachingPage() {
   const [coaching, setCoaching] = useState(false);
   const [error, setError] = useState("");
   const [hasDiagnosis, setHasDiagnosis] = useState(false);
-  const [hasResume, setHasResume] = useState(false);
   const [diagnoses, setDiagnoses] = useState<DiagnosisResultHistoryItemDto[]>([]);
   const [selectedDiagnosisId, setSelectedDiagnosisId] = useState<string | null>(null);
-  const [resumes, setResumes] = useState<ResumeDto[]>([]);
-  const [resumeId, setResumeId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuestionRow[]>([makeQuestionRow()]);
   const [inputType, setInputType] = useState<"text" | "file">("text");
   const [text, setText] = useState("");
@@ -46,7 +41,7 @@ export function CoachingPage() {
   const [query, setQuery] = useState("");
   const [jobs, setJobs] = useState<CoachingJob[]>([]);
   const [searching, setSearching] = useState(false);
-  const [picker, setPicker] = useState<"diagnosis" | "resume" | null>(null);
+  const [picker, setPicker] = useState<"diagnosis" | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -61,16 +56,10 @@ export function CoachingPage() {
         }
         return;
       }
-      const [resumeResponse, diagnosisResponse] = await Promise.all([
-        listResumes().catch(() => null),
+      const [diagnosisResponse] = await Promise.all([
         getDiagnosisResultHistory(undefined, 20).catch(() => null),
       ]);
       if (!active) return;
-      const nextResumes = resumeResponse?.resumes || [];
-      const selectedResume = nextResumes.find((item) => item.isSelected) || nextResumes[0];
-      setResumes(nextResumes);
-      setResumeId(selectedResume?.id || null);
-      setHasResume(Boolean(selectedResume));
       setDiagnoses(diagnosisResponse?.items || []);
       setSelectedDiagnosisId(diagnosisResponse?.selectedResultId || user.user.diagnosisResultId || null);
       setHasDiagnosis(Boolean(user.user.diagnosisResultId || diagnosisResponse?.selectedResultId));
@@ -135,7 +124,6 @@ export function CoachingPage() {
         file,
         jobPostingId: connectedJob?.id,
         jobDuty: connectedJob?.duty,
-        resumeId,
         questions: normalizedQuestions,
       });
       if (typeof result.creditBalance === "number") {
@@ -166,7 +154,6 @@ export function CoachingPage() {
   if (coaching) return <CoachingLoadingScreen />;
 
   const selectedDiagnosis = diagnoses.find((item) => item.resultId === selectedDiagnosisId);
-  const selectedResume = resumes.find((item) => item.id === resumeId);
   const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || 0 }));
   const questionsReady = normalizedQuestions.length > 0 && normalizedQuestions.every((item) => item.question && item.characterLimit >= MIN_CHARACTER_LIMIT && item.characterLimit <= MAX_CHARACTER_LIMIT);
   const coverLetterReady = inputType === "text" ? Boolean(text.trim()) : Boolean(file);
@@ -179,7 +166,6 @@ export function CoachingPage() {
       <section className={styles.intro}><strong>자소서를 Ai가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
       {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button>}
       <StatusCard title="강점·성향 진단 결과" ready={hasDiagnosis} empty="현재 강·약점 결과가 없습니다." action="진단 시작하기 →" href="/ai-tools/diagnosis" onChange={() => setPicker("diagnosis")} selected={selectedDiagnosis?.typeName} date={formatDate(selectedDiagnosis?.completedAt)} />
-      <StatusCard title="내 이력서 (선택)" ready={hasResume} empty="이력서 없이도 자소서 코칭을 받을 수 있어요." action="이력서 등록하기 →" href="/my/resumes/new" onChange={() => setPicker("resume")} selected={selectedResume?.file?.originalFilename || selectedResume?.title} />
 
       <section className={styles.questionSection}>
         <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={addQuestion} disabled={questions.length >= MAX_QUESTION_COUNT}>+ 추가</button></div>
@@ -204,7 +190,6 @@ export function CoachingPage() {
     {jobPickerOpen ? <JobPicker query={query} setQuery={setQuery} jobs={jobs} searching={searching} onSearch={searchJobs} onPick={(item) => { setJobPickerOpen(false); setDutySheetJob(item); }} onClose={() => setJobPickerOpen(false)} /> : null}
     {dutySheetJob ? <JobDutySheet job={dutySheetJob} onBack={() => { setDutySheetJob(null); setJobPickerOpen(true); }} onClose={() => setDutySheetJob(null)} onConfirm={(duty) => { setConnectedJob({ ...dutySheetJob, duty }); setDutySheetJob(null); }} /> : null}
     {picker === "diagnosis" ? <DiagnosisPicker items={diagnoses} selectedId={selectedDiagnosisId} onPick={async (item) => { await selectDiagnosisResult(item.resultId); setSelectedDiagnosisId(item.resultId); setHasDiagnosis(true); setPicker(null); }} onClose={() => setPicker(null)} /> : null}
-    {picker === "resume" ? <ResumePicker items={resumes} selectedId={resumeId} onPick={(item) => { setResumeId(item.id); setHasResume(true); setPicker(null); }} onClose={() => setPicker(null)} /> : null}
   </div>;
 }
 
@@ -257,10 +242,6 @@ function TermsReference({ title, children }: { title: string; children: string }
 
 function DiagnosisPicker({ items, selectedId, onPick, onClose }: { items: DiagnosisResultHistoryItemDto[]; selectedId: string | null; onPick: (item: DiagnosisResultHistoryItemDto) => void; onClose: () => void }) {
   return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet}`}><div className={styles.sheetHandle} /><header><h2>강점·성향 진단 결과</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.pickerList}>{items.map((item) => <button type="button" key={item.resultId} className={styles.pickerCard} onClick={() => onPick(item)}><span><strong>{item.typeName}</strong><small>{formatDate(item.completedAt)}</small></span>{item.resultId === selectedId ? <b className={styles.selectedLabel}>선택됨 ✓</b> : <em>선택하기</em>}</button>)}</div></section></div>;
-}
-
-function ResumePicker({ items, selectedId, onPick, onClose }: { items: ResumeDto[]; selectedId: string | null; onPick: (item: ResumeDto) => void; onClose: () => void }) {
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet}`}><div className={styles.sheetHandle} /><header><h2>내 이력서 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.pickerList}>{items.map((item) => <button type="button" key={item.id} className={styles.pickerCard} onClick={() => onPick(item)}><span><strong>{item.file?.originalFilename || item.title}</strong><small>{formatDate(item.updatedAt || item.createdAt)}</small></span>{item.id === selectedId ? <b className={styles.selectedLabel}>선택됨 ✓</b> : <em>선택하기</em>}</button>)}</div></section></div>;
 }
 
 function makeQuestionRow(): QuestionRow {

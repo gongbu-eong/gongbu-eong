@@ -149,6 +149,7 @@ export function AppHeader({
         {showTicketStatus && isAuthenticated ? (
           <AppTicketStatus ticketCount={effectiveTicketCount} hasTicketAlert={hasTicketAlert} />
         ) : null}
+        {/*
         {isAuthenticated ? (
           <Link href="/notifications" aria-label="알림" className={`${styles.headerButton} ${styles.notificationButton}`}>
             <FigmaHeaderIcon kind="bell" />
@@ -159,6 +160,7 @@ export function AppHeader({
             ) : null}
           </Link>
         ) : null}
+        */}
         <button
           type="button"
           aria-label="메인 메뉴"
@@ -297,6 +299,7 @@ export function AppFooter({
     }
 
     window.alert("로그인이 필요한 서비스입니다.");
+    router.push("/login");
   };
 
   return (

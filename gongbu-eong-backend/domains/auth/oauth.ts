@@ -153,6 +153,11 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     });
 
     const redirectUrl = new URL(successRedirectUrl, request.url);
+    if (authResult.diagnosisResultId) {
+      redirectUrl.pathname = "/ai-tools/diagnosis/result";
+      redirectUrl.search = "";
+      redirectUrl.searchParams.set("resultId", authResult.diagnosisResultId);
+    }
     if (authResult.welcomeCreditsGranted) {
       redirectUrl.searchParams.set("ticketReward", "welcome");
       redirectUrl.searchParams.set("ticketAmount", "5");

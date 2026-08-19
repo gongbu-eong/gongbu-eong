@@ -1,5 +1,49 @@
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { DiagnosisResultDetail } from "@/features/diagnosis/components/DiagnosisResultDetail";
+import {
+  DIAGNOSIS_SHARE_DESCRIPTION,
+  DIAGNOSIS_SHARE_IMAGE_HEIGHT,
+  DIAGNOSIS_SHARE_IMAGE_WIDTH,
+  DIAGNOSIS_SHARE_TITLE,
+  getDiagnosisResultShareUrl,
+  getDiagnosisShareImageUrl,
+} from "@/features/diagnosis/diagnosis-share";
+
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ resultId?: string }>;
+}): Promise<Metadata> {
+  const params = await searchParams;
+  const url = getDiagnosisResultShareUrl(params.resultId);
+  const imageUrl = getDiagnosisShareImageUrl();
+
+  return {
+    title: DIAGNOSIS_SHARE_TITLE,
+    description: DIAGNOSIS_SHARE_DESCRIPTION,
+    openGraph: {
+      title: DIAGNOSIS_SHARE_TITLE,
+      description: DIAGNOSIS_SHARE_DESCRIPTION,
+      url,
+      type: "website",
+      images: [
+        {
+          url: imageUrl,
+          width: DIAGNOSIS_SHARE_IMAGE_WIDTH,
+          height: DIAGNOSIS_SHARE_IMAGE_HEIGHT,
+          alt: DIAGNOSIS_SHARE_TITLE,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: DIAGNOSIS_SHARE_TITLE,
+      description: DIAGNOSIS_SHARE_DESCRIPTION,
+      images: [imageUrl],
+    },
+  };
+}
 
 export default function DiagnosisResultPage() {
   return (

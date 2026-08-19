@@ -581,7 +581,7 @@
 
 .hiringBars > div {
   display: grid;
-  grid-template-columns: 4.0625rem minmax(0, 10rem) 1.5rem;
+  grid-template-columns: 4.0625rem minmax(0, 1fr) 1.5rem;
   align-items: center;
   gap: .5rem;
 }

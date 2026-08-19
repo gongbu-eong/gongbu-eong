@@ -8,7 +8,6 @@ import { getDiagnosisResultHistory } from "@/features/diagnosis/diagnosis.api";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { listResumes } from "../my.api";
 import { listCoachingHistory } from "@/features/coaching/coaching.api";
 import styles from "./My.module.css";
 
@@ -16,7 +15,7 @@ export function MyPage() {
   const router = useRouter();
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [bookmarkCount, setBookmarkCount] = useState(0);
-  const [resumeCount, setResumeCount] = useState(0);
+  // const [resumeCount, setResumeCount] = useState(0);
   const [diagnosisCount, setDiagnosisCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -39,9 +38,8 @@ export function MyPage() {
 
       setUser(userResponse.user);
 
-      const [jobsResponse, resumesResponse, diagnosisResponse, coachingResponse] = await Promise.all([
+      const [jobsResponse, diagnosisResponse, coachingResponse] = await Promise.all([
         getHomeJobs().catch(() => null),
-        listResumes().catch(() => null),
         getDiagnosisResultHistory(undefined, 1).catch(() => null),
         listCoachingHistory().catch(() => null),
       ]);
@@ -49,7 +47,7 @@ export function MyPage() {
       if (!alive) return;
 
       setBookmarkCount(jobsResponse?.bookmarkCount ?? 0);
-      setResumeCount(resumesResponse?.resumes.length ?? 0);
+      // setResumeCount(resumesResponse?.resumes.length ?? 0);
       setDiagnosisCount(diagnosisResponse?.totalCount ?? 0);
       setCoverLetterCoachingCount(coachingResponse?.items.length ?? 0);
       setIsCheckingAuth(false);
@@ -162,6 +160,7 @@ export function MyPage() {
             count={interviewCoachingCount}
           />
           */}
+          {/*
           <MyMenuItem
             href="/my/resumes"
             iconSrc="/my/activity-resume.png"
@@ -170,6 +169,7 @@ export function MyPage() {
             title="내 이력서 관리"
             count={resumeCount || undefined}
           />
+          */}
         </nav>
 
         <h2 className={styles.sectionTitle}>설정</h2>

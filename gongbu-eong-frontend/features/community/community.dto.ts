@@ -52,6 +52,9 @@ export type CommunityCommentDto = {
   author: CommunityAuthorDto;
   createdAt: string;
   canDelete: boolean;
+  likeCount: number;
+  dislikeCount: number;
+  myReaction: "like" | "dislike" | null;
   replies: CommunityCommentDto[];
 };
 
@@ -87,6 +90,16 @@ export type CommunityReactionResponseDto = {
     isRecommended: boolean;
     isScrapped: boolean;
     isBest: boolean;
+  };
+};
+
+export type CommunityCommentReactionResponseDto = {
+  ok: true;
+  reaction: {
+    commentId: string;
+    likeCount: number;
+    dislikeCount: number;
+    myReaction: "like" | "dislike" | null;
   };
 };
 

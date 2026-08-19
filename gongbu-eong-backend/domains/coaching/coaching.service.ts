@@ -17,7 +17,7 @@ export { listCoachingHistory, findCoachingResult };
 type PreparedCoachingSource = { content: Array<Record<string, unknown>>; storageText: string; originalText: string };
 
 async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoachingSource> {
-  const prompt = buildPrompt(args.job, args.resumeAdditionalNotes, args.questions || [], args.jobDuty);
+  const prompt = buildPrompt(args.job, args.questions || [], args.jobDuty);
   if (args.inputType === "file" && args.file) {
     if (args.file.name.toLowerCase().endsWith(".pdf")) {
       return {
@@ -107,7 +107,7 @@ const coachingFeedbackTool = {
                 exceededBy: { type: "number" },
                 frameworks: { type: "array", items: { type: "string", enum: ["PREP", "CAR", "PAP", "STAR"] } },
                 editCount: { type: "number" },
-                methodComment: { type: "string", maxLength: 240 },
+                methodComment: { type: "string", maxLength: 500 },
                 resumeEvidence: { type: "array", maxItems: 4, items: { type: "string", maxLength: 200 } },
                 ncsEvaluations: { type: "array", maxItems: 3, items: { type: "object", additionalProperties: true } },
                 coachingPoints: { type: "object", additionalProperties: true },
@@ -125,7 +125,7 @@ const coachingFeedbackTool = {
                       original: { type: "string", maxLength: 160 },
                       severity: { type: "string", enum: ["check", "fix", "keep"] },
                       label: { type: "string", maxLength: 30 },
-                      note: { type: "string", maxLength: 180 },
+                      note: { type: "string", maxLength: 420 },
                     },
                   },
                 },
@@ -140,9 +140,9 @@ const coachingFeedbackTool = {
                       frameworkPart: { type: "string", maxLength: 30 },
                       severity: { type: "string", enum: ["check", "fix", "keep"] },
                       title: { type: "string", maxLength: 60 },
-                      issue: { type: "string", maxLength: 220 },
-                      suggestion: { type: "string", maxLength: 240 },
-                      replacement: { type: "string", maxLength: 240 },
+                      issue: { type: "string", maxLength: 520 },
+                      suggestion: { type: "string", maxLength: 560 },
+                      replacement: { type: "string", maxLength: 520 },
                     },
                   },
                 },
@@ -156,8 +156,7 @@ const coachingFeedbackTool = {
   },
 } as const;
 
-function buildPrompt(job?: CoachingJobDto | null, resumeAdditionalNotes?: string | null, questions: CoachingQuestionInput[] = [], jobDuty?: string | null) {
-  const notes = resumeAdditionalNotes?.trim() ? `\n\n사용자가 이력서 관리의 기타 항목에 작성한 내용:\n${resumeAdditionalNotes.trim()}` : "";
+function buildPrompt(job?: CoachingJobDto | null, questions: CoachingQuestionInput[] = [], jobDuty?: string | null) {
   const duty = jobDuty?.trim() ? `\n사용자가 이 공고에서 지원하려는 직무: ${jobDuty.trim()}` : "";
   const questionGuide = questions.length
     ? `\n\n사용자가 입력한 자소서 문항과 글자 수 제한입니다. submissionReview.questions는 반드시 이 순서와 개수 그대로 반환하세요.\n${questions.map((item, index) => `${index + 1}. 문항: ${item.question || "문항 미입력"} / 글자 수 제한: ${item.characterLimit || "없음"}`).join("\n")}`
@@ -168,7 +167,9 @@ function buildPrompt(job?: CoachingJobDto | null, resumeAdditionalNotes?: string
 JSON이 길어져 중간에 끊기지 않도록 모든 문장은 간결하게 작성하세요. 같은 원문 문단을 여러 필드에 반복해서 길게 복사하지 마세요.
 파일 첨부인 경우 파일명은 분석 대상이 아닙니다. 문서 내부의 자기소개서 문장만 분석하세요.
 모든 피드백, 점수, 개선 제안, 문장별 첨삭, 개선 예시문은 제출 원문과 공고 내용을 근거로 AI가 새로 작성해야 합니다. 샘플 문장이나 고정 문구를 반복하지 마세요.
-summary는 2~4문장, 각 feedback/comment/suggestion/reason은 1~2문장으로 제한하세요.
+summary는 최소 4문장 이상 작성하고, 현재 강점·가장 큰 리스크·직무 연결성·우선 수정 방향을 모두 포함하세요.
+각 feedback/comment/suggestion/reason은 근거와 수정 방향이 보이도록 2~4문장으로 작성하세요. 한 줄짜리 짧은 평은 금지합니다.
+coachingPoints의 각 배열 항목은 문항별 원문과 NCS 역량을 연결해 구체적으로 작성하고, 추상적인 조언만 쓰지 마세요.
 originalTextExcerpt는 문장별 첨삭에 그대로 보여줄 제출 원문 핵심 문단 400~700자입니다. sentenceEdits[].original은 반드시 originalTextExcerpt 안에 포함되는 정확한 연속 부분 문자열이어야 하며, 요약·새 문장·비슷한 표현으로 바꾸면 안 됩니다.
 rewrittenText는 originalTextExcerpt를 공고에 맞춰 다시 쓴 after 문단이며 700자 이내로 작성하세요.
 sentenceEdits[].original은 반드시 제출 원문에서 그대로 가져온 표현이어야 합니다.
@@ -179,12 +180,12 @@ sections는 정확히 "지원동기", "경험 서술", "입사 후 포부" 순�
 "지원동기"는 회사/기관/직무를 선택한 이유와 지원자의 동기가 설득력 있는지 판단하세요.
 "경험 서술"은 경험의 배경, 역할, 행동, 성과가 구체적으로 드러나는지 판단하세요. 원문에 프로젝트, 경험, 성과, 업무 내용이 있으면 반드시 이 항목의 sentenceEdits에 포함하세요.
 "입사 후 포부"는 입사 후 목표, 기여 방식, 직무 수행 계획이 구체적인지 판단하세요.
-jobConnection과 sections의 feedback은 해당 항목에 대한 AI 판단을 1~3문장으로 작성하세요.
+jobConnection과 sections의 feedback은 해당 항목에 대한 AI 판단을 2~4문장으로 작성하세요.
 jobConnection과 sections의 suggestion은 반드시 "예: "로 시작하는 구체적인 개선 문장 또는 개선 방향 한 문장으로 작성하세요.
 status는 "good" 또는 "needs_work"입니다. sentenceEdits[].good은 잘 쓴 표현이면 true, 보완이 필요한 표현이면 false입니다.
 문장별 첨삭은 화면에서 한 문단 안에 보완 표현과 좋은 표현을 밑줄/배경색으로 표시합니다. 따라서 sentenceEdits[].original은 화면에 표시할 원문 문장 안에서 정확히 찾을 수 있는 짧거나 중간 길이의 구절로 선택하세요.
 sentenceEdits[].improved는 보완이 필요한 표현이면 대체 문장을, 잘 쓴 표현이면 왜 유지하면 좋은지에 맞춘 개선 방향을 작성하세요.
-questionFeedback에는 "전체 문항"을 넣지 마세요.${notes}
+questionFeedback에는 "전체 문항"을 넣지 마세요.
 ${questionGuide}
 
 반환 JSON 필드:
@@ -219,8 +220,8 @@ submissionReview.preSubmitChecks는 제출 전 반드시 확인해야 하는 지
 5. 대인관계능력: 팀워크, 리더십, 갈등관리
 6. 정보능력: 정보수집, 정보분석, 컴퓨터활용
 7. 직업윤리: 근로윤리, 공동체윤리, 안전의식
-submissionReview.strongestQuestion은 문항 중 가장 강한 포인트 1개입니다. { "questionIndex": 1부터 시작, "title": "최대 8글자 제목", "ncsName": "NCS 역량명", "comment": "AI 판단" } 형식입니다.
-submissionReview.priorityImprovement는 가장 먼저 보완할 사항 1개입니다. { "questionIndex": 1부터 시작, "title": "최대 8글자 제목", "ncsName": "부족한 NCS 역량명", "comment": "AI 판단" } 형식입니다.
+submissionReview.strongestQuestion은 문항 중 가장 강한 포인트 1개입니다. { "questionIndex": 1부터 시작, "title": "최대 8글자 제목", "ncsName": "NCS 역량명", "comment": "AI 판단 2~3문장" } 형식입니다.
+submissionReview.priorityImprovement는 가장 먼저 보완할 사항 1개입니다. { "questionIndex": 1부터 시작, "title": "최대 8글자 제목", "ncsName": "부족한 NCS 역량명", "comment": "AI 판단 2~3문장" } 형식입니다.
 submissionReview.overallAssessment는 전체 평가 하단에 보여줄 종합 가이드입니다. { "strengths": "현재 강점", "firstFix": "가장 먼저 고칠 것", "principle": "첨삭 원칙" } 형식입니다.
 submissionReview.questions[].tabTitle은 질문 내용을 AI가 최대 8글자 한국어 제목으로 요약한 값입니다. "1.", "2." 같은 문항 번호는 포함하지 마세요.
 submissionReview.questions[].answer는 해당 문항에 대응되는 제출 원문을 원문 순서대로 담되 1200자를 넘기지 마세요. 문항별 구분이 불분명하면 제출 원문 전체에서 가장 관련 있는 문단을 사용하세요.
@@ -233,7 +234,7 @@ PREP는 주장→이유→사례→재강조, CAR는 배경→행동→결과, P
 submissionReview.questions[].highlights는 화면에서 원문 answer 안에 밑줄과 배경색으로 표시할 정확한 연속 부분 문자열입니다. original은 반드시 answer 안에서 찾을 수 있어야 합니다. severity는 "check"(제출 전 확인), "fix"(고치면 좋은 곳), "keep"(그대로 두세요) 중 하나입니다.
 각 질문마다 highlights에는 가능한 한 fix와 keep을 모두 포함하세요. 정말 유지할 표현이 없을 때만 keep을 생략하세요.
 submissionReview.questions[].edits는 하이라이트와 연결되는 첨삭 카드입니다. frameworkPart는 "P · 주장", "R · 이유", "E · 사례", "C · 배경", "A · 행동", "R · 결과", "S · 상황", "T · 과제"처럼 방법론 단계가 보이게 작성하세요.
-edits[].issue는 왜 문제인지 또는 왜 유지하면 좋은지, suggestion은 어떻게 바꾸거나 유지하면 좋은지, replacement는 대체 문장이 있을 때만 작성하세요.
+edits[].issue는 왜 문제인지 또는 왜 유지하면 좋은지 2문장 이상, suggestion은 어떻게 바꾸거나 유지하면 좋은지 2문장 이상 작성하세요. replacement는 대체 문장이 있을 때만 작성하세요.
 submissionReview.questions[].comparisonEdits는 비교 탭에서 보여줄 문장별 원문과 첨삭입니다. 각 항목은 { "original": "원문 문장", "improved": "첨삭 문장", "reason": "수정 이유" }입니다. 최대 4개만 반환하세요.
 submissionReview.questions[].majorRevisions는 주요 수정 3건입니다. 원문에 근거한 핵심 수정 포인트를 3개 반환하세요.
 submissionReview.questions[].factualChecks는 사실성 체크입니다. 자소서에 작성된 수치, 기관명, 경험 기간, 성과처럼 제출 전 확인해야 할 내용을 1~3개 반환하세요.`;

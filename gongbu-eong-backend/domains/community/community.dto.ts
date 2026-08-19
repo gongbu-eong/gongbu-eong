@@ -52,6 +52,9 @@ export type CommunityCommentDto = {
   author: CommunityAuthorDto;
   createdAt: string;
   canDelete: boolean;
+  likeCount: number;
+  dislikeCount: number;
+  myReaction: "like" | "dislike" | null;
   replies: CommunityCommentDto[];
 };
 

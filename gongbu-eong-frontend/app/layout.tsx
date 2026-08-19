@@ -4,7 +4,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Gongbu Eong Frontend",
+  title: "공부엉이",
   description: "Frontend app for Gongbu Eong",
 };
 

@@ -15,6 +15,11 @@ export const CREDIT_REWARD_POLICY = {
     sourceType: "community_activity_milestone",
     reason: "커뮤니티 글·댓글 활동 보상",
   },
+  diagnosisResultShare: {
+    amount: 1,
+    sourceType: "diagnosis_result_share",
+    reason: "강점·성향 진단 결과 공유 보상",
+  },
 } as const;
 
 type CreditRewardPolicy = {
@@ -123,6 +128,52 @@ export async function grantCommunityActivityMilestoneReward(
       },
     });
 
+    const balanceAfter =
+      transaction.balanceAfter ?? (await getCurrentCreditBalance(userId, client));
+
+    await client.query("COMMIT");
+    return { granted: transaction.granted, balanceAfter };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function grantDiagnosisResultShareReward(
+  userId: string,
+  resultId: string,
+) {
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+    const policy = await getCreditRewardPolicy(
+      client,
+      CREDIT_REWARD_POLICY.diagnosisResultShare.sourceType,
+      {
+        amount: CREDIT_REWARD_POLICY.diagnosisResultShare.amount,
+        isActive: true,
+        reason: CREDIT_REWARD_POLICY.diagnosisResultShare.reason,
+      },
+    );
+
+    if (!policy.isActive) {
+      const balanceAfter = await getCurrentCreditBalance(userId, client);
+      await client.query("COMMIT");
+      return { granted: false, balanceAfter };
+    }
+
+    const transaction = await insertCreditTransaction(client, {
+      userId,
+      amount: policy.amount,
+      transactionType: "event_grant",
+      sourceType: CREDIT_REWARD_POLICY.diagnosisResultShare.sourceType,
+      sourceId: resultId,
+      reason: policy.reason,
+      metadata: { grantType: "diagnosis_result_share", resultId },
+    });
     const balanceAfter =
       transaction.balanceAfter ?? (await getCurrentCreditBalance(userId, client));
 

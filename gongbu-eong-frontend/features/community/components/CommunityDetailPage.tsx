@@ -4,7 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import {
   createCommunityComment,
@@ -13,6 +13,7 @@ import {
   getCommunityPost,
   reportCommunityComment,
   reportCommunityPost,
+  setCommunityCommentReaction,
   setCommunityRecommend,
   setCommunityScrap,
 } from "../community.api";
@@ -149,7 +150,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   };
 
   const startReply = (comment: CommunityCommentDto) => {
-    const commentId = comment.parentCommentId || comment.id;
+    const commentId = comment.id;
     if (replyTarget?.commentId === commentId) {
       setReplyTarget(null);
       setReplyText("");
@@ -198,6 +199,18 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     setModal(null);
   };
 
+  const reactComment = async (commentId: string, reactionType: "like" | "dislike") => {
+    if (!post) return;
+    try {
+      const response = await setCommunityCommentReaction(commentId, reactionType);
+      setPost((current) => current
+        ? { ...current, comments: updateCommentReaction(current.comments, response.reaction) }
+        : current);
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "댓글 반응 처리에 실패했습니다.");
+    }
+  };
+
   const shareWithKakao = async () => {
     if (!post) return;
     const url = window.location.href;
@@ -215,6 +228,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       const kakao = window.Kakao;
       if (!kakao) throw new Error("카카오 공유를 준비하지 못했습니다.");
       if (!kakao.isInitialized()) kakao.init(kakaoKey);
+      if (!kakao.Share?.sendDefault) throw new Error("카카오 공유를 준비하지 못했습니다.");
       kakao.Share.sendDefault({
         objectType: "feed",
         content: {
@@ -346,6 +360,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                       onDelete={() => setModal({ type: "delete-comment", commentId: item.id })}
                       onReportReply={(commentId) => setModal({ type: "report-comment", commentId })}
                       onDeleteReply={(commentId) => setModal({ type: "delete-comment", commentId })}
+                      onReact={reactComment}
                     />
                   ))}
                   {!post.comments.length ? <EmptyState>아직 댓글이 없습니다.</EmptyState> : null}
@@ -469,10 +484,10 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
 declare global {
   interface Window {
     Kakao?: {
-      init: (key: string) => void;
       isInitialized: () => boolean;
-      Share: {
-        sendDefault: (options: unknown) => void;
+      init: (key: string) => void;
+      Share?: {
+        sendDefault: (options: Record<string, unknown>) => void;
       };
     };
   }
@@ -502,6 +517,7 @@ function loadKakaoSdk() {
 
 function CommunityComment({
   comment,
+  depth = 0,
   replyTarget,
   replyText,
   saving,
@@ -512,8 +528,10 @@ function CommunityComment({
   onDelete,
   onReportReply,
   onDeleteReply,
+  onReact,
 }: {
   comment: CommunityCommentDto;
+  depth?: number;
   replyTarget: { commentId: string; nickname: string } | null;
   replyText: string;
   saving: boolean;
@@ -524,11 +542,17 @@ function CommunityComment({
   onDelete: () => void;
   onReportReply: (commentId: string) => void;
   onDeleteReply: (commentId: string) => void;
+  onReact: (commentId: string, reactionType: "like" | "dislike") => void;
 }) {
+  const isReply = depth > 0;
+  const style = isReply
+    ? ({ marginLeft: depth > 1 ? `${Math.min(depth - 1, 6) * 0.5}rem` : undefined } as CSSProperties)
+    : undefined;
+
   return (
-    <article className={styles.comment}>
+    <article className={isReply ? styles.replyComment : styles.comment} style={style}>
       <div className={styles.commentHeader}>
-        <Avatar author={comment.author} />
+        {isReply ? <Image src="/community/reply-arrow.svg" alt="" width={24} height={24} /> : <Avatar author={comment.author} />}
         <div className={styles.authorLine}>
           <strong>{comment.author.nickname}</strong>
           {comment.author.diagnosisTypeName ? <b className={styles.typeBadge}>{comment.author.diagnosisTypeName}</b> : null}
@@ -537,7 +561,11 @@ function CommunityComment({
       </div>
       <p className={styles.commentBody}>{comment.content}</p>
       <CommentActions
+        likeCount={comment.likeCount}
+        dislikeCount={comment.dislikeCount}
+        myReaction={comment.myReaction}
         onReply={() => onReply(comment)}
+        onReact={(reactionType) => onReact(comment.id, reactionType)}
         onReport={onReport}
         onDelete={comment.canDelete ? onDelete : undefined}
       />
@@ -553,19 +581,22 @@ function CommunityComment({
       {comment.replies.length ? (
         <div className={styles.replyList}>
           {comment.replies.map((reply) => (
-            <article key={reply.id} className={styles.replyComment}>
-              <div className={styles.replyAuthorLine}>
-                <Image src="/community/reply-arrow.svg" alt="" width={24} height={24} />
-                <strong>{reply.author.nickname}</strong>
-              </div>
-              <p>{reply.content}</p>
-              <CommentActions
-                compact
-                onReply={() => onReply(reply)}
-                onReport={() => onReportReply(reply.id)}
-                onDelete={reply.canDelete ? () => onDeleteReply(reply.id) : undefined}
-              />
-            </article>
+            <CommunityComment
+              key={reply.id}
+              comment={reply}
+              depth={depth + 1}
+              replyTarget={replyTarget}
+              replyText={replyText}
+              saving={saving}
+              onReplyTextChange={onReplyTextChange}
+              onReply={onReply}
+              onSubmitReply={onSubmitReply}
+              onReport={() => onReportReply(reply.id)}
+              onDelete={() => onDeleteReply(reply.id)}
+              onReportReply={onReportReply}
+              onDeleteReply={onDeleteReply}
+              onReact={onReact}
+            />
           ))}
         </div>
       ) : null}
@@ -602,12 +633,20 @@ function ReplyForm({
 
 function CommentActions({
   compact = false,
+  likeCount,
+  dislikeCount,
+  myReaction,
   onReply,
+  onReact,
   onReport,
   onDelete,
 }: {
   compact?: boolean;
+  likeCount: number;
+  dislikeCount: number;
+  myReaction: "like" | "dislike" | null;
   onReply: () => void;
+  onReact: (reactionType: "like" | "dislike") => void;
   onReport: () => void;
   onDelete?: () => void;
 }) {
@@ -615,14 +654,24 @@ function CommentActions({
     <div className={`${styles.commentTools} ${compact ? styles.commentToolsCompact : ""}`}>
       {!compact ? <button type="button" className={styles.replyWriteButton} onClick={onReply}>답글 쓰기</button> : null}
       <div className={styles.commentReactionGroup}>
-        <button type="button" aria-label="댓글 좋아요">
+        <button
+          type="button"
+          className={myReaction === "like" ? styles.commentReactionActive : ""}
+          aria-label="댓글 좋아요"
+          onClick={() => onReact("like")}
+        >
           <Image src="/community/comment-like.svg" alt="" width={24} height={24} />
-          <span>0</span>
+          <span>{formatNumber(likeCount)}</span>
         </button>
         <span className={styles.commentDivider} />
-        <button type="button" aria-label="댓글 싫어요">
+        <button
+          type="button"
+          className={myReaction === "dislike" ? styles.commentReactionActive : ""}
+          aria-label="댓글 싫어요"
+          onClick={() => onReact("dislike")}
+        >
           <Image className={styles.dislikeIcon} src="/community/comment-like.svg" alt="" width={24} height={24} />
-          <span>0</span>
+          <span>{formatNumber(dislikeCount)}</span>
         </button>
         <span className={styles.commentDivider} />
         <button type="button" onClick={onReport}>
@@ -654,12 +703,41 @@ function removeCommentById(comments: CommunityCommentDto[], commentId: string): 
     .filter((comment) => comment.id !== commentId)
     .map((comment) => ({
       ...comment,
-      replies: comment.replies.filter((reply) => reply.id !== commentId),
+      replies: removeCommentById(comment.replies, commentId),
     }));
 }
 
-function countRemovedComments(comments: CommunityCommentDto[], commentId: string) {
-  const root = comments.find((comment) => comment.id === commentId);
-  if (root) return 1 + root.replies.length;
-  return comments.some((comment) => comment.replies.some((reply) => reply.id === commentId)) ? 1 : 0;
+function countRemovedComments(comments: CommunityCommentDto[], commentId: string): number {
+  for (const comment of comments) {
+    if (comment.id === commentId) return countCommentTree(comment);
+    const nestedCount = countRemovedComments(comment.replies, commentId);
+    if (nestedCount) return nestedCount;
+  }
+
+  return 0;
+}
+
+function countCommentTree(comment: CommunityCommentDto): number {
+  return 1 + comment.replies.reduce((total, reply) => total + countCommentTree(reply), 0);
+}
+
+function updateCommentReaction(
+  comments: CommunityCommentDto[],
+  reaction: { commentId: string; likeCount: number; dislikeCount: number; myReaction: "like" | "dislike" | null },
+): CommunityCommentDto[] {
+  return comments.map((comment) => {
+    if (comment.id === reaction.commentId) {
+      return {
+        ...comment,
+        likeCount: reaction.likeCount,
+        dislikeCount: reaction.dislikeCount,
+        myReaction: reaction.myReaction,
+      };
+    }
+
+    return {
+      ...comment,
+      replies: updateCommentReaction(comment.replies, reaction),
+    };
+  });
 }

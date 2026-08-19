@@ -12,7 +12,11 @@ import { COMMUNITY_CATEGORIES, type CommunityAttachmentDto, type CommunityCatego
 import { AuthorProfile } from "./CommunityShared";
 import styles from "./Community.module.css";
 
-const MAX_ATTACHMENTS = 20;
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_DATA_URL_LENGTH = 12_000_000;
+const IMAGE_MAX_DIMENSION = 1600;
+const IMAGE_JPEG_QUALITY = 0.82;
 
 type PendingAttachment = Pick<CommunityAttachmentDto, "fileName" | "mimeType" | "fileSizeBytes" | "dataUrl">;
 
@@ -30,12 +34,16 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
     getCurrentUser()
       .then((response) => {
         if (!response.authenticated || !response.user) {
+          window.alert("로그인이 필요한 서비스입니다.");
           router.replace("/login");
           return;
         }
         setUser(response.user);
       })
-      .catch(() => router.replace("/login"));
+      .catch(() => {
+        window.alert("로그인이 필요한 서비스입니다.");
+        router.replace("/login");
+      });
   }, [router]);
 
   useEffect(() => {
@@ -80,21 +88,30 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
         return;
       }
 
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
         setMessage("첨부파일은 최대 10MB까지 등록할 수 있습니다.");
         return;
       }
 
-      const dataUrl = await readAsDataUrl(file);
-      nextAttachments.push({
-        fileName: file.name,
-        mimeType: file.type,
-        fileSizeBytes: file.size,
-        dataUrl,
-      });
+      try {
+        nextAttachments.push(await normalizeImageAttachment(file));
+      } catch (error) {
+        setMessage(error instanceof Error ? error.message : "첨부파일을 처리하지 못했습니다.");
+        return;
+      }
+    }
+
+    const totalDataUrlLength = [...attachments, ...nextAttachments].reduce(
+      (total, attachment) => total + attachment.dataUrl.length,
+      0,
+    );
+    if (totalDataUrlLength > MAX_TOTAL_ATTACHMENT_DATA_URL_LENGTH) {
+      setMessage("첨부파일 총 용량이 너무 큽니다. 이미지를 줄여 다시 첨부해 주세요.");
+      return;
     }
 
     setAttachments((current) => [...current, ...nextAttachments]);
+    setMessage("");
   };
 
   const removeAttachment = (index: number) => {
@@ -106,6 +123,11 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
     setMessage("");
     if (!title.trim() || !content.trim()) {
       setMessage("제목과 내용을 입력해주세요.");
+      return;
+    }
+    const totalDataUrlLength = attachments.reduce((total, attachment) => total + attachment.dataUrl.length, 0);
+    if (totalDataUrlLength > MAX_TOTAL_ATTACHMENT_DATA_URL_LENGTH) {
+      setMessage("첨부파일 총 용량이 너무 큽니다. 이미지를 줄여 다시 첨부해 주세요.");
       return;
     }
     setSaving(true);
@@ -218,4 +240,54 @@ function readAsDataUrl(file: File) {
     reader.onerror = () => reject(new Error("파일을 읽지 못했습니다."));
     reader.readAsDataURL(file);
   });
+}
+
+async function normalizeImageAttachment(file: File): Promise<PendingAttachment> {
+  const originalDataUrl = await readAsDataUrl(file);
+  const image = await loadImage(originalDataUrl);
+  const scale = Math.min(1, IMAGE_MAX_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("첨부파일을 처리하지 못했습니다.");
+  }
+
+  context.drawImage(image, 0, 0, width, height);
+  const compressedDataUrl = canvas.toDataURL("image/jpeg", IMAGE_JPEG_QUALITY);
+  const shouldUseCompressed =
+    compressedDataUrl.length < originalDataUrl.length ||
+    originalDataUrl.length > MAX_TOTAL_ATTACHMENT_DATA_URL_LENGTH / MAX_ATTACHMENTS;
+  const dataUrl = shouldUseCompressed ? compressedDataUrl : originalDataUrl;
+  const mimeType = dataUrl.startsWith("data:image/jpeg") ? "image/jpeg" : file.type;
+
+  return {
+    fileName: mimeType === "image/jpeg" ? toJpegFileName(file.name) : file.name,
+    mimeType,
+    fileSizeBytes: estimateDataUrlBytes(dataUrl),
+    dataUrl,
+  };
+}
+
+function loadImage(dataUrl: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("첨부파일을 이미지로 읽지 못했습니다."));
+    image.src = dataUrl;
+  });
+}
+
+function estimateDataUrlBytes(dataUrl: string) {
+  const base64 = dataUrl.split(",", 2)[1] || "";
+  return Math.floor((base64.length * 3) / 4);
+}
+
+function toJpegFileName(fileName: string) {
+  const baseName = fileName.replace(/\.[^.]+$/, "");
+  return `${baseName || "첨부 이미지"}.jpg`;
 }

@@ -46,6 +46,9 @@ type CommentRow = {
   author_background_color: string | null;
   diagnosis_type_name: string | null;
   can_delete: boolean;
+  like_count: string | number;
+  dislike_count: string | number;
+  my_reaction: "like" | "dislike" | null;
 };
 
 type ReportRow = {
@@ -374,11 +377,28 @@ export async function listCommunityComments(postId: string, userId?: string) {
         users.profile_avatar_key AS author_avatar_key,
         users.profile_background_color AS author_background_color,
         diagnosis.personality_type_name AS diagnosis_type_name,
+        COALESCE(comment_reactions.like_count, 0)::text AS like_count,
+        COALESCE(comment_reactions.dislike_count, 0)::text AS dislike_count,
+        my_reaction.reaction_type AS my_reaction,
         ($2::uuid IS NOT NULL AND comments.user_id = $2::uuid) AS can_delete
       FROM public.community_comments comments
       JOIN public.users users
         ON users.id = comments.user_id
       LEFT JOIN LATERAL (${diagnosisSql("users")}) diagnosis ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT
+          COUNT(*) FILTER (WHERE reaction_type = 'like') AS like_count,
+          COUNT(*) FILTER (WHERE reaction_type = 'dislike') AS dislike_count
+        FROM public.community_comment_reactions
+        WHERE comment_id = comments.id
+      ) comment_reactions ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT reaction_type
+        FROM public.community_comment_reactions
+        WHERE comment_id = comments.id
+          AND user_id = $2::uuid
+        LIMIT 1
+      ) my_reaction ON $2::uuid IS NOT NULL
       WHERE comments.post_id = $1
         AND comments.status = 'active'
       ORDER BY comments.created_at DESC
@@ -404,9 +424,7 @@ export async function createCommunityComment(
           AND status = 'active'
       ),
       parent AS (
-        SELECT
-          id,
-          COALESCE(parent_comment_id, id) AS normalized_parent_id
+        SELECT id
         FROM public.community_comments
         WHERE id = $4::uuid
           AND post_id = $2
@@ -417,7 +435,7 @@ export async function createCommunityComment(
       SELECT
         target_post.id,
         $1,
-        CASE WHEN $4::uuid IS NULL THEN NULL ELSE parent.normalized_parent_id END,
+        CASE WHEN $4::uuid IS NULL THEN NULL ELSE parent.id END,
         $3
       FROM target_post
       LEFT JOIN parent ON $4::uuid IS NOT NULL
@@ -428,6 +446,126 @@ export async function createCommunityComment(
   );
 
   return result.rows[0]?.id || null;
+}
+
+export async function setCommunityCommentReaction(
+  userId: string,
+  commentId: string,
+  reactionType: "like" | "dislike",
+) {
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+    const target = await client.query<{ id: string }>(
+      `
+        SELECT id
+        FROM public.community_comments
+        WHERE id = $1
+          AND status = 'active'
+        LIMIT 1
+      `,
+      [commentId],
+    );
+
+    if (!target.rows[0]) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    const current = await client.query<{ reaction_type: "like" | "dislike" }>(
+      `
+        SELECT reaction_type
+        FROM public.community_comment_reactions
+        WHERE comment_id = $1
+          AND user_id = $2
+        LIMIT 1
+      `,
+      [commentId, userId],
+    );
+
+    if (current.rows[0]?.reaction_type === reactionType) {
+      await client.query(
+        `
+          DELETE FROM public.community_comment_reactions
+          WHERE comment_id = $1
+            AND user_id = $2
+        `,
+        [commentId, userId],
+      );
+    } else {
+      await client.query(
+        `
+          INSERT INTO public.community_comment_reactions (
+            comment_id,
+            user_id,
+            reaction_type
+          )
+          VALUES ($1, $2, $3)
+          ON CONFLICT (comment_id, user_id)
+          DO UPDATE SET
+            reaction_type = EXCLUDED.reaction_type,
+            updated_at = NOW()
+        `,
+        [commentId, userId, reactionType],
+      );
+    }
+
+    const state = await getCommunityCommentReactionState(commentId, userId, client);
+    await client.query("COMMIT");
+    return state;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function getCommunityCommentReactionState(
+  commentId: string,
+  userId: string,
+  client: Pick<typeof db, "query"> = db,
+) {
+  const result = await client.query<{
+    comment_id: string;
+    like_count: string | number;
+    dislike_count: string | number;
+    my_reaction: "like" | "dislike" | null;
+  }>(
+    `
+      SELECT
+        comments.id AS comment_id,
+        COUNT(reactions.id) FILTER (WHERE reactions.reaction_type = 'like')::text AS like_count,
+        COUNT(reactions.id) FILTER (WHERE reactions.reaction_type = 'dislike')::text AS dislike_count,
+        my_reaction.reaction_type AS my_reaction
+      FROM public.community_comments comments
+      LEFT JOIN public.community_comment_reactions reactions
+        ON reactions.comment_id = comments.id
+      LEFT JOIN LATERAL (
+        SELECT reaction_type
+        FROM public.community_comment_reactions
+        WHERE comment_id = comments.id
+          AND user_id = $2
+        LIMIT 1
+      ) my_reaction ON TRUE
+      WHERE comments.id = $1
+        AND comments.status = 'active'
+      GROUP BY comments.id, my_reaction.reaction_type
+      LIMIT 1
+    `,
+    [commentId, userId],
+  );
+  const row = result.rows[0];
+
+  if (!row) return null;
+
+  return {
+    commentId: row.comment_id,
+    likeCount: Number(row.like_count || 0),
+    dislikeCount: Number(row.dislike_count || 0),
+    myReaction: row.my_reaction,
+  };
 }
 
 export async function deleteCommunityComment(userId: string, commentId: string) {
@@ -573,6 +711,9 @@ export async function listCommunityActivity(userId: string) {
         users.profile_avatar_key AS author_avatar_key,
         users.profile_background_color AS author_background_color,
         diagnosis.personality_type_name AS diagnosis_type_name,
+        0::text AS like_count,
+        0::text AS dislike_count,
+        NULL::varchar(20) AS my_reaction,
         TRUE AS can_delete
       FROM public.community_comments comments
       JOIN public.users users ON users.id = comments.user_id
@@ -912,6 +1053,9 @@ function toComment(row: CommentRow): CommunityCommentDto {
     author: toAuthor(row),
     createdAt: new Date(row.created_at).toISOString(),
     canDelete: Boolean(row.can_delete),
+    likeCount: Number(row.like_count || 0),
+    dislikeCount: Number(row.dislike_count || 0),
+    myReaction: row.my_reaction,
     replies: [],
   };
 }
@@ -936,18 +1080,21 @@ function nestComments(comments: CommunityCommentDto[]) {
     roots.push(comment);
   }
 
-  for (const root of roots) {
-    root.replies.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
-  }
+  for (const root of roots) sortRepliesByLatest(root);
 
   return roots.sort((left, right) => getThreadLatestTime(right) - getThreadLatestTime(left));
 }
 
-function getThreadLatestTime(comment: CommunityCommentDto) {
+function getThreadLatestTime(comment: CommunityCommentDto): number {
   return Math.max(
     new Date(comment.createdAt).getTime(),
-    ...comment.replies.map((reply) => new Date(reply.createdAt).getTime()),
+    ...comment.replies.map(getThreadLatestTime),
   );
+}
+
+function sortRepliesByLatest(comment: CommunityCommentDto) {
+  comment.replies.sort((left, right) => getThreadLatestTime(right) - getThreadLatestTime(left));
+  comment.replies.forEach(sortRepliesByLatest);
 }
 
 function toReport(row: ReportRow): CommunityReportDto {

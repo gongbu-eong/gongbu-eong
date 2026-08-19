@@ -22,6 +22,7 @@ import {
   listPopularCommunityPosts,
   listPopularCommunitySearchQueries,
   logCommunitySearch,
+  setCommunityCommentReaction,
   setCommunityReaction,
   updateCommunityReport,
   updateCommunityPost,
@@ -30,8 +31,9 @@ import {
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_CONTENT_LENGTH = 5000;
-const MAX_ATTACHMENT_COUNT = 20;
+const MAX_ATTACHMENT_COUNT = 5;
 const MAX_ATTACHMENT_DATA_URL_LENGTH = 14_000_000;
+const MAX_TOTAL_ATTACHMENT_DATA_URL_LENGTH = 14_000_000;
 const REPORT_REASON_CODES = [
   "스팸·홍보/도배",
   "욕설·비방·혐오 표현",
@@ -98,7 +100,7 @@ export async function saveCommunityPost(
   postId?: string,
 ) {
   const user = await requireSessionUser(request);
-  const body = await request.json().catch(() => null);
+  const body = await readJsonBody(request);
   const input = parsePostInput(body);
   const savedPostId = postId
     ? (await updateCommunityPost(user.id, postId, input) ? postId : null)
@@ -152,6 +154,29 @@ export async function toggleCommunityPostReaction(
 
   if (!reaction) {
     const error = new Error("게시글을 찾을 수 없습니다.");
+    error.name = "NotFoundError";
+    throw error;
+  }
+
+  return { ok: true, reaction };
+}
+
+export async function toggleCommunityCommentReaction(
+  request: NextRequest,
+  commentId: string,
+) {
+  const user = await requireSessionUser(request);
+  const body = await request.json().catch(() => ({}));
+  const reactionType = body?.reactionType;
+
+  if (reactionType !== "like" && reactionType !== "dislike") {
+    throwBadRequest("댓글 반응 값이 올바르지 않습니다.");
+  }
+
+  const reaction = await setCommunityCommentReaction(user.id, commentId, reactionType);
+
+  if (!reaction) {
+    const error = new Error("댓글을 찾을 수 없습니다.");
     error.name = "NotFoundError";
     throw error;
   }
@@ -274,7 +299,11 @@ export async function reviewCommunityReport(request: NextRequest, reportId: stri
 }
 
 function parsePostInput(value: unknown) {
-  const body = (value || {}) as Record<string, unknown>;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throwBadRequest("요청 형식이 올바르지 않습니다. 첨부 이미지 용량을 줄여 다시 시도해 주세요.");
+  }
+
+  const body = value as Record<string, unknown>;
   const category = String(body.category || "");
   const title = typeof body.title === "string" ? body.title.trim() : "";
   const content = typeof body.content === "string" ? body.content.trim() : "";
@@ -352,7 +381,20 @@ function parseAttachments(value: unknown, legacyImageDataUrl: string | null): Co
     }
   }
 
+  const totalDataUrlLength = attachments.reduce((total, attachment) => total + attachment.dataUrl.length, 0);
+  if (totalDataUrlLength > MAX_TOTAL_ATTACHMENT_DATA_URL_LENGTH) {
+    throwBadRequest("첨부파일 총 용량이 너무 큽니다. 이미지를 줄여 다시 첨부해 주세요.");
+  }
+
   return attachments;
+}
+
+async function readJsonBody(request: NextRequest) {
+  try {
+    return await request.json();
+  } catch {
+    throwBadRequest("첨부 파일은 최대 10MB까지 등록할 수 있습니다.");
+  }
 }
 
 async function requireCommunityModerator(request: NextRequest) {

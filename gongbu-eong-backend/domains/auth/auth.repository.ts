@@ -43,6 +43,7 @@ export async function upsertOAuthUser(args: {
     let userId = existingAccount.rows[0]?.user_id;
     let isNewUser = false;
     let welcomeCreditsGranted = false;
+    let linkedDiagnosisResultId: string | null = null;
 
     if (!userId) {
       const communityNickname = await generateUniqueCommunityNickname(client);
@@ -282,11 +283,23 @@ export async function upsertOAuthUser(args: {
         `,
         [args.diagnosisRunId, userId],
       );
+
+      const linkedResult = await client.query<{ id: string }>(
+        `
+          SELECT id
+          FROM public.diagnosis_results
+          WHERE diagnosis_run_id = $1
+            AND user_id = $2
+          LIMIT 1
+        `,
+        [args.diagnosisRunId, userId],
+      );
+      linkedDiagnosisResultId = linkedResult.rows[0]?.id ?? null;
     }
 
     await client.query("COMMIT");
 
-    return { userId, isNewUser, welcomeCreditsGranted };
+    return { userId, isNewUser, welcomeCreditsGranted, diagnosisResultId: linkedDiagnosisResultId };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

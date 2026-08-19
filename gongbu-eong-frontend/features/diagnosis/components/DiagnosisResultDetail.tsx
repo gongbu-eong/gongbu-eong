@@ -8,16 +8,37 @@ import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import {
+  grantDiagnosisShareReward,
   getDiagnosisResultDetail,
   getDiagnosisResultHistory,
   selectDiagnosisResult,
 } from "../diagnosis.api";
+import {
+  DIAGNOSIS_SHARE_DESCRIPTION,
+  DIAGNOSIS_SHARE_TITLE,
+  getDiagnosisResultShareUrl,
+  getDiagnosisShareImageUrl,
+} from "../diagnosis-share";
 import type {
   DiagnosisResultDetailResponseDto,
   DiagnosisResultHistoryItemDto,
   DiagnosisTypeCode,
 } from "../diagnosis.dto";
 import styles from "./DiagnosisResultDetail.module.css";
+
+declare global {
+  interface Window {
+    Kakao?: {
+      isInitialized: () => boolean;
+      init: (key: string) => void;
+      Share?: {
+        sendDefault: (options: Record<string, unknown>) => void;
+      };
+    };
+  }
+}
+
+const KAKAO_SDK_SRC = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js";
 
 type TypeCopy = {
   color: string;
@@ -229,11 +250,61 @@ export function DiagnosisResultDetail() {
   };
 
   const shareResult = async () => {
-    const shareData = { title: `${nickname}님의 공부엉이 진단 결과`, text: `나의 강점·성향 유형은 ${result.typeName}이에요.`, url: window.location.href };
+    const shareUrl = getDiagnosisResultShareUrl(result.resultId, window.location.origin);
+    const shareImageUrl = getDiagnosisShareImageUrl(window.location.origin);
+    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY?.trim();
     try {
-      if (navigator.share) await navigator.share(shareData);
-      else await navigator.clipboard.writeText(window.location.href);
-      setShareMessage("공유 완료!");
+      if (!kakaoKey) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareMessage("링크 복사 완료!");
+        window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
+        return;
+      }
+
+      const kakao = await loadKakaoSdk();
+      if (!kakao.isInitialized()) kakao.init(kakaoKey);
+      if (!kakao.Share?.sendDefault) throw new Error("Kakao Share SDK is unavailable");
+
+      kakao.Share.sendDefault({
+        objectType: "feed",
+        content: {
+          title: DIAGNOSIS_SHARE_TITLE,
+          description: `${nickname}님의 강점·성향 유형은 ${result.typeName}이에요. ${DIAGNOSIS_SHARE_DESCRIPTION}`,
+          imageUrl: shareImageUrl,
+          link: {
+            mobileWebUrl: shareUrl,
+            webUrl: shareUrl,
+          },
+        },
+        buttons: [
+          {
+            title: "결과 보러가기",
+            link: {
+              mobileWebUrl: shareUrl,
+              webUrl: shareUrl,
+            },
+          },
+        ],
+      });
+
+      if (user) {
+        const reward = await grantDiagnosisShareReward(result.resultId);
+        if (reward.granted) {
+          window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
+            detail: {
+              message: "진단권 1장이 추가되었습니다.",
+              balanceAfter: reward.balanceAfter,
+            },
+          }));
+        } else {
+          window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+            detail: { balance: reward.balanceAfter },
+          }));
+        }
+        setShareMessage(reward.granted ? "티켓 지급 완료!" : "공유 완료!");
+      } else {
+        setShareMessage("공유 완료!");
+      }
       window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
     } catch {
       setShareMessage("다시 시도해 주세요");
@@ -331,7 +402,7 @@ export function DiagnosisResultDetail() {
               ))}
             </div>
             <div className={styles.tipNotice}><span aria-hidden="true">💬</span><p><strong>이 팁은 {nickname}님 유형에 대한 조언이에요.</strong><br />지원할 회사·직무별 맞춤 전략은 자소서 코칭에서 내 유형과 함께 분석해드려요.</p></div>
-            <button type="button" className={styles.coachingButton}>내 유형 + 지원 회사로 자소서 코칭 받기 →</button>
+            <button type="button" className={styles.coachingButton} onClick={() => router.push("/ai-tools/coaching")}>내 유형 + 지원 회사로 자소서 코칭 받기 →</button>
           </section>
 
           <section className={styles.section}>
@@ -419,6 +490,34 @@ function RecommendedPosting({ posting }: { posting: DiagnosisResultDetailRespons
 
 function ResultState({ message }: { message: string }) {
   return <main className={styles.page}><section className={styles.state}><p>{message}</p><Link href="/ai-tools/diagnosis">진단 화면으로 이동</Link></section></main>;
+}
+
+function loadKakaoSdk() {
+  return new Promise<NonNullable<Window["Kakao"]>>((resolve, reject) => {
+    if (typeof window === "undefined") {
+      reject(new Error("Kakao SDK requires browser"));
+      return;
+    }
+
+    if (window.Kakao) {
+      resolve(window.Kakao);
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>(`script[src="${KAKAO_SDK_SRC}"]`);
+    if (existingScript) {
+      existingScript.addEventListener("load", () => window.Kakao ? resolve(window.Kakao) : reject(new Error("Kakao SDK load failed")), { once: true });
+      existingScript.addEventListener("error", () => reject(new Error("Kakao SDK load failed")), { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = KAKAO_SDK_SRC;
+    script.async = true;
+    script.onload = () => window.Kakao ? resolve(window.Kakao) : reject(new Error("Kakao SDK load failed"));
+    script.onerror = () => reject(new Error("Kakao SDK load failed"));
+    document.head.appendChild(script);
+  });
 }
 
 function formatDate(value: string) {

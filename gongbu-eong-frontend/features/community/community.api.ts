@@ -3,6 +3,7 @@ import type {
   CommunityActivityResponseDto,
   CommunityAttachmentDto,
   CommunityCategory,
+  CommunityCommentReactionResponseDto,
   CommunityDetailResponseDto,
   CommunityListResponseDto,
   CommunityReactionResponseDto,
@@ -100,6 +101,13 @@ export function reportCommunityComment(commentId: string, reasonCode?: string) {
   return apiClient<{ ok: true }>(`/api/community/comments/${commentId}/report`, {
     method: "POST",
     body: JSON.stringify({ reasonCode }),
+  });
+}
+
+export function setCommunityCommentReaction(commentId: string, reactionType: "like" | "dislike") {
+  return apiClient<CommunityCommentReactionResponseDto>(`/api/community/comments/${commentId}/reaction`, {
+    method: "POST",
+    body: JSON.stringify({ reactionType }),
   });
 }
 

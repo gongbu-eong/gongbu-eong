@@ -161,7 +161,6 @@ export function DiagnosisFlow() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<CurrentUserDto | null>(null);
   const isSubmittingRef = useRef(false);
-  const loginRedirectedRef = useRef(false);
 
   useEffect(() => {
     let ignore = false;
@@ -181,22 +180,14 @@ export function DiagnosisFlow() {
         } else {
           setIsAuthenticated(false);
           setCurrentUser(null);
-          if (!loginRedirectedRef.current) {
-            loginRedirectedRef.current = true;
-            window.alert("로그인이 필요한 서비스입니다.");
-            router.replace("/login");
-          }
+          setIsCheckingSession(false);
         }
       })
       .catch(() => {
         if (!ignore) {
           setIsAuthenticated(false);
           setCurrentUser(null);
-          if (!loginRedirectedRef.current) {
-            loginRedirectedRef.current = true;
-            window.alert("로그인이 필요한 서비스입니다.");
-            router.replace("/login");
-          }
+          setIsCheckingSession(false);
         }
       });
 
@@ -215,15 +206,9 @@ export function DiagnosisFlow() {
     return () => {
       ignore = true;
     };
-  }, [router]);
+  }, []);
 
   async function startSurvey() {
-    if (!isAuthenticated) {
-      window.alert("로그인이 필요한 서비스입니다.");
-      router.replace("/login");
-      return;
-    }
-
     isSubmittingRef.current = false;
     setAnswers({});
     setState({ status: "loading" });

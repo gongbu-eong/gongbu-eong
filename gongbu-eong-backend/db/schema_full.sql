@@ -1,10 +1,8 @@
--- 공부엉이 DB 전체 초기화/생성 스크립트
--- 이 파일은 지금까지 추가/변경한 테이블, 컬럼, 인덱스, seed/alter 데이터를 한 번에 적용합니다.
--- 주의: 아래 스크립트는 public/app 스키마를 DROP 후 재생성하므로 기존 데이터가 삭제됩니다.
+-- 공부엉이 DB 통합 스키마 최신화 스크립트
+-- 이 파일은 지금까지 추가/변경한 테이블, 컬럼, 인덱스, seed 데이터를 한 번에 적용합니다.
+-- 기존 공고/배치 데이터를 유지하기 위해 DROP SCHEMA/TRUNCATE를 사용하지 않습니다.
 
-DROP SCHEMA IF EXISTS app CASCADE;
-DROP SCHEMA IF EXISTS public CASCADE;
-CREATE SCHEMA public;
+CREATE SCHEMA IF NOT EXISTS public;
 GRANT ALL ON SCHEMA public TO postgres;
 GRANT ALL ON SCHEMA public TO public;
 
@@ -146,6 +144,7 @@ CREATE TABLE IF NOT EXISTS public.users (
   gender VARCHAR(20) CHECK (gender IS NULL OR gender IN ('female','male')),
   age_group VARCHAR(20) CHECK (age_group IS NULL OR age_group IN ('teens','early_20s','late_20s','early_30s','late_30s','over_40')),
   selected_diagnosis_result_id UUID,
+  selected_resume_id UUID,
   status public.user_status NOT NULL DEFAULT 'active',
   last_login_at TIMESTAMPTZ,
   withdrawn_at TIMESTAMPTZ,
@@ -280,6 +279,9 @@ CREATE TABLE IF NOT EXISTS public.job_postings (
   apply_url TEXT,
   email_apply_address TEXT,
   raw_payload JSONB,
+  content_hash VARCHAR(64),
+  source_updated_at TIMESTAMPTZ,
+  closed_at TIMESTAMPTZ,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -319,6 +321,50 @@ CREATE TABLE IF NOT EXISTS public.job_posting_stages (
   end_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (job_posting_id, stage_order)
+);
+
+CREATE TABLE IF NOT EXISTS public.job_posting_sync_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  source public.job_source NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'running',
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  heartbeat_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  fetched_count INTEGER NOT NULL DEFAULT 0,
+  inserted_count INTEGER NOT NULL DEFAULT 0,
+  updated_count INTEGER NOT NULL DEFAULT 0,
+  deactivated_count INTEGER NOT NULL DEFAULT 0,
+  error_message TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::JSONB,
+  CONSTRAINT job_posting_sync_runs_status_check
+    CHECK (status IN ('running', 'succeeded', 'failed', 'skipped')),
+  CONSTRAINT job_posting_sync_runs_counts_check
+    CHECK (
+      fetched_count >= 0
+      AND inserted_count >= 0
+      AND updated_count >= 0
+      AND deactivated_count >= 0
+    )
+);
+
+CREATE TABLE IF NOT EXISTS public.job_posting_view_events (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  job_posting_id UUID NOT NULL REFERENCES public.job_postings(id),
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  anonymous_id UUID,
+  entry_source VARCHAR(50) NOT NULL DEFAULT 'unknown',
+  viewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.job_posting_daily_stats (
+  stat_date DATE NOT NULL,
+  job_posting_id UUID NOT NULL REFERENCES public.job_postings(id),
+  view_count BIGINT NOT NULL DEFAULT 0,
+  unique_view_count BIGINT NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (stat_date, job_posting_id),
+  CONSTRAINT job_posting_daily_stats_counts_check
+    CHECK (view_count >= 0 AND unique_view_count >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS public.user_job_bookmarks (
@@ -496,15 +542,31 @@ CREATE TABLE IF NOT EXISTS public.diagnosis_recommended_job_postings (
   UNIQUE (diagnosis_result_id, job_posting_id)
 );
 
+CREATE TABLE IF NOT EXISTS public.user_files (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  purpose TEXT NOT NULL DEFAULT 'resume',
+  original_filename TEXT NOT NULL,
+  storage_provider TEXT NOT NULL DEFAULT 'nhn_object_storage',
+  storage_container TEXT NOT NULL DEFAULT 'gongbueong',
+  storage_object_key TEXT NOT NULL,
+  public_url TEXT,
+  content_type TEXT,
+  size_bytes BIGINT,
+  upload_status TEXT NOT NULL DEFAULT 'uploaded',
+  metadata JSONB NOT NULL DEFAULT '{}'::JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS public.user_resumes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES public.users(id),
-  file_name VARCHAR(255) NOT NULL,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) DEFAULT '이력서',
   file_url TEXT,
   extracted_text TEXT,
-  user_file_id UUID,
-  source_type TEXT NOT NULL DEFAULT 'manual',
-  title TEXT,
+  user_file_id UUID REFERENCES public.user_files(id) ON DELETE SET NULL,
+  source_type TEXT NOT NULL DEFAULT 'manual' CHECK (source_type IN ('upload', 'manual')),
+  title TEXT NOT NULL DEFAULT '이력서',
   name TEXT,
   birth_year TEXT,
   birth_date TEXT,
@@ -529,6 +591,224 @@ CREATE TABLE IF NOT EXISTS public.user_resumes (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.resume_parse_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  user_file_id UUID NOT NULL REFERENCES public.user_files(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending',
+  extracted_payload JSONB,
+  error_message TEXT,
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT chk_resume_parse_jobs_status
+    CHECK (status IN ('pending', 'processing', 'completed', 'failed'))
+);
+
+CREATE TABLE IF NOT EXISTS public.user_resume_educations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resume_id UUID NOT NULL REFERENCES public.user_resumes(id) ON DELETE CASCADE,
+  school_name TEXT NOT NULL,
+  major TEXT,
+  degree TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  graduation_status TEXT,
+  gpa_score TEXT,
+  gpa_max TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS public.user_resume_experiences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resume_id UUID NOT NULL REFERENCES public.user_resumes(id) ON DELETE CASCADE,
+  company_name TEXT NOT NULL,
+  role TEXT,
+  position TEXT,
+  description TEXT,
+  duties TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS public.user_resume_certifications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resume_id UUID NOT NULL REFERENCES public.user_resumes(id) ON DELETE CASCADE,
+  certificate_name TEXT NOT NULL,
+  issuer TEXT,
+  acquired_year TEXT,
+  acquired_date TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS public.user_resume_awards (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resume_id UUID NOT NULL REFERENCES public.user_resumes(id) ON DELETE CASCADE,
+  contest_name TEXT NOT NULL,
+  award_name TEXT,
+  issuer TEXT,
+  awarded_date TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.user_resume_activities (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resume_id UUID NOT NULL REFERENCES public.user_resumes(id) ON DELETE CASCADE,
+  activity_name TEXT NOT NULL,
+  description TEXT,
+  issuer TEXT,
+  activity_date TEXT,
+  start_date TEXT,
+  end_date TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.user_resume_languages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resume_id UUID NOT NULL REFERENCES public.user_resumes(id) ON DELETE CASCADE,
+  language_name TEXT,
+  test_name TEXT,
+  level_or_score TEXT,
+  issuer TEXT,
+  acquired_date TEXT,
+  sort_order INTEGER NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS community_nickname VARCHAR(12),
+  ADD COLUMN IF NOT EXISTS profile_status_message VARCHAR(30),
+  ADD COLUMN IF NOT EXISTS profile_avatar_key VARCHAR(30) NOT NULL DEFAULT (
+    (ARRAY['fox','lion','cat','penguin','chick','monkey','cow','bear','chicken','mouse'])[FLOOR(RANDOM() * 10 + 1)::INTEGER]
+  ),
+  ADD COLUMN IF NOT EXISTS profile_background_color VARCHAR(20) NOT NULL DEFAULT '#c4c6ca',
+  ADD COLUMN IF NOT EXISTS gender VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS age_group VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS selected_resume_id UUID;
+
+ALTER TABLE public.job_postings
+  ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64),
+  ADD COLUMN IF NOT EXISTS source_updated_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ;
+
+ALTER TABLE public.user_resumes
+  ADD COLUMN IF NOT EXISTS user_file_id UUID,
+  ADD COLUMN IF NOT EXISTS source_type TEXT NOT NULL DEFAULT 'manual',
+  ADD COLUMN IF NOT EXISTS title TEXT,
+  ADD COLUMN IF NOT EXISTS name TEXT,
+  ADD COLUMN IF NOT EXISTS birth_year TEXT,
+  ADD COLUMN IF NOT EXISTS birth_date TEXT,
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS desired_job TEXT,
+  ADD COLUMN IF NOT EXISTS highest_education TEXT,
+  ADD COLUMN IF NOT EXISTS gpa TEXT,
+  ADD COLUMN IF NOT EXISTS gpa_score TEXT,
+  ADD COLUMN IF NOT EXISTS gpa_max TEXT,
+  ADD COLUMN IF NOT EXISTS school_major TEXT,
+  ADD COLUMN IF NOT EXISTS graduation_status TEXT,
+  ADD COLUMN IF NOT EXISTS education_start_date TEXT,
+  ADD COLUMN IF NOT EXISTS education_end_date TEXT,
+  ADD COLUMN IF NOT EXISTS education_summary TEXT,
+  ADD COLUMN IF NOT EXISTS career_summary TEXT,
+  ADD COLUMN IF NOT EXISTS certification_summary TEXT,
+  ADD COLUMN IF NOT EXISTS additional_notes TEXT,
+  ADD COLUMN IF NOT EXISTS completion_percent SMALLINT NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS extracted_payload JSONB NOT NULL DEFAULT '{}'::JSONB;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'user_resumes'
+      AND column_name = 'file_name'
+  ) THEN
+    EXECUTE 'UPDATE public.user_resumes SET title = COALESCE(NULLIF(title, ''''), NULLIF(file_name, ''''), ''이력서'') WHERE title IS NULL';
+    ALTER TABLE public.user_resumes ALTER COLUMN file_name DROP NOT NULL;
+  ELSE
+    UPDATE public.user_resumes
+    SET title = '이력서'
+    WHERE title IS NULL;
+  END IF;
+END $$;
+
+ALTER TABLE public.user_resumes
+  ALTER COLUMN title SET DEFAULT '이력서',
+  ALTER COLUMN title SET NOT NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'chk_user_resumes_source_type'
+  ) THEN
+    ALTER TABLE public.user_resumes
+      ADD CONSTRAINT chk_user_resumes_source_type
+      CHECK (source_type IN ('upload', 'manual'));
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_user_resumes_user_file'
+  ) THEN
+    ALTER TABLE public.user_resumes
+      ADD CONSTRAINT fk_user_resumes_user_file
+      FOREIGN KEY (user_file_id)
+      REFERENCES public.user_files(id)
+      ON DELETE SET NULL;
+  END IF;
+END $$;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'fk_users_selected_resume'
+  ) THEN
+    ALTER TABLE public.users
+      ADD CONSTRAINT fk_users_selected_resume
+      FOREIGN KEY (selected_resume_id)
+      REFERENCES public.user_resumes(id)
+      ON DELETE SET NULL;
+  END IF;
+END $$;
+
+ALTER TABLE public.user_resume_educations
+  ADD COLUMN IF NOT EXISTS graduation_status TEXT,
+  ADD COLUMN IF NOT EXISTS gpa_score TEXT,
+  ADD COLUMN IF NOT EXISTS gpa_max TEXT;
+
+ALTER TABLE public.user_resume_experiences
+  ADD COLUMN IF NOT EXISTS position TEXT,
+  ADD COLUMN IF NOT EXISTS duties TEXT;
+
+ALTER TABLE public.user_resume_certifications
+  ADD COLUMN IF NOT EXISTS acquired_date TEXT;
+
+ALTER TABLE public.user_resume_awards
+  ADD COLUMN IF NOT EXISTS issuer TEXT;
+
+ALTER TABLE public.user_resume_activities
+  ADD COLUMN IF NOT EXISTS issuer TEXT;
+
+ALTER TABLE public.user_resume_languages
+  ADD COLUMN IF NOT EXISTS issuer TEXT,
+  ALTER COLUMN language_name DROP NOT NULL;
+
 CREATE TABLE IF NOT EXISTS public.ai_usage_events (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.users(id),
@@ -546,13 +826,23 @@ CREATE TABLE IF NOT EXISTS public.resume_coaching_requests (
   user_id UUID NOT NULL REFERENCES public.users(id),
   job_posting_id UUID REFERENCES public.job_postings(id),
   resume_id UUID REFERENCES public.user_resumes(id) ON DELETE SET NULL,
+  input_type VARCHAR(20) NOT NULL DEFAULT 'text',
+  source_file_id UUID REFERENCES public.user_files(id),
+  source_filename TEXT,
   prompt_text TEXT,
   input_text TEXT NOT NULL,
+  job_posting_snapshot JSONB NOT NULL DEFAULT '{}'::JSONB,
   entry_source public.entry_source NOT NULL DEFAULT 'unknown',
   ip_address INET,
   user_agent TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.resume_coaching_requests
+  ADD COLUMN IF NOT EXISTS input_type VARCHAR(20) NOT NULL DEFAULT 'text',
+  ADD COLUMN IF NOT EXISTS source_file_id UUID REFERENCES public.user_files(id),
+  ADD COLUMN IF NOT EXISTS source_filename TEXT,
+  ADD COLUMN IF NOT EXISTS job_posting_snapshot JSONB NOT NULL DEFAULT '{}'::JSONB;
 
 CREATE TABLE IF NOT EXISTS public.resume_coaching_results (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -672,37 +962,137 @@ CREATE TABLE IF NOT EXISTS public.community_boards (
 
 CREATE TABLE IF NOT EXISTS public.community_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  board_id UUID NOT NULL REFERENCES public.community_boards(id),
-  user_id UUID NOT NULL REFERENCES public.users(id),
-  title VARCHAR(255) NOT NULL,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  category VARCHAR(40) NOT NULL,
+  title VARCHAR(120) NOT NULL,
   content TEXT NOT NULL,
-  status public.post_status NOT NULL DEFAULT 'published',
+  image_data_url TEXT,
   view_count INTEGER NOT NULL DEFAULT 0,
-  comment_count INTEGER NOT NULL DEFAULT 0,
-  like_count INTEGER NOT NULL DEFAULT 0,
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS public.community_comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  post_id UUID NOT NULL REFERENCES public.community_posts(id),
-  user_id UUID NOT NULL REFERENCES public.users(id),
-  parent_comment_id UUID REFERENCES public.community_comments(id),
+  post_id UUID NOT NULL REFERENCES public.community_posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  parent_comment_id UUID REFERENCES public.community_comments(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
-  status public.post_status NOT NULL DEFAULT 'published',
+  status VARCHAR(20) NOT NULL DEFAULT 'active',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  deleted_at TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS public.community_post_reactions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  post_id UUID NOT NULL REFERENCES public.community_posts(id),
-  user_id UUID NOT NULL REFERENCES public.users(id),
-  reaction_type VARCHAR(30) NOT NULL DEFAULT 'like',
+  post_id UUID NOT NULL REFERENCES public.community_posts(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  reaction_type VARCHAR(20) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  UNIQUE (post_id, user_id, reaction_type)
+  PRIMARY KEY (post_id, user_id, reaction_type),
+  CONSTRAINT community_post_reactions_type_check
+    CHECK (reaction_type IN ('recommend', 'scrap'))
 );
+
+CREATE TABLE IF NOT EXISTS public.community_post_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  post_id UUID NOT NULL REFERENCES public.community_posts(id) ON DELETE CASCADE,
+  file_name VARCHAR(255) NOT NULL,
+  mime_type VARCHAR(120) NOT NULL,
+  file_size_bytes INTEGER NOT NULL DEFAULT 0,
+  file_data_url TEXT NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.community_comment_reactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  comment_id UUID NOT NULL REFERENCES public.community_comments(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  reaction_type VARCHAR(20) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT community_comment_reactions_type_check
+    CHECK (reaction_type IN ('like', 'dislike')),
+  CONSTRAINT community_comment_reactions_comment_user_unique
+    UNIQUE (comment_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.community_reports (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  target_type VARCHAR(20) NOT NULL,
+  target_id UUID NOT NULL,
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  reason VARCHAR(120),
+  reason_code VARCHAR(60),
+  reason_detail TEXT,
+  status VARCHAR(20) NOT NULL DEFAULT 'pending',
+  target_snapshot JSONB,
+  reviewed_by UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMPTZ,
+  review_note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT community_reports_target_type_check
+    CHECK (target_type IN ('post', 'comment')),
+  CONSTRAINT community_reports_status_check
+    CHECK (status IN ('pending', 'reviewing', 'resolved', 'rejected'))
+);
+
+CREATE TABLE IF NOT EXISTS public.community_search_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  query VARCHAR(80) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.community_search_terms (
+  query VARCHAR(80) PRIMARY KEY,
+  search_count INTEGER NOT NULL DEFAULT 0,
+  last_searched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE public.community_posts
+  ADD COLUMN IF NOT EXISTS category VARCHAR(40) NOT NULL DEFAULT '자유·잡담',
+  ADD COLUMN IF NOT EXISTS image_data_url TEXT,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+ALTER TABLE public.community_posts
+  ALTER COLUMN status TYPE VARCHAR(20) USING status::TEXT,
+  ALTER COLUMN status SET DEFAULT 'active';
+
+UPDATE public.community_posts
+SET status = 'active'
+WHERE status = 'published';
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'community_posts'
+      AND column_name = 'board_id'
+      AND is_nullable = 'NO'
+  ) THEN
+    ALTER TABLE public.community_posts ALTER COLUMN board_id DROP NOT NULL;
+  END IF;
+END $$;
+
+ALTER TABLE public.community_comments
+  ADD COLUMN IF NOT EXISTS parent_comment_id UUID REFERENCES public.community_comments(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+
+ALTER TABLE public.community_comments
+  ALTER COLUMN status TYPE VARCHAR(20) USING status::TEXT,
+  ALTER COLUMN status SET DEFAULT 'active';
+
+UPDATE public.community_comments
+SET status = 'active'
+WHERE status = 'published';
 
 CREATE TABLE IF NOT EXISTS public.notification_preferences (
   user_id UUID PRIMARY KEY REFERENCES public.users(id),
@@ -775,6 +1165,25 @@ CREATE INDEX IF NOT EXISTS idx_entry_events_user_created ON public.user_entry_ev
 CREATE INDEX IF NOT EXISTS idx_job_postings_end_at ON public.job_postings(application_end_at);
 CREATE INDEX IF NOT EXISTS idx_job_postings_institution ON public.job_postings(institution_id);
 CREATE INDEX IF NOT EXISTS idx_job_postings_region_category ON public.job_postings(work_region, job_category);
+CREATE INDEX IF NOT EXISTS idx_job_posting_sync_runs_source_started
+  ON public.job_posting_sync_runs(source, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_job_postings_active_end_created
+  ON public.job_postings(application_end_at ASC, created_at DESC)
+  WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_job_postings_active_source_external_id
+  ON public.job_postings(source, source_posting_id)
+  WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_job_postings_calendar_start_end
+  ON public.job_postings(application_start_at, application_end_at);
+CREATE INDEX IF NOT EXISTS idx_job_view_events_posting_viewed
+  ON public.job_posting_view_events(job_posting_id, viewed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_job_view_events_viewed_brin
+  ON public.job_posting_view_events USING BRIN(viewed_at);
+CREATE INDEX IF NOT EXISTS idx_job_view_events_user_viewed
+  ON public.job_posting_view_events(user_id, viewed_at DESC)
+  WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_job_daily_stats_posting_date
+  ON public.job_posting_daily_stats(job_posting_id, stat_date DESC);
 CREATE INDEX IF NOT EXISTS idx_job_bookmarks_user ON public.user_job_bookmarks(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_job_applications_user_status ON public.user_job_applications(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_calendar_user_starts ON public.user_calendar_items(user_id, starts_at);
@@ -789,7 +1198,32 @@ CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_result_user ON public.diagn
 CREATE INDEX IF NOT EXISTS idx_job_postings_announcement_created ON public.job_postings(announcement_at DESC, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_created ON public.ai_usage_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_files_user_created
+  ON public.user_files(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_resume_user_created ON public.user_resumes(user_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_user_resumes_selected_one
+  ON public.user_resumes(user_id)
+  WHERE is_selected = TRUE;
+CREATE INDEX IF NOT EXISTS idx_user_resumes_user_created
+  ON public.user_resumes(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_resumes_user_title
+  ON public.user_resumes(user_id, title);
+CREATE INDEX IF NOT EXISTS idx_resume_parse_jobs_user_created
+  ON public.resume_parse_jobs(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_resume_parse_jobs_status_created
+  ON public.resume_parse_jobs(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_resume_coaching_requests_user_created
+  ON public.resume_coaching_requests(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_resume_coaching_requests_source_file
+  ON public.resume_coaching_requests(source_file_id);
+CREATE INDEX IF NOT EXISTS idx_user_resume_awards_resume_id
+  ON public.user_resume_awards(resume_id);
+CREATE INDEX IF NOT EXISTS idx_user_resume_activities_resume_id
+  ON public.user_resume_activities(resume_id);
+CREATE INDEX IF NOT EXISTS idx_user_resume_languages_resume_id
+  ON public.user_resume_languages(resume_id);
+CREATE UNIQUE INDEX IF NOT EXISTS credit_packages_name_unique_idx
+  ON public.credit_packages(name);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_created ON public.credit_transactions(user_id, created_at DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS credit_transactions_reward_source_unique_idx
   ON public.credit_transactions(user_id, source_type, source_id)
@@ -798,9 +1232,74 @@ CREATE UNIQUE INDEX IF NOT EXISTS credit_transactions_reward_source_unique_idx
 CREATE INDEX IF NOT EXISTS credit_transactions_source_created_idx
   ON public.credit_transactions(source_type, created_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_posts_board_created ON public.community_posts(board_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_posts_status_created_idx
+  ON public.community_posts(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_posts_category_idx
+  ON public.community_posts(category);
 CREATE INDEX IF NOT EXISTS idx_comments_post_created ON public.community_comments(post_id, created_at);
+CREATE INDEX IF NOT EXISTS community_comments_active_post_idx
+  ON public.community_comments(post_id, created_at)
+  WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS community_comments_parent_idx
+  ON public.community_comments(parent_comment_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_reactions_user_idx
+  ON public.community_post_reactions(user_id, reaction_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_reactions_post_type_idx
+  ON public.community_post_reactions(post_id, reaction_type);
+CREATE INDEX IF NOT EXISTS community_comment_reactions_user_idx
+  ON public.community_comment_reactions(user_id, reaction_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_comment_reactions_comment_type_idx
+  ON public.community_comment_reactions(comment_id, reaction_type);
+CREATE INDEX IF NOT EXISTS community_attachments_post_idx
+  ON public.community_post_attachments(post_id, sort_order, created_at);
+CREATE UNIQUE INDEX IF NOT EXISTS community_reports_unique_target_idx
+  ON public.community_reports(user_id, target_type, target_id);
+CREATE INDEX IF NOT EXISTS community_reports_status_idx
+  ON public.community_reports(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_search_logs_query_idx
+  ON public.community_search_logs(query, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_search_logs_query_created_idx
+  ON public.community_search_logs(query, created_at DESC);
+CREATE INDEX IF NOT EXISTS community_search_logs_created_query_idx
+  ON public.community_search_logs(created_at DESC, query);
+CREATE INDEX IF NOT EXISTS community_search_terms_count_idx
+  ON public.community_search_terms(search_count DESC, last_searched_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON public.notifications(user_id, created_at DESC);
+
+DROP VIEW IF EXISTS public.job_posting_hot_7d;
+CREATE VIEW public.job_posting_hot_7d AS
+SELECT
+  stats.job_posting_id,
+  SUM(stats.view_count)::BIGINT AS view_count,
+  SUM(stats.unique_view_count)::BIGINT AS unique_view_count
+FROM public.job_posting_daily_stats stats
+WHERE stats.stat_date >= (NOW() AT TIME ZONE 'Asia/Seoul')::DATE - 6
+GROUP BY stats.job_posting_id;
+
+DROP VIEW IF EXISTS public.community_report_target_summary;
+CREATE VIEW public.community_report_target_summary AS
+SELECT
+  reports.target_type,
+  reports.target_id,
+  COUNT(*)::INTEGER AS report_count,
+  COUNT(*) FILTER (WHERE reports.status = 'pending')::INTEGER AS pending_count,
+  COUNT(*) FILTER (WHERE reports.status = 'reviewing')::INTEGER AS reviewing_count,
+  COUNT(*) FILTER (WHERE reports.status = 'resolved')::INTEGER AS resolved_count,
+  COUNT(*) FILTER (WHERE reports.status = 'rejected')::INTEGER AS rejected_count,
+  MIN(reports.created_at) AS first_reported_at,
+  MAX(reports.created_at) AS last_reported_at,
+  JSONB_OBJECT_AGG(reports.reason_code, reason_counts.reason_count)
+    FILTER (WHERE reports.reason_code IS NOT NULL) AS reason_counts,
+  (ARRAY_AGG(reports.target_snapshot ORDER BY reports.created_at DESC))[1] AS latest_target_snapshot
+FROM public.community_reports reports
+LEFT JOIN LATERAL (
+  SELECT COUNT(*)::INTEGER AS reason_count
+  FROM public.community_reports reason_reports
+  WHERE reason_reports.target_type = reports.target_type
+    AND reason_reports.target_id = reports.target_id
+    AND reason_reports.reason_code = reports.reason_code
+) reason_counts ON TRUE
+GROUP BY reports.target_type, reports.target_id;
 
 DO $$
 DECLARE
@@ -846,12 +1345,76 @@ VALUES
   ('free', '자유', 40)
 ON CONFLICT (code) DO NOTHING;
 
-INSERT INTO public.credit_packages (name, credit_amount, bonus_credit_amount, price_krw)
+UPDATE public.credit_packages
+SET is_active = FALSE,
+    updated_at = NOW()
+WHERE name NOT IN ('진단권 10개', '진단권 30개', '진단권 60개');
+
+INSERT INTO public.credit_packages (
+  name,
+  credit_amount,
+  bonus_credit_amount,
+  price_krw,
+  is_active,
+  sort_order
+)
 VALUES
-  ('15크레딧', 15, 0, 4900),
-  ('30크레딧', 30, 5, 9900),
-  ('60크레딧', 60, 15, 19900)
-ON CONFLICT DO NOTHING;
+  ('진단권 10개', 10, 0, 2900, TRUE, 10),
+  ('진단권 30개', 30, 5, 9900, TRUE, 20),
+  ('진단권 60개', 60, 15, 19900, TRUE, 30)
+ON CONFLICT (name) DO UPDATE SET
+  credit_amount = EXCLUDED.credit_amount,
+  bonus_credit_amount = EXCLUDED.bonus_credit_amount,
+  price_krw = EXCLUDED.price_krw,
+  is_active = EXCLUDED.is_active,
+  sort_order = EXCLUDED.sort_order,
+  updated_at = NOW();
+
+INSERT INTO public.credit_reward_policies (
+  reward_key,
+  description,
+  credit_amount,
+  daily_limit,
+  milestone_count,
+  is_active,
+  metadata
+)
+VALUES
+  (
+    'welcome_signup',
+    '신규 가입 무료 진단권 5개',
+    5,
+    NULL,
+    NULL,
+    TRUE,
+    '{"grant_once_per_user": true}'::JSONB
+  ),
+  (
+    'community_activity_milestone',
+    '커뮤니티 글·댓글 활동 보상',
+    1,
+    NULL,
+    3,
+    TRUE,
+    '{"reward_rule": "active_posts_plus_active_comments_every_3"}'::JSONB
+  ),
+  (
+    'diagnosis_result_share',
+    '강점·성향 진단 결과 공유 보상',
+    1,
+    NULL,
+    NULL,
+    TRUE,
+    '{"grant_once_per_result": true}'::JSONB
+  )
+ON CONFLICT (reward_key) DO UPDATE SET
+  description = EXCLUDED.description,
+  credit_amount = EXCLUDED.credit_amount,
+  daily_limit = EXCLUDED.daily_limit,
+  milestone_count = EXCLUDED.milestone_count,
+  is_active = EXCLUDED.is_active,
+  metadata = EXCLUDED.metadata,
+  updated_at = NOW();
 
 
 -- ============================================================
@@ -1198,8 +1761,6 @@ ON CONFLICT (question_id, option_no) DO UPDATE SET
 -- Job categories, posting-category sync, personality mappings
 -- ============================================================
 
-BEGIN;
-
 CREATE TABLE IF NOT EXISTS public.job_categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   source_code VARCHAR(20) NOT NULL UNIQUE,
@@ -1461,14 +2022,10 @@ CREATE INDEX IF NOT EXISTS idx_personality_job_categories_personality
 CREATE INDEX IF NOT EXISTS idx_job_postings_hot
   ON public.job_postings(is_active, is_featured DESC, view_count DESC, application_end_at);
 
-COMMIT;
-
 
 -- ============================================================
 -- Personality job categories: top 6 validation/order
 -- ============================================================
-
-BEGIN;
 
 -- 실행 추진형의 90점 동점군에서는 식품가공을 우선 노출한다.
 -- 현장 절차에 따라 즉시 작업하고 결과물을 만드는 직무 특성을 반영하며,
@@ -1613,8 +2170,6 @@ BEGIN
 END
 $$;
 
-COMMIT;
-
 -- 적용 결과 확인용 조회
 WITH ranked AS (
   SELECT
@@ -1651,8 +2206,6 @@ ORDER BY personality_code, display_rank;
 -- Diagnosis result detail/history indexes
 -- ============================================================
 
-BEGIN;
-
 CREATE INDEX IF NOT EXISTS idx_diagnosis_results_type_created
   ON public.diagnosis_results(personality_type_id, created_at DESC);
 
@@ -1665,14 +2218,10 @@ CREATE INDEX IF NOT EXISTS idx_job_posting_categories_category_posting
 CREATE INDEX IF NOT EXISTS idx_job_postings_announcement_created
   ON public.job_postings(announcement_at DESC, created_at DESC);
 
-COMMIT;
-
 
 -- ============================================================
 -- Existing diagnosis anonymous-run user link backfill
 -- ============================================================
-
-BEGIN;
 
 WITH latest_conversion AS (
   SELECT DISTINCT ON (diagnosis_run_id)
@@ -1696,8 +2245,6 @@ WHERE results.diagnosis_run_id = runs.id
 
 DELETE FROM public.user_sessions
 WHERE expires_at <= NOW();
-
-COMMIT;
 
 
 -- ============================================================
