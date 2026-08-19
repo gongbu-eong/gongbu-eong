@@ -545,12 +545,10 @@ function CommunityComment({
   onReact: (commentId: string, reactionType: "like" | "dislike") => void;
 }) {
   const isReply = depth > 0;
-  const style = isReply
-    ? ({ marginLeft: depth > 1 ? `${Math.min(depth - 1, 6) * 0.5}rem` : undefined } as CSSProperties)
-    : undefined;
+
 
   return (
-    <article className={isReply ? styles.replyComment : styles.comment} style={style}>
+    <article className={isReply ? styles.replyComment : styles.comment}>
       <div className={styles.commentHeader}>
         {isReply ? <Image src="/community/reply-arrow.svg" alt="" width={24} height={24} /> : <Avatar author={comment.author} />}
         <div className={styles.authorLine}>
@@ -584,7 +582,7 @@ function CommunityComment({
             <CommunityComment
               key={reply.id}
               comment={reply}
-              depth={depth + 1}
+              depth={1}
               replyTarget={replyTarget}
               replyText={replyText}
               saving={saving}

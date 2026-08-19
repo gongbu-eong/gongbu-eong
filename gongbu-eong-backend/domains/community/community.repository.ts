@@ -417,29 +417,68 @@ export async function createCommunityComment(
 ) {
   const result = await query<{ id: string }>(
     `
-      WITH target_post AS (
+      WITH RECURSIVE
+
+      target_post AS (
         SELECT id
         FROM public.community_posts
         WHERE id = $2
           AND status = 'active'
       ),
-      parent AS (
+
+      parent_chain AS (
+        SELECT
+          comments.id,
+          comments.parent_comment_id
+        FROM public.community_comments comments
+        WHERE comments.id = $4::uuid
+          AND comments.post_id = $2
+          AND comments.status = 'active'
+
+        UNION ALL
+
+        SELECT
+          parent.id,
+          parent.parent_comment_id
+        FROM public.community_comments parent
+        JOIN parent_chain child
+          ON parent.id = child.parent_comment_id
+        WHERE parent.post_id = $2
+          AND parent.status = 'active'
+      ),
+
+      root_parent AS (
         SELECT id
-        FROM public.community_comments
-        WHERE id = $4::uuid
-          AND post_id = $2
-          AND status = 'active'
+        FROM parent_chain
+        WHERE parent_comment_id IS NULL
         LIMIT 1
       )
-      INSERT INTO public.community_comments (post_id, user_id, parent_comment_id, content)
+
+      INSERT INTO public.community_comments (
+        post_id,
+        user_id,
+        parent_comment_id,
+        content
+      )
+
       SELECT
         target_post.id,
         $1,
-        CASE WHEN $4::uuid IS NULL THEN NULL ELSE parent.id END,
+        CASE
+          WHEN $4::uuid IS NULL THEN NULL
+          ELSE root_parent.id
+        END,
         $3
+
       FROM target_post
-      LEFT JOIN parent ON $4::uuid IS NOT NULL
-      WHERE $4::uuid IS NULL OR parent.id IS NOT NULL
+
+      LEFT JOIN root_parent
+        ON $4::uuid IS NOT NULL
+
+      WHERE
+        $4::uuid IS NULL
+        OR root_parent.id IS NOT NULL
+
       RETURNING id
     `,
     [userId, postId, content, parentCommentId || null],
@@ -1069,20 +1108,61 @@ function nestComments(comments: CommunityCommentDto[]) {
     byId.set(comment.id, comment);
   }
 
+  // 먼저 원댓글만 찾음
   for (const comment of comments) {
-    if (comment.parentCommentId) {
-      const parent = byId.get(comment.parentCommentId);
-      if (parent) {
-        parent.replies.push(comment);
-        continue;
-      }
+    if (!comment.parentCommentId) {
+      roots.push(comment);
     }
-    roots.push(comment);
   }
 
-  for (const root of roots) sortRepliesByLatest(root);
+  // 모든 대댓글을 최상위 원댓글 바로 아래에 연결
+  for (const comment of comments) {
+    if (!comment.parentCommentId) {
+      continue;
+    }
 
-  return roots.sort((left, right) => getThreadLatestTime(right) - getThreadLatestTime(left));
+    let parent = byId.get(comment.parentCommentId);
+
+    const visited = new Set<string>();
+
+    while (parent?.parentCommentId) {
+      if (visited.has(parent.id)) {
+        break;
+      }
+
+      visited.add(parent.id);
+
+      const nextParent = byId.get(parent.parentCommentId);
+
+      if (!nextParent) {
+        break;
+      }
+
+      parent = nextParent;
+    }
+
+    if (parent) {
+      parent.replies.push(comment);
+    }
+  }
+
+  // 대댓글 최신순
+  for (const root of roots) {
+    root.replies.sort(
+      (left, right) =>
+        new Date(right.createdAt).getTime() -
+        new Date(left.createdAt).getTime()
+    );
+  }
+
+  // 원댓글은 원댓글 자체의 작성시간 기준 최신순
+  roots.sort(
+    (left, right) =>
+      new Date(right.createdAt).getTime() -
+      new Date(left.createdAt).getTime()
+  );
+
+  return roots;
 }
 
 function getThreadLatestTime(comment: CommunityCommentDto): number {
