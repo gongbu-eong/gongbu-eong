@@ -616,6 +616,7 @@ CREATE TABLE IF NOT EXISTS public.credit_packages (
   bonus_credit_amount INTEGER NOT NULL DEFAULT 0,
   price_krw INTEGER NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -643,7 +644,22 @@ CREATE TABLE IF NOT EXISTS public.credit_transactions (
   amount INTEGER NOT NULL,
   balance_after INTEGER NOT NULL,
   reason TEXT,
+  source_type VARCHAR(80),
+  source_id TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.credit_reward_policies (
+  reward_key VARCHAR(80) PRIMARY KEY,
+  description TEXT NOT NULL,
+  credit_amount INTEGER NOT NULL,
+  daily_limit INTEGER,
+  milestone_count INTEGER,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  metadata JSONB NOT NULL DEFAULT '{}'::JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS public.community_boards (
@@ -775,6 +791,12 @@ CREATE INDEX IF NOT EXISTS idx_job_postings_announcement_created ON public.job_p
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_created ON public.ai_usage_events(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_resume_user_created ON public.user_resumes(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_created ON public.credit_transactions(user_id, created_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS credit_transactions_reward_source_unique_idx
+  ON public.credit_transactions(user_id, source_type, source_id)
+  WHERE source_type IS NOT NULL
+    AND source_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS credit_transactions_source_created_idx
+  ON public.credit_transactions(source_type, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_posts_board_created ON public.community_posts(board_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_comments_post_created ON public.community_comments(post_id, created_at);

@@ -211,45 +211,37 @@ async function getCreditRewardPolicy(
   rewardKey: string,
   fallback: CreditRewardPolicy,
 ) {
-  try {
-    const result = await client.query<{
-      description: string;
-      credit_amount: number;
-      daily_limit: number | null;
-      milestone_count: number | null;
-      is_active: boolean;
-    }>(
-      `
-        SELECT
-          description,
-          credit_amount,
-          daily_limit,
-          milestone_count,
-          is_active
-        FROM public.credit_reward_policies
-        WHERE reward_key = $1
-        LIMIT 1
-      `,
-      [rewardKey],
-    );
-    const row = result.rows[0];
+  const result = await client.query<{
+    description: string;
+    credit_amount: number;
+    daily_limit: number | null;
+    milestone_count: number | null;
+    is_active: boolean;
+  }>(
+    `
+      SELECT
+        description,
+        credit_amount,
+        daily_limit,
+        milestone_count,
+        is_active
+      FROM public.credit_reward_policies
+      WHERE reward_key = $1
+      LIMIT 1
+    `,
+    [rewardKey],
+  );
+  const row = result.rows[0];
 
-    if (!row) return fallback;
+  if (!row) return fallback;
 
-    return {
-      amount: Number(row.credit_amount) || fallback.amount,
-      dailyLimit: row.daily_limit ?? fallback.dailyLimit,
-      milestoneCount: row.milestone_count ?? fallback.milestoneCount,
-      isActive: row.is_active,
-      reason: row.description || fallback.reason,
-    } satisfies CreditRewardPolicy;
-  } catch (error) {
-    if ((error as { code?: string }).code === "42P01") {
-      return fallback;
-    }
-
-    throw error;
-  }
+  return {
+    amount: Number(row.credit_amount) || fallback.amount,
+    dailyLimit: row.daily_limit ?? fallback.dailyLimit,
+    milestoneCount: row.milestone_count ?? fallback.milestoneCount,
+    isActive: row.is_active,
+    reason: row.description || fallback.reason,
+  } satisfies CreditRewardPolicy;
 }
 
 async function insertCreditTransaction(
@@ -296,8 +288,8 @@ async function insertCreditTransaction(
         $2,
         current_balance.balance + $2,
         $3,
-        $4,
-        $5,
+        $4::varchar(80),
+        $5::text,
         $6::jsonb
       FROM current_balance
       WHERE ($8::boolean = false OR current_balance.balance + $2 >= 0)
@@ -305,8 +297,8 @@ async function insertCreditTransaction(
         SELECT 1
         FROM public.credit_transactions
         WHERE user_id = $1
-          AND source_type = $4
-          AND source_id = $5
+          AND source_type = $4::varchar(80)
+          AND source_id = $5::text
       )
       RETURNING id, balance_after
     `,

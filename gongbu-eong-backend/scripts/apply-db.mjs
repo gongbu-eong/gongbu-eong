@@ -35,6 +35,16 @@ async function main() {
     "seed_diagnosis.sql",
     "alter_job_category_recommendations.sql",
     "alter_resume_coaching.sql",
+    "20260814_community.sql",
+    "20260815_credit_policy.sql",
+    "20260815_notification_settings.sql",
+    "20260815_in_app_notifications.sql",
+    "alter_user_profile_fields.sql",
+    "20260818_remove_blind_resume_personal_fields.sql",
+    "20260818_remove_coaching_grade_from_feedback.sql",
+    "20260819_credit_ticket_policy.sql",
+    "20260819_community_comment_threads.sql",
+    "20260819_community_search_popular_index.sql",
   ];
 
   await client.connect();
