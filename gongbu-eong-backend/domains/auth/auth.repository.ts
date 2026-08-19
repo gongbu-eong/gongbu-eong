@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { grantWelcomeSignupCredits } from "@/domains/credits/credits.repository";
+import { generateUniqueCommunityNickname } from "./community-nickname";
 
 type OAuthProvider = "kakao" | "naver";
 
@@ -41,21 +42,25 @@ export async function upsertOAuthUser(args: {
 
     let userId = existingAccount.rows[0]?.user_id;
     let isNewUser = false;
+    let welcomeCreditsGranted = false;
 
     if (!userId) {
+      const communityNickname = await generateUniqueCommunityNickname(client);
       const user = await client.query<{ id: string; inserted: boolean }>(
         `
           INSERT INTO public.users (
             email,
             nickname,
             display_name,
+            community_nickname,
             avatar_url,
             last_login_at
           )
-          VALUES ($1, $2, $2, $3, NOW())
+          VALUES ($1, $2, $2, $3, $4, NOW())
           ON CONFLICT (email) DO UPDATE SET
             nickname = COALESCE(EXCLUDED.nickname, public.users.nickname),
             display_name = COALESCE(EXCLUDED.display_name, public.users.display_name),
+            community_nickname = COALESCE(public.users.community_nickname, EXCLUDED.community_nickname),
             avatar_url = COALESCE(EXCLUDED.avatar_url, public.users.avatar_url),
             last_login_at = NOW(),
             updated_at = NOW()
@@ -64,6 +69,7 @@ export async function upsertOAuthUser(args: {
         [
           args.profile.email || null,
           args.profile.nickname || null,
+          communityNickname,
           args.profile.avatarUrl || null,
         ],
       );
@@ -104,9 +110,10 @@ export async function upsertOAuthUser(args: {
       );
 
       if (isNewUser) {
-        await grantWelcomeSignupCredits(client, userId);
+        welcomeCreditsGranted = await grantWelcomeSignupCredits(client, userId);
       }
     } else {
+      const communityNickname = await generateUniqueCommunityNickname(client);
       await client.query(
         `
           UPDATE public.users
@@ -115,6 +122,7 @@ export async function upsertOAuthUser(args: {
             nickname = COALESCE($3, nickname),
             display_name = COALESCE($3, display_name),
             avatar_url = COALESCE($4, avatar_url),
+            community_nickname = COALESCE(community_nickname, $5),
             last_login_at = NOW(),
             updated_at = NOW()
           WHERE id = $1
@@ -124,6 +132,7 @@ export async function upsertOAuthUser(args: {
           args.profile.email || null,
           args.profile.nickname || null,
           args.profile.avatarUrl || null,
+          communityNickname,
         ],
       );
 
@@ -277,7 +286,7 @@ export async function upsertOAuthUser(args: {
 
     await client.query("COMMIT");
 
-    return { userId };
+    return { userId, isNewUser, welcomeCreditsGranted };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

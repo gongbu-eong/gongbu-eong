@@ -120,12 +120,12 @@ export function CoachingPage() {
   const submit = async () => {
     const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || null }));
     if (!hasDiagnosis || !selectedDiagnosisId) return setError("강점·성향 진단을 먼저 완료해 주세요.");
-    if (!hasResume || !resumeId) return setError("이력서를 먼저 등록해 주세요.");
     if (normalizedQuestions.some((item) => !item.question || !item.characterLimit)) return setError("자소서 문항과 글자 수 제한을 입력해 주세요.");
     if (normalizedQuestions.some((item) => item.characterLimit! < MIN_CHARACTER_LIMIT || item.characterLimit! > MAX_CHARACTER_LIMIT)) return setError("글자 수 제한은 100자 이상 2000자 이하로 입력해 주세요.");
     if (inputType === "text" && !text.trim()) return setError("자소서를 입력해 주세요.");
     if (inputType === "file" && !file) return setError("자소서 파일을 첨부해 주세요.");
     if (!termsConfirmed) return setError("자소서 약관동의를 완료해 주세요.");
+    if (!window.confirm("진단권 한장이 소모됩니다. 진행하시겠습니까?")) return;
     setError("");
     setCoaching(true);
     try {
@@ -138,9 +138,18 @@ export function CoachingPage() {
         resumeId,
         questions: normalizedQuestions,
       });
+      if (typeof result.creditBalance === "number") {
+        window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+          detail: { balance: result.creditBalance },
+        }));
+      }
       router.push(`/ai-tools/coaching/result/${result.resultId}`);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "코칭에 실패했습니다.");
+      const message = caught instanceof Error ? caught.message : "코칭에 실패했습니다.";
+      if (message.includes("진단권이 부족합니다")) {
+        window.alert(message);
+      }
+      setError(message);
       setCoaching(false);
     }
   };
@@ -161,7 +170,7 @@ export function CoachingPage() {
   const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || 0 }));
   const questionsReady = normalizedQuestions.length > 0 && normalizedQuestions.every((item) => item.question && item.characterLimit >= MIN_CHARACTER_LIMIT && item.characterLimit <= MAX_CHARACTER_LIMIT);
   const coverLetterReady = inputType === "text" ? Boolean(text.trim()) : Boolean(file);
-  const formReady = Boolean(selectedDiagnosisId) && Boolean(resumeId) && questionsReady && coverLetterReady && termsConfirmed;
+  const formReady = Boolean(selectedDiagnosisId) && questionsReady && coverLetterReady && termsConfirmed;
 
   return <div className={styles.page}>
     <AppHeader />
@@ -170,7 +179,7 @@ export function CoachingPage() {
       <section className={styles.intro}><strong>자소서를 Ai가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
       {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button>}
       <StatusCard title="강점·성향 진단 결과" ready={hasDiagnosis} empty="현재 강·약점 결과가 없습니다." action="진단 시작하기 →" href="/ai-tools/diagnosis" onChange={() => setPicker("diagnosis")} selected={selectedDiagnosis?.typeName} date={formatDate(selectedDiagnosis?.completedAt)} />
-      <StatusCard title="내 이력서" ready={hasResume} empty="현재 등록된 이력서가 없습니다." action="이력서 등록하기 →" href="/my/resumes/new" onChange={() => setPicker("resume")} selected={selectedResume?.file?.originalFilename || selectedResume?.title} />
+      <StatusCard title="내 이력서 (선택)" ready={hasResume} empty="이력서 없이도 자소서 코칭을 받을 수 있어요." action="이력서 등록하기 →" href="/my/resumes/new" onChange={() => setPicker("resume")} selected={selectedResume?.file?.originalFilename || selectedResume?.title} />
 
       <section className={styles.questionSection}>
         <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={addQuestion} disabled={questions.length >= MAX_QUESTION_COUNT}>+ 추가</button></div>
@@ -178,7 +187,7 @@ export function CoachingPage() {
           <textarea aria-label={`자소서 문항 ${index + 1}`} value={item.question} onChange={(event) => updateQuestion(setQuestions, item.id, "question", event.target.value)} placeholder="자소서 문항을 입력하세요." />
           <div className={styles.questionLimitRow}>
             <label htmlFor={`question-limit-${item.id}`}>글자 수 제한</label>
-            <input id={`question-limit-${item.id}`} value={item.characterLimit} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", normalizeCharacterLimit(event.target.value))} inputMode="numeric" placeholder="000" />
+            <input id={`question-limit-${item.id}`} value={item.characterLimit} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", normalizeCharacterLimit(event.target.value))} inputMode="numeric" placeholder="최대 2000자" />
             {index > 0 ? <button className={styles.questionDelete} type="button" onClick={() => setQuestions((items) => items.filter((entry) => entry.id !== item.id))}>삭제</button> : null}
           </div>
         </div>)}

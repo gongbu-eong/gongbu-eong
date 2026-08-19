@@ -102,6 +102,25 @@ export async function updateUserProfile(
   userId: string,
   input: UpdateUserProfileInput,
 ) {
+  const duplicated = await db.query<{ exists: boolean }>(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM public.users
+        WHERE community_nickname = $1
+          AND id <> $2
+          AND status = 'active'
+      ) AS exists
+    `,
+    [input.communityNickname, userId],
+  );
+
+  if (duplicated.rows[0]?.exists) {
+    const error = new Error("이미 사용 중인 닉네임입니다.");
+    error.name = "DuplicateNicknameError";
+    throw error;
+  }
+
   const result = await db.query<UserProfileRow>(
     `
       UPDATE public.users

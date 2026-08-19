@@ -9,18 +9,11 @@ export const CREDIT_REWARD_POLICY = {
     sourceType: "welcome_signup",
     reason: "신규 가입 무료 진단권 5개",
   },
-  communityPostCreate: {
+  communityActivityMilestone: {
     amount: 1,
-    dailyLimit: 3,
-    sourceType: "community_post_create",
-    reason: "커뮤니티 게시글 작성 보상",
-  },
-  communityCommentMilestone: {
-    amount: 1,
-    commentsPerReward: 5,
-    dailyLimit: 2,
-    sourceType: "community_comment_milestone",
-    reason: "커뮤니티 댓글 활동 보상",
+    milestoneCount: 3,
+    sourceType: "community_activity_milestone",
+    reason: "커뮤니티 글·댓글 활동 보상",
   },
 } as const;
 
@@ -48,19 +41,22 @@ export async function grantWelcomeSignupCredits(
 
   if (!policy.isActive) return false;
 
-  return insertCreditTransaction(client, {
+  const transaction = await insertCreditTransaction(client, {
     userId,
     amount: policy.amount,
+    transactionType: "event_grant",
     sourceType: CREDIT_REWARD_POLICY.welcomeSignup.sourceType,
     sourceId: userId,
     reason: policy.reason,
     metadata: { grantType: "signup", freeCredits: true },
   });
+
+  return transaction.granted;
 }
 
-export async function grantCommunityPostCreateReward(
+export async function grantCommunityActivityMilestoneReward(
   userId: string,
-  postId: string,
+  source: { type: "post" | "comment"; id: string },
 ) {
   const client = await db.connect();
 
@@ -68,134 +64,146 @@ export async function grantCommunityPostCreateReward(
     await client.query("BEGIN");
     const policy = await getCreditRewardPolicy(
       client,
-      CREDIT_REWARD_POLICY.communityPostCreate.sourceType,
+      CREDIT_REWARD_POLICY.communityActivityMilestone.sourceType,
       {
-        amount: CREDIT_REWARD_POLICY.communityPostCreate.amount,
-        dailyLimit: CREDIT_REWARD_POLICY.communityPostCreate.dailyLimit,
-        isActive: true,
-        reason: CREDIT_REWARD_POLICY.communityPostCreate.reason,
-      },
-    );
-
-    if (!policy.isActive) {
-      await client.query("COMMIT");
-      return false;
-    }
-
-    const dailyCount = await countTodayRewards(
-      client,
-      userId,
-      CREDIT_REWARD_POLICY.communityPostCreate.sourceType,
-    );
-    const dailyLimit =
-      policy.dailyLimit ?? CREDIT_REWARD_POLICY.communityPostCreate.dailyLimit;
-
-    if (dailyCount >= dailyLimit) {
-      await client.query("COMMIT");
-      return false;
-    }
-
-    const granted = await insertCreditTransaction(client, {
-      userId,
-      amount: policy.amount,
-      sourceType: CREDIT_REWARD_POLICY.communityPostCreate.sourceType,
-      sourceId: postId,
-      reason: policy.reason,
-      metadata: {
-        postId,
-        dailyLimit,
-      },
-    });
-    await client.query("COMMIT");
-    return granted;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
-export async function grantCommunityCommentMilestoneReward(
-  userId: string,
-  commentId: string,
-) {
-  const client = await db.connect();
-
-  try {
-    await client.query("BEGIN");
-    const policy = await getCreditRewardPolicy(
-      client,
-      CREDIT_REWARD_POLICY.communityCommentMilestone.sourceType,
-      {
-        amount: CREDIT_REWARD_POLICY.communityCommentMilestone.amount,
-        dailyLimit: CREDIT_REWARD_POLICY.communityCommentMilestone.dailyLimit,
+        amount: CREDIT_REWARD_POLICY.communityActivityMilestone.amount,
         milestoneCount:
-          CREDIT_REWARD_POLICY.communityCommentMilestone.commentsPerReward,
+          CREDIT_REWARD_POLICY.communityActivityMilestone.milestoneCount,
         isActive: true,
-        reason: CREDIT_REWARD_POLICY.communityCommentMilestone.reason,
+        reason: CREDIT_REWARD_POLICY.communityActivityMilestone.reason,
       },
     );
 
     if (!policy.isActive) {
+      const balanceAfter = await getCurrentCreditBalance(userId, client);
       await client.query("COMMIT");
-      return false;
+      return { granted: false, balanceAfter };
     }
 
-    const todayCommentCountResult = await client.query<{ count: string }>(
+    const activityCountResult = await client.query<{ count: string }>(
       `
-        SELECT COUNT(*)::text AS count
-        FROM public.community_comments
-        WHERE user_id = $1
-          AND status = 'active'
-          AND (created_at AT TIME ZONE 'Asia/Seoul')::date
-                = (NOW() AT TIME ZONE 'Asia/Seoul')::date
+        SELECT (
+          SELECT COUNT(*)
+          FROM public.community_posts
+          WHERE user_id = $1
+            AND status = 'active'
+        ) + (
+          SELECT COUNT(*)
+          FROM public.community_comments
+          WHERE user_id = $1
+            AND status = 'active'
+        ) AS count
       `,
       [userId],
     );
-    const todayCommentCount = Number(
-      todayCommentCountResult.rows[0]?.count || 0,
-    );
-    const commentsPerReward =
+    const activityCount = Number(activityCountResult.rows[0]?.count || 0);
+    const milestoneCount =
       policy.milestoneCount ??
-      CREDIT_REWARD_POLICY.communityCommentMilestone.commentsPerReward;
-    const dailyLimit =
-      policy.dailyLimit ?? CREDIT_REWARD_POLICY.communityCommentMilestone.dailyLimit;
-    const milestone = todayCommentCount / commentsPerReward;
+      CREDIT_REWARD_POLICY.communityActivityMilestone.milestoneCount;
+    const milestone = activityCount / milestoneCount;
 
-    if (
-      !Number.isInteger(milestone) ||
-      milestone < 1 ||
-      milestone > dailyLimit
-    ) {
+    if (!Number.isInteger(milestone) || milestone < 1) {
+      const balanceAfter = await getCurrentCreditBalance(userId, client);
       await client.query("COMMIT");
-      return false;
+      return { granted: false, balanceAfter };
     }
 
-    const today = await currentKstDate(client);
-    const granted = await insertCreditTransaction(client, {
+    const transaction = await insertCreditTransaction(client, {
       userId,
       amount: policy.amount,
-      sourceType: CREDIT_REWARD_POLICY.communityCommentMilestone.sourceType,
-      sourceId: `${today}:${milestone}`,
-      reason: `${policy.reason} (${today} ${todayCommentCount}번째 댓글)`,
+      transactionType: "event_grant",
+      sourceType: CREDIT_REWARD_POLICY.communityActivityMilestone.sourceType,
+      sourceId: `activity:${milestone}`,
+      reason: `${policy.reason} (${activityCount}번째 활동)`,
       metadata: {
-        commentId,
+        source,
         milestone,
-        todayCommentCount,
-        commentsPerReward,
-        dailyLimit,
+        activityCount,
+        milestoneCount,
       },
     });
 
+    const balanceAfter =
+      transaction.balanceAfter ?? (await getCurrentCreditBalance(userId, client));
+
     await client.query("COMMIT");
-    return granted;
+    return { granted: transaction.granted, balanceAfter };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();
   }
+}
+
+export async function consumeCoachingCredit(userId: string, sourceId: string) {
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+    const transaction = await insertCreditTransaction(client, {
+      userId,
+      amount: -1,
+      transactionType: "use",
+      sourceType: "resume_coaching",
+      sourceId,
+      reason: "AI NCS 자소서 코칭 진단권 사용",
+      metadata: { feature: "ai_ncs_cover_letter_coaching" },
+      requireSufficientBalance: true,
+    });
+    const balanceAfter =
+      transaction.balanceAfter ?? (await getCurrentCreditBalance(userId, client));
+
+    await client.query("COMMIT");
+    return { consumed: transaction.granted, balanceAfter };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function refundCoachingCredit(userId: string, sourceId: string) {
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+    const transaction = await insertCreditTransaction(client, {
+      userId,
+      amount: 1,
+      transactionType: "refund",
+      sourceType: "resume_coaching_refund",
+      sourceId,
+      reason: "AI NCS 자소서 코칭 실패 환불",
+      metadata: { originalSourceType: "resume_coaching", originalSourceId: sourceId },
+    });
+    const balanceAfter =
+      transaction.balanceAfter ?? (await getCurrentCreditBalance(userId, client));
+
+    await client.query("COMMIT");
+    return { refunded: transaction.granted, balanceAfter };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getCurrentCreditBalance(userId: string, client: DbClient = db) {
+  const result = await client.query<{ balance_after: number | null }>(
+    `
+      SELECT balance_after
+      FROM public.credit_transactions
+      WHERE user_id = $1
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    `,
+    [userId],
+  );
+
+  return Number(result.rows[0]?.balance_after || 0);
 }
 
 async function getCreditRewardPolicy(
@@ -249,17 +257,19 @@ async function insertCreditTransaction(
   args: {
     userId: string;
     amount: number;
+    transactionType: "purchase" | "use" | "refund" | "admin_adjust" | "event_grant";
     sourceType: string;
     sourceId: string;
     reason: string;
     metadata: Record<string, unknown>;
+    requireSufficientBalance?: boolean;
   },
 ) {
   await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
     `credit:${args.userId}`,
   ]);
 
-  const result = await client.query<{ id: string }>(
+  const result = await client.query<{ id: string; balance_after: number }>(
     `
       WITH current_balance AS (
         SELECT COALESCE((
@@ -282,7 +292,7 @@ async function insertCreditTransaction(
       )
       SELECT
         $1,
-        'event_grant'::public.credit_transaction_type,
+        $7::public.credit_transaction_type,
         $2,
         current_balance.balance + $2,
         $3,
@@ -290,14 +300,15 @@ async function insertCreditTransaction(
         $5,
         $6::jsonb
       FROM current_balance
-      WHERE NOT EXISTS (
+      WHERE ($8::boolean = false OR current_balance.balance + $2 >= 0)
+        AND NOT EXISTS (
         SELECT 1
         FROM public.credit_transactions
         WHERE user_id = $1
           AND source_type = $4
           AND source_id = $5
       )
-      RETURNING id
+      RETURNING id, balance_after
     `,
     [
       args.userId,
@@ -306,35 +317,11 @@ async function insertCreditTransaction(
       args.sourceType,
       args.sourceId,
       JSON.stringify(args.metadata),
+      args.transactionType,
+      Boolean(args.requireSufficientBalance),
     ],
   );
 
-  return Boolean(result.rows[0]);
-}
-
-async function countTodayRewards(
-  client: DbClient,
-  userId: string,
-  sourceType: string,
-) {
-  const result = await client.query<{ count: string }>(
-    `
-      SELECT COUNT(*)::text AS count
-      FROM public.credit_transactions
-      WHERE user_id = $1
-        AND source_type = $2
-        AND (created_at AT TIME ZONE 'Asia/Seoul')::date
-              = (NOW() AT TIME ZONE 'Asia/Seoul')::date
-    `,
-    [userId, sourceType],
-  );
-
-  return Number(result.rows[0]?.count || 0);
-}
-
-async function currentKstDate(client: DbClient) {
-  const result = await client.query<{ today: string }>(
-    `SELECT (NOW() AT TIME ZONE 'Asia/Seoul')::date::text AS today`,
-  );
-  return result.rows[0]?.today || new Date().toISOString().slice(0, 10);
+  const row = result.rows[0];
+  return { granted: Boolean(row), balanceAfter: row?.balance_after };
 }

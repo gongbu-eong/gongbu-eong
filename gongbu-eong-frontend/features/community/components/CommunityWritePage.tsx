@@ -113,6 +113,18 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
       const response = postId
         ? await updateCommunityPost(postId, { category, title, content, imageDataUrl: attachments[0]?.dataUrl || null, attachments })
         : await createCommunityPost({ category, title, content, imageDataUrl: attachments[0]?.dataUrl || null, attachments });
+      if (response.creditReward?.granted) {
+        window.sessionStorage.setItem("gongbu_pending_ticket_reward", JSON.stringify({
+          message: "진단권 1장이 추가되었습니다.",
+          balanceAfter: response.creditReward.balanceAfter,
+        }));
+        window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
+          detail: {
+            message: "진단권 1장이 추가되었습니다.",
+            balanceAfter: response.creditReward.balanceAfter,
+          },
+        }));
+      }
       router.replace(`/community/${response.post.id}`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "게시글을 저장하지 못했습니다.");

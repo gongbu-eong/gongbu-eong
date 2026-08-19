@@ -7,6 +7,8 @@ import { useRouter } from "next/navigation";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { HomeMenuDrawer } from "@/features/home/components/HomeMain";
+import { ComingSoonAlert } from "./ComingSoonAlert";
+import { TicketRewardAlert } from "./TicketRewardAlert";
 import styles from "./AppChrome.module.css";
 
 type AppHeaderProps = {
@@ -30,6 +32,7 @@ export function AppHeader({
   const [fetchedBookmarkCount, setFetchedBookmarkCount] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [ticketRewardMessage, setTicketRewardMessage] = useState("");
 
   useEffect(() => {
     const shouldFetchUser =
@@ -71,6 +74,51 @@ export function AppHeader({
     ticketCount ?? user?.creditBalance ?? fetchedUser?.creditBalance ?? 0;
   const effectiveUnreadNotificationCount =
     user?.unreadNotificationCount ?? fetchedUser?.unreadNotificationCount ?? 0;
+
+  useEffect(() => {
+    let active = true;
+    const showPendingReward = (message: string, balanceAfter?: number) => {
+      window.setTimeout(() => {
+        if (!active) return;
+        if (typeof balanceAfter === "number") {
+          setFetchedUser((current) =>
+            current ? { ...current, creditBalance: balanceAfter } : current,
+          );
+          window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+            detail: { balance: balanceAfter },
+          }));
+        }
+        setTicketRewardMessage(message);
+      }, 0);
+    };
+
+    const pendingReward = window.sessionStorage.getItem("gongbu_pending_ticket_reward");
+    if (pendingReward) {
+      window.sessionStorage.removeItem("gongbu_pending_ticket_reward");
+      try {
+        const parsed = JSON.parse(pendingReward) as { message?: string; balanceAfter?: number };
+        showPendingReward(parsed.message || "진단권 한장이 추가되었습니다.", parsed.balanceAfter);
+      } catch {
+        showPendingReward("진단권 한장이 추가되었습니다.");
+      }
+    }
+
+    const handleReward = (event: Event) => {
+      const detail = (event as CustomEvent<{ message?: string; balanceAfter?: number }>).detail;
+      if (typeof detail?.balanceAfter === "number") {
+        setFetchedUser((current) =>
+          current ? { ...current, creditBalance: detail.balanceAfter } : current,
+        );
+      }
+      setTicketRewardMessage(detail?.message || "진단권 한장이 추가되었습니다.");
+    };
+
+    window.addEventListener("gongbu-ticket-rewarded", handleReward);
+    return () => {
+      active = false;
+      window.removeEventListener("gongbu-ticket-rewarded", handleReward);
+    };
+  }, []);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -131,6 +179,12 @@ export function AppHeader({
           onLogout={handleLogout}
         />
       ) : null}
+      {ticketRewardMessage ? (
+        <TicketRewardAlert
+          message={ticketRewardMessage}
+          onClose={() => setTicketRewardMessage("")}
+        />
+      ) : null}
     </header>
   );
 }
@@ -146,16 +200,52 @@ export function AppTicketStatus({
   ticketCount?: number;
   hasTicketAlert?: boolean;
 }) {
+  const [eventTicketCount, setEventTicketCount] = useState<number | null>(null);
+  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
+  const displayTicketCount = eventTicketCount ?? ticketCount;
+
+  useEffect(() => {
+    const handleBalanceChange = (event: Event) => {
+      const balance = (event as CustomEvent<{ balance?: number; balanceAfter?: number }>).detail?.balance;
+      const balanceAfter = (event as CustomEvent<{ balance?: number; balanceAfter?: number }>).detail?.balanceAfter;
+      const nextBalance = typeof balanceAfter === "number" ? balanceAfter : balance;
+      if (typeof nextBalance === "number") {
+        setEventTicketCount(nextBalance);
+      }
+    };
+
+    window.addEventListener("gongbu-ticket-balance-changed", handleBalanceChange);
+    window.addEventListener("gongbu-ticket-rewarded", handleBalanceChange);
+    return () => {
+      window.removeEventListener("gongbu-ticket-balance-changed", handleBalanceChange);
+      window.removeEventListener("gongbu-ticket-rewarded", handleBalanceChange);
+    };
+  }, []);
+
   return (
-    <div className={styles.headerTicketStatus} aria-label={`보유 진단권 ${ticketCount}개`}>
+    <div className={styles.headerTicketStatus} aria-label={`보유 진단권 ${displayTicketCount}개`}>
       <span className={styles.headerTicketProgress} aria-hidden="true" />
       <Image src="/my/header-score.png" alt="" width={23} height={12} className={styles.headerTicketIcon} />
-      <span className={styles.headerTicketCount}>{ticketCount}</span>
+      <span className={styles.headerTicketCount}>{displayTicketCount}</span>
       {hasTicketAlert ? (
-        <span className={styles.headerTicketAlert} aria-hidden="true">
+        <button
+          type="button"
+          className={styles.headerTicketAlert}
+          aria-label="진단권 안내"
+          aria-expanded={isTooltipOpen}
+          onBlur={() => setIsTooltipOpen(false)}
+          onClick={() => setIsTooltipOpen((value) => !value)}
+          onMouseEnter={() => setIsTooltipOpen(true)}
+          onMouseLeave={() => setIsTooltipOpen(false)}
+        >
           <Image src="/my/header-alert-bg.svg" alt="" width={16} height={16} />
           <b>!</b>
-        </span>
+          {isTooltipOpen ? (
+            <span className={styles.headerTicketTooltip} role="tooltip">
+              커뮤니티에서 댓글과 글을 작성하면, 진단권이 추가됩니다.
+            </span>
+          ) : null}
+        </button>
       ) : null}
     </div>
   );
@@ -168,6 +258,7 @@ export function AppFooter({
 }) {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -221,7 +312,7 @@ export function AppFooter({
       <button
         type="button"
         className={active === "ai" ? styles.active : undefined}
-        onClick={() => goProtected("/ai-tools/diagnosis")}
+        onClick={() => setIsComingSoonOpen(true)}
       >
         <span className={styles.footerIconWrap}>
           <Image src="/diagnosis/result-detail/footer-ai.svg" alt="" width={27} height={27} />
@@ -241,6 +332,9 @@ export function AppFooter({
         <Image src="/diagnosis/result-detail/footer-my.svg" alt="" width={28} height={25} />
         <span>MY</span>
       </button>
+      {isComingSoonOpen ? (
+        <ComingSoonAlert onClose={() => setIsComingSoonOpen(false)} />
+      ) : null}
     </footer>
   );
 }

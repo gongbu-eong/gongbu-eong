@@ -9,20 +9,27 @@ import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import {
   createCommunityComment,
   deleteCommunityComment,
+  getCommunityPosts,
   getCommunityPost,
   reportCommunityComment,
   reportCommunityPost,
   setCommunityRecommend,
   setCommunityScrap,
 } from "../community.api";
-import type { CommunityCommentDto, CommunityPostDetailDto } from "../community.dto";
-import { Avatar, EmptyState, formatNumber, formatRelativeTime } from "./CommunityShared";
+import {
+  COMMUNITY_SHARE_DESCRIPTION,
+  COMMUNITY_SHARE_TITLE,
+  getCommunityShareImageUrl,
+} from "../community-share";
+import type { CommunityCommentDto, CommunityPostDetailDto, CommunityPostSummaryDto } from "../community.dto";
+import { Avatar, DeleteConfirmDialog, EmptyState, formatNumber, formatRelativeTime, Pagination, PostItem } from "./CommunityShared";
 import styles from "./Community.module.css";
 
 type ModalState =
   | { type: "share" }
   | { type: "report-post" }
   | { type: "report-comment"; commentId: string }
+  | { type: "delete-comment"; commentId: string }
   | null;
 
 const REPORT_REASONS = [
@@ -34,15 +41,25 @@ const REPORT_REASONS = [
   "게시판 성격에 맞지 않음",
   "기타",
 ];
+const COMMENT_PAGE_SIZE = 5;
+const BOARD_PAGE_SIZE = 20;
 
 export function CommunityDetailPage({ postId }: { postId: string }) {
   const router = useRouter();
   const [post, setPost] = useState<CommunityPostDetailDto | null>(null);
   const [comment, setComment] = useState("");
+  const [replyText, setReplyText] = useState("");
+  const [replyTarget, setReplyTarget] = useState<{ commentId: string; nickname: string } | null>(null);
+  const [commentPage, setCommentPage] = useState(1);
+  const [boardItems, setBoardItems] = useState<CommunityPostSummaryDto[]>([]);
+  const [boardTotal, setBoardTotal] = useState(0);
+  const [boardPage, setBoardPage] = useState(1);
+  const [boardSort, setBoardSort] = useState<"latest" | "popular">("latest");
   const [toast, setToast] = useState("");
   const [modal, setModal] = useState<ModalState>(null);
   const [selectedReason, setSelectedReason] = useState(REPORT_REASONS[0]);
   const [saving, setSaving] = useState(false);
+  const loadedPostId = post?.id;
 
   useEffect(() => {
     getCommunityPost(postId)
@@ -50,23 +67,59 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       .catch((error) => setToast(error instanceof Error ? error.message : "게시글을 불러오지 못했습니다."));
   }, [postId]);
 
+  useEffect(() => {
+    if (!loadedPostId) return;
+    let active = true;
+    getCommunityPosts({
+      sort: boardSort,
+      limit: BOARD_PAGE_SIZE,
+      offset: (boardPage - 1) * BOARD_PAGE_SIZE,
+    })
+      .then((response) => {
+        if (!active) return;
+        setBoardItems(response.items);
+        setBoardTotal(response.total);
+      })
+      .catch((error) => active && setToast(error instanceof Error ? error.message : "게시판 글을 불러오지 못했습니다."));
+
+    return () => {
+      active = false;
+    };
+  }, [boardPage, boardSort, loadedPostId]);
+
   const toggleRecommend = async () => {
     if (!post) return;
+    const previous = post;
+    const enabled = !post.isRecommended;
+    setPost({
+      ...post,
+      isRecommended: enabled,
+      recommendCount: Math.max(0, post.recommendCount + (enabled ? 1 : -1)),
+    });
     try {
-      const response = await setCommunityRecommend(post.id, !post.isRecommended);
-      setPost(response.post);
-      if (!post.isRecommended) setToast("추천을 눌러 베스트로 올려주세요!");
+      const response = await setCommunityRecommend(post.id, enabled);
+      setPost((current) => current ? { ...current, ...response.reaction } : current);
+      if (enabled) setToast("추천을 눌러 베스트로 올려주세요!");
     } catch (error) {
+      setPost(previous);
       setToast(error instanceof Error ? error.message : "추천 처리에 실패했습니다.");
     }
   };
 
   const toggleScrap = async () => {
     if (!post) return;
+    const previous = post;
+    const enabled = !post.isScrapped;
+    setPost({
+      ...post,
+      isScrapped: enabled,
+      scrapCount: Math.max(0, post.scrapCount + (enabled ? 1 : -1)),
+    });
     try {
-      const response = await setCommunityScrap(post.id, !post.isScrapped);
-      setPost(response.post);
+      const response = await setCommunityScrap(post.id, enabled);
+      setPost((current) => current ? { ...current, ...response.reaction } : current);
     } catch (error) {
+      setPost(previous);
       setToast(error instanceof Error ? error.message : "스크랩 처리에 실패했습니다.");
     }
   };
@@ -79,6 +132,15 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       const response = await createCommunityComment(post.id, comment);
       setPost(response.post);
       setComment("");
+      setCommentPage(1);
+      if (response.creditReward?.granted) {
+        window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
+          detail: {
+            message: "진단권 1장이 추가되었습니다.",
+            balanceAfter: response.creditReward.balanceAfter,
+          },
+        }));
+      }
     } catch (error) {
       setToast(error instanceof Error ? error.message : "댓글 등록에 실패했습니다.");
     } finally {
@@ -86,10 +148,54 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     }
   };
 
-  const deleteComment = async (commentId: string) => {
-    if (!post || !confirm("댓글을 삭제하시겠습니까?")) return;
+  const startReply = (comment: CommunityCommentDto) => {
+    const commentId = comment.parentCommentId || comment.id;
+    if (replyTarget?.commentId === commentId) {
+      setReplyTarget(null);
+      setReplyText("");
+      return;
+    }
+    setReplyTarget({
+      commentId,
+      nickname: comment.author.nickname,
+    });
+    setReplyText("");
+  };
+
+  const submitReply = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!post || !replyTarget || !replyText.trim() || saving) return;
+    setSaving(true);
+    try {
+      const response = await createCommunityComment(post.id, replyText, replyTarget.commentId);
+      setPost(response.post);
+      setReplyTarget(null);
+      setReplyText("");
+      setCommentPage(1);
+      if (response.creditReward?.granted) {
+        window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
+          detail: {
+            message: "진단권 1장이 추가되었습니다.",
+            balanceAfter: response.creditReward.balanceAfter,
+          },
+        }));
+      }
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "답글 등록에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDeleteComment = async (commentId: string) => {
+    if (!post) return;
     await deleteCommunityComment(commentId);
-    setPost({ ...post, comments: post.comments.filter((item) => item.id !== commentId) });
+    setPost({
+      ...post,
+      commentCount: Math.max(0, post.commentCount - countRemovedComments(post.comments, commentId)),
+      comments: removeCommentById(post.comments, commentId),
+    });
+    setModal(null);
   };
 
   const shareWithKakao = async () => {
@@ -104,21 +210,27 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       return;
     }
 
-    await loadKakaoSdk();
-    const kakao = window.Kakao;
-    if (!kakao) throw new Error("카카오 공유를 준비하지 못했습니다.");
-    if (!kakao.isInitialized()) kakao.init(kakaoKey);
-    kakao.Share.sendDefault({
-      objectType: "feed",
-      content: {
-        title: post.title,
-        description: post.contentPreview,
-        imageUrl: post.imageUrl || `${window.location.origin}/home/home-hero-diagnosis-required.png`,
-        link: { mobileWebUrl: url, webUrl: url },
-      },
-      buttons: [{ title: "글 보러가기", link: { mobileWebUrl: url, webUrl: url } }],
-    });
-    setModal(null);
+    try {
+      await loadKakaoSdk();
+      const kakao = window.Kakao;
+      if (!kakao) throw new Error("카카오 공유를 준비하지 못했습니다.");
+      if (!kakao.isInitialized()) kakao.init(kakaoKey);
+      kakao.Share.sendDefault({
+        objectType: "feed",
+        content: {
+          title: COMMUNITY_SHARE_TITLE,
+          description: COMMUNITY_SHARE_DESCRIPTION,
+          imageUrl: getCommunityShareImageUrl(window.location.origin),
+          link: { mobileWebUrl: url, webUrl: url },
+        },
+        buttons: [{ title: "글 보러가기", link: { mobileWebUrl: url, webUrl: url } }],
+      });
+      setModal(null);
+    } catch (error) {
+      await navigator.clipboard?.writeText(url);
+      setToast(error instanceof Error ? `${error.message} 링크를 복사했습니다.` : "카카오 공유에 실패해 링크를 복사했습니다.");
+      setModal(null);
+    }
   };
 
   const copyShareLink = async () => {
@@ -144,6 +256,12 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       setModal(null);
     }
   };
+
+  const totalCommentPages = post ? Math.max(1, Math.ceil(post.comments.length / COMMENT_PAGE_SIZE)) : 1;
+  const safeCommentPage = Math.min(commentPage, totalCommentPages);
+  const visibleComments = post
+    ? post.comments.slice((safeCommentPage - 1) * COMMENT_PAGE_SIZE, safeCommentPage * COMMENT_PAGE_SIZE)
+    : [];
 
   return (
     <div className={styles.page}>
@@ -208,22 +326,77 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                 </div>
               ) : null}
               <section className={styles.commentSection}>
-                <h2>댓글 {post.comments.length}</h2>
+                <h2>댓글 {formatNumber(post.commentCount)}</h2>
                 <form className={styles.commentForm} onSubmit={submitComment}>
                   <textarea value={comment} maxLength={500} onChange={(event) => setComment(event.target.value)} placeholder="댓글을 입력하세요." />
                   <button type="submit" disabled={!comment.trim() || saving}>등록</button>
                 </form>
                 <div className={styles.commentList}>
-                  {post.comments.map((item) => (
+                  {visibleComments.map((item) => (
                     <CommunityComment
                       key={item.id}
                       comment={item}
+                      replyTarget={replyTarget}
+                      replyText={replyText}
+                      saving={saving}
+                      onReplyTextChange={setReplyText}
+                      onReply={startReply}
+                      onSubmitReply={submitReply}
                       onReport={() => setModal({ type: "report-comment", commentId: item.id })}
-                      onDelete={() => void deleteComment(item.id)}
+                      onDelete={() => setModal({ type: "delete-comment", commentId: item.id })}
+                      onReportReply={(commentId) => setModal({ type: "report-comment", commentId })}
+                      onDeleteReply={(commentId) => setModal({ type: "delete-comment", commentId })}
                     />
                   ))}
                   {!post.comments.length ? <EmptyState>아직 댓글이 없습니다.</EmptyState> : null}
                 </div>
+                <Pagination
+                  currentPage={safeCommentPage}
+                  totalItems={post.comments.length}
+                  pageSize={COMMENT_PAGE_SIZE}
+                  onPageChange={setCommentPage}
+                  showSinglePage
+                />
+                <Link href="/community" className={styles.backToListButton}>
+                  목록으로 가기
+                </Link>
+              </section>
+              <section className={styles.detailBoardSection}>
+                <div className={`${styles.sectionHeader} ${styles.allPostsHeader}`}>
+                  <h2>전체 글</h2>
+                  <div className={styles.sortButtons}>
+                    <button
+                      className={boardSort === "latest" ? styles.sortActive : ""}
+                      onClick={() => {
+                        setBoardSort("latest");
+                        setBoardPage(1);
+                      }}
+                    >
+                      최신순
+                    </button>
+                    <span>|</span>
+                    <button
+                      className={boardSort === "popular" ? styles.sortActive : ""}
+                      onClick={() => {
+                        setBoardSort("popular");
+                        setBoardPage(1);
+                      }}
+                    >
+                      인기순
+                    </button>
+                  </div>
+                </div>
+                <div className={styles.postList}>
+                  {boardItems.map((item) => <PostItem key={item.id} post={item} />)}
+                  {!boardItems.length ? <EmptyState>이 게시판에 등록된 글이 없습니다.</EmptyState> : null}
+                </div>
+                <Pagination
+                  currentPage={boardPage}
+                  totalItems={boardTotal}
+                  pageSize={BOARD_PAGE_SIZE}
+                  onPageChange={setBoardPage}
+                  showSinglePage
+                />
               </section>
             </>
           )}
@@ -231,8 +404,19 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
         <AppFooter active="community" />
       </section>
       {modal ? (
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
-          {modal.type === "share" ? (
+        <div
+          className={`${styles.modalBackdrop} ${modal.type === "delete-comment" ? "" : styles.sheetBackdrop}`}
+          role="dialog"
+          aria-modal="true"
+        >
+          {modal.type === "delete-comment" ? (
+            <DeleteConfirmDialog
+              title="댓글을 삭제하시겠습니까?"
+              description="댓글을 삭제하면, 복구가 되지 않습니다."
+              onCancel={() => setModal(null)}
+              onConfirm={() => void confirmDeleteComment(modal.commentId)}
+            />
+          ) : modal.type === "share" ? (
             <section className={`${styles.bottomSheet} ${styles.shareSheet}`}>
               <span className={styles.sheetHandle} />
               <h2>공유하기</h2>
@@ -318,28 +502,164 @@ function loadKakaoSdk() {
 
 function CommunityComment({
   comment,
+  replyTarget,
+  replyText,
+  saving,
+  onReplyTextChange,
+  onReply,
+  onSubmitReply,
   onReport,
   onDelete,
+  onReportReply,
+  onDeleteReply,
 }: {
   comment: CommunityCommentDto;
+  replyTarget: { commentId: string; nickname: string } | null;
+  replyText: string;
+  saving: boolean;
+  onReplyTextChange: (value: string) => void;
+  onReply: (comment: CommunityCommentDto) => void;
+  onSubmitReply: (event: FormEvent) => void;
   onReport: () => void;
   onDelete: () => void;
+  onReportReply: (commentId: string) => void;
+  onDeleteReply: (commentId: string) => void;
 }) {
   return (
     <article className={styles.comment}>
-      <Avatar author={comment.author} />
-      <div>
+      <div className={styles.commentHeader}>
+        <Avatar author={comment.author} />
         <div className={styles.authorLine}>
           <strong>{comment.author.nickname}</strong>
           {comment.author.diagnosisTypeName ? <b className={styles.typeBadge}>{comment.author.diagnosisTypeName}</b> : null}
-          <span>{formatRelativeTime(comment.createdAt)}</span>
         </div>
-        <p>{comment.content}</p>
-        <div className={styles.commentTools}>
-          <button type="button" onClick={onReport}>신고</button>
-          {comment.canDelete ? <button type="button" onClick={onDelete}>삭제</button> : null}
-        </div>
+        <time>{formatCommentDate(comment.createdAt)}</time>
       </div>
+      <p className={styles.commentBody}>{comment.content}</p>
+      <CommentActions
+        onReply={() => onReply(comment)}
+        onReport={onReport}
+        onDelete={comment.canDelete ? onDelete : undefined}
+      />
+      {replyTarget?.commentId === comment.id ? (
+        <ReplyForm
+          replyText={replyText}
+          saving={saving}
+          placeholder="댓글을 입력하세요."
+          onReplyTextChange={onReplyTextChange}
+          onSubmitReply={onSubmitReply}
+        />
+      ) : null}
+      {comment.replies.length ? (
+        <div className={styles.replyList}>
+          {comment.replies.map((reply) => (
+            <article key={reply.id} className={styles.replyComment}>
+              <div className={styles.replyAuthorLine}>
+                <Image src="/community/reply-arrow.svg" alt="" width={24} height={24} />
+                <strong>{reply.author.nickname}</strong>
+              </div>
+              <p>{reply.content}</p>
+              <CommentActions
+                compact
+                onReply={() => onReply(reply)}
+                onReport={() => onReportReply(reply.id)}
+                onDelete={reply.canDelete ? () => onDeleteReply(reply.id) : undefined}
+              />
+            </article>
+          ))}
+        </div>
+      ) : null}
     </article>
   );
+}
+
+function ReplyForm({
+  replyText,
+  saving,
+  placeholder,
+  onReplyTextChange,
+  onSubmitReply,
+}: {
+  replyText: string;
+  saving: boolean;
+  placeholder: string;
+  onReplyTextChange: (value: string) => void;
+  onSubmitReply: (event: FormEvent) => void;
+}) {
+  return (
+    <form className={styles.replyForm} onSubmit={onSubmitReply}>
+      <Image src="/community/reply-arrow.svg" alt="" width={24} height={24} />
+      <textarea
+        value={replyText}
+        maxLength={500}
+        onChange={(event) => onReplyTextChange(event.target.value)}
+        placeholder={placeholder}
+      />
+      <button type="submit" disabled={!replyText.trim() || saving}>등록</button>
+    </form>
+  );
+}
+
+function CommentActions({
+  compact = false,
+  onReply,
+  onReport,
+  onDelete,
+}: {
+  compact?: boolean;
+  onReply: () => void;
+  onReport: () => void;
+  onDelete?: () => void;
+}) {
+  return (
+    <div className={`${styles.commentTools} ${compact ? styles.commentToolsCompact : ""}`}>
+      {!compact ? <button type="button" className={styles.replyWriteButton} onClick={onReply}>답글 쓰기</button> : null}
+      <div className={styles.commentReactionGroup}>
+        <button type="button" aria-label="댓글 좋아요">
+          <Image src="/community/comment-like.svg" alt="" width={24} height={24} />
+          <span>0</span>
+        </button>
+        <span className={styles.commentDivider} />
+        <button type="button" aria-label="댓글 싫어요">
+          <Image className={styles.dislikeIcon} src="/community/comment-like.svg" alt="" width={24} height={24} />
+          <span>0</span>
+        </button>
+        <span className={styles.commentDivider} />
+        <button type="button" onClick={onReport}>
+          <Image src="/community/comment-report.svg" alt="" width={24} height={24} />
+          <span>신고</span>
+        </button>
+        {onDelete ? (
+          <>
+            <span className={styles.commentDivider} />
+            <button type="button" onClick={onDelete}>
+              <span>삭제</span>
+            </button>
+          </>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function formatCommentDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const pad = (input: number) => String(input).padStart(2, "0");
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function removeCommentById(comments: CommunityCommentDto[], commentId: string): CommunityCommentDto[] {
+  return comments
+    .filter((comment) => comment.id !== commentId)
+    .map((comment) => ({
+      ...comment,
+      replies: comment.replies.filter((reply) => reply.id !== commentId),
+    }));
+}
+
+function countRemovedComments(comments: CommunityCommentDto[], commentId: string) {
+  const root = comments.find((comment) => comment.id === commentId);
+  if (root) return 1 + root.replies.length;
+  return comments.some((comment) => comment.replies.some((reply) => reply.id === commentId)) ? 1 : 0;
 }

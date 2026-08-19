@@ -2219,7 +2219,7 @@
 .myPage .stats {
   display: grid;
   height: 5.3125rem;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   align-items: center;
   margin: 1rem 0 0;
   padding: 0;

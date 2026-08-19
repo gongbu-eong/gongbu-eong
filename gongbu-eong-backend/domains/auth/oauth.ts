@@ -131,7 +131,7 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     const forwardedFor = request.headers.get("x-forwarded-for");
     const ipAddress = forwardedFor?.split(",")[0]?.trim();
 
-    await upsertOAuthUser({
+    const authResult = await upsertOAuthUser({
       profile,
       accessTokenHash: hashValue(token.accessToken),
       refreshTokenHash: token.refreshToken ? hashValue(token.refreshToken) : undefined,
@@ -152,7 +152,13 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       userAgent: request.headers.get("user-agent") || undefined,
     });
 
-    const response = NextResponse.redirect(successRedirectUrl);
+    const redirectUrl = new URL(successRedirectUrl, request.url);
+    if (authResult.welcomeCreditsGranted) {
+      redirectUrl.searchParams.set("ticketReward", "welcome");
+      redirectUrl.searchParams.set("ticketAmount", "5");
+    }
+
+    const response = NextResponse.redirect(redirectUrl);
     response.cookies.delete(`${provider}_oauth_state`);
     response.cookies.delete("oauth_entry_source");
     response.cookies.delete("oauth_diagnosis_run_id");

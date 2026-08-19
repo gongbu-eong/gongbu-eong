@@ -10,7 +10,7 @@ export async function coachResume(args: { inputType: "text" | "file"; inputText:
   if (args.questions?.length) form.set("questions", JSON.stringify(args.questions));
   if (args.file) form.set("file", args.file);
   const response = await fetch("/api/coaching", { method: "POST", body: form, credentials: "include", cache: "no-store" });
-  const body = await response.json() as { ok: boolean; message?: string; resultId: string; requestId: string; feedback: CoachingFeedback; sourceFile?: { id: string; originalFilename: string } };
+  const body = await response.json() as { ok: boolean; message?: string; resultId: string; requestId: string; feedback: CoachingFeedback; sourceFile?: { id: string; originalFilename: string }; creditBalance?: number };
   if (!response.ok || !body.ok) throw new Error(body.message || "코칭에 실패했습니다.");
   return body;
 }

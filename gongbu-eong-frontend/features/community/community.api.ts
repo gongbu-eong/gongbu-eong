@@ -5,6 +5,7 @@ import type {
   CommunityCategory,
   CommunityDetailResponseDto,
   CommunityListResponseDto,
+  CommunityReactionResponseDto,
   CommunitySearchMetaResponseDto,
 } from "./community.dto";
 
@@ -62,14 +63,14 @@ export function deleteCommunityPost(postId: string) {
 }
 
 export function setCommunityRecommend(postId: string, enabled: boolean) {
-  return apiClient<CommunityDetailResponseDto>(`/api/community/${postId}/recommend`, {
+  return apiClient<CommunityReactionResponseDto>(`/api/community/${postId}/recommend`, {
     method: "POST",
     body: JSON.stringify({ enabled }),
   });
 }
 
 export function setCommunityScrap(postId: string, enabled: boolean) {
-  return apiClient<CommunityDetailResponseDto>(`/api/community/${postId}/scrap`, {
+  return apiClient<CommunityReactionResponseDto>(`/api/community/${postId}/scrap`, {
     method: "POST",
     body: JSON.stringify({ enabled }),
   });
@@ -82,10 +83,10 @@ export function reportCommunityPost(postId: string, reasonCode?: string) {
   });
 }
 
-export function createCommunityComment(postId: string, content: string) {
+export function createCommunityComment(postId: string, content: string, parentCommentId?: string | null) {
   return apiClient<CommunityDetailResponseDto>(`/api/community/${postId}/comments`, {
     method: "POST",
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, parentCommentId: parentCommentId || null }),
   });
 }
 

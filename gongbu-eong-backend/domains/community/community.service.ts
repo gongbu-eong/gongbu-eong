@@ -1,7 +1,6 @@
 import { getSessionUser, requireSessionUser } from "@/domains/auth/session";
 import {
-  grantCommunityCommentMilestoneReward,
-  grantCommunityPostCreateReward,
+  grantCommunityActivityMilestoneReward,
 } from "@/domains/credits/credits.repository";
 import type { NextRequest } from "next/server";
 import {
@@ -53,7 +52,7 @@ export async function getCommunityPosts(request: NextRequest) {
   const category = searchParams.get("category") || undefined;
 
   if (searchQuery) {
-    void logCommunitySearch(user?.id, searchQuery).catch((error) => {
+    await logCommunitySearch(user?.id, searchQuery).catch((error) => {
       console.error("[Community] search log failed", error);
     });
   }
@@ -111,13 +110,21 @@ export async function saveCommunityPost(
     throw error;
   }
 
-  if (!postId) {
-    await grantCommunityPostCreateReward(user.id, savedPostId).catch((error) => {
-      console.error("[Community] post credit reward failed", error);
-    });
-  }
+  const creditReward = !postId
+    ? await grantCommunityActivityMilestoneReward(user.id, {
+        type: "post",
+        id: savedPostId,
+      }).catch((error) => {
+        console.error("[Community] post credit reward failed", error);
+        return null;
+      })
+    : null;
 
-  return { ok: true, post: await findCommunityPostById(savedPostId, user.id) };
+  return {
+    ok: true,
+    post: await findCommunityPostById(savedPostId, user.id),
+    creditReward,
+  };
 }
 
 export async function removeCommunityPost(request: NextRequest, postId: string) {
@@ -141,21 +148,25 @@ export async function toggleCommunityPostReaction(
   const user = await requireSessionUser(request);
   const body = await request.json().catch(() => ({}));
   const enabled = Boolean(body?.enabled);
-  const post = await setCommunityReaction(user.id, postId, reactionType, enabled);
+  const reaction = await setCommunityReaction(user.id, postId, reactionType, enabled);
 
-  if (!post) {
+  if (!reaction) {
     const error = new Error("게시글을 찾을 수 없습니다.");
     error.name = "NotFoundError";
     throw error;
   }
 
-  return { ok: true, post };
+  return { ok: true, reaction };
 }
 
 export async function saveCommunityComment(request: NextRequest, postId: string) {
   const user = await requireSessionUser(request);
   const body = await request.json().catch(() => null);
   const content = typeof body?.content === "string" ? body.content.trim() : "";
+  const parentCommentId =
+    typeof body?.parentCommentId === "string" && body.parentCommentId.trim()
+      ? body.parentCommentId.trim()
+      : null;
 
   if (!content) {
     throwBadRequest("댓글을 입력해주세요.");
@@ -165,18 +176,26 @@ export async function saveCommunityComment(request: NextRequest, postId: string)
     throwBadRequest("댓글은 최대 500자까지 입력할 수 있습니다.");
   }
 
-  const commentId = await createCommunityComment(user.id, postId, content);
+  if (parentCommentId && !isUuid(parentCommentId)) {
+    throwBadRequest("답글 대상이 올바르지 않습니다.");
+  }
+
+  const commentId = await createCommunityComment(user.id, postId, content, parentCommentId);
   if (!commentId) {
-    const error = new Error("게시글을 찾을 수 없습니다.");
+    const error = new Error(parentCommentId ? "답글을 달 댓글을 찾을 수 없습니다." : "게시글을 찾을 수 없습니다.");
     error.name = "NotFoundError";
     throw error;
   }
 
-  await grantCommunityCommentMilestoneReward(user.id, commentId).catch((error) => {
+  const creditReward = await grantCommunityActivityMilestoneReward(user.id, {
+    type: "comment",
+    id: commentId,
+  }).catch((error) => {
     console.error("[Community] comment credit reward failed", error);
+    return null;
   });
 
-  return { ok: true, post: await findCommunityPostById(postId, user.id) };
+  return { ok: true, post: await findCommunityPostById(postId, user.id), creditReward };
 }
 
 export async function removeCommunityComment(
@@ -368,4 +387,8 @@ function throwBadRequest(message: string): never {
   const error = new Error(message);
   error.name = "BadRequestError";
   throw error;
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }

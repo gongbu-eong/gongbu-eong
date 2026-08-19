@@ -124,6 +124,8 @@ function handleError(request: NextRequest, error: unknown) {
   const status =
     error instanceof Error && error.name === "UnauthorizedError"
       ? 401
+      : error instanceof Error && error.name === "DuplicateNicknameError"
+        ? 409
       : error instanceof Error && error.name === "BadRequestError"
         ? 400
         : 500;

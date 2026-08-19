@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCommunityPosts } from "../community.api";
 import type { CommunityPostSummaryDto } from "../community.dto";
-import { CategoryChips, CommunityQuickActions, CommunitySearchBar, EmptyState, isCommunityCategory, PostItem } from "./CommunityShared";
+import { CategoryChips, CommunityQuickActions, CommunitySearchBar, EmptyState, isCommunityCategory, Pagination, PostItem } from "./CommunityShared";
 import styles from "./Community.module.css";
 
 const PAGE_SIZE = 20;
@@ -16,20 +16,24 @@ export function CommunityMain({
   initialCategory,
   initialQuery,
   initialSort,
+  initialPage,
 }: {
   initialCategory?: string;
   initialQuery?: string;
   initialSort?: "latest" | "popular";
+  initialPage?: number;
 }) {
   const router = useRouter();
   const [items, setItems] = useState<CommunityPostSummaryDto[]>([]);
   const [popular, setPopular] = useState<CommunityPostSummaryDto[]>([]);
   const [total, setTotal] = useState(0);
   const [sort, setSort] = useState<"latest" | "popular">(initialSort || "latest");
+  const [currentPage, setCurrentPage] = useState(Math.max(1, initialPage || 1));
   const [popularPeriod, setPopularPeriod] = useState<"today" | "week">("week");
   const [message, setMessage] = useState("");
   const selectedCategory = isCommunityCategory(initialCategory || "") ? initialCategory! : "전체";
   const query = initialQuery || "";
+  const visiblePopular = popular.slice(0, 5);
 
   useEffect(() => {
     let active = true;
@@ -38,7 +42,7 @@ export function CommunityMain({
       category: selectedCategory,
       sort,
       limit: PAGE_SIZE,
-      offset: 0,
+      offset: (currentPage - 1) * PAGE_SIZE,
     })
       .then((response) => {
         if (!active) return;
@@ -51,7 +55,7 @@ export function CommunityMain({
     return () => {
       active = false;
     };
-  }, [query, selectedCategory, sort]);
+  }, [currentPage, query, selectedCategory, sort]);
 
   const searchHref = useMemo(() => {
     const params = new URLSearchParams();
@@ -67,16 +71,35 @@ export function CommunityMain({
     router.push(`/community${params.size ? `?${params.toString()}` : ""}`);
   };
 
+  const changeSort = (nextSort: "latest" | "popular") => {
+    setSort(nextSort);
+    setCurrentPage(1);
+  };
+
+  const changePage = (page: number) => {
+    setCurrentPage(page);
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (selectedCategory !== "전체") params.set("category", selectedCategory);
+    if (sort !== "latest") params.set("sort", sort);
+    if (page > 1) params.set("page", String(page));
+    router.push(`/community${params.size ? `?${params.toString()}` : ""}`, { scroll: false });
+  };
+
   return (
     <div className={styles.page}>
       <section className={styles.frame}>
         <AppHeader />
         <main className={styles.content}>
           <h1>커뮤니티</h1>
-          <Link href={searchHref} className={styles.searchBox}>
-            <span>{query || "제목 · 내용을 검색해 보세요."}</span>
-            <Image src="/community/search.svg" alt="" width={25} height={25} />
-          </Link>
+          {query ? (
+            <CommunitySearchBar initialValue={query} onSearch={goSearch} />
+          ) : (
+            <Link href={searchHref} className={styles.searchBox}>
+              <span>제목 · 내용을 검색해 보세요.</span>
+              <Image src="/community/search.svg" alt="" width={25} height={25} />
+            </Link>
+          )}
           <CategoryChips
             selected={selectedCategory}
             toHref={(category) => {
@@ -87,11 +110,7 @@ export function CommunityMain({
             }}
           />
 
-          {query ? (
-            <div className={styles.searchInlineSection}>
-              <CommunitySearchBar initialValue={query} onSearch={goSearch} />
-            </div>
-          ) : (
+          {query ? null : (
             <section className={styles.popularSection}>
               <div className={styles.sectionHeader}>
                 <h2>전체 인기글</h2>
@@ -101,8 +120,8 @@ export function CommunityMain({
                 </div>
               </div>
               <div className={styles.popularList}>
-                {popular.map((post, index) => <PostItem key={post.id} post={post} rank={index + 1} />)}
-                {!popular.length ? <EmptyState>인기글이 아직 없습니다.</EmptyState> : null}
+                {visiblePopular.map((post, index) => <PostItem key={post.id} post={post} rank={index + 1} />)}
+                {!visiblePopular.length ? <EmptyState>인기글이 아직 없습니다.</EmptyState> : null}
               </div>
             </section>
           )}
@@ -110,9 +129,9 @@ export function CommunityMain({
           <div className={`${styles.sectionHeader} ${styles.allPostsHeader}`}>
             <h2>{query ? `‘${query}’ 검색 결과` : "전체 글"}</h2>
             <div className={styles.sortButtons}>
-              <button className={sort === "latest" ? styles.sortActive : ""} onClick={() => setSort("latest")}>최신순</button>
+              <button className={sort === "latest" ? styles.sortActive : ""} onClick={() => changeSort("latest")}>최신순</button>
               <span>|</span>
-              <button className={sort === "popular" ? styles.sortActive : ""} onClick={() => setSort("popular")}>인기순</button>
+              <button className={sort === "popular" ? styles.sortActive : ""} onClick={() => changeSort("popular")}>인기순</button>
             </div>
           </div>
           <div className={styles.postList}>
@@ -120,7 +139,13 @@ export function CommunityMain({
             {!items.length ? <EmptyState>{query ? `‘${query}’에 대한 검색 결과가 없어요.` : "등록된 글이 없습니다."}<br />첫 글을 작성해 보세요.</EmptyState> : null}
           </div>
           {message ? <p className={styles.toast}>{message}</p> : null}
-          {total > PAGE_SIZE ? <p className={styles.postStats}>총 {total.toLocaleString("ko-KR")}건 중 최근 {items.length}건</p> : null}
+          <Pagination
+            currentPage={currentPage}
+            totalItems={total}
+            pageSize={PAGE_SIZE}
+            onPageChange={changePage}
+            showSinglePage
+          />
         </main>
         {!query ? <CommunityQuickActions /> : null}
         <AppFooter active="community" />

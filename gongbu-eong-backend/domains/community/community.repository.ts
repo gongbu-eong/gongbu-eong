@@ -36,6 +36,7 @@ type PostRow = {
 type CommentRow = {
   id: string;
   post_id: string;
+  parent_comment_id: string | null;
   content: string;
   created_at: Date | string;
   user_id: string;
@@ -68,6 +69,14 @@ export type CommunityPostAttachmentInput = {
   mimeType: string;
   fileSizeBytes: number;
   dataUrl: string;
+};
+
+export type CommunityReactionState = {
+  recommendCount: number;
+  scrapCount: number;
+  isRecommended: boolean;
+  isScrapped: boolean;
+  isBest: boolean;
 };
 
 export type ListCommunityPostsInput = {
@@ -296,7 +305,58 @@ export async function setCommunityReaction(
     );
   }
 
-  return findCommunityPostById(postId, userId);
+  return getCommunityReactionState(userId, postId);
+}
+
+async function getCommunityReactionState(
+  userId: string,
+  postId: string,
+): Promise<CommunityReactionState | null> {
+  const result = await query<{
+    recommend_count: string | number;
+    scrap_count: string | number;
+    is_recommended: boolean;
+    is_scrapped: boolean;
+  }>(
+    `
+      SELECT
+        COUNT(*) FILTER (WHERE reactions.reaction_type = 'recommend')::text AS recommend_count,
+        COUNT(*) FILTER (WHERE reactions.reaction_type = 'scrap')::text AS scrap_count,
+        EXISTS (
+          SELECT 1
+          FROM public.community_post_reactions mine
+          WHERE mine.post_id = posts.id
+            AND mine.user_id = $1
+            AND mine.reaction_type = 'recommend'
+        ) AS is_recommended,
+        EXISTS (
+          SELECT 1
+          FROM public.community_post_reactions mine
+          WHERE mine.post_id = posts.id
+            AND mine.user_id = $1
+            AND mine.reaction_type = 'scrap'
+        ) AS is_scrapped
+      FROM public.community_posts posts
+      LEFT JOIN public.community_post_reactions reactions
+        ON reactions.post_id = posts.id
+      WHERE posts.id = $2
+        AND posts.status = 'active'
+      GROUP BY posts.id
+      LIMIT 1
+    `,
+    [userId, postId],
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  const recommendCount = Number(row.recommend_count || 0);
+
+  return {
+    recommendCount,
+    scrapCount: Number(row.scrap_count || 0),
+    isRecommended: Boolean(row.is_recommended),
+    isScrapped: Boolean(row.is_scrapped),
+    isBest: recommendCount >= 20,
+  };
 }
 
 export async function listCommunityComments(postId: string, userId?: string) {
@@ -305,6 +365,7 @@ export async function listCommunityComments(postId: string, userId?: string) {
       SELECT
         comments.id,
         comments.post_id,
+        comments.parent_comment_id,
         comments.content,
         comments.created_at,
         users.id AS user_id,
@@ -320,29 +381,50 @@ export async function listCommunityComments(postId: string, userId?: string) {
       LEFT JOIN LATERAL (${diagnosisSql("users")}) diagnosis ON TRUE
       WHERE comments.post_id = $1
         AND comments.status = 'active'
-      ORDER BY comments.created_at ASC
+      ORDER BY comments.created_at DESC
     `,
     [postId, userId || null],
   );
 
-  return result.rows.map(toComment);
+  return nestComments(result.rows.map(toComment));
 }
 
 export async function createCommunityComment(
   userId: string,
   postId: string,
   content: string,
+  parentCommentId?: string | null,
 ) {
   const result = await query<{ id: string }>(
     `
-      INSERT INTO public.community_comments (post_id, user_id, content)
-      SELECT id, $1, $3
-      FROM public.community_posts
-      WHERE id = $2
-        AND status = 'active'
+      WITH target_post AS (
+        SELECT id
+        FROM public.community_posts
+        WHERE id = $2
+          AND status = 'active'
+      ),
+      parent AS (
+        SELECT
+          id,
+          COALESCE(parent_comment_id, id) AS normalized_parent_id
+        FROM public.community_comments
+        WHERE id = $4::uuid
+          AND post_id = $2
+          AND status = 'active'
+        LIMIT 1
+      )
+      INSERT INTO public.community_comments (post_id, user_id, parent_comment_id, content)
+      SELECT
+        target_post.id,
+        $1,
+        CASE WHEN $4::uuid IS NULL THEN NULL ELSE parent.normalized_parent_id END,
+        $3
+      FROM target_post
+      LEFT JOIN parent ON $4::uuid IS NOT NULL
+      WHERE $4::uuid IS NULL OR parent.id IS NOT NULL
       RETURNING id
     `,
-    [userId, postId, content],
+    [userId, postId, content, parentCommentId || null],
   );
 
   return result.rows[0]?.id || null;
@@ -482,6 +564,7 @@ export async function listCommunityActivity(userId: string) {
       SELECT
         comments.id,
         comments.post_id,
+        comments.parent_comment_id,
         comments.content,
         comments.created_at,
         users.id AS user_id,
@@ -550,9 +633,21 @@ export async function logCommunitySearch(userId: string | undefined, searchQuery
 export async function listPopularCommunitySearchQueries() {
   const result = await query<{ query: string }>(
     `
+      WITH recent_searches AS (
+        SELECT query, created_at
+        FROM public.community_search_logs
+        WHERE created_at >= NOW() - INTERVAL '24 hours'
+      )
       SELECT query
-      FROM public.community_search_terms
-      ORDER BY search_count DESC, last_searched_at DESC
+      FROM (
+        SELECT
+          query,
+          COUNT(*) AS search_count,
+          MIN(created_at) AS first_searched_at
+        FROM recent_searches
+        GROUP BY query
+      ) ranked
+      ORDER BY search_count DESC, first_searched_at ASC, query ASC
       LIMIT 6
     `,
   );
@@ -812,11 +907,47 @@ function toComment(row: CommentRow): CommunityCommentDto {
   return {
     id: row.id,
     postId: row.post_id,
+    parentCommentId: row.parent_comment_id,
     content: row.content,
     author: toAuthor(row),
     createdAt: new Date(row.created_at).toISOString(),
     canDelete: Boolean(row.can_delete),
+    replies: [],
   };
+}
+
+function nestComments(comments: CommunityCommentDto[]) {
+  const byId = new Map<string, CommunityCommentDto>();
+  const roots: CommunityCommentDto[] = [];
+
+  for (const comment of comments) {
+    comment.replies = [];
+    byId.set(comment.id, comment);
+  }
+
+  for (const comment of comments) {
+    if (comment.parentCommentId) {
+      const parent = byId.get(comment.parentCommentId);
+      if (parent) {
+        parent.replies.push(comment);
+        continue;
+      }
+    }
+    roots.push(comment);
+  }
+
+  for (const root of roots) {
+    root.replies.sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+  }
+
+  return roots.sort((left, right) => getThreadLatestTime(right) - getThreadLatestTime(left));
+}
+
+function getThreadLatestTime(comment: CommunityCommentDto) {
+  return Math.max(
+    new Date(comment.createdAt).getTime(),
+    ...comment.replies.map((reply) => new Date(reply.createdAt).getTime()),
+  );
 }
 
 function toReport(row: ReportRow): CommunityReportDto {

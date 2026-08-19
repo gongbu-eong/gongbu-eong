@@ -1,0 +1,77 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 7000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dialog {
+  position: relative;
+  display: flex;
+  width: min(calc(100vw - 32px), 568px);
+  min-height: min(calc(100vw - 32px), 568px);
+  max-height: calc(100dvh - 32px);
+  flex-direction: column;
+  align-items: center;
+  padding: clamp(32px, 8.142vw, 48px) clamp(16px, 4.071vw, 24px) clamp(16px, 4.071vw, 24px);
+  border-radius: 10px;
+  background: #fff;
+  color: #1a2233;
+  text-align: center;
+}
+
+.image {
+  width: clamp(202px, 51.399vw, 308px);
+  height: auto;
+  object-fit: contain;
+}
+
+.dialog h2 {
+  margin: clamp(16px, 4.071vw, 24px) 0 0;
+  color: #1a2233;
+  font-size: clamp(20px, 5.089vw, 30px);
+  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.dialog p {
+  margin: clamp(8px, 2.035vw, 12px) 0 0;
+  color: #5a6580;
+  font-size: clamp(14px, 3.562vw, 21px);
+  line-height: 1.2143;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.dialog button {
+  width: 100%;
+  height: clamp(52px, 13.232vw, 78px);
+  margin-top: auto;
+  border: 0;
+  border-radius: 12px;
+  background: #2f7ff0;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: clamp(16px, 4.071vw, 24px);
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+@media (max-width: 393px) {
+  .dialog {
+    width: calc(100vw - 32px);
+    min-height: calc(100vw - 32px);
+  }
+}

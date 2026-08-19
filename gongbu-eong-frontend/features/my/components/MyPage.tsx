@@ -21,7 +21,7 @@ export function MyPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [coverLetterCoachingCount, setCoverLetterCoachingCount] = useState(0);
-  const interviewCoachingCount = 0;
+  // const interviewCoachingCount = 0;
 
   useEffect(() => {
     let alive = true;
@@ -118,10 +118,12 @@ export function MyPage() {
             <strong>{coverLetterCoachingCount}</strong>
             <span>자소서 코칭</span>
           </div>
+          {/*
           <div className={styles.stat}>
             <strong>{interviewCoachingCount}</strong>
             <span>면접 코칭</span>
           </div>
+          */}
         </section>
 
         <h2 className={styles.sectionTitle}>내 활동</h2>
@@ -150,6 +152,7 @@ export function MyPage() {
             title="내 자소서 코칭 기록"
             count={coverLetterCoachingCount}
           />
+          {/*
           <MyMenuItem
             href="#"
             iconSrc="/my/activity-interview.png"
@@ -158,6 +161,7 @@ export function MyPage() {
             title="내 면접 코칭 기록"
             count={interviewCoachingCount}
           />
+          */}
           <MyMenuItem
             href="/my/resumes"
             iconSrc="/my/activity-resume.png"
@@ -170,6 +174,7 @@ export function MyPage() {
 
         <h2 className={styles.sectionTitle}>설정</h2>
         <nav className={styles.menuList} aria-label="설정">
+          {/*
           <MyMenuItem href="/my/notifications" iconSrc="/my/setting-notification.png" iconWidth={26} iconHeight={30} title="알림 설정" />
           <MyMenuItem href="#" iconSrc="/my/setting-ticket.png" iconWidth={30} iconHeight={21} title="진단권 결제" />
           <MyMenuItem
@@ -180,7 +185,8 @@ export function MyPage() {
             title="결제 내역"
           />
           <MyMenuItem href="#" iconSrc="/my/setting-support.png" iconWidth={30} iconHeight={25} title="고객센터 · 문의" />
-          <MyMenuItem href="#" iconSrc="/my/setting-policy.png" iconWidth={25} iconHeight={32} title="약관 및 정책" />
+          */}
+          <MyMenuItem href="/my/policies" iconSrc="/my/setting-policy.png" iconWidth={25} iconHeight={32} title="약관 및 정책" />
         </nav>
 
         <h2 className={styles.sectionTitle}>커뮤니티</h2>

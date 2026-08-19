@@ -1,4 +1,49 @@
+import type { Metadata } from "next";
 import { CommunityDetailPage } from "@/features/community/components/CommunityDetailPage";
+import {
+  COMMUNITY_SHARE_DESCRIPTION,
+  COMMUNITY_SHARE_IMAGE_HEIGHT,
+  COMMUNITY_SHARE_IMAGE_WIDTH,
+  COMMUNITY_SHARE_TITLE,
+  getCommunityPostShareUrl,
+  getCommunityShareImageUrl,
+} from "@/features/community/community-share";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ postId: string }>;
+}): Promise<Metadata> {
+  const { postId } = await params;
+  const url = getCommunityPostShareUrl(postId);
+  const imageUrl = getCommunityShareImageUrl();
+
+  return {
+    title: COMMUNITY_SHARE_TITLE,
+    description: COMMUNITY_SHARE_DESCRIPTION,
+    openGraph: {
+      title: COMMUNITY_SHARE_TITLE,
+      description: COMMUNITY_SHARE_DESCRIPTION,
+      url,
+      siteName: "공부엉이",
+      type: "article",
+      images: [
+        {
+          url: imageUrl,
+          width: COMMUNITY_SHARE_IMAGE_WIDTH,
+          height: COMMUNITY_SHARE_IMAGE_HEIGHT,
+          alt: COMMUNITY_SHARE_TITLE,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: COMMUNITY_SHARE_TITLE,
+      description: COMMUNITY_SHARE_DESCRIPTION,
+      images: [imageUrl],
+    },
+  };
+}
 
 export default async function CommunityDetailRoute({
   params,

@@ -47,10 +47,12 @@ export type CommunityPostSummaryDto = {
 export type CommunityCommentDto = {
   id: string;
   postId: string;
+  parentCommentId: string | null;
   content: string;
   author: CommunityAuthorDto;
   createdAt: string;
   canDelete: boolean;
+  replies: CommunityCommentDto[];
 };
 
 export type CommunityPostDetailDto = CommunityPostSummaryDto & {
@@ -71,6 +73,21 @@ export type CommunityListResponseDto = {
 export type CommunityDetailResponseDto = {
   ok: true;
   post: CommunityPostDetailDto;
+  creditReward?: {
+    granted: boolean;
+    balanceAfter: number;
+  } | null;
+};
+
+export type CommunityReactionResponseDto = {
+  ok: true;
+  reaction: {
+    recommendCount: number;
+    scrapCount: number;
+    isRecommended: boolean;
+    isScrapped: boolean;
+    isBest: boolean;
+  };
 };
 
 export type CommunityActivityResponseDto = {

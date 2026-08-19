@@ -114,6 +114,58 @@ export function PostItem({
   );
 }
 
+export function Pagination({
+  currentPage,
+  totalItems,
+  pageSize,
+  onPageChange,
+  showSinglePage = false,
+}: {
+  currentPage: number;
+  totalItems: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  showSinglePage?: boolean;
+}) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const groupStart = Math.floor((currentPage - 1) / 10) * 10 + 1;
+  const pages = Array.from({ length: Math.min(10, totalPages - groupStart + 1) }, (_, index) => groupStart + index);
+
+  if (totalItems <= 0 || (totalPages <= 1 && !showSinglePage)) return null;
+
+  return (
+    <nav className={styles.pagination} aria-label="페이지 이동">
+      <button
+        type="button"
+        disabled={currentPage <= 1}
+        onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+        aria-label="이전 페이지"
+      >
+        {"<"}
+      </button>
+      {pages.map((page) => (
+        <button
+          key={page}
+          type="button"
+          className={page === currentPage ? styles.pageActive : ""}
+          onClick={() => onPageChange(page)}
+          aria-current={page === currentPage ? "page" : undefined}
+        >
+          {page}
+        </button>
+      ))}
+      <button
+        type="button"
+        disabled={currentPage >= totalPages}
+        onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+        aria-label="다음 페이지"
+      >
+        {">"}
+      </button>
+    </nav>
+  );
+}
+
 export function AuthorProfile({ author }: { author: CommunityAuthorDto }) {
   return (
     <div className={styles.profileSummary}>
@@ -147,6 +199,37 @@ export function Avatar({
 
 export function EmptyState({ children }: { children: React.ReactNode }) {
   return <div className={styles.empty}>{children}</div>;
+}
+
+export function DeleteConfirmDialog({
+  title,
+  description,
+  confirmLabel = "삭제하기",
+  cancelLabel = "돌아가기",
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  description: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <section className={styles.deleteAlert}>
+      <h2>{title}</h2>
+      <p>{description}</p>
+      <div className={styles.deleteAlertActions}>
+        <button type="button" className={styles.deleteAlertCancel} onClick={onCancel}>
+          {cancelLabel}
+        </button>
+        <button type="button" className={styles.deleteAlertConfirm} onClick={onConfirm}>
+          {confirmLabel}
+        </button>
+      </div>
+    </section>
+  );
 }
 
 export function CommunityQuickActions() {

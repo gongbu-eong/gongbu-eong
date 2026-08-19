@@ -6,6 +6,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { MouseEvent, PointerEvent } from "react";
 import { AppFooter, AppTicketStatus } from "@/features/layout/components/AppChrome";
+import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
+import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAlert";
 import { getCommunityPosts } from "@/features/community/community.api";
 import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "../home.api";
@@ -43,6 +45,7 @@ const aiTools = [
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
     image: "/home/home-tool-resume.png",
     imageAlt: "Ai 면접 코칭",
+    comingSoon: true,
   },
   {
     href: "#",
@@ -107,6 +110,29 @@ const resultCards = {
   },
 } as const;
 
+function getWelcomeTicketRewardMessage() {
+  if (typeof window === "undefined") return "";
+  const params = new URLSearchParams(window.location.search);
+  const ticketReward = params.get("ticketReward");
+  const ticketAmount = Number(params.get("ticketAmount") || 0);
+
+  if (ticketReward !== "welcome" || ticketAmount <= 0) return "";
+  return `진단권 ${ticketAmount}장이 추가되었습니다.`;
+}
+
+function clearWelcomeTicketRewardQuery() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("ticketReward") !== "welcome") return;
+  params.delete("ticketReward");
+  params.delete("ticketAmount");
+  const nextQuery = params.toString();
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`,
+  );
+}
+
 export function HomeMain({
   initialUser = null,
   authResolved = false,
@@ -118,6 +144,7 @@ export function HomeMain({
   const [isLoading, setIsLoading] = useState(!initialUser && !authResolved);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
+  const [ticketRewardMessage, setTicketRewardMessage] = useState(getWelcomeTicketRewardMessage);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [jobs, setJobs] = useState<HomeJobsResponseDto>({
     hotJobs: [],
@@ -129,6 +156,10 @@ export function HomeMain({
   const hotListRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
   const draggedRef = useRef(false);
+
+  useEffect(() => {
+    clearWelcomeTicketRewardQuery();
+  }, []);
 
   useEffect(() => {
     if (initialUser || authResolved) {
@@ -182,7 +213,7 @@ export function HomeMain({
   useEffect(() => {
     let mounted = true;
 
-    getCommunityPosts({ limit: 3, sort: "latest" })
+    getCommunityPosts({ limit: 10, sort: "latest" })
       .then((response) => {
         if (mounted) setCommunityPreview(response.items);
       })
@@ -211,10 +242,6 @@ export function HomeMain({
   }`;
 
 const DRAG_THRESHOLD = 10;
-
-function formatBadgeCount(count: number) {
-  return count > 99 ? "99+" : String(count);
-}
 
 const startHotDrag = (event: PointerEvent<HTMLDivElement>) => {
   // 모바일 터치는 브라우저 기본 스크롤 사용
@@ -304,10 +331,11 @@ const ignoreClickAfterDrag = (
       <section className={styles.mobileFrame} aria-label="공부엉이 메인">
         <header className={styles.header}>
           <Link href="/" className={styles.logoLink} aria-label="공부엉이 홈">
-            <span className={styles.logoAccent}>공</span>부엉이
+            <Image src="/tickets/main-logo.png" alt="공부엉이" width={59} height={26} priority />
           </Link>
           <div className={styles.headerActions}>
             {user ? <AppTicketStatus ticketCount={user.creditBalance ?? 0} /> : null}
+            {/*
             {user ? (
               <Link href="/notifications" aria-label="알림" className={styles.iconButton}>
                 <BellIcon />
@@ -318,6 +346,7 @@ const ignoreClickAfterDrag = (
                 ) : null}
               </Link>
             ) : null}
+            */}
             <button
               type="button"
               aria-label="메뉴 열기"
@@ -517,10 +546,12 @@ const ignoreClickAfterDrag = (
               >
                 <span className={styles.communityCategory}>{post.category}</span>
                 <strong>{post.title}</strong>
-                <p>{post.contentPreview}</p>
-                {post.author.diagnosisTypeName ? (
-                  <span className={styles.communityType}>{post.author.diagnosisTypeName}</span>
-                ) : null}
+                <span className={styles.communityAuthor}>
+                  {post.author.nickname}
+                  {post.author.diagnosisTypeName ? (
+                    <b className={styles.communityType}>{post.author.diagnosisTypeName}</b>
+                  ) : null}
+                </span>
                 <span className={styles.communityMeta}>
                   <span>조회수 : {post.viewCount.toLocaleString("ko-KR")}</span>
                   <span>추천수 : {post.recommendCount.toLocaleString("ko-KR")}</span>
@@ -535,6 +566,8 @@ const ignoreClickAfterDrag = (
           </div>
         </div>
 
+        <BusinessInfo />
+
         <AppFooter active="home" />
 
         {isMenuOpen ? (
@@ -548,42 +581,13 @@ const ignoreClickAfterDrag = (
         ) : null}
 
         {isComingSoonOpen ? (
-          <div className={styles.noticeOverlay} role="presentation">
-            <button
-              type="button"
-              className={styles.noticeDim}
-              aria-label="안내 닫기"
-              onClick={() => setIsComingSoonOpen(false)}
-            />
-            <section
-              className={styles.noticeDialog}
-              role="alertdialog"
-              aria-modal="true"
-              aria-labelledby="coming-soon-title"
-            >
-              <span className={styles.noticeOwlStage} aria-hidden="true">
-                <Image
-                  src="/home/home-coming-soon-bg.svg"
-                  alt=""
-                  width={207}
-                  height={124}
-                  className={styles.noticeOwlBg}
-                />
-                <Image
-                  src="/home/home-coming-soon-owl.png"
-                  alt=""
-                  width={125}
-                  height={168}
-                  className={styles.noticeOwl}
-                />
-              </span>
-              <h2 id="coming-soon-title">아직 준비중입니다.</h2>
-              <p>조금만 기다려주세요.</p>
-              <button type="button" onClick={() => setIsComingSoonOpen(false)}>
-                확인
-              </button>
-            </section>
-          </div>
+          <ComingSoonAlert onClose={() => setIsComingSoonOpen(false)} />
+        ) : null}
+        {ticketRewardMessage ? (
+          <TicketRewardAlert
+            message={ticketRewardMessage}
+            onClose={() => setTicketRewardMessage("")}
+          />
         ) : null}
       </section>
     </main>
@@ -702,15 +706,45 @@ export function HomeMenuDrawer({
             icon="ai"
             title="AI 도구"
             label="BEST"
-            items={["AI 도구 모음", "직무 성향 진단", "AI 자소서 코칭", "AI 면접 코칭", "심리·직무 테스트 모음"]}
-            hrefs={user ? ["#", "/ai-tools/diagnosis", "/ai-tools/coaching", "#", "#"] : ["/login", "/login", "/login", "/login", "/login"]}
+            items={[
+              // "AI 도구 모음",
+              "직무 성향 진단",
+              "AI 자소서 코칭",
+              // "AI 면접 코칭",
+              // "심리·직무 테스트 모음",
+            ]}
+            hrefs={user ? [
+              // "#",
+              "/ai-tools/diagnosis",
+              "/ai-tools/coaching",
+              // "#",
+              // "#",
+            ] : [
+              // "/login",
+              "/login",
+              "/login",
+              // "/login",
+              // "/login",
+            ]}
             onNavigate={onClose}
           />
           <DrawerSection
             icon="community"
             title="커뮤니티"
-            items={["인기글", "내 또래 인기글", "내 글 · 댓글"]}
-            hrefs={user ? ["/community?sort=popular", "/community?sort=popular", "/community/activity"] : ["/login", "/login", "/login"]}
+            items={[
+              // "인기글",
+              // "내 또래 인기글",
+              "내 글 · 댓글",
+            ]}
+            hrefs={user ? [
+              // "/community?sort=popular",
+              // "/community?sort=popular",
+              "/community/activity",
+            ] : [
+              // "/login",
+              // "/login",
+              "/login",
+            ]}
             onNavigate={onClose}
           />
           <DrawerSection icon="my" title="마이페이지" titleHref={user ? "/my" : "/login"} onNavigate={onClose} />
@@ -961,6 +995,39 @@ function SearchIcon() {
         strokeLinecap="round"
       />
     </svg>
+  );
+}
+
+function BusinessInfo() {
+  return (
+    <section className={styles.businessInfo} aria-label="사업자 정보">
+      <h2>(주)커리어넷 사업자 정보</h2>
+      <dl>
+        <dt>대표이사</dt>
+        <dd>박윤수</dd>
+
+        <dt>주소</dt>
+        <dd>
+          <address>
+            (주)커리어넷, (08381)서울특별시 구로구 디지털로 273,
+            <br />
+            2층(구로동, 에이스트윈타워 2차)
+          </address>
+        </dd>
+
+        <dt>문의전화</dt>
+        <dd>1577-9577 (평일 09:00~18:00 [주말, 공휴일 휴무])</dd>
+
+        <dt>이메일</dt>
+        <dd>helpdesk@career.co.kr</dd>
+
+        <dt>사업자등록번호</dt>
+        <dd>220-86-73547</dd>
+
+        <dt>통신판매업 신고번호</dt>
+        <dd>2010-서울구로-0401</dd>
+      </dl>
+    </section>
   );
 }
 

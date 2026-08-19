@@ -47,10 +47,12 @@ export type CommunityPostSummaryDto = {
 export type CommunityCommentDto = {
   id: string;
   postId: string;
+  parentCommentId: string | null;
   content: string;
   author: CommunityAuthorDto;
   createdAt: string;
   canDelete: boolean;
+  replies: CommunityCommentDto[];
 };
 
 export type CommunityPostDetailDto = CommunityPostSummaryDto & {

@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { deleteCommunityComment, deleteCommunityPost, getCommunityActivity, setCommunityScrap } from "../community.api";
 import type { CommunityActivityResponseDto } from "../community.dto";
-import { AuthorProfile, EmptyState, PostItem, formatRelativeTime } from "./CommunityShared";
+import { AuthorProfile, DeleteConfirmDialog, EmptyState, PostItem, formatRelativeTime } from "./CommunityShared";
 import styles from "./Community.module.css";
 
 type ActivityTab = "posts" | "comments" | "scraps";
@@ -20,15 +20,12 @@ type ConfirmState =
 
 export function CommunityActivityPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [activity, setActivity] = useState<CommunityActivityResponseDto | null>(null);
-  const [tab, setTab] = useState<ActivityTab>(() => (
-    typeof window === "undefined"
-      ? "posts"
-      : toActivityTab(new URLSearchParams(window.location.search).get("tab"))
-  ));
   const [message, setMessage] = useState("");
   const [confirmTarget, setConfirmTarget] = useState<ConfirmState>(null);
+  const tab = toActivityTab(searchParams.get("tab"));
 
   useEffect(() => {
     getCurrentUser()
@@ -79,9 +76,9 @@ export function CommunityActivityPage() {
           <h1>내 활동</h1>
           <AuthorProfile author={author} />
           <nav className={styles.activityTabs}>
-            <button className={tab === "posts" ? styles.tabActive : ""} onClick={() => setTab("posts")}>작성글 ({activity?.posts.length || 0})</button>
-            <button className={tab === "comments" ? styles.tabActive : ""} onClick={() => setTab("comments")}>작성 댓글 ({activity?.comments.length || 0})</button>
-            <button className={tab === "scraps" ? styles.tabActive : ""} onClick={() => setTab("scraps")}>스크랩({activity?.scraps.length || 0})</button>
+            <button className={tab === "posts" ? styles.tabActive : ""} onClick={() => moveTab(router, "posts")}>작성글 ({activity?.posts.length || 0})</button>
+            <button className={tab === "comments" ? styles.tabActive : ""} onClick={() => moveTab(router, "comments")}>작성 댓글 ({activity?.comments.length || 0})</button>
+            <button className={tab === "scraps" ? styles.tabActive : ""} onClick={() => moveTab(router, "scraps")}>스크랩({activity?.scraps.length || 0})</button>
           </nav>
           {message ? <p className={styles.toast}>{message}</p> : null}
           <section className={styles.activitySection}>
@@ -143,14 +140,13 @@ export function CommunityActivityPage() {
       </section>
       {confirmTarget ? (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
-          <section className={styles.modal}>
-            <h2>{getConfirmTitle(confirmTarget)}</h2>
-            <p>{getConfirmDescription(confirmTarget)}</p>
-            <div className={styles.modalActions}>
-              <button type="button" className={styles.secondaryButton} onClick={() => setConfirmTarget(null)}>취소</button>
-              <button type="button" className={styles.primaryButton} onClick={() => void confirmAction()}>확인</button>
-            </div>
-          </section>
+          <DeleteConfirmDialog
+            title={getConfirmTitle(confirmTarget)}
+            description={getConfirmDescription(confirmTarget)}
+            confirmLabel={confirmTarget.type === "scrap" ? "해제하기" : "삭제하기"}
+            onCancel={() => setConfirmTarget(null)}
+            onConfirm={() => void confirmAction()}
+          />
         </div>
       ) : null}
     </div>
@@ -161,6 +157,10 @@ function toActivityTab(value: string | null): ActivityTab {
   return value === "comments" || value === "scraps" ? value : "posts";
 }
 
+function moveTab(router: ReturnType<typeof useRouter>, nextTab: ActivityTab) {
+  router.replace(`/community/activity?tab=${nextTab}`, { scroll: false });
+}
+
 function getConfirmTitle(target: Exclude<ConfirmState, null>) {
   if (target.type === "post") return "글을 삭제하시겠습니까?";
   if (target.type === "comment") return "댓글을 삭제하시겠습니까?";
@@ -168,7 +168,7 @@ function getConfirmTitle(target: Exclude<ConfirmState, null>) {
 }
 
 function getConfirmDescription(target: Exclude<ConfirmState, null>) {
-  if (target.type === "post") return "삭제한 글은 내 활동에서 다시 확인할 수 없습니다.";
-  if (target.type === "comment") return "삭제한 댓글은 다시 복구할 수 없습니다.";
-  return "해제하면 스크랩한 글 목록에서 사라집니다.";
+  if (target.type === "post") return "글을 삭제하면, 복구가 되지 않습니다.";
+  if (target.type === "comment") return "댓글을 삭제하면, 복구가 되지 않습니다.";
+  return "스크랩을 해제하면, 목록에서 사라집니다.";
 }
