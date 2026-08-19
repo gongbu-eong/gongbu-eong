@@ -13,15 +13,24 @@
   min-height: 100dvh;
   background: #ffffff;
   overflow: visible;
+
+  padding-top: 56px;
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
+
   word-break: keep-all;
   font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
 }
 
 .header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 900;
+
+  width: min(600px, 100%);
+  box-sizing: border-box;
+
   height: 56px;
   display: flex;
   align-items: center;
@@ -530,12 +539,11 @@
   width: 94px;
 }
 
-.toolCard:nth-child(2) .toolCopy em,
-.toolCard:nth-child(3) .toolCopy em {
+.toolCard:nth-child(2) .toolCopy em {
   background: #1fb573;
 }
 
-.toolCard:nth-child(4) .toolCopy em {
+.toolCard:nth-child(3) .toolCopy em {
   background: #ff5c5c;
 }
 

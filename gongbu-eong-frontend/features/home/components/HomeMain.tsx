@@ -41,24 +41,14 @@ const aiTools = [
   },
   {
     href: "#",
-    tag: "첫 1회 무료",
-    memberTag: "첫 3회 무료 쿠폰 증정",
+    tag: "준비중",
+    memberTag: "준비중",
     title: "Ai 면접 코칭",
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
     image: "/home/home-tool-resume.png",
     imageAlt: "Ai 면접 코칭",
     comingSoon: true,
-  },
-  {
-    href: "#",
-    tag: "준비중",
-    memberTag: "준비중",
-    title: "탈락사례 분석",
-    description: "왜 떨어졌을까? 곧 데이터로 알려드려요.",
-    image: "/home/home-tool-interview.png",
-    imageAlt: "탈락사례 분석",
-    comingSoon: true,
-  },
+  }
 ];
 
 const resultCards = {

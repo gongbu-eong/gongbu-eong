@@ -15,6 +15,7 @@
   max-width: 600px;
   min-height: 100dvh;
   margin: 0 auto;
+  padding-top: 3rem;
   padding-bottom: 5rem;
   background: #fff;
   overflow-wrap: break-word;
@@ -22,12 +23,24 @@
 }
 
 .header {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 900;
+
   display: flex;
+  width: 100%;
+  max-width: 600px;
   height: 3rem;
   padding: 0 1rem;
+
   align-items: center;
   justify-content: space-between;
+
+  box-sizing: border-box;
   background: #fff;
+
+  transform: translateX(-50%);
 }
 
 .headerGroup {
