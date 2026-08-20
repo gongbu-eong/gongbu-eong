@@ -7,6 +7,7 @@ import {
   DiagnosisResultResponseDto,
   DiagnosisStatsResponseDto,
 } from "./diagnosis.dto";
+import { getStoredAttributionContext } from "@/features/analytics/analytics.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
 
 export function getDiagnosisQuestions() {
@@ -64,6 +65,7 @@ export function submitDiagnosis(answers: DiagnosisAnswerRequestDto[]) {
     body: JSON.stringify({
       anonymousId: getAnonymousId(),
       entrySource: "diagnosis",
+      attribution: getStoredAttributionContext(),
       answers,
     }),
   });

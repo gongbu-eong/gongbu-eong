@@ -162,14 +162,20 @@ h6 {
 }
 
 a[href],
+a[role="button"],
+a[role="link"],
 button:not(:disabled),
 input[type="button"]:not(:disabled),
 input[type="submit"]:not(:disabled),
 input[type="checkbox"]:not(:disabled),
 input[type="radio"]:not(:disabled),
+label[for],
 select:not(:disabled),
 summary,
-[role="button"] {
+[role="button"],
+[role="link"],
+[aria-expanded],
+[data-clickable="true"] {
   cursor: pointer;
 }
 

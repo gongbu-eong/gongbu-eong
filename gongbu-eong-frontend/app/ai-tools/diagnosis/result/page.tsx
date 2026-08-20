@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { DiagnosisResultDetail } from "@/features/diagnosis/components/DiagnosisResultDetail";
 import {
   DIAGNOSIS_SHARE_DESCRIPTION,
@@ -16,8 +17,14 @@ export async function generateMetadata({
   searchParams: Promise<{ resultId?: string }>;
 }): Promise<Metadata> {
   const params = await searchParams;
-  const url = getDiagnosisResultShareUrl(params.resultId);
-  const imageUrl = getDiagnosisShareImageUrl();
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ||
+    (host.includes("localhost") ? "http" : "https");
+  const requestOrigin = host ? `${protocol}://${host}` : undefined;
+  const url = getDiagnosisResultShareUrl(params.resultId, requestOrigin);
+  const imageUrl = getDiagnosisShareImageUrl(requestOrigin);
 
   return {
     title: DIAGNOSIS_SHARE_TITLE,

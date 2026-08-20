@@ -4,24 +4,31 @@ export const DIAGNOSIS_SHARE_DESCRIPTION =
 export const DIAGNOSIS_SHARE_IMAGE_WIDTH = 800;
 export const DIAGNOSIS_SHARE_IMAGE_HEIGHT = 400;
 
-const DEFAULT_SHARE_IMAGE_PATH = "/diagnosis-share-banner.png";
+const DEFAULT_SHARE_IMAGE_PATH = "/diagnosis-share-banner.png?v=20260820";
 
-export function getPublicBaseUrl() {
-  return (process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000").replace(/\/$/, "");
+export function getPublicBaseUrl(runtimeOrigin?: string) {
+  const configuredOrigin = process.env.NEXT_PUBLIC_FRONTEND_URL?.trim();
+  const configured = configuredOrigin ? configuredOrigin.replace(/\/$/, "") : "";
+  const runtime = runtimeOrigin ? runtimeOrigin.replace(/\/$/, "") : "";
+
+  if (configured && !isLocalOrigin(configured)) return configured;
+  if (runtime && !isLocalOrigin(runtime)) return runtime;
+  return configured || runtime || "http://localhost:3000";
 }
 
 export function getDiagnosisShareImageUrl(origin = getPublicBaseUrl()) {
   const configuredImageUrl = process.env.NEXT_PUBLIC_DIAGNOSIS_SHARE_IMAGE_URL?.trim();
+  const publicOrigin = getPublicBaseUrl(origin);
 
   if (configuredImageUrl) {
-    return toAbsoluteUrl(configuredImageUrl, origin);
+    return toAbsoluteUrl(configuredImageUrl, publicOrigin);
   }
 
-  return toAbsoluteUrl(DEFAULT_SHARE_IMAGE_PATH, origin);
+  return toAbsoluteUrl(DEFAULT_SHARE_IMAGE_PATH, publicOrigin);
 }
 
 export function getDiagnosisResultShareUrl(resultId?: string, origin = getPublicBaseUrl()) {
-  const url = new URL("/ai-tools/diagnosis/result", origin);
+  const url = new URL("/ai-tools/diagnosis/result", getPublicBaseUrl(origin));
   if (resultId) url.searchParams.set("resultId", resultId);
   return url.toString();
 }
@@ -31,5 +38,14 @@ function toAbsoluteUrl(value: string, origin: string) {
     return new URL(value, origin).toString();
   } catch {
     return new URL(DEFAULT_SHARE_IMAGE_PATH, getPublicBaseUrl()).toString();
+  }
+}
+
+function isLocalOrigin(value: string) {
+  try {
+    const url = new URL(value);
+    return ["localhost", "127.0.0.1", "0.0.0.0"].includes(url.hostname);
+  } catch {
+    return false;
   }
 }

@@ -244,6 +244,7 @@ export function DiagnosisFlow() {
 
     try {
       const result = await submitDiagnosis(payload);
+      trackDiagnosisComplete(result);
 
       if (isAuthenticated) {
         router.push(
@@ -260,7 +261,18 @@ export function DiagnosisFlow() {
         message:
           error instanceof Error ? error.message : "진단 결과를 저장하지 못했어요.",
       });
-    }
+  }
+  }
+
+  function trackDiagnosisComplete(result: DiagnosisResultResponseDto) {
+    window.gtag?.("event", "diagnosis_complete", {
+      event_category: "diagnosis",
+      diagnosis_type: result.typeCode,
+      diagnosis_type_name: result.typeName,
+      diagnosis_run_id: result.runId,
+      diagnosis_result_id: result.resultId,
+      attempt_no: result.attemptNo ?? undefined,
+    });
   }
 
   function selectOption(args: {

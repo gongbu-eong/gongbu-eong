@@ -249,6 +249,60 @@ CREATE TABLE IF NOT EXISTS public.user_entry_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.user_attributions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  first_source VARCHAR(100),
+  first_medium VARCHAR(100),
+  first_campaign VARCHAR(200),
+  first_content VARCHAR(200),
+  first_term VARCHAR(200),
+  first_gclid VARCHAR(255),
+  first_fbclid VARCHAR(255),
+  first_landing_url TEXT,
+  first_landing_path TEXT,
+  first_referrer TEXT,
+  first_seen_at TIMESTAMPTZ,
+  first_raw_payload JSONB,
+  last_source VARCHAR(100),
+  last_medium VARCHAR(100),
+  last_campaign VARCHAR(200),
+  last_content VARCHAR(200),
+  last_term VARCHAR(200),
+  last_gclid VARCHAR(255),
+  last_fbclid VARCHAR(255),
+  last_landing_url TEXT,
+  last_landing_path TEXT,
+  last_referrer TEXT,
+  last_seen_at TIMESTAMPTZ,
+  last_raw_payload JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (user_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.attribution_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  anonymous_id UUID,
+  event_name VARCHAR(80) NOT NULL DEFAULT 'attribution_capture',
+  source VARCHAR(100),
+  medium VARCHAR(100),
+  campaign VARCHAR(200),
+  content VARCHAR(200),
+  term VARCHAR(200),
+  gclid VARCHAR(255),
+  fbclid VARCHAR(255),
+  landing_url TEXT,
+  landing_path TEXT,
+  referrer TEXT,
+  ip_address INET,
+  user_agent TEXT,
+  raw_payload JSONB NOT NULL DEFAULT '{}'::JSONB,
+  captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS public.public_institutions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   alio_institution_id VARCHAR(80) UNIQUE,
@@ -517,6 +571,45 @@ CREATE TABLE IF NOT EXISTS public.diagnosis_login_conversions (
   user_agent TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (diagnosis_run_id, user_id, provider)
+);
+
+CREATE TABLE IF NOT EXISTS public.product_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
+  anonymous_id UUID,
+  event_type VARCHAR(100) NOT NULL,
+  event_source VARCHAR(40) NOT NULL DEFAULT 'server',
+  first_source VARCHAR(100),
+  first_medium VARCHAR(100),
+  first_campaign VARCHAR(200),
+  first_content VARCHAR(200),
+  first_term VARCHAR(200),
+  first_gclid VARCHAR(255),
+  first_fbclid VARCHAR(255),
+  first_landing_url TEXT,
+  first_landing_path TEXT,
+  first_referrer TEXT,
+  first_seen_at TIMESTAMPTZ,
+  first_raw_payload JSONB,
+  current_source VARCHAR(100),
+  current_medium VARCHAR(100),
+  current_campaign VARCHAR(200),
+  current_content VARCHAR(200),
+  current_term VARCHAR(200),
+  current_gclid VARCHAR(255),
+  current_fbclid VARCHAR(255),
+  current_landing_url TEXT,
+  current_landing_path TEXT,
+  current_referrer TEXT,
+  current_seen_at TIMESTAMPTZ,
+  current_raw_payload JSONB,
+  diagnosis_run_id UUID REFERENCES public.diagnosis_runs(id) ON DELETE SET NULL,
+  diagnosis_result_id UUID REFERENCES public.diagnosis_results(id) ON DELETE SET NULL,
+  attempt_no INTEGER,
+  properties JSONB NOT NULL DEFAULT '{}'::JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT product_events_attempt_no_check
+    CHECK (attempt_no IS NULL OR attempt_no >= 1)
 );
 
 DO $$
@@ -1098,13 +1191,25 @@ CREATE TABLE IF NOT EXISTS public.notification_preferences (
   user_id UUID PRIMARY KEY REFERENCES public.users(id),
   application_deadline_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   application_deadline_days_before INTEGER NOT NULL DEFAULT 3,
+  application_deadline_days_before_list INTEGER[] NOT NULL DEFAULT ARRAY[3]::INTEGER[],
   tailored_job_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   marketing_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  marketing_agreed_at TIMESTAMPTZ,
+  marketing_revoked_at TIMESTAMPTZ,
   kakao_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  kakao_connected_at TIMESTAMPTZ,
   email_enabled BOOLEAN NOT NULL DEFAULT FALSE,
   push_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE public.notification_preferences
+  ADD COLUMN IF NOT EXISTS application_deadline_days_before_list INTEGER[] NOT NULL DEFAULT ARRAY[3]::INTEGER[],
+  ADD COLUMN IF NOT EXISTS marketing_agreed_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS marketing_revoked_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS kakao_connected_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 CREATE TABLE IF NOT EXISTS public.notifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1116,6 +1221,29 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   read_at TIMESTAMPTZ,
   sent_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.notification_dispatch_queue (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
+  channel public.notification_channel NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  body TEXT NOT NULL,
+  target_path TEXT,
+  payload JSONB NOT NULL DEFAULT '{}'::JSONB,
+  status VARCHAR(30) NOT NULL DEFAULT 'pending',
+  scheduled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  locked_at TIMESTAMPTZ,
+  sent_at TIMESTAMPTZ,
+  failed_at TIMESTAMPTZ,
+  failure_reason TEXT,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT notification_dispatch_queue_status_check
+    CHECK (status IN ('pending', 'processing', 'sent', 'failed', 'cancelled')),
+  CONSTRAINT notification_dispatch_queue_attempt_count_check
+    CHECK (attempt_count >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS public.support_inquiries (
@@ -1161,6 +1289,20 @@ CREATE INDEX IF NOT EXISTS idx_access_logs_path_created ON public.access_logs(pa
 CREATE INDEX IF NOT EXISTS idx_access_logs_anonymous_created ON public.access_logs(anonymous_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_access_logs_user_created ON public.access_logs(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_entry_events_user_created ON public.user_entry_events(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_user_attributions_first_source
+  ON public.user_attributions(first_source, first_medium, first_campaign);
+CREATE INDEX IF NOT EXISTS idx_user_attributions_last_source
+  ON public.user_attributions(last_source, last_medium, last_campaign);
+CREATE INDEX IF NOT EXISTS idx_attribution_events_captured
+  ON public.attribution_events(captured_at DESC);
+CREATE INDEX IF NOT EXISTS idx_attribution_events_user_captured
+  ON public.attribution_events(user_id, captured_at DESC)
+  WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_attribution_events_anonymous_captured
+  ON public.attribution_events(anonymous_id, captured_at DESC)
+  WHERE anonymous_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_attribution_events_source_campaign
+  ON public.attribution_events(source, medium, campaign, captured_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_job_postings_end_at ON public.job_postings(application_end_at);
 CREATE INDEX IF NOT EXISTS idx_job_postings_institution ON public.job_postings(institution_id);
@@ -1195,6 +1337,21 @@ CREATE INDEX IF NOT EXISTS idx_diagnosis_results_type_created ON public.diagnosi
 CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_run ON public.diagnosis_login_conversions(diagnosis_run_id);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_user_created ON public.diagnosis_login_conversions(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_diagnosis_conversions_result_user ON public.diagnosis_login_conversions(diagnosis_result_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_product_events_type_created
+  ON public.product_events(event_type, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_product_events_user_type_created
+  ON public.product_events(user_id, event_type, created_at DESC)
+  WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_product_events_anonymous_type_created
+  ON public.product_events(anonymous_id, event_type, created_at DESC)
+  WHERE anonymous_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_product_events_first_source
+  ON public.product_events(first_source, first_medium, first_campaign, event_type);
+CREATE INDEX IF NOT EXISTS idx_product_events_current_source
+  ON public.product_events(current_source, current_medium, current_campaign, event_type);
+CREATE UNIQUE INDEX IF NOT EXISTS product_events_diagnosis_run_unique_idx
+  ON public.product_events(event_type, diagnosis_run_id)
+  WHERE diagnosis_run_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_job_postings_announcement_created ON public.job_postings(announcement_at DESC, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_ai_usage_user_created ON public.ai_usage_events(user_id, created_at DESC);
@@ -1265,6 +1422,14 @@ CREATE INDEX IF NOT EXISTS community_search_logs_created_query_idx
 CREATE INDEX IF NOT EXISTS community_search_terms_count_idx
   ON public.community_search_terms(search_count DESC, last_searched_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON public.notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notification_dispatch_queue_pending
+  ON public.notification_dispatch_queue(scheduled_at, created_at)
+  WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_notification_dispatch_queue_user_created
+  ON public.notification_dispatch_queue(user_id, created_at DESC)
+  WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_notification_dispatch_queue_status_created
+  ON public.notification_dispatch_queue(status, created_at DESC);
 
 DROP VIEW IF EXISTS public.job_posting_hot_7d;
 CREATE VIEW public.job_posting_hot_7d AS
@@ -1309,6 +1474,7 @@ BEGIN
     'users',
     'user_oauth_accounts',
     'user_profiles',
+    'user_attributions',
     'public_institutions',
     'job_postings',
     'job_posting_details',
@@ -1322,6 +1488,8 @@ BEGIN
     'payments',
     'community_posts',
     'community_comments',
+    'notification_preferences',
+    'notification_dispatch_queue',
     'support_inquiries',
     'faqs'
   ]

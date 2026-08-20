@@ -327,30 +327,6 @@ export function DiagnosisResultDetail() {
     ];
   }, [detail]);
 
-  if (loading) return <ResultState message="진단 결과를 불러오고 있어요." />;
-  if (!detail || error) return <ResultState message={error || "진단 결과가 없습니다."} />;
-
-  const { result } = detail;
-  const copy = TYPE_COPY[result.typeCode];
-  const displayedJobCategories = result.jobCategories.slice(0, 6);
-  const maxHiringCount = Math.max(1, ...detail.monthlyHiring.categories.map((item) => item.count));
-  const recommendedJobsParams = new URLSearchParams({
-    view: "recommended",
-    scope: "monthly-regular",
-    resultId: result.resultId,
-  });
-  const recommendedNcsCategories =
-    detail.monthlyHiring.categories.map((category) => category.name).filter(Boolean);
-  if (recommendedNcsCategories.length) {
-    recommendedJobsParams.set("ncs", recommendedNcsCategories.join("|"));
-  }
-  const recommendedJobsHref = `/jobs?${recommendedJobsParams.toString()}`;
-
-  const openHistory = () => {
-    setHistoryOpen(true);
-    if (!history.length && !historyLoading) void loadHistory();
-  };
-
   const waitForShareReward = useCallback((previousBalance?: number) => {
     if (shareRewardPollingRef.current) {
       window.clearTimeout(shareRewardPollingRef.current);
@@ -395,9 +371,34 @@ export function DiagnosisResultDetail() {
     shareRewardPollingRef.current = window.setTimeout(poll, 1500);
   }, []);
 
+  if (loading) return <ResultState message="진단 결과를 불러오고 있어요." />;
+  if (!detail || error) return <ResultState message={error || "진단 결과가 없습니다."} />;
+
+  const { result } = detail;
+  const copy = TYPE_COPY[result.typeCode];
+  const displayedJobCategories = result.jobCategories.slice(0, 6);
+  const maxHiringCount = Math.max(1, ...detail.monthlyHiring.categories.map((item) => item.count));
+  const recommendedJobsParams = new URLSearchParams({
+    view: "recommended",
+    scope: "monthly-regular",
+    resultId: result.resultId,
+  });
+  const recommendedNcsCategories =
+    detail.monthlyHiring.categories.map((category) => category.name).filter(Boolean);
+  if (recommendedNcsCategories.length) {
+    recommendedJobsParams.set("ncs", recommendedNcsCategories.join("|"));
+  }
+  const recommendedJobsHref = `/jobs?${recommendedJobsParams.toString()}`;
+
+  const openHistory = () => {
+    setHistoryOpen(true);
+    if (!history.length && !historyLoading) void loadHistory();
+  };
+
   const shareResult = async () => {
-    const shareUrl = getDiagnosisResultShareUrl(result.resultId, window.location.origin);
-    const shareImageUrl = getDiagnosisShareImageUrl(window.location.origin);
+    const publicOrigin = window.location.origin;
+    const shareUrl = getDiagnosisResultShareUrl(result.resultId, publicOrigin);
+    const shareImageUrl = getDiagnosisShareImageUrl(publicOrigin);
     const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY?.trim();
     try {
       if (!kakaoKey) {

@@ -26,6 +26,7 @@ import {
   findPersonalityType,
   findQuestionsWithOptions,
 } from "./diagnosis.repository";
+import { recordDiagnosisCompleteEvent } from "@/domains/analytics/analytics.repository";
 import { getJobPostings } from "../jobs/jobs.service";
 
 type AxisCode = "stability" | "teamwork" | "execution" | "principle";
@@ -443,6 +444,7 @@ async function toDiagnosisResultResponse(
   return {
     runId: result.run_id,
     resultId: result.result_id,
+    attemptNo: null,
     typeCode: result.type_code,
     typeName: result.type_name,
     summary: result.summary || "",
@@ -564,10 +566,24 @@ export async function submitDiagnosis(args: {
       },
     },
   });
+  const diagnosisCompleteEvent = await recordDiagnosisCompleteEvent({
+    userId: args.userId,
+    anonymousId: args.body.anonymousId,
+    diagnosisRunId: created.runId,
+    diagnosisResultId: created.resultId,
+    diagnosisType: typeCode,
+    attribution: args.body.attribution,
+    properties: {
+      type_name: personalityType.name,
+      question_set_id: questionSet.id,
+      total_score: totalScore,
+    },
+  });
 
   return {
     runId: created.runId,
     resultId: created.resultId,
+    attemptNo: diagnosisCompleteEvent.attemptNo,
     typeCode,
     typeName: personalityType.name,
     summary: personalityType.summary,

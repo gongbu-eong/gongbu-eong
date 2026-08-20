@@ -28,7 +28,9 @@ export function CoachingPage() {
   const [hasDiagnosis, setHasDiagnosis] = useState(false);
   const [diagnoses, setDiagnoses] = useState<DiagnosisResultHistoryItemDto[]>([]);
   const [selectedDiagnosisId, setSelectedDiagnosisId] = useState<string | null>(null);
-  const [questions, setQuestions] = useState<QuestionRow[]>([makeQuestionRow()]);
+  const [questions, setQuestions] = useState<QuestionRow[]>(() => [
+    makeQuestionRow("question-initial"),
+  ]);
   const [inputType, setInputType] = useState<"text" | "file">("text");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -244,8 +246,16 @@ function DiagnosisPicker({ items, selectedId, onPick, onClose }: { items: Diagno
   return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet}`}><div className={styles.sheetHandle} /><header><h2>강점·성향 진단 결과</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.pickerList}>{items.map((item) => <button type="button" key={item.resultId} className={styles.pickerCard} onClick={() => onPick(item)}><span><strong>{item.typeName}</strong><small>{formatDate(item.completedAt)}</small></span>{item.resultId === selectedId ? <b className={styles.selectedLabel}>선택됨 ✓</b> : <em>선택하기</em>}</button>)}</div></section></div>;
 }
 
-function makeQuestionRow(): QuestionRow {
-  return { id: crypto.randomUUID(), question: "", characterLimit: "" };
+function makeQuestionRow(id = createQuestionRowId()): QuestionRow {
+  return { id, question: "", characterLimit: "" };
+}
+
+function createQuestionRowId() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `question-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function updateQuestion(setter: (updater: (items: QuestionRow[]) => QuestionRow[]) => void, id: string, key: "question" | "characterLimit", value: string) {

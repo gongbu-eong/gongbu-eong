@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { AppNav } from "./AppNav";
-import { PageAccessLogger } from "./PageAccessLogger";
 
 type PageShellProps = {
   title: string;
@@ -11,7 +10,6 @@ type PageShellProps = {
 export function PageShell({ title, description, children }: PageShellProps) {
   return (
     <main className="min-h-screen bg-zinc-50 text-zinc-950">
-      <PageAccessLogger title={title} />
       <AppNav />
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-10">
         <header className="space-y-2">

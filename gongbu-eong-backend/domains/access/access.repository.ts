@@ -3,12 +3,14 @@ import { CreateAccessLogRequestDto } from "./access.dto";
 
 export function createAccessLog(args: {
   body: CreateAccessLogRequestDto;
+  userId?: string;
   ipAddress?: string;
   userAgent?: string;
 }) {
   return query(
     `
       INSERT INTO public.access_logs (
+        user_id,
         anonymous_id,
         event_name,
         path,
@@ -19,9 +21,10 @@ export function createAccessLog(args: {
         user_agent,
         metadata
       )
-      VALUES ($1, $2, $3, $4, $5, $6::public.entry_source, $7, $8, $9::jsonb)
+      VALUES ($1, $2, $3, $4, $5, $6, $7::public.entry_source, $8, $9, $10::jsonb)
     `,
     [
+      args.userId || null,
       args.body.anonymousId || null,
       args.body.eventName || "page_view",
       args.body.path,

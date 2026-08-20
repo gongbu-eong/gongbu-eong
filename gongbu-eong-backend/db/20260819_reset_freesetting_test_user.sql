@@ -131,17 +131,32 @@ DELETE FROM public.community_search_terms
 WHERE search_count <= 0
   AND query IN (SELECT query FROM _target_search_counts);
 
-DELETE FROM public.notification_dispatch_queue queue
-USING _target_user target
-WHERE queue.user_id = target.id;
+DO $$
+BEGIN
+  IF to_regclass('public.notification_dispatch_queue') IS NOT NULL THEN
+    EXECUTE '
+      DELETE FROM public.notification_dispatch_queue queue
+      USING _target_user target
+      WHERE queue.user_id = target.id
+    ';
+  END IF;
 
-DELETE FROM public.notifications notifications
-USING _target_user target
-WHERE notifications.user_id = target.id;
+  IF to_regclass('public.notifications') IS NOT NULL THEN
+    EXECUTE '
+      DELETE FROM public.notifications notifications
+      USING _target_user target
+      WHERE notifications.user_id = target.id
+    ';
+  END IF;
 
-DELETE FROM public.notification_preferences preferences
-USING _target_user target
-WHERE preferences.user_id = target.id;
+  IF to_regclass('public.notification_preferences') IS NOT NULL THEN
+    EXECUTE '
+      DELETE FROM public.notification_preferences preferences
+      USING _target_user target
+      WHERE preferences.user_id = target.id
+    ';
+  END IF;
+END $$;
 
 DELETE FROM public.rejection_analysis_results results
 USING _target_rejection_requests requests
@@ -259,6 +274,19 @@ DELETE FROM public.diagnosis_recommended_job_postings recommendations
 USING _target_diagnosis_results results
 WHERE recommendations.diagnosis_result_id = results.id;
 
+DO $$
+BEGIN
+  IF to_regclass('public.product_events') IS NOT NULL THEN
+    EXECUTE '
+      DELETE FROM public.product_events events
+      USING _target_user target
+      WHERE events.user_id = target.id
+         OR events.diagnosis_run_id IN (SELECT id FROM _target_runs)
+         OR events.diagnosis_result_id IN (SELECT id FROM _target_diagnosis_results)
+    ';
+  END IF;
+END $$;
+
 DELETE FROM public.diagnosis_login_conversions conversions
 USING _target_user target
 WHERE conversions.user_id = target.id
@@ -300,6 +328,25 @@ WHERE profiles.user_id = target.id;
 DELETE FROM public.user_consents consents
 USING _target_user target
 WHERE consents.user_id = target.id;
+
+DO $$
+BEGIN
+  IF to_regclass('public.user_attributions') IS NOT NULL THEN
+    EXECUTE '
+      DELETE FROM public.user_attributions attributions
+      USING _target_user target
+      WHERE attributions.user_id = target.id
+    ';
+  END IF;
+
+  IF to_regclass('public.attribution_events') IS NOT NULL THEN
+    EXECUTE '
+      DELETE FROM public.attribution_events events
+      USING _target_user target
+      WHERE events.user_id = target.id
+    ';
+  END IF;
+END $$;
 
 DELETE FROM public.user_entry_events events
 USING _target_user target

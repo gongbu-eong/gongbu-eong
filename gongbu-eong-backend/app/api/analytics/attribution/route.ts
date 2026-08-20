@@ -1,33 +1,32 @@
 import { NextRequest } from "next/server";
-import { createAccessLog } from "@/domains/access/access.repository";
 import { getSessionUser } from "@/domains/auth/session";
+import { saveAttribution } from "@/domains/analytics/analytics.repository";
 import { jsonWithCors } from "@/lib/cors";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
   const forwardedFor = request.headers.get("x-forwarded-for");
   const ipAddress = forwardedFor?.split(",")[0]?.trim();
 
   try {
+    const body = await request.json();
     const user = await getSessionUser(request);
-
-    await createAccessLog({
+    const result = await saveAttribution({
       body,
       userId: user?.id,
       ipAddress,
       userAgent: request.headers.get("user-agent") || undefined,
     });
 
-    return jsonWithCors(request, { ok: true }, { status: 201 });
+    return jsonWithCors(request, { ok: true, ...result }, { status: 201 });
   } catch (error) {
     return jsonWithCors(
       request,
       {
         ok: false,
         message:
-          error instanceof Error ? error.message : "Access log write failed.",
+          error instanceof Error ? error.message : "Attribution write failed.",
       },
       { status: 400 },
     );

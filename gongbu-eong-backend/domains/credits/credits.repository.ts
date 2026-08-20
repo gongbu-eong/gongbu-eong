@@ -165,12 +165,29 @@ export async function grantDiagnosisResultShareReward(
       return { granted: false, balanceAfter };
     }
 
+    const previousReward = await client.query<{ id: string }>(
+      `
+        SELECT id
+        FROM public.credit_transactions
+        WHERE user_id = $1
+          AND source_type = $2::varchar(80)
+        LIMIT 1
+      `,
+      [userId, CREDIT_REWARD_POLICY.diagnosisResultShare.sourceType],
+    );
+
+    if (previousReward.rows[0]) {
+      const balanceAfter = await getCurrentCreditBalance(userId, client);
+      await client.query("COMMIT");
+      return { granted: false, balanceAfter };
+    }
+
     const transaction = await insertCreditTransaction(client, {
       userId,
       amount: policy.amount,
       transactionType: "event_grant",
       sourceType: CREDIT_REWARD_POLICY.diagnosisResultShare.sourceType,
-      sourceId: resultId,
+      sourceId: userId,
       reason: policy.reason,
       metadata: { grantType: "diagnosis_result_share", resultId },
     });

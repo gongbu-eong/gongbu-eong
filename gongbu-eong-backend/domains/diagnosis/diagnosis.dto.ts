@@ -29,9 +29,28 @@ export type DiagnosisAnswerRequestDto = {
   optionId: string;
 };
 
+export type DiagnosisAttributionSnapshotDto = {
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_content?: string | null;
+  utm_term?: string | null;
+  gclid?: string | null;
+  fbclid?: string | null;
+  landingUrl?: string | null;
+  landingPath?: string | null;
+  referrer?: string | null;
+  capturedAt?: string | null;
+};
+
 export type CreateDiagnosisRunRequestDto = {
   anonymousId?: string;
   entrySource?: string;
+  attribution?: {
+    first?: DiagnosisAttributionSnapshotDto | null;
+    last?: DiagnosisAttributionSnapshotDto | null;
+    current?: DiagnosisAttributionSnapshotDto | null;
+  };
   answers: DiagnosisAnswerRequestDto[];
 };
 
@@ -48,6 +67,7 @@ export type DiagnosisTypeCode =
 export type DiagnosisResultResponseDto = {
   runId: string;
   resultId: string;
+  attemptNo: number | null;
   typeCode: DiagnosisTypeCode;
   typeName: string;
   summary: string;

@@ -1,15 +1,18 @@
 import { getAnonymousId } from "@/shared/session/anonymous-id";
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+const backendUrl =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
-export function logPageView(args: { path: string; title?: string }) {
-  if (!backendUrl) {
-    return;
-  }
-
+export function logPageView(args: {
+  path: string;
+  title?: string;
+  referrer?: string;
+  metadata?: Record<string, unknown>;
+}) {
   fetch(`${backendUrl}/api/access-logs`, {
     method: "POST",
     keepalive: true,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -18,8 +21,9 @@ export function logPageView(args: { path: string; title?: string }) {
       eventName: "page_view",
       path: args.path,
       title: args.title,
-      referrer: document.referrer || undefined,
+      referrer: (args.referrer ?? document.referrer) || undefined,
       entrySource: resolveEntrySource(args.path),
+      metadata: args.metadata,
     }),
   }).catch(() => {
     // Logging must never block page rendering.
