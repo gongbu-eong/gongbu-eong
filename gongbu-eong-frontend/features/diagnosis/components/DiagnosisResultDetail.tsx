@@ -8,7 +8,6 @@ import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import {
-  grantDiagnosisShareReward,
   getDiagnosisResultDetail,
   getDiagnosisResultHistory,
   selectDiagnosisResult,
@@ -252,6 +251,7 @@ export function DiagnosisResultDetail() {
   const [shareMessage, setShareMessage] = useState("공유하고 코칭 받기 →");
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const shareRewardPollingRef = useRef<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -271,6 +271,12 @@ export function DiagnosisResultDetail() {
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [selectedResultId]);
+
+  useEffect(() => () => {
+    if (shareRewardPollingRef.current) {
+      window.clearTimeout(shareRewardPollingRef.current);
+    }
+  }, []);
 
   const loadHistory = useCallback(async (cursor?: string) => {
     setHistoryLoading(true);
@@ -345,6 +351,50 @@ export function DiagnosisResultDetail() {
     if (!history.length && !historyLoading) void loadHistory();
   };
 
+  const waitForShareReward = useCallback((previousBalance?: number) => {
+    if (shareRewardPollingRef.current) {
+      window.clearTimeout(shareRewardPollingRef.current);
+    }
+
+    let attempts = 0;
+    let observedBalance = previousBalance;
+    const poll = async () => {
+      attempts += 1;
+      try {
+        const response = await getCurrentUser();
+        const nextBalance = response.authenticated ? response.user?.creditBalance : undefined;
+        if (response.authenticated && response.user) {
+          setUser(response.user);
+        }
+
+        if (typeof nextBalance === "number") {
+          if (typeof observedBalance === "number" && nextBalance > observedBalance) {
+            window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
+              detail: {
+                message: "진단권 1장이 추가되었습니다.",
+                balanceAfter: nextBalance,
+              },
+            }));
+            setShareMessage("티켓 지급 완료!");
+            window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
+            return;
+          }
+          observedBalance = nextBalance;
+        }
+      } catch {
+        // Keep polling briefly; the webhook can arrive a little after the user returns.
+      }
+
+      if (attempts < 10) {
+        shareRewardPollingRef.current = window.setTimeout(poll, 1500);
+      } else {
+        setShareMessage("공유하고 코칭 받기 →");
+      }
+    };
+
+    shareRewardPollingRef.current = window.setTimeout(poll, 1500);
+  }, []);
+
   const shareResult = async () => {
     const shareUrl = getDiagnosisResultShareUrl(result.resultId, window.location.origin);
     const shareImageUrl = getDiagnosisShareImageUrl(window.location.origin);
@@ -381,27 +431,22 @@ export function DiagnosisResultDetail() {
             },
           },
         ],
+        ...(user ? {
+          serverCallbackArgs: {
+            gb_action: "diagnosis_result_share",
+            gb_user_id: user.id,
+            gb_result_id: result.resultId,
+          },
+        } : {}),
       });
 
       if (user) {
-        const reward = await grantDiagnosisShareReward(result.resultId);
-        if (reward.granted) {
-          window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
-            detail: {
-              message: "진단권 1장이 추가되었습니다.",
-              balanceAfter: reward.balanceAfter,
-            },
-          }));
-        } else {
-          window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
-            detail: { balance: reward.balanceAfter },
-          }));
-        }
-        setShareMessage(reward.granted ? "티켓 지급 완료!" : "공유 완료!");
+        setShareMessage("공유 완료 후 지급됩니다.");
+        waitForShareReward(user.creditBalance);
       } else {
         setShareMessage("공유 완료!");
+        window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
       }
-      window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
     } catch {
       setShareMessage("다시 시도해 주세요");
     }
@@ -480,9 +525,19 @@ export function DiagnosisResultDetail() {
             </div>
           </section>
 
-          <section className={styles.shareTicket}>
+          <section
+            className={styles.shareTicket}
+            role="button"
+            tabIndex={0}
+            onClick={() => void shareResult()}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              void shareResult();
+            }}
+          >
             <Image src="/diagnosis/result-detail/gift.png" alt="" width={84} height={89} />
-            <div><strong>결과를 공유하고 <em>AI 자소서 코칭</em><br />무료 티켓을 받으세요.</strong><button type="button" onClick={shareResult}>{shareMessage}</button></div>
+            <div><strong>결과를 공유하고 <em>AI 자소서 코칭</em><br />무료 티켓을 받으세요.</strong><span className={styles.shareTicketCta}>{shareMessage}</span></div>
           </section>
 
           <section className={styles.section}>

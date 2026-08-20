@@ -275,21 +275,54 @@ function toJobPostingDto(row: JobPostingRow): JobPostingDto {
     hiringCount: row.hiring_count,
     isClosed:
       row.is_active === false ||
-      Boolean(applicationEndAt && new Date(applicationEndAt).getTime() < Date.now()),
+      Boolean(applicationEndAt && isPastApplicationEndDate(applicationEndAt)),
     ...(row.match_score == null
       ? {}
       : { matchScore: Number(row.match_score) }),
   };
 }
 
+const SEOUL_TIME_ZONE = "Asia/Seoul";
+const DAY_IN_MS = 86_400_000;
+const seoulDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: SEOUL_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 function toDday(value: string | null) {
   if (!value) return "상시";
 
-  const end = new Date(value).getTime();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.max(0, Math.ceil((end - today.getTime()) / 86_400_000));
+  const days = daysUntilSeoulDate(value);
+  if (days == null) return "상시";
   return days === 0 ? "D-Day" : `D-${days}`;
+}
+
+function isPastApplicationEndDate(value: string) {
+  const endDay = toSeoulDayNumber(value);
+  const todayDay = toSeoulDayNumber(new Date());
+  return endDay != null && todayDay != null && endDay < todayDay;
+}
+
+function daysUntilSeoulDate(value: string) {
+  const endDay = toSeoulDayNumber(value);
+  const todayDay = toSeoulDayNumber(new Date());
+  if (endDay == null || todayDay == null) return null;
+  return Math.max(0, endDay - todayDay);
+}
+
+function toSeoulDayNumber(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = seoulDateFormatter.formatToParts(date);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+  if (!year || !month || !day) return null;
+
+  return Math.floor(Date.UTC(year, month - 1, day) / DAY_IN_MS);
 }
 
 function clamp(value: number, min: number, max: number) {

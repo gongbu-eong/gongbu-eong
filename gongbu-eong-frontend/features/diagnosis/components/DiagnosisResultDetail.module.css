@@ -355,6 +355,7 @@
   padding: 1rem 2.5rem 1rem 1.5rem;
   border-radius: .625rem;
   background: #ffe6e5;
+  cursor: pointer;
 }
 
 .shareTicket img {
@@ -375,11 +376,13 @@
   font-style: normal;
 }
 
-.shareTicket button {
+.shareTicketCta {
+  display: inline-flex;
   min-height: 1.75rem;
   margin-top: .5rem;
   padding: .35rem .75rem;
-  border: 0;
+  align-items: center;
+  justify-content: center;
   border-radius: .4375rem;
   background: #e8544d;
   color: #fff;

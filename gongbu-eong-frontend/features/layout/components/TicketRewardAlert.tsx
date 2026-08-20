@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { createPortal } from "react-dom";
 import styles from "./TicketRewardAlert.module.css";
 
 export function TicketRewardAlert({
@@ -10,7 +11,7 @@ export function TicketRewardAlert({
   message?: string;
   onClose: () => void;
 }) {
-  return (
+  const alert = (
     <div className={styles.overlay} role="presentation">
       <div className={styles.dim} />
       <section
@@ -35,4 +36,7 @@ export function TicketRewardAlert({
       </section>
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(alert, document.body);
 }

@@ -238,9 +238,38 @@ function toDateTime(value: string | null) {
 }
 function toRemainingText(value: string | null) {
   if (!value) return "상시 채용 중이에요";
-  const days = Math.max(0, Math.ceil((new Date(value).getTime() - Date.now()) / 86_400_000));
+  const days = daysUntilDate(value);
   return days === 0 ? "오늘 마감이에요" : `마감까지 ${days}일 남았어요`;
 }
+
+const JOB_DETAIL_DAY_IN_MS = 86_400_000;
+const jobDetailDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+function daysUntilDate(value: string) {
+  const endDay = toSeoulDayNumber(value);
+  const todayDay = toSeoulDayNumber(new Date());
+  if (endDay == null || todayDay == null) return 0;
+  return Math.max(0, endDay - todayDay);
+}
+
+function toSeoulDayNumber(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = jobDetailDateFormatter.formatToParts(date);
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+  if (!year || !month || !day) return null;
+
+  return Math.floor(Date.UTC(year, month - 1, day) / JOB_DETAIL_DAY_IN_MS);
+}
+
 function toDeadlineDetail(value: string | null) {
   return value ? `(~ ${toDateTime(value)})` : "(마감일 정보 없음)";
 }
