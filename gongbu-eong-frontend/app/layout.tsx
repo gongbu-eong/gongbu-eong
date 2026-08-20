@@ -19,6 +19,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+
   return (
     <html lang="ko" className="h-full antialiased" suppressHydrationWarning>
       <head>
@@ -61,7 +63,7 @@ export default function RootLayout({
         {children}
         <div id="datepicker-root" />
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-VN2DTZMSG1"
+          src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
           strategy="afterInteractive"
         />
         <Script id="google-analytics" strategy="afterInteractive">
@@ -69,7 +71,7 @@ export default function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', 'G-VN2DTZMSG1');
+            gtag('config', '${gaId}');
           `}
         </Script>
       </body>
