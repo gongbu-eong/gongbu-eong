@@ -14,6 +14,8 @@ import {
 } from "../diagnosis.api";
 import {
   DIAGNOSIS_SHARE_DESCRIPTION,
+  DIAGNOSIS_SHARE_IMAGE_HEIGHT,
+  DIAGNOSIS_SHARE_IMAGE_WIDTH,
   DIAGNOSIS_SHARE_TITLE,
   getDiagnosisResultShareUrl,
   getDiagnosisShareImageUrl,
@@ -32,6 +34,7 @@ declare global {
       init: (key: string) => void;
       Share?: {
         sendDefault: (options: Record<string, unknown>) => void;
+        sendScrap?: (options: Record<string, unknown>) => void;
       };
     };
   }
@@ -410,36 +413,48 @@ export function DiagnosisResultDetail() {
 
       const kakao = await loadKakaoSdk();
       if (!kakao.isInitialized()) kakao.init(kakaoKey);
-      if (!kakao.Share?.sendDefault) throw new Error("Kakao Share SDK is unavailable");
+      if (!kakao.Share?.sendDefault && !kakao.Share?.sendScrap) {
+        throw new Error("Kakao Share SDK is unavailable");
+      }
 
-      kakao.Share.sendDefault({
-        objectType: "feed",
-        content: {
-          title: DIAGNOSIS_SHARE_TITLE,
-          description: `${nickname}님의 강점·성향 유형은 ${result.typeName}이에요. ${DIAGNOSIS_SHARE_DESCRIPTION}`,
-          imageUrl: shareImageUrl,
-          link: {
-            mobileWebUrl: shareUrl,
-            webUrl: shareUrl,
-          },
-        },
-        buttons: [
-          {
-            title: "결과 보러가기",
+      const serverCallbackArgs = user ? {
+        gb_action: "diagnosis_result_share",
+        gb_user_id: user.id,
+        gb_result_id: result.resultId,
+      } : undefined;
+
+      if (kakao.Share?.sendScrap) {
+        kakao.Share.sendScrap({
+          requestUrl: shareUrl,
+          ...(serverCallbackArgs ? { serverCallbackArgs } : {}),
+        });
+      } else {
+        kakao.Share.sendDefault({
+          objectType: "feed",
+          content: {
+            title: DIAGNOSIS_SHARE_TITLE,
+            description: DIAGNOSIS_SHARE_DESCRIPTION,
+            imageUrl: shareImageUrl,
+            imageWidth: DIAGNOSIS_SHARE_IMAGE_WIDTH,
+            imageHeight: DIAGNOSIS_SHARE_IMAGE_HEIGHT,
             link: {
               mobileWebUrl: shareUrl,
               webUrl: shareUrl,
             },
           },
-        ],
-        ...(user ? {
-          serverCallbackArgs: {
-            gb_action: "diagnosis_result_share",
-            gb_user_id: user.id,
-            gb_result_id: result.resultId,
-          },
-        } : {}),
-      });
+          buttonTitle: "결과 보러가기",
+          buttons: [
+            {
+              title: "결과 보러가기",
+              link: {
+                mobileWebUrl: shareUrl,
+                webUrl: shareUrl,
+              },
+            },
+          ],
+          ...(serverCallbackArgs ? { serverCallbackArgs } : {}),
+        });
+      }
 
       if (user) {
         setShareMessage("공유 완료 후 지급됩니다.");

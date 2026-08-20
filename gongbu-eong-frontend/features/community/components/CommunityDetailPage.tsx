@@ -488,6 +488,7 @@ declare global {
       init: (key: string) => void;
       Share?: {
         sendDefault: (options: Record<string, unknown>) => void;
+        sendScrap?: (options: Record<string, unknown>) => void;
       };
     };
   }
