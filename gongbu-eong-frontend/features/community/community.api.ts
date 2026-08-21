@@ -92,7 +92,7 @@ export function createCommunityComment(postId: string, content: string, parentCo
 }
 
 export function deleteCommunityComment(commentId: string) {
-  return apiClient<{ ok: true }>(`/api/community/comments/${commentId}`, {
+  return apiClient<CommunityDetailResponseDto>(`/api/community/comments/${commentId}`, {
     method: "DELETE",
   });
 }

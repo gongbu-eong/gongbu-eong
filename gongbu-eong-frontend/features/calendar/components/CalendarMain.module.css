@@ -200,7 +200,7 @@
   width: 0.25rem;
   height: 0.25rem;
   border-radius: 999px;
-  background: currentColor;
+  background: #1a2233;
 }
 
 .dateButton.selectedDate {
@@ -215,6 +215,10 @@
 .dateButton.selectedDate span,
 .dateButton.selectedDate strong {
   color: #fff;
+}
+
+.dateButton.selectedDate i {
+  background: #fff;
 }
 
 .dateButton.sunday span,
@@ -593,6 +597,10 @@
 .monthDay i {
   width: 0.375rem;
   height: 0.375rem;
+}
+
+.selectedMonthDay i {
+  background: #fff;
 }
 
 .mineYearHeader {

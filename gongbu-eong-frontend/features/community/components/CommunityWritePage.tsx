@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChangeEvent, DragEvent, FormEvent, useEffect, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
@@ -19,6 +19,12 @@ const IMAGE_MAX_DIMENSION = 1600;
 const IMAGE_JPEG_QUALITY = 0.82;
 
 type PendingAttachment = Pick<CommunityAttachmentDto, "fileName" | "mimeType" | "fileSizeBytes" | "dataUrl">;
+type FormSnapshot = {
+  category: CommunityCategory;
+  title: string;
+  content: string;
+  attachments: string[];
+};
 
 export function CommunityWritePage({ postId }: { postId?: string }) {
   const router = useRouter();
@@ -27,6 +33,9 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
+  const [originalForm, setOriginalForm] = useState<FormSnapshot | null>(
+    postId ? null : createFormSnapshot("자유·잡담", "", "", []),
+  );
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -50,18 +59,32 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
     if (!postId) return;
     getCommunityPost(postId)
       .then((response) => {
-        setCategory(response.post.category);
-        setTitle(response.post.title);
-        setContent(response.post.content);
-        setAttachments(response.post.attachments.map((attachment) => ({
+        const nextAttachments = response.post.attachments.map((attachment) => ({
           fileName: attachment.fileName,
           mimeType: attachment.mimeType,
           fileSizeBytes: attachment.fileSizeBytes,
           dataUrl: attachment.dataUrl,
-        })));
+        }));
+        setCategory(response.post.category);
+        setTitle(response.post.title);
+        setContent(response.post.content);
+        setAttachments(nextAttachments);
+        setOriginalForm(createFormSnapshot(
+          response.post.category,
+          response.post.title,
+          response.post.content,
+          nextAttachments,
+        ));
       })
       .catch((error) => setMessage(error instanceof Error ? error.message : "게시글을 불러오지 못했습니다."));
   }, [postId]);
+
+  const currentForm = useMemo(
+    () => createFormSnapshot(category, title, content, attachments),
+    [attachments, category, content, title],
+  );
+  const hasChanges = originalForm ? !isSameFormSnapshot(originalForm, currentForm) : !postId;
+  const canSubmit = Boolean(title.trim() && content.trim()) && (!postId || hasChanges);
 
   const selectImage = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -156,7 +179,7 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
           },
         }));
       }
-      router.replace(`/community/${response.post.id}`);
+      router.replace(postId ? `/community/${response.post.id}` : "/community");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "게시글을 저장하지 못했습니다.");
     } finally {
@@ -177,7 +200,7 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
     <div className={styles.page}>
       <section className={styles.frame}>
         <AppHeader user={user} />
-        <main className={styles.content}>
+        <main className={`${styles.content} ${styles.writeContent}`}>
           <h1>{postId ? "글 수정" : "글쓰기"}</h1>
           <AuthorProfile author={author} />
           <form className={styles.form} onSubmit={submit}>
@@ -226,13 +249,42 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
             {message ? <p className={styles.toast}>{message}</p> : null}
             <div className={styles.formActions}>
               <Link href={postId ? `/community/${postId}` : "/community"}>취소</Link>
-              <button type="submit" disabled={saving}>{saving ? "저장 중..." : "완료"}</button>
+              <button type="submit" disabled={saving || !canSubmit}>{saving ? "저장 중..." : postId ? "수정 완료" : "완료"}</button>
             </div>
           </form>
         </main>
         <AppFooter active="community" />
       </section>
     </div>
+  );
+}
+
+function createFormSnapshot(
+  category: CommunityCategory,
+  title: string,
+  content: string,
+  attachments: PendingAttachment[],
+): FormSnapshot {
+  return {
+    category,
+    title,
+    content,
+    attachments: attachments.map((attachment) => [
+      attachment.fileName,
+      attachment.mimeType,
+      attachment.fileSizeBytes,
+      attachment.dataUrl,
+    ].join("\u001f")),
+  };
+}
+
+function isSameFormSnapshot(left: FormSnapshot, right: FormSnapshot) {
+  return (
+    left.category === right.category &&
+    left.title === right.title &&
+    left.content === right.content &&
+    left.attachments.length === right.attachments.length &&
+    left.attachments.every((value, index) => value === right.attachments[index])
   );
 }
 

@@ -570,6 +570,10 @@
   padding-top: 0;
 }
 
+.communityBand .listGroup {
+  gap: 0;
+}
+
 .businessInfo {
   min-height: 380px;
   padding: 24px 16px 40px;

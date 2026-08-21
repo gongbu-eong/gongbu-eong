@@ -32,6 +32,7 @@ export type CurrentUserDto = {
     currentCount: number;
     remainingCount: number;
     percent: number;
+    isMaxed: boolean;
   };
 };
 

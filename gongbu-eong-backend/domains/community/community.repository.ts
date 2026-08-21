@@ -36,7 +36,9 @@ type PostRow = {
 type CommentRow = {
   id: string;
   post_id: string;
+  post_title?: string | null;
   parent_comment_id: string | null;
+  status: "active" | "deleted";
   content: string;
   created_at: Date | string;
   user_id: string;
@@ -98,8 +100,8 @@ export async function listCommunityPosts(args: ListCommunityPostsInput) {
   const countFilters = buildPostFilters(args, countValues);
   const orderBy =
     args.sort === "popular"
-      ? "recommend_count DESC, comment_count DESC, posts.created_at DESC"
-      : "posts.created_at DESC";
+      ? "recommend_count DESC, comment_count DESC, posts.created_at DESC, posts.id DESC"
+      : "posts.created_at DESC, posts.id DESC";
   const limitParam = `$${values.push(args.limit)}`;
   const offsetParam = `$${values.push(args.offset)}`;
 
@@ -141,7 +143,8 @@ export async function listPopularCommunityPosts(userId?: string) {
         recommend_count DESC,
         comment_count DESC,
         posts.view_count DESC,
-        posts.created_at DESC
+        posts.created_at DESC,
+        posts.id DESC
       LIMIT 5
     `,
     [userId || null],
@@ -170,6 +173,28 @@ export async function findCommunityPostById(postId: string, userId?: string) {
     comments: await listCommunityComments(post.id, userId),
     canEdit: Boolean(userId && post.user_id === userId),
   } satisfies CommunityPostDetailDto;
+}
+
+export async function getCommunityPostListPage(postId: string, pageSize: number) {
+  const result = await query<{ row_number: string | number }>(
+    `
+      WITH ranked_posts AS (
+        SELECT
+          posts.id,
+          ROW_NUMBER() OVER (ORDER BY posts.created_at DESC, posts.id DESC) AS row_number
+        FROM public.community_posts posts
+        WHERE posts.status = 'active'
+      )
+      SELECT row_number::text
+      FROM ranked_posts
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [postId],
+  );
+
+  const rowNumber = Number(result.rows[0]?.row_number || 1);
+  return Math.max(1, Math.ceil(rowNumber / Math.max(1, pageSize)));
 }
 
 export async function increaseCommunityPostView(postId: string) {
@@ -369,6 +394,7 @@ export async function listCommunityComments(postId: string, userId?: string) {
         comments.id,
         comments.post_id,
         comments.parent_comment_id,
+        comments.status,
         comments.content,
         comments.created_at,
         users.id AS user_id,
@@ -377,10 +403,14 @@ export async function listCommunityComments(postId: string, userId?: string) {
         users.profile_avatar_key AS author_avatar_key,
         users.profile_background_color AS author_background_color,
         diagnosis.personality_type_name AS diagnosis_type_name,
-        COALESCE(comment_reactions.like_count, 0)::text AS like_count,
-        COALESCE(comment_reactions.dislike_count, 0)::text AS dislike_count,
-        my_reaction.reaction_type AS my_reaction,
-        ($2::uuid IS NOT NULL AND comments.user_id = $2::uuid) AS can_delete
+        CASE WHEN comments.status = 'active' THEN COALESCE(comment_reactions.like_count, 0) ELSE 0 END::text AS like_count,
+        CASE WHEN comments.status = 'active' THEN COALESCE(comment_reactions.dislike_count, 0) ELSE 0 END::text AS dislike_count,
+        CASE WHEN comments.status = 'active' THEN my_reaction.reaction_type ELSE NULL END AS my_reaction,
+        (
+          comments.status = 'active'
+          AND $2::uuid IS NOT NULL
+          AND comments.user_id = $2::uuid
+        ) AS can_delete
       FROM public.community_comments comments
       JOIN public.users users
         ON users.id = comments.user_id
@@ -400,8 +430,8 @@ export async function listCommunityComments(postId: string, userId?: string) {
         LIMIT 1
       ) my_reaction ON $2::uuid IS NOT NULL
       WHERE comments.post_id = $1
-        AND comments.status = 'active'
-      ORDER BY comments.created_at DESC
+        AND comments.status IN ('active', 'deleted')
+      ORDER BY comments.created_at ASC, comments.id ASC
     `,
     [postId, userId || null],
   );
@@ -433,7 +463,7 @@ export async function createCommunityComment(
         FROM public.community_comments comments
         WHERE comments.id = $4::uuid
           AND comments.post_id = $2
-          AND comments.status = 'active'
+          AND comments.status IN ('active', 'deleted')
 
         UNION ALL
 
@@ -444,7 +474,7 @@ export async function createCommunityComment(
         JOIN parent_chain child
           ON parent.id = child.parent_comment_id
         WHERE parent.post_id = $2
-          AND parent.status = 'active'
+          AND parent.status IN ('active', 'deleted')
       ),
 
       root_parent AS (
@@ -608,7 +638,7 @@ async function getCommunityCommentReactionState(
 }
 
 export async function deleteCommunityComment(userId: string, commentId: string) {
-  const result = await query<{ id: string }>(
+  const result = await query<{ id: string; post_id: string }>(
     `
       UPDATE public.community_comments
       SET status = 'deleted',
@@ -617,12 +647,12 @@ export async function deleteCommunityComment(userId: string, commentId: string) 
       WHERE id = $2
         AND user_id = $1
         AND status = 'active'
-      RETURNING id
+      RETURNING id, post_id
     `,
     [userId, commentId],
   );
 
-  return Boolean(result.rows[0]);
+  return result.rows[0] || null;
 }
 
 export async function createCommunityReport(
@@ -741,7 +771,9 @@ export async function listCommunityActivity(userId: string) {
       SELECT
         comments.id,
         comments.post_id,
+        posts.title AS post_title,
         comments.parent_comment_id,
+        comments.status,
         comments.content,
         comments.created_at,
         users.id AS user_id,
@@ -755,10 +787,12 @@ export async function listCommunityActivity(userId: string) {
         NULL::varchar(20) AS my_reaction,
         TRUE AS can_delete
       FROM public.community_comments comments
+      JOIN public.community_posts posts ON posts.id = comments.post_id
       JOIN public.users users ON users.id = comments.user_id
       LEFT JOIN LATERAL (${diagnosisSql("users")}) diagnosis ON TRUE
       WHERE comments.user_id = $1
         AND comments.status = 'active'
+        AND posts.status = 'active'
       ORDER BY comments.created_at DESC
       LIMIT 30
     `,
@@ -1084,11 +1118,14 @@ function toPostSummary(row: PostRow): CommunityPostSummaryDto {
 }
 
 function toComment(row: CommentRow): CommunityCommentDto {
+  const isDeleted = row.status === "deleted";
   return {
     id: row.id,
     postId: row.post_id,
+    postTitle: row.post_title || null,
     parentCommentId: row.parent_comment_id,
-    content: row.content,
+    status: row.status,
+    content: isDeleted ? "삭제된 댓글입니다." : row.content,
     author: toAuthor(row),
     createdAt: new Date(row.created_at).toISOString(),
     canDelete: Boolean(row.can_delete),
@@ -1146,36 +1183,25 @@ function nestComments(comments: CommunityCommentDto[]) {
     }
   }
 
-  // 대댓글 최신순
+  // 대댓글은 작성된 순서대로 노출
   for (const root of roots) {
     root.replies.sort(
       (left, right) =>
-        new Date(right.createdAt).getTime() -
-        new Date(left.createdAt).getTime()
+        new Date(left.createdAt).getTime() -
+        new Date(right.createdAt).getTime()
     );
   }
 
-  // 원댓글은 원댓글 자체의 작성시간 기준 최신순
+  // 원댓글은 작성된 순서대로 노출
   roots.sort(
     (left, right) =>
-      new Date(right.createdAt).getTime() -
-      new Date(left.createdAt).getTime()
+      new Date(left.createdAt).getTime() -
+      new Date(right.createdAt).getTime()
   );
 
   return roots;
 }
 
-function getThreadLatestTime(comment: CommunityCommentDto): number {
-  return Math.max(
-    new Date(comment.createdAt).getTime(),
-    ...comment.replies.map(getThreadLatestTime),
-  );
-}
-
-function sortRepliesByLatest(comment: CommunityCommentDto) {
-  comment.replies.sort((left, right) => getThreadLatestTime(right) - getThreadLatestTime(left));
-  comment.replies.forEach(sortRepliesByLatest);
-}
 
 function toReport(row: ReportRow): CommunityReportDto {
   return {

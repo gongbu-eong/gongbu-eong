@@ -394,16 +394,20 @@ const ignoreClickAfterDrag = (
             />
           </Link>
         ) : (
-          <section className={resultBannerClassName}>
+          <Link
+            href="/ai-tools/diagnosis"
+            className={`${resultBannerClassName} ${styles.resultBannerLink}`}
+            aria-label="강점·성향 진단하러 가기"
+          >
             <p className={styles.resultLoginMessage}>
               강점·성향 진단을
               <br />
               진행해 주세요.
             </p>
-            <Link href="/ai-tools/diagnosis" className={styles.resultLink}>
+            <span className={styles.resultLink}>
               <span>진단하러 가기</span>
               <b aria-hidden="true">→</b>
-            </Link>
+            </span>
             <Image
               src="/home/home-hero-diagnosis-required.png"
               alt=""
@@ -413,7 +417,7 @@ const ignoreClickAfterDrag = (
               priority
               sizes="133px"
             />
-          </section>
+          </Link>
         )}
 
         <SectionHeader title="🔥 Hot 공고" />
@@ -542,7 +546,11 @@ const ignoreClickAfterDrag = (
           <SectionHeader title="커뮤니티" href={user ? "/community" : "/login"} />
           <div className={styles.listGroup}>
             {communityPreview.map((post) => (
-              <PostItem key={post.id} post={post} />
+              <PostItem
+                key={post.id}
+                post={post}
+                href={user ? `/community/${post.id}` : "/login"}
+              />
             ))}
             {!communityPreview.length ? (
               <p className={styles.emptyJobs}>등록된 커뮤니티 글이 없습니다.</p>

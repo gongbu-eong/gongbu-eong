@@ -324,7 +324,7 @@ export function CalendarMain({
                 <DateStrip
                   mode={mode}
                   selectedDate={selectedDate}
-                  selectedDateEvents={selectedDateEvents}
+                  eventsByDate={monthEvents}
                   days={selectedWeekDays}
                   canPrev={canPrevWeek}
                   canNext={canNextWeek}
@@ -458,7 +458,7 @@ function MineYearHeader({
 function DateStrip({
   mode,
   selectedDate,
-  selectedDateEvents,
+  eventsByDate,
   days,
   canPrev,
   canNext,
@@ -467,7 +467,7 @@ function DateStrip({
 }: {
   mode: CalendarMode;
   selectedDate: Date;
-  selectedDateEvents: CalendarJobEvent[];
+  eventsByDate: Record<string, CalendarJobEvent[]>;
   days: Date[];
   canPrev: boolean;
   canNext: boolean;
@@ -481,11 +481,13 @@ function DateStrip({
         &lt;
       </button>
       {days.map((day) => {
-        const isSelected = toDateKey(day) === selectedKey;
+        const dateKey = toDateKey(day);
+        const isSelected = dateKey === selectedKey;
+        const hasEvents = Boolean(eventsByDate[dateKey]?.length);
         return (
           <button
             type="button"
-            key={toDateKey(day)}
+            key={dateKey}
             className={`${styles.dateButton} ${getWeekendClass(day)} ${
               isSelected ? styles.selectedDate : ""
             }`}
@@ -493,7 +495,7 @@ function DateStrip({
           >
             <span>{WEEKDAYS[day.getDay()]}</span>
             <strong>{day.getDate()}</strong>
-            {isSelected && selectedDateEvents.length > 0 ? <i /> : null}
+            {hasEvents ? <i /> : null}
           </button>
         );
       })}
@@ -643,6 +645,7 @@ function MonthCalendar({
         {days.map((day) => {
           const isSelected = day.date && toDateKey(day.date) === selectedKey;
           const isToday = day.date && toDateKey(day.date) === todayKey;
+          const hasEvents = day.events.length > 0;
           return (
             <button
               type="button"
@@ -657,7 +660,7 @@ function MonthCalendar({
               {day.date ? (
                 <>
                   <span>{day.date.getDate()}</span>
-                  {isSelected ? <i /> : null}
+                  {hasEvents ? <i /> : null}
                 </>
               ) : null}
             </button>

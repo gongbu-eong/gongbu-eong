@@ -4,7 +4,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CSSProperties, FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import {
@@ -24,7 +24,7 @@ import {
   getCommunityShareImageUrl,
 } from "../community-share";
 import type { CommunityCommentDto, CommunityPostDetailDto, CommunityPostSummaryDto } from "../community.dto";
-import { Avatar, DeleteConfirmDialog, EmptyState, formatNumber, formatRelativeTime, Pagination, PostItem } from "./CommunityShared";
+import { Avatar, DeleteConfirmDialog, EmptyState, formatNumber, Pagination, PostItem } from "./CommunityShared";
 import styles from "./Community.module.css";
 
 type ModalState =
@@ -43,15 +43,24 @@ const REPORT_REASONS = [
   "게시판 성격에 맞지 않음",
   "기타",
 ];
-const COMMENT_PAGE_SIZE = 5;
+const COMMENT_PAGE_SIZE = 20;
+const REPLY_PAGE_SIZE = 20;
 const BOARD_PAGE_SIZE = 20;
+
+type ReplyTarget = {
+  commentId: string;
+  nickname: string;
+  hostCommentId: string;
+};
 
 export function CommunityDetailPage({ postId }: { postId: string }) {
   const router = useRouter();
   const [post, setPost] = useState<CommunityPostDetailDto | null>(null);
   const [comment, setComment] = useState("");
   const [replyText, setReplyText] = useState("");
-  const [replyTarget, setReplyTarget] = useState<{ commentId: string; nickname: string } | null>(null);
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [expandedReplyIds, setExpandedReplyIds] = useState<string[]>([]);
+  const [replyPages, setReplyPages] = useState<Record<string, number>>({});
   const [commentPage, setCommentPage] = useState(1);
   const [boardItems, setBoardItems] = useState<CommunityPostSummaryDto[]>([]);
   const [boardTotal, setBoardTotal] = useState(0);
@@ -61,13 +70,26 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   const [modal, setModal] = useState<ModalState>(null);
   const [selectedReason, setSelectedReason] = useState(REPORT_REASONS[0]);
   const [saving, setSaving] = useState(false);
+  const requestedPostIdsRef = useRef<Set<string>>(new Set());
   const loadedPostId = post?.id;
   useBodyScrollLock(Boolean(modal));
 
   useEffect(() => {
+    if (requestedPostIdsRef.current.has(postId)) return;
+    requestedPostIdsRef.current.add(postId);
     getCommunityPost(postId)
-      .then((response) => setPost(response.post))
-      .catch((error) => setToast(error instanceof Error ? error.message : "게시글을 불러오지 못했습니다."));
+      .then((response) => {
+        setPost(response.post);
+        setBoardPage(response.boardPage || 1);
+        setExpandedReplyIds([]);
+        setReplyPages({});
+        setReplyTarget(null);
+        setReplyText("");
+      })
+      .catch((error) => {
+        requestedPostIdsRef.current.delete(postId);
+        setToast(error instanceof Error ? error.message : "게시글을 불러오지 못했습니다.");
+      });
   }, [postId]);
 
   useEffect(() => {
@@ -135,7 +157,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       const response = await createCommunityComment(post.id, comment);
       setPost(response.post);
       setComment("");
-      setCommentPage(1);
+      setCommentPage(getLastPage(response.post.comments.length, COMMENT_PAGE_SIZE));
       if (response.creditReward?.granted) {
         window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
           detail: {
@@ -166,11 +188,26 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       setReplyText("");
       return;
     }
+    const hostCommentId = post ? findReplyHostCommentId(post.comments, commentId) || commentId : commentId;
     setReplyTarget({
       commentId,
       nickname: comment.author.nickname,
+      hostCommentId,
     });
+    setExpandedReplyIds((current) => current.includes(hostCommentId) ? current : [...current, hostCommentId]);
     setReplyText("");
+  };
+
+  const toggleReplies = (commentId: string) => {
+    setExpandedReplyIds((current) => (
+      current.includes(commentId)
+        ? current.filter((item) => item !== commentId)
+        : [...current, commentId]
+    ));
+  };
+
+  const setReplyPage = (commentId: string, page: number) => {
+    setReplyPages((current) => ({ ...current, [commentId]: page }));
   };
 
   const submitReply = async (event: FormEvent) => {
@@ -180,9 +217,13 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     try {
       const response = await createCommunityComment(post.id, replyText, replyTarget.commentId);
       setPost(response.post);
+      setExpandedReplyIds((current) => (
+        current.includes(replyTarget.hostCommentId) ? current : [...current, replyTarget.hostCommentId]
+      ));
+      const hostComment = findCommentById(response.post.comments, replyTarget.hostCommentId);
+      setReplyPage(replyTarget.hostCommentId, getLastPage(hostComment?.replies.length || 0, REPLY_PAGE_SIZE));
       setReplyTarget(null);
       setReplyText("");
-      setCommentPage(1);
       if (response.creditReward?.granted) {
         window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
           detail: {
@@ -208,12 +249,8 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
 
   const confirmDeleteComment = async (commentId: string) => {
     if (!post) return;
-    await deleteCommunityComment(commentId);
-    setPost({
-      ...post,
-      commentCount: Math.max(0, post.commentCount - countRemovedComments(post.comments, commentId)),
-      comments: removeCommentById(post.comments, commentId),
-    });
+    const response = await deleteCommunityComment(commentId);
+    setPost(response.post);
     setModal(null);
   };
 
@@ -306,14 +343,16 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
             <>
               <section className={styles.detailHeader}>
                 <h1>글 상세</h1>
-                <div className={styles.postMeta}>
+                <div className={styles.detailMetaTop}>
                   <span className={styles.categoryBadge}>{post.category}</span>
-                  <span>{formatRelativeTime(post.createdAt)}</span>
+                  <time>{formatCommentDate(post.createdAt)}</time>
                 </div>
                 <strong className={styles.postTitle}>{post.title}</strong>
-                <div className={styles.authorLine}>
+                <div className={styles.detailAuthorLine}>
                   <span>{post.author.nickname}</span>
                   {post.author.diagnosisTypeName ? <b className={styles.typeBadge}>{post.author.diagnosisTypeName}</b> : null}
+                </div>
+                <div className={styles.detailStats}>
                   <span>조회수 : {formatNumber(post.viewCount)}</span>
                   <span>추천수 : {formatNumber(post.recommendCount)}</span>
                   <span>댓글 : {formatNumber(post.commentCount)}</span>
@@ -369,10 +408,15 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                       key={item.id}
                       comment={item}
                       replyTarget={replyTarget}
+                      expandedReplyIds={expandedReplyIds}
+                      replyPages={replyPages}
+                      replyMentionNickname={null}
                       replyText={replyText}
                       saving={saving}
                       onReplyTextChange={setReplyText}
                       onReply={startReply}
+                      onToggleReplies={toggleReplies}
+                      onReplyPageChange={setReplyPage}
                       onSubmitReply={submitReply}
                       onReport={() => setModal({ type: "report-comment", commentId: item.id })}
                       onDelete={() => setModal({ type: "delete-comment", commentId: item.id })}
@@ -420,7 +464,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                   </div>
                 </div>
                 <div className={styles.postList}>
-                  {boardItems.map((item) => <PostItem key={item.id} post={item} />)}
+                  {boardItems.map((item) => <PostItem key={item.id} post={item} active={item.id === post.id} />)}
                   {!boardItems.length ? <EmptyState>이 게시판에 등록된 글이 없습니다.</EmptyState> : null}
                 </div>
                 <Pagination
@@ -538,10 +582,15 @@ function CommunityComment({
   comment,
   depth = 0,
   replyTarget,
+  expandedReplyIds,
+  replyPages,
+  replyMentionNickname,
   replyText,
   saving,
   onReplyTextChange,
   onReply,
+  onToggleReplies,
+  onReplyPageChange,
   onSubmitReply,
   onReport,
   onDelete,
@@ -551,11 +600,16 @@ function CommunityComment({
 }: {
   comment: CommunityCommentDto;
   depth?: number;
-  replyTarget: { commentId: string; nickname: string } | null;
+  replyTarget: ReplyTarget | null;
+  expandedReplyIds: string[];
+  replyPages: Record<string, number>;
+  replyMentionNickname: string | null;
   replyText: string;
   saving: boolean;
   onReplyTextChange: (value: string) => void;
   onReply: (comment: CommunityCommentDto) => void;
+  onToggleReplies: (commentId: string) => void;
+  onReplyPageChange: (commentId: string, page: number) => void;
   onSubmitReply: (event: FormEvent) => void;
   onReport: () => void;
   onDelete: () => void;
@@ -564,10 +618,15 @@ function CommunityComment({
   onReact: (commentId: string, reactionType: "like" | "dislike") => void;
 }) {
   const isReply = depth > 0;
-
+  const isDeleted = comment.status === "deleted";
+  const repliesExpanded = expandedReplyIds.includes(comment.id) || replyTarget?.hostCommentId === comment.id;
+  const replyCount = comment.replies.length;
+  const totalReplyPages = getLastPage(replyCount, REPLY_PAGE_SIZE);
+  const safeReplyPage = Math.min(replyPages[comment.id] || 1, totalReplyPages);
+  const visibleReplies = comment.replies.slice((safeReplyPage - 1) * REPLY_PAGE_SIZE, safeReplyPage * REPLY_PAGE_SIZE);
 
   return (
-    <article className={isReply ? styles.replyComment : styles.comment}>
+    <article className={`${isReply ? styles.replyComment : styles.comment} ${isDeleted ? styles.deletedComment : ""}`}>
       <div className={styles.commentHeader}>
         {isReply ? <Image src="/community/reply-arrow.svg" alt="" width={24} height={24} /> : <Avatar author={comment.author} />}
         <div className={styles.authorLine}>
@@ -576,46 +635,81 @@ function CommunityComment({
         </div>
         <time>{formatCommentDate(comment.createdAt)}</time>
       </div>
-      <p className={styles.commentBody}>{comment.content}</p>
-      <CommentActions
-        likeCount={comment.likeCount}
-        dislikeCount={comment.dislikeCount}
-        myReaction={comment.myReaction}
-        onReply={() => onReply(comment)}
-        onReact={(reactionType) => onReact(comment.id, reactionType)}
-        onReport={onReport}
-        onDelete={comment.canDelete ? onDelete : undefined}
-      />
+      <p className={styles.commentBody}>
+        {isReply && replyMentionNickname ? <span className={styles.replyBodyMention}>@{replyMentionNickname}</span> : null}
+        {comment.content}
+      </p>
+      {isDeleted ? (
+        <div className={styles.commentTools}>
+          <button type="button" className={styles.replyWriteButton} onClick={() => onReply(comment)}>답글 쓰기</button>
+        </div>
+      ) : (
+        <CommentActions
+          likeCount={comment.likeCount}
+          dislikeCount={comment.dislikeCount}
+          myReaction={comment.myReaction}
+          onReply={() => onReply(comment)}
+          onReact={(reactionType) => onReact(comment.id, reactionType)}
+          onReport={onReport}
+          onDelete={comment.canDelete ? onDelete : undefined}
+        />
+      )}
       {replyTarget?.commentId === comment.id ? (
         <ReplyForm
           replyText={replyText}
           saving={saving}
-          placeholder="댓글을 입력하세요."
+          mention={replyTarget.nickname}
+          placeholder={`${replyTarget.nickname}님에게 답글을 입력하세요.`}
           onReplyTextChange={onReplyTextChange}
           onSubmitReply={onSubmitReply}
         />
       ) : null}
-      {comment.replies.length ? (
-        <div className={styles.replyList}>
-          {comment.replies.map((reply) => (
-            <CommunityComment
-              key={reply.id}
-              comment={reply}
-              depth={1}
-              replyTarget={replyTarget}
-              replyText={replyText}
-              saving={saving}
-              onReplyTextChange={onReplyTextChange}
-              onReply={onReply}
-              onSubmitReply={onSubmitReply}
-              onReport={() => onReportReply(reply.id)}
-              onDelete={() => onDeleteReply(reply.id)}
-              onReportReply={onReportReply}
-              onDeleteReply={onDeleteReply}
-              onReact={onReact}
-            />
-          ))}
-        </div>
+      {replyCount ? (
+        <>
+          <button
+            type="button"
+            className={styles.replyToggle}
+            onClick={() => onToggleReplies(comment.id)}
+            aria-expanded={repliesExpanded}
+          >
+            {repliesExpanded ? "답글 모두 숨기기" : `답글 ${formatNumber(replyCount)}개 모두 보기`}
+          </button>
+          {repliesExpanded ? (
+            <>
+              <div className={styles.replyList}>
+                {visibleReplies.map((reply) => (
+                  <CommunityComment
+                    key={reply.id}
+                    comment={reply}
+                    depth={1}
+                    replyTarget={replyTarget}
+                    expandedReplyIds={expandedReplyIds}
+                    replyPages={replyPages}
+                    replyMentionNickname={findCommentNickname(comment, reply.parentCommentId)}
+                    replyText={replyText}
+                    saving={saving}
+                    onReplyTextChange={onReplyTextChange}
+                    onReply={onReply}
+                    onToggleReplies={onToggleReplies}
+                    onReplyPageChange={onReplyPageChange}
+                    onSubmitReply={onSubmitReply}
+                    onReport={() => onReportReply(reply.id)}
+                    onDelete={() => onDeleteReply(reply.id)}
+                    onReportReply={onReportReply}
+                    onDeleteReply={onDeleteReply}
+                    onReact={onReact}
+                  />
+                ))}
+              </div>
+              <Pagination
+                currentPage={safeReplyPage}
+                totalItems={replyCount}
+                pageSize={REPLY_PAGE_SIZE}
+                onPageChange={(page) => onReplyPageChange(comment.id, page)}
+              />
+            </>
+          ) : null}
+        </>
       ) : null}
     </article>
   );
@@ -624,12 +718,14 @@ function CommunityComment({
 function ReplyForm({
   replyText,
   saving,
+  mention,
   placeholder,
   onReplyTextChange,
   onSubmitReply,
 }: {
   replyText: string;
   saving: boolean;
+  mention: string;
   placeholder: string;
   onReplyTextChange: (value: string) => void;
   onSubmitReply: (event: FormEvent) => void;
@@ -637,6 +733,7 @@ function ReplyForm({
   return (
     <form className={styles.replyForm} onSubmit={onSubmitReply}>
       <Image src="/community/reply-arrow.svg" alt="" width={24} height={24} />
+      <span className={styles.replyMention}>@{mention}</span>
       <textarea
         value={replyText}
         maxLength={500}
@@ -673,7 +770,7 @@ function CommentActions({
       <div className={styles.commentReactionGroup}>
         <button
           type="button"
-          className={myReaction === "like" ? styles.commentReactionActive : ""}
+          className={`${styles.commentReactionLikeButton} ${myReaction === "like" ? styles.commentReactionActive : ""}`}
           aria-label="댓글 좋아요"
           onClick={() => onReact("like")}
         >
@@ -683,7 +780,7 @@ function CommentActions({
         <span className={styles.commentDivider} />
         <button
           type="button"
-          className={myReaction === "dislike" ? styles.commentReactionActive : ""}
+          className={`${styles.commentReactionDislikeButton} ${myReaction === "dislike" ? styles.commentReactionActive : ""}`}
           aria-label="댓글 싫어요"
           onClick={() => onReact("dislike")}
         >
@@ -708,34 +805,18 @@ function CommentActions({
   );
 }
 
+function findCommentNickname(root: CommunityCommentDto, commentId: string | null) {
+  if (!commentId) return null;
+  if (root.id === commentId) return root.author.nickname;
+  const match = root.replies.find((reply) => reply.id === commentId);
+  return match?.author.nickname || root.author.nickname;
+}
+
 function formatCommentDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   const pad = (input: number) => String(input).padStart(2, "0");
   return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function removeCommentById(comments: CommunityCommentDto[], commentId: string): CommunityCommentDto[] {
-  return comments
-    .filter((comment) => comment.id !== commentId)
-    .map((comment) => ({
-      ...comment,
-      replies: removeCommentById(comment.replies, commentId),
-    }));
-}
-
-function countRemovedComments(comments: CommunityCommentDto[], commentId: string): number {
-  for (const comment of comments) {
-    if (comment.id === commentId) return countCommentTree(comment);
-    const nestedCount = countRemovedComments(comment.replies, commentId);
-    if (nestedCount) return nestedCount;
-  }
-
-  return 0;
-}
-
-function countCommentTree(comment: CommunityCommentDto): number {
-  return 1 + comment.replies.reduce((total, reply) => total + countCommentTree(reply), 0);
 }
 
 function updateCommentReaction(
@@ -757,4 +838,40 @@ function updateCommentReaction(
       replies: updateCommentReaction(comment.replies, reaction),
     };
   });
+}
+
+function findReplyHostCommentId(comments: CommunityCommentDto[], targetCommentId: string, hostCommentId?: string): string | null {
+  for (const comment of comments) {
+    const currentHostId = hostCommentId || comment.id;
+
+    if (comment.id === targetCommentId) {
+      return currentHostId;
+    }
+
+    const childHostId = findReplyHostCommentId(comment.replies, targetCommentId, currentHostId);
+    if (childHostId) {
+      return childHostId;
+    }
+  }
+
+  return null;
+}
+
+function findCommentById(comments: CommunityCommentDto[], commentId: string): CommunityCommentDto | null {
+  for (const comment of comments) {
+    if (comment.id === commentId) {
+      return comment;
+    }
+
+    const nestedComment = findCommentById(comment.replies, commentId);
+    if (nestedComment) {
+      return nestedComment;
+    }
+  }
+
+  return null;
+}
+
+function getLastPage(totalItems: number, pageSize: number) {
+  return Math.max(1, Math.ceil(totalItems / pageSize));
 }

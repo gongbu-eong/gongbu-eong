@@ -249,9 +249,12 @@ export function AppTicketStatus({
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
   const displayTicketCount = eventTicketCount ?? ticketCount;
   const progress = eventProgress ?? communityActivityRewardProgress;
-  const progressPercent = Math.max(0, Math.min(100, progress?.percent ?? 0));
   const currentProgressCount = progress?.currentCount ?? 0;
   const milestoneCount = progress?.milestoneCount ?? 3;
+  const isMaxed = Boolean(progress?.isMaxed || displayTicketCount >= 20);
+  const progressPercent = isMaxed
+    ? 0
+    : Math.max(0, Math.min(100, progress?.percent ?? 0));
 
   useEffect(() => {
     const handleBalanceChange = (event: Event) => {
@@ -282,7 +285,11 @@ export function AppTicketStatus({
   return (
     <div
       className={styles.headerTicketStatus}
-      aria-label={`보유 진단권 ${displayTicketCount}개, 커뮤니티 활동 보상 ${currentProgressCount}/${milestoneCount}`}
+      aria-label={
+        isMaxed
+          ? `보유 진단권 ${displayTicketCount}개, 최대 보유 수량 도달`
+          : `보유 진단권 ${displayTicketCount}개, 커뮤니티 활동 보상 ${currentProgressCount}/${milestoneCount}`
+      }
     >
       <span className={styles.headerTicketProgress} aria-hidden="true">
         <span style={{ width: `${progressPercent}%` }} />
@@ -304,7 +311,9 @@ export function AppTicketStatus({
           <b>!</b>
           {isTooltipOpen ? (
             <span className={styles.headerTicketTooltip} role="tooltip">
-              커뮤니티 글, 댓글, 답글 3개마다 진단권 1장이 추가됩니다.
+              {isMaxed
+                ? "진단권은 최대 20장까지 보유할 수 있습니다."
+                : "커뮤니티 글, 댓글, 답글 3개마다 진단권 1장이 추가됩니다."}
             </span>
           ) : null}
         </button>

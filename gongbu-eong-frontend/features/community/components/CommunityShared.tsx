@@ -66,14 +66,22 @@ export function PostItem({
   post,
   rank,
   actions,
+  href,
+  active = false,
+  variant = "list",
 }: {
   post: CommunityPostSummaryDto;
   rank?: number;
   actions?: React.ReactNode;
+  href?: string;
+  active?: boolean;
+  variant?: "list" | "activity";
 }) {
+  const postHref = href ?? `/community/${post.id}`;
+
   if (rank) {
     return (
-      <Link href={`/community/${post.id}`} className={styles.popularItem}>
+      <Link href={postHref} className={`${styles.popularItem} ${active ? styles.postItemActive : ""}`}>
         <span className={styles.rank}>{rank}</span>
         <span className={styles.popularBody}>
           <span className={styles.popularCategory}>{post.category}</span>
@@ -92,9 +100,31 @@ export function PostItem({
     );
   }
 
+  if (variant === "activity") {
+    return (
+      <article className={`${styles.postItem} ${styles.activityPostItem} ${active ? styles.postItemActive : ""}`}>
+        <Link href={postHref} className={styles.postItemMain}>
+          <span className={styles.categoryBadge}>{post.category}</span>
+          <strong className={styles.postTitle}>{post.title}</strong>
+          <span className={styles.activityMetaLine}>
+            {post.author.diagnosisTypeName ? <b className={styles.typeBadge}>{post.author.diagnosisTypeName}</b> : null}
+            <span>{post.author.nickname}</span>
+            <time>{formatClockTime(post.createdAt)}</time>
+          </span>
+          <span className={styles.postStats}>
+            <span>조회수 : {formatNumber(post.viewCount)}</span>
+            <span>추천수 : {formatNumber(post.recommendCount)}</span>
+            <span>댓글 : {formatNumber(post.commentCount)}</span>
+          </span>
+        </Link>
+        {actions}
+      </article>
+    );
+  }
+
   return (
-    <article className={styles.postItem}>
-      <Link href={`/community/${post.id}`} className={styles.postItemMain}>
+    <article className={`${styles.postItem} ${active ? styles.postItemActive : ""}`}>
+      <Link href={postHref} className={styles.postItemMain}>
         <span className={styles.categoryBadge}>{post.category}</span>
         <strong className={styles.postTitle}>{post.title}</strong>
         <span className={styles.authorLine}>
@@ -107,7 +137,7 @@ export function PostItem({
             <span>추천수 : {formatNumber(post.recommendCount)}</span>
             <span>댓글 : {formatNumber(post.commentCount)}</span>
           </span>
-          <time>{formatRelativeTime(post.createdAt)}</time>
+          <time>{formatClockTime(post.createdAt)}</time>
         </span>
       </Link>
       {actions}
@@ -263,20 +293,48 @@ export function CommunityQuickActions() {
 
 export function formatRelativeTime(value: string) {
   const date = new Date(value);
-  const diff = Date.now() - date.getTime();
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  const diff = Math.max(0, now.getTime() - date.getTime());
   const minute = 60 * 1000;
   const hour = 60 * minute;
-  const day = 24 * hour;
+  const calendarDayDiff = getLocalCalendarDayDiff(date, now);
 
-  if (Number.isNaN(date.getTime())) return "";
-  if (diff < hour) return `${Math.max(1, Math.floor(diff / minute))}분 전`;
-  if (diff < day) return `${Math.floor(diff / hour)}시간 전`;
-  if (diff < day * 7) return `${Math.floor(diff / day)}일 전`;
+  if (diff < minute) return "방금 전";
+  if (diff < hour) return `${Math.floor(diff / minute)}분 전`;
+  if (calendarDayDiff === 0) return `${Math.floor(diff / hour)}시간 전`;
+  if (calendarDayDiff === 1) return "어제";
+  if (calendarDayDiff < 7) return `${calendarDayDiff}일 전`;
   return date.toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" });
 }
 
 export function formatNumber(value: number) {
   return value.toLocaleString("ko-KR");
+}
+
+export function formatClockTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  const diff = Math.max(0, now.getTime() - date.getTime());
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const pad = (input: number) => String(input).padStart(2, "0");
+  const calendarDayDiff = getLocalCalendarDayDiff(date, now);
+
+  if (diff < minute) return "방금 전";
+  if (diff < hour) return `${Math.floor(diff / minute)}분 전`;
+  if (calendarDayDiff === 0) return `${Math.floor(diff / hour)}시간 전`;
+  if (calendarDayDiff === 1) return "어제";
+  if (calendarDayDiff < 7) return `${calendarDayDiff}일 전`;
+
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function getLocalCalendarDayDiff(left: Date, right: Date) {
+  const leftDay = new Date(left.getFullYear(), left.getMonth(), left.getDate()).getTime();
+  const rightDay = new Date(right.getFullYear(), right.getMonth(), right.getDate()).getTime();
+  return Math.max(0, Math.floor((rightDay - leftDay) / (24 * 60 * 60 * 1000)));
 }
 
 export function isCommunityCategory(value: string): value is CommunityCategory {

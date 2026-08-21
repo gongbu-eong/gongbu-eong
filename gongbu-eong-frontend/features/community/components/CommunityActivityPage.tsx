@@ -9,7 +9,7 @@ import type { CurrentUserDto } from "@/features/home/home.dto";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { deleteCommunityComment, deleteCommunityPost, getCommunityActivity, setCommunityScrap } from "../community.api";
 import type { CommunityActivityResponseDto } from "../community.dto";
-import { AuthorProfile, DeleteConfirmDialog, EmptyState, PostItem, formatRelativeTime } from "./CommunityShared";
+import { AuthorProfile, DeleteConfirmDialog, EmptyState, PostItem } from "./CommunityShared";
 import styles from "./Community.module.css";
 
 type ActivityTab = "posts" | "comments" | "scraps";
@@ -90,6 +90,7 @@ export function CommunityActivityPage() {
                   <PostItem
                     key={post.id}
                     post={post}
+                    variant="activity"
                     actions={
                       <span className={styles.itemActions} onClick={(event) => event.preventDefault()}>
                         <Link href={`/community/${post.id}/edit`}>글 수정</Link>
@@ -104,13 +105,14 @@ export function CommunityActivityPage() {
             {tab === "comments" ? (
               <div className={styles.activityList}>
                 {activity?.comments.map((comment) => (
-                  <article key={comment.id} className={styles.postItem}>
+                  <article key={comment.id} className={styles.activityCommentItem}>
                     <Link href={`/community/${comment.postId}`} className={styles.postItemMain}>
-                      <div className={styles.postMeta}>
-                        <span className={styles.categoryBadge}>댓글</span>
-                        <span>{formatRelativeTime(comment.createdAt)}</span>
-                      </div>
-                      <strong className={styles.postTitle}>{comment.content}</strong>
+                      <span className={styles.commentQuoteMark}>“</span>
+                      <strong className={styles.activityCommentTitle}>{comment.postTitle || "댓글"}</strong>
+                      <span className={styles.activityCommentPreview}>
+                        <span>{comment.content}</span>
+                        <span aria-hidden="true">›</span>
+                      </span>
                     </Link>
                     <span className={styles.itemActions}>
                       <button type="button" onClick={() => setConfirmTarget({ type: "comment", id: comment.id })}>댓글 삭제</button>
@@ -126,6 +128,7 @@ export function CommunityActivityPage() {
                   <PostItem
                     key={post.id}
                     post={post}
+                    variant="activity"
                     actions={
                       <span className={styles.itemActions} onClick={(event) => event.preventDefault()}>
                         <button type="button" onClick={() => setConfirmTarget({ type: "scrap", id: post.id })}>스크랩 해제</button>

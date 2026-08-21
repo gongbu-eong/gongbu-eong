@@ -8,6 +8,7 @@ import {
   getCommunityPostShareUrl,
   getCommunityShareImageUrl,
 } from "@/features/community/community-share";
+import { requireCommunityAuth } from "../requireCommunityAuth";
 
 export async function generateMetadata({
   params,
@@ -50,6 +51,7 @@ export default async function CommunityDetailRoute({
 }: {
   params: Promise<{ postId: string }>;
 }) {
+  await requireCommunityAuth();
   const { postId } = await params;
   return <CommunityDetailPage postId={postId} />;
 }

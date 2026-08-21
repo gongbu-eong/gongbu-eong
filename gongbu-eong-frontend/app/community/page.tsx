@@ -1,10 +1,12 @@
 import { CommunityMain } from "@/features/community/components/CommunityMain";
+import { requireCommunityAuth } from "./requireCommunityAuth";
 
 export default async function CommunityPage({
   searchParams,
 }: {
   searchParams: Promise<{ category?: string; q?: string; sort?: string; page?: string }>;
 }) {
+  await requireCommunityAuth();
   const params = await searchParams;
   const page = Number(params.page || 1);
 

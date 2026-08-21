@@ -14,6 +14,7 @@ import {
   deleteCommunityComment,
   deleteCommunityPost,
   findCommunityPostById,
+  getCommunityPostListPage,
   increaseCommunityPostView,
   isCategory,
   listCommunityActivity,
@@ -92,7 +93,11 @@ export async function getCommunityPost(request: NextRequest, postId: string) {
     throw error;
   }
 
-  return { ok: true, post };
+  return {
+    ok: true,
+    post,
+    boardPage: await getCommunityPostListPage(postId, 20),
+  };
 }
 
 export async function saveCommunityPost(
@@ -228,15 +233,18 @@ export async function removeCommunityComment(
   commentId: string,
 ) {
   const user = await requireSessionUser(request);
-  const deleted = await deleteCommunityComment(user.id, commentId);
+  const deletedComment = await deleteCommunityComment(user.id, commentId);
 
-  if (!deleted) {
+  if (!deletedComment) {
     const error = new Error("삭제할 댓글을 찾을 수 없습니다.");
     error.name = "NotFoundError";
     throw error;
   }
 
-  return { ok: true };
+  return {
+    ok: true,
+    post: await findCommunityPostById(deletedComment.post_id, user.id),
+  };
 }
 
 export async function reportCommunityTarget(

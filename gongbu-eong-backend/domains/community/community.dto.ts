@@ -47,7 +47,9 @@ export type CommunityPostSummaryDto = {
 export type CommunityCommentDto = {
   id: string;
   postId: string;
+  postTitle?: string | null;
   parentCommentId: string | null;
+  status: "active" | "deleted";
   content: string;
   author: CommunityAuthorDto;
   createdAt: string;
@@ -76,6 +78,7 @@ export type CommunityListResponseDto = {
 export type CommunityDetailResponseDto = {
   ok: true;
   post: CommunityPostDetailDto;
+  boardPage?: number;
   creditReward?: {
     granted: boolean;
     balanceAfter: number;
@@ -85,6 +88,7 @@ export type CommunityDetailResponseDto = {
       currentCount: number;
       remainingCount: number;
       percent: number;
+      isMaxed: boolean;
     };
   } | null;
 };

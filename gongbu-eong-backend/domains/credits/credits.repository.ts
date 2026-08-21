@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 
 type DbClient = Pick<PoolClient, "query">;
 
+export const MAX_CREDIT_BALANCE = 20;
+
 export const CREDIT_REWARD_POLICY = {
   welcomeSignup: {
     amount: 5,
@@ -36,6 +38,7 @@ export type CommunityActivityRewardProgress = {
   currentCount: number;
   remainingCount: number;
   percent: number;
+  isMaxed: boolean;
 };
 
 export async function grantWelcomeSignupCredits(
@@ -91,12 +94,21 @@ export async function grantCommunityActivityMilestoneReward(
       policy.milestoneCount ??
       CREDIT_REWARD_POLICY.communityActivityMilestone.milestoneCount;
     const activityCount = await getCommunityActivityCount(userId, client);
-    const progress = buildCommunityActivityRewardProgress(activityCount, milestoneCount);
+    const currentBalance = await getCurrentCreditBalance(userId, client);
+    const progress = buildCommunityActivityRewardProgress(
+      activityCount,
+      milestoneCount,
+      currentBalance >= MAX_CREDIT_BALANCE,
+    );
 
     if (!policy.isActive) {
-      const balanceAfter = await getCurrentCreditBalance(userId, client);
       await client.query("COMMIT");
-      return { granted: false, balanceAfter, progress };
+      return { granted: false, balanceAfter: currentBalance, progress };
+    }
+
+    if (progress.isMaxed) {
+      await client.query("COMMIT");
+      return { granted: false, balanceAfter: currentBalance, progress };
     }
 
     const achievedMilestone = Math.floor(activityCount / progress.milestoneCount);
@@ -104,9 +116,8 @@ export async function grantCommunityActivityMilestoneReward(
     const nextRewardMilestone = rewardedMilestoneCount + 1;
 
     if (achievedMilestone < nextRewardMilestone) {
-      const balanceAfter = await getCurrentCreditBalance(userId, client);
       await client.query("COMMIT");
-      return { granted: false, balanceAfter, progress };
+      return { granted: false, balanceAfter: currentBalance, progress };
     }
 
     const transaction = await insertCreditTransaction(client, {
@@ -289,8 +300,13 @@ export async function getCommunityActivityRewardProgress(
     policy.milestoneCount ??
     CREDIT_REWARD_POLICY.communityActivityMilestone.milestoneCount;
   const activityCount = await getCommunityActivityCount(userId, client);
+  const currentBalance = await getCurrentCreditBalance(userId, client);
 
-  return buildCommunityActivityRewardProgress(activityCount, milestoneCount);
+  return buildCommunityActivityRewardProgress(
+    activityCount,
+    milestoneCount,
+    currentBalance >= MAX_CREDIT_BALANCE,
+  );
 }
 
 async function getCommunityActivityCount(userId: string, client: DbClient) {
@@ -336,8 +352,20 @@ async function getCommunityActivityRewardedMilestoneCount(
 function buildCommunityActivityRewardProgress(
   activityCount: number,
   milestoneCount: number,
+  isMaxed = false,
 ) {
   const safeMilestoneCount = Math.max(1, milestoneCount);
+  if (isMaxed) {
+    return {
+      activityCount,
+      milestoneCount: safeMilestoneCount,
+      currentCount: 0,
+      remainingCount: 0,
+      percent: 0,
+      isMaxed: true,
+    } satisfies CommunityActivityRewardProgress;
+  }
+
   const currentCount = activityCount % safeMilestoneCount;
   const remainingCount =
     currentCount === 0 ? safeMilestoneCount : safeMilestoneCount - currentCount;
@@ -348,6 +376,7 @@ function buildCommunityActivityRewardProgress(
     currentCount,
     remainingCount,
     percent: Math.round((currentCount / safeMilestoneCount) * 100),
+    isMaxed: false,
   } satisfies CommunityActivityRewardProgress;
 }
 
@@ -438,6 +467,7 @@ async function insertCreditTransaction(
         $6::jsonb
       FROM current_balance
       WHERE ($8::boolean = false OR current_balance.balance + $2 >= 0)
+        AND ($2 <= 0 OR current_balance.balance + $2 <= $9::integer)
         AND NOT EXISTS (
         SELECT 1
         FROM public.credit_transactions
@@ -456,6 +486,7 @@ async function insertCreditTransaction(
       JSON.stringify(args.metadata),
       args.transactionType,
       Boolean(args.requireSufficientBalance),
+      MAX_CREDIT_BALANCE,
     ],
   );
 
