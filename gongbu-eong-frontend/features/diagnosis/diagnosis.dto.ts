@@ -97,6 +97,7 @@ export type DiagnosisResultHistoryResponseDto = {
 export type DiagnosisResultDetailResponseDto = {
   result: DiagnosisResultResponseDto;
   completedAt: string;
+  isOwner: boolean;
   percentile: {
     traitLabel: string;
     topPercent: number | null;

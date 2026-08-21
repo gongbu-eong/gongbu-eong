@@ -311,7 +311,6 @@ const endHotDrag = (event: PointerEvent<HTMLDivElement>) => {
 
   const alertLoginRequired = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    window.alert("로그인이 필요한 서비스입니다.");
     window.location.href = "/login";
   };
 

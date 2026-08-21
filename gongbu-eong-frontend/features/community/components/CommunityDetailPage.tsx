@@ -348,15 +348,11 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                   <time>{formatCommentDate(post.createdAt)}</time>
                 </div>
                 <strong className={styles.postTitle}>{post.title}</strong>
-                <div className={styles.detailAuthorLine}>
-                  <span>{post.author.nickname}</span>
-                  {post.author.diagnosisTypeName ? <b className={styles.typeBadge}>{post.author.diagnosisTypeName}</b> : null}
-                </div>
                 <div className={styles.detailStats}>
                   <span>조회수 : {formatNumber(post.viewCount)}</span>
                   <span>추천수 : {formatNumber(post.recommendCount)}</span>
                   <span>댓글 : {formatNumber(post.commentCount)}</span>
-                </div>
+                  </div>
                 {post.canEdit ? (
                   <div className={styles.itemActions}>
                     <Link href={`/community/${post.id}/edit`}>글 수정</Link>

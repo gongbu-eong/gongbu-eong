@@ -43,14 +43,12 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
     getCurrentUser()
       .then((response) => {
         if (!response.authenticated || !response.user) {
-          window.alert("로그인이 필요한 서비스입니다.");
           router.replace("/login");
           return;
         }
         setUser(response.user);
       })
       .catch(() => {
-        window.alert("로그인이 필요한 서비스입니다.");
         router.replace("/login");
       });
   }, [router]);

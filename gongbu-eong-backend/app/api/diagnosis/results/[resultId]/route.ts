@@ -20,16 +20,8 @@ export async function GET(
       )
     : null;
 
-  if (!user) {
-    return jsonWithCors(
-      request,
-      { message: "로그인이 필요합니다." },
-      { status: 401, headers: { "Cache-Control": "no-store" } },
-    );
-  }
-
   const { resultId } = await context.params;
-  const detail = await getDiagnosisResultDetail(user.id, resultId);
+  const detail = await getDiagnosisResultDetail(user?.id ?? null, resultId);
 
   if (!detail) {
     return jsonWithCors(
@@ -40,7 +32,7 @@ export async function GET(
   }
 
   return jsonWithCors(request, detail, {
-    headers: { "Cache-Control": "private, no-store" },
+    headers: { "Cache-Control": user ? "private, no-store" : "public, max-age=60" },
   });
 }
 

@@ -47,7 +47,6 @@ export function MyNotificationSettingsPage() {
       if (!alive) return;
 
       if (!userResponse?.authenticated || !userResponse.user) {
-        window.alert("로그인이 필요한 서비스입니다.");
         router.replace("/login");
         return;
       }

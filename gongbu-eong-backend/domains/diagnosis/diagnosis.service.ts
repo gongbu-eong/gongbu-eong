@@ -16,6 +16,7 @@ import {
   findJobCategoriesForPersonalityType,
   findLatestDiagnosisResultForUser,
   findDiagnosisResultForUser,
+  findDiagnosisResultById,
   findDiagnosisResultHistory,
   findDiagnosisPercentile,
   findSelectedDiagnosisResultId,
@@ -320,39 +321,61 @@ export async function getLatestDiagnosisResult(
 }
 
 export async function getDiagnosisResultDetail(
-  userId: string,
+  userId: string | null,
   resultId?: string,
 ): Promise<DiagnosisResultDetailResponseDto | null> {
-  const result = resultId
-    ? await findDiagnosisResultForUser(userId, resultId)
-    : await findLatestDiagnosisResultForUser(userId);
+  if (!userId && !resultId) {
+    return null;
+  }
 
-  if (!result) {
+  let isOwner = true;
+  const result = resultId
+    ? userId
+      ? await findDiagnosisResultForUser(userId, resultId)
+      : null
+    : await findLatestDiagnosisResultForUser(userId!);
+  const publicResult = resultId && !result
+    ? await findDiagnosisResultById(resultId)
+    : null;
+  const resolvedResult = result || publicResult;
+
+  if (!result && publicResult) {
+    isOwner = false;
+  }
+
+  if (!resolvedResult) {
     return null;
   }
 
   const [response, percentile, previousResultCount, companies, monthlyHiring, recommendedJobs] =
     await Promise.all([
-      toDiagnosisResultResponse(result),
-      findDiagnosisPercentile(result.result_id, result.type_code, userId),
-      countPreviousDiagnosisResults(userId, result.result_id),
-      findRecommendedInstitutions(result.type_code, 3),
-      findMonthlyHiringByPersonalityType(result.type_code),
-      getJobPostings({
-        view: "recommended",
-        userId,
-        diagnosisResultId: result.result_id,
-        monthlyRegularOnly: true,
-        limit: 3,
-        offset: 0,
-      }),
+      toDiagnosisResultResponse(resolvedResult),
+      isOwner && userId
+        ? findDiagnosisPercentile(resolvedResult.result_id, resolvedResult.type_code, userId)
+        : Promise.resolve({ topPercent: null, sampleSize: 0 }),
+      isOwner && userId
+        ? countPreviousDiagnosisResults(userId, resolvedResult.result_id)
+        : Promise.resolve(0),
+      findRecommendedInstitutions(resolvedResult.type_code, 3),
+      findMonthlyHiringByPersonalityType(resolvedResult.type_code),
+      isOwner && userId
+        ? getJobPostings({
+            view: "recommended",
+            userId,
+            diagnosisResultId: resolvedResult.result_id,
+            monthlyRegularOnly: true,
+            limit: 3,
+            offset: 0,
+          })
+        : Promise.resolve({ items: [] }),
     ]);
 
   return {
     result: response,
-    completedAt: new Date(result.completed_at).toISOString(),
+    completedAt: new Date(resolvedResult.completed_at).toISOString(),
+    isOwner,
     percentile: {
-      traitLabel: PERCENTILE_TRAIT_LABELS[result.type_code],
+      traitLabel: PERCENTILE_TRAIT_LABELS[resolvedResult.type_code],
       topPercent: percentile.topPercent,
       sampleSize: percentile.sampleSize,
     },

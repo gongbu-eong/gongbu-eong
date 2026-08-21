@@ -381,6 +381,10 @@ export function DiagnosisResultDetail() {
 
   const { result } = detail;
   const copy = TYPE_COPY[result.typeCode];
+  const isPublicView = selectedResultId ? !detail.isOwner : false;
+  const heroOwnerLabel = isPublicView ? "나의" : `${nickname}님의`;
+  const personTitle = isPublicView ? `${result.typeName}은 이런 사람이에요` : `${nickname}님은 이런 사람이에요`;
+  const subjectLabel = isPublicView ? "나" : `${nickname}님`;
   const displayedJobCategories = result.jobCategories.slice(0, 6);
   const maxHiringCount = Math.max(1, ...detail.monthlyHiring.categories.map((item) => item.count));
   const recommendedJobsParams = new URLSearchParams({
@@ -472,17 +476,17 @@ export function DiagnosisResultDetail() {
 
   return (
     <main className={styles.page}>
-      <article className={styles.frame}>
-        <AppHeader user={user} nickname={nickname} bookmarkCount={bookmarkCount} />
+      <article className={`${styles.frame} ${isPublicView ? styles.publicFrame : ""}`}>
+        {isPublicView ? null : <AppHeader user={user} nickname={nickname} bookmarkCount={bookmarkCount} />}
 
         <div className={styles.resultBody}>
-          <h1 className={styles.pageTitle}>
+          {isPublicView ? null : <h1 className={styles.pageTitle}>
             <Image src="/diagnosis/result-detail/title-icon.png" alt="" width={29} height={26} />
             강점·성향 진단 결과
-          </h1>
+          </h1>}
 
           <section className={styles.hero} style={{ backgroundColor: copy.color }}>
-            <p>{nickname}님의 강점·성향 유형은</p>
+            <p>{heroOwnerLabel} 강점·성향 유형은</p>
             <h2>{result.typeName}</h2>
             <span>{copy.heroSummary}</span>
             <Image
@@ -496,13 +500,13 @@ export function DiagnosisResultDetail() {
           </section>
 
           <section className={styles.personSection}>
-            <h2><FigmaSectionIcon kind="person" />{nickname}님은 이런 사람이에요</h2>
+            <h2><FigmaSectionIcon kind="person" />{personTitle}</h2>
             <p>{copy.description}</p>
           </section>
 
           <section className={styles.section}>
             <h2><FigmaSectionIcon kind="analysis" />나의 성향 분석</h2>
-            <p className={styles.sectionCaption}>4가지 축으로 본 {nickname}님의 성향이에요.</p>
+            {isPublicView ? null : <p className={styles.sectionCaption}>4가지 축으로 본 {nickname}님의 성향이에요.</p>}
             <div className={styles.axisList}>
               {result.axisResults.map((axis) => (
                 <div className={styles.axisItem} key={axis.code}>
@@ -511,21 +515,22 @@ export function DiagnosisResultDetail() {
                 </div>
               ))}
             </div>
-            {detail.percentile.topPercent == null ? (
+            {!isPublicView && detail.percentile.topPercent == null ? (
               <div className={styles.percentilePending}>
                 가입 사용자 데이터가 쌓이면 성향 순위를 알려드려요.
               </div>
-            ) : (
+            ) : null}
+            {!isPublicView && detail.percentile.topPercent != null ? (
               <div className={styles.percentile}>
                 <span>{nickname}님의 {detail.percentile.traitLabel} 은(는)</span>
                 <strong>상위 <b>{detail.percentile.topPercent}</b>%</strong>
               </div>
-            )}
+            ) : null}
           </section>
 
           <section className={styles.section}>
             <h2><FigmaSectionIcon kind="strength" />강점과 성장 포인트</h2>
-            <p className={styles.sectionCaption}>{nickname}님이 잘하는 것과, 조금만 신경 쓰면 좋을 것</p>
+            {isPublicView ? null : <p className={styles.sectionCaption}>{nickname}님이 잘하는 것과, 조금만 신경 쓰면 좋을 것</p>}
             <div className={styles.pointList}>
               {points.map((point, index) => (
                 <article className={point.growth ? styles.growthCard : styles.pointCard} key={point.title}>
@@ -543,7 +548,7 @@ export function DiagnosisResultDetail() {
             </div>
           </section>
 
-          <section
+          {isPublicView ? null : <section
             className={styles.shareTicket}
             role="button"
             tabIndex={0}
@@ -556,11 +561,11 @@ export function DiagnosisResultDetail() {
           >
             <Image src="/diagnosis/result-detail/gift.png" alt="" width={84} height={89} />
             <div><strong>결과를 공유하고 <em>AI 자소서 코칭</em><br />무료 티켓을 받으세요.</strong><span className={styles.shareTicketCta}>{shareMessage}</span></div>
-          </section>
+          </section>}
 
           <section className={styles.section}>
             <h2><FigmaSectionIcon kind="tips" />{result.typeName} 취업 팁</h2>
-            <p className={styles.sectionCaption}>{nickname}님 유형의 강점은 살리고, 약점은 보완하는 법이에요.</p>
+            <p className={styles.sectionCaption}>{subjectLabel} 유형의 강점은 살리고, 약점은 보완하는 법이에요.</p>
             <div className={styles.tipList}>
               {copy.tips.map((tip, index) => (
                 <article key={tip.title}>
@@ -570,11 +575,15 @@ export function DiagnosisResultDetail() {
                 </article>
               ))}
             </div>
-            <div className={styles.tipNotice}><span aria-hidden="true">💬</span><p><strong>이 팁은 {nickname}님 유형에 대한 조언이에요.</strong><br />지원할 회사·직무별 맞춤 전략은 자소서 코칭에서 내 유형과 함께 분석해드려요.</p></div>
-            <button type="button" className={styles.coachingButton} onClick={() => router.push("/ai-tools/coaching")}>내 유형 + 지원 회사로 자소서 코칭 받기 →</button>
+            <div className={styles.tipNotice}><span aria-hidden="true">💬</span><p><strong>이 팁은 {subjectLabel} 유형에 대한 조언이에요.</strong><br />지원할 회사·직무별 맞춤 전략은 자소서 코칭에서 내 유형과 함께 분석해드려요.</p></div>
+            {isPublicView ? (
+              <Link href="/ai-tools/diagnosis" className={styles.publicDiagnosisButton}>나의 강점·성향 유형 검사하기&nbsp;&nbsp;&gt;</Link>
+            ) : (
+              <button type="button" className={styles.coachingButton} onClick={() => router.push("/ai-tools/coaching")}>내 유형 + 지원 회사로 자소서 코칭 받기 →</button>
+            )}
           </section>
 
-          <section className={styles.section}>
+          {isPublicView ? null : <section className={styles.section}>
             <h2><FigmaSectionIcon kind="jobs" />이런 직무·기업에 강해요</h2>
             <p className={styles.sectionCaption}>{result.typeName}과 잘 맞는 직무와 공기업이에요.</p>
             <h3>{nickname}님에게 어울리는 직무</h3>
@@ -585,9 +594,9 @@ export function DiagnosisResultDetail() {
               {!detail.recommendedPostings.length && detail.companies.map((company) => <article className={styles.companyFallback} key={company.id}><strong>{company.name}</strong></article>)}
               {!detail.recommendedPostings.length && !detail.companies.length ? <p className={styles.empty}>현재 모집 중인 추천 공고가 없어요.</p> : null}
             </div>
-          </section>
+          </section>}
 
-          <section className={styles.section}>
+          {isPublicView ? null : <section className={styles.section}>
             <h2><FigmaSectionIcon kind="hiring" />{result.typeName} 맞춤 채용 현황</h2>
             <p className={styles.sectionCaption}>이번 달 {nickname}님 유형에 맞는 정규직 채용을 모았어요.</p>
             <div className={styles.hiringTotal}>
@@ -599,21 +608,21 @@ export function DiagnosisResultDetail() {
                 <div key={category.name}><strong>{category.name}</strong><i><b style={{ width: `${(category.count / maxHiringCount) * 100}%` }} /></i><span>{category.count}</span></div>
               ))}
             </div>
-          </section>
+          </section>}
 
-          <div className={styles.actions}>
+          {isPublicView ? null : <div className={styles.actions}>
             <Link className={styles.recommendedJobsButton} href={recommendedJobsHref}>{result.typeName} 맞춤 공고 보러가기 →</Link>
             {detail.previousResultCount > 0 ? (
               <button type="button" className={styles.historyButton} onClick={openHistory}>이전 결과로 맞춤 공고 받기 →</button>
             ) : null}
             <button type="button" className={styles.shareButton} onClick={shareResult}>공유하고 자소서 코칭 티켓 받기!</button>
-          </div>
+          </div>}
         </div>
 
-        <AppFooter active="ai" />
+        {isPublicView ? null : <AppFooter active="ai" />}
       </article>
 
-      {historyOpen ? (
+      {!isPublicView && historyOpen ? (
         <div className={styles.historyOverlay} role="dialog" aria-modal="true" aria-label="이전 진단 결과">
           <button className={styles.historyBackdrop} type="button" onClick={() => setHistoryOpen(false)} aria-label="닫기" />
           <section className={styles.historySheet}>

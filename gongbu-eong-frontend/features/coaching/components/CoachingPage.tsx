@@ -55,7 +55,6 @@ export function CoachingPage() {
       if (!user?.authenticated || !user.user) {
         if (!loginRedirectedRef.current) {
           loginRedirectedRef.current = true;
-          window.alert("로그인이 필요한 서비스입니다.");
           router.replace("/login");
         }
         return;

@@ -287,6 +287,39 @@ export async function findDiagnosisResultForUser(
   return result.rows[0];
 }
 
+export async function findDiagnosisResultById(resultId: string) {
+  const result = await query<LatestDiagnosisResultRow>(
+    `
+      SELECT
+        runs.id AS run_id,
+        results.id AS result_id,
+        personality_types.code AS type_code,
+        personality_types.name AS type_name,
+        results.summary,
+        results.stability_score,
+        results.challenge_score,
+        results.stability_axis_percent,
+        results.teamwork_axis_percent,
+        results.execution_axis_percent,
+        results.principle_axis_percent,
+        results.strengths,
+        results.weaknesses,
+        results.raw_result,
+        COALESCE(runs.completed_at, results.created_at) AS completed_at
+      FROM public.diagnosis_results results
+      JOIN public.diagnosis_runs runs
+        ON runs.id = results.diagnosis_run_id
+      JOIN public.personality_types personality_types
+        ON personality_types.id = results.personality_type_id
+      WHERE results.id = $1
+      LIMIT 1
+    `,
+    [resultId],
+  );
+
+  return result.rows[0];
+}
+
 export async function findDiagnosisResultHistory(args: {
   userId: string;
   limit: number;
