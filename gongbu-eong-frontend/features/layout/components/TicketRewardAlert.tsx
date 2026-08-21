@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { createPortal } from "react-dom";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import styles from "./TicketRewardAlert.module.css";
 
 export function TicketRewardAlert({
@@ -11,6 +12,8 @@ export function TicketRewardAlert({
   message?: string;
   onClose: () => void;
 }) {
+  useBodyScrollLock(true);
+
   const alert = (
     <div className={styles.overlay} role="presentation">
       <div className={styles.dim} />

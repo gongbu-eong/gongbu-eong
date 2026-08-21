@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { deleteResume, listResumes, selectResume } from "../my.api";
 import type { ResumeDto } from "../my.dto";
 import styles from "./My.module.css";
@@ -11,6 +12,7 @@ export function MyResumeList() {
   const [resumes, setResumes] = useState<ResumeDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<ResumeDto | null>(null);
+  useBodyScrollLock(Boolean(deleting));
 
   const refresh = () => {
     setLoading(true);

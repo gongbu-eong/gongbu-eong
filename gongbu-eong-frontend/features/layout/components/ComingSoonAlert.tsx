@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { createPortal } from "react-dom";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import styles from "./ComingSoonAlert.module.css";
 
 export function ComingSoonAlert({
@@ -9,6 +10,8 @@ export function ComingSoonAlert({
 }: {
   onClose: () => void;
 }) {
+  useBodyScrollLock(true);
+
   if (typeof document === "undefined") return null;
 
   return createPortal(

@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import {
   getDiagnosisResultDetail,
   getDiagnosisResultHistory,
@@ -255,6 +256,7 @@ export function DiagnosisResultDetail() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const shareRewardPollingRef = useRef<number | null>(null);
+  useBodyScrollLock(historyOpen);
 
   useEffect(() => {
     let active = true;

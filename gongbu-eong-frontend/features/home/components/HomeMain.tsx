@@ -335,7 +335,12 @@ const ignoreClickAfterDrag = (
             <Image src="/tickets/main-logo.png" alt="공부엉이" width={88} height={39} priority />
           </Link>
           <div className={styles.headerActions}>
-            {user ? <AppTicketStatus ticketCount={user.creditBalance ?? 0} /> : null}
+            {user ? (
+              <AppTicketStatus
+                ticketCount={user.creditBalance ?? 0}
+                communityActivityRewardProgress={user.communityActivityRewardProgress}
+              />
+            ) : null}
             {/*
             {user ? (
               <Link href="/notifications" aria-label="알림" className={styles.iconButton}>

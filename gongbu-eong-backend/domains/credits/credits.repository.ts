@@ -30,6 +30,14 @@ type CreditRewardPolicy = {
   reason: string;
 };
 
+export type CommunityActivityRewardProgress = {
+  activityCount: number;
+  milestoneCount: number;
+  currentCount: number;
+  remainingCount: number;
+  percent: number;
+};
+
 export async function grantWelcomeSignupCredits(
   client: DbClient,
   userId: string,
@@ -79,38 +87,26 @@ export async function grantCommunityActivityMilestoneReward(
       },
     );
 
-    if (!policy.isActive) {
-      const balanceAfter = await getCurrentCreditBalance(userId, client);
-      await client.query("COMMIT");
-      return { granted: false, balanceAfter };
-    }
-
-    const activityCountResult = await client.query<{ count: string }>(
-      `
-        SELECT (
-          SELECT COUNT(*)
-          FROM public.community_posts
-          WHERE user_id = $1
-            AND status = 'active'
-        ) + (
-          SELECT COUNT(*)
-          FROM public.community_comments
-          WHERE user_id = $1
-            AND status = 'active'
-        ) AS count
-      `,
-      [userId],
-    );
-    const activityCount = Number(activityCountResult.rows[0]?.count || 0);
     const milestoneCount =
       policy.milestoneCount ??
       CREDIT_REWARD_POLICY.communityActivityMilestone.milestoneCount;
-    const milestone = activityCount / milestoneCount;
+    const activityCount = await getCommunityActivityCount(userId, client);
+    const progress = buildCommunityActivityRewardProgress(activityCount, milestoneCount);
 
-    if (!Number.isInteger(milestone) || milestone < 1) {
+    if (!policy.isActive) {
       const balanceAfter = await getCurrentCreditBalance(userId, client);
       await client.query("COMMIT");
-      return { granted: false, balanceAfter };
+      return { granted: false, balanceAfter, progress };
+    }
+
+    const achievedMilestone = Math.floor(activityCount / progress.milestoneCount);
+    const rewardedMilestoneCount = await getCommunityActivityRewardedMilestoneCount(userId, client);
+    const nextRewardMilestone = rewardedMilestoneCount + 1;
+
+    if (achievedMilestone < nextRewardMilestone) {
+      const balanceAfter = await getCurrentCreditBalance(userId, client);
+      await client.query("COMMIT");
+      return { granted: false, balanceAfter, progress };
     }
 
     const transaction = await insertCreditTransaction(client, {
@@ -118,13 +114,13 @@ export async function grantCommunityActivityMilestoneReward(
       amount: policy.amount,
       transactionType: "event_grant",
       sourceType: CREDIT_REWARD_POLICY.communityActivityMilestone.sourceType,
-      sourceId: `activity:${milestone}`,
+      sourceId: `activity:${nextRewardMilestone}`,
       reason: `${policy.reason} (${activityCount}번째 활동)`,
       metadata: {
         source,
-        milestone,
+        milestone: nextRewardMilestone,
         activityCount,
-        milestoneCount,
+        milestoneCount: progress.milestoneCount,
       },
     });
 
@@ -132,7 +128,7 @@ export async function grantCommunityActivityMilestoneReward(
       transaction.balanceAfter ?? (await getCurrentCreditBalance(userId, client));
 
     await client.query("COMMIT");
-    return { granted: transaction.granted, balanceAfter };
+    return { granted: transaction.granted, balanceAfter, progress };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -272,6 +268,87 @@ export async function getCurrentCreditBalance(userId: string, client: DbClient =
   );
 
   return Number(result.rows[0]?.balance_after || 0);
+}
+
+export async function getCommunityActivityRewardProgress(
+  userId: string,
+  client: DbClient = db,
+) {
+  const policy = await getCreditRewardPolicy(
+    client,
+    CREDIT_REWARD_POLICY.communityActivityMilestone.sourceType,
+    {
+      amount: CREDIT_REWARD_POLICY.communityActivityMilestone.amount,
+      milestoneCount:
+        CREDIT_REWARD_POLICY.communityActivityMilestone.milestoneCount,
+      isActive: true,
+      reason: CREDIT_REWARD_POLICY.communityActivityMilestone.reason,
+    },
+  );
+  const milestoneCount =
+    policy.milestoneCount ??
+    CREDIT_REWARD_POLICY.communityActivityMilestone.milestoneCount;
+  const activityCount = await getCommunityActivityCount(userId, client);
+
+  return buildCommunityActivityRewardProgress(activityCount, milestoneCount);
+}
+
+async function getCommunityActivityCount(userId: string, client: DbClient) {
+  const result = await client.query<{ count: string }>(
+    `
+      SELECT (
+        SELECT COUNT(*)
+        FROM public.community_posts
+        WHERE user_id = $1
+          AND status = 'active'
+      ) + (
+        SELECT COUNT(*)
+        FROM public.community_comments
+        WHERE user_id = $1
+          AND status = 'active'
+      ) AS count
+    `,
+    [userId],
+  );
+
+  return Number(result.rows[0]?.count || 0);
+}
+
+async function getCommunityActivityRewardedMilestoneCount(
+  userId: string,
+  client: DbClient,
+) {
+  const result = await client.query<{ count: string }>(
+    `
+      SELECT COUNT(*) AS count
+      FROM public.credit_transactions
+      WHERE user_id = $1
+        AND transaction_type = 'event_grant'::public.credit_transaction_type
+        AND source_type = $2::varchar(80)
+        AND amount > 0
+    `,
+    [userId, CREDIT_REWARD_POLICY.communityActivityMilestone.sourceType],
+  );
+
+  return Number(result.rows[0]?.count || 0);
+}
+
+function buildCommunityActivityRewardProgress(
+  activityCount: number,
+  milestoneCount: number,
+) {
+  const safeMilestoneCount = Math.max(1, milestoneCount);
+  const currentCount = activityCount % safeMilestoneCount;
+  const remainingCount =
+    currentCount === 0 ? safeMilestoneCount : safeMilestoneCount - currentCount;
+
+  return {
+    activityCount,
+    milestoneCount: safeMilestoneCount,
+    currentCount,
+    remainingCount,
+    percent: Math.round((currentCount / safeMilestoneCount) * 100),
+  } satisfies CommunityActivityRewardProgress;
 }
 
 async function getCreditRewardPolicy(

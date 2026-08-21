@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser, getJobPostings } from "@/features/home/home.api";
 import { getDiagnosisResultHistory, selectDiagnosisResult } from "@/features/diagnosis/diagnosis.api";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import type { DiagnosisResultHistoryItemDto } from "@/features/diagnosis/diagnosis.dto";
 import { coachResume } from "../coaching.api";
 import type { CoachingJob } from "../coaching.dto";
@@ -44,6 +45,7 @@ export function CoachingPage() {
   const [jobs, setJobs] = useState<CoachingJob[]>([]);
   const [searching, setSearching] = useState(false);
   const [picker, setPicker] = useState<"diagnosis" | null>(null);
+  useBodyScrollLock(Boolean(termsOpen || jobPickerOpen || dutySheetJob || picker));
 
   useEffect(() => {
     let active = true;

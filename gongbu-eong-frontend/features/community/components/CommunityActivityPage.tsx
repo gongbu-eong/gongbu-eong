@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { deleteCommunityComment, deleteCommunityPost, getCommunityActivity, setCommunityScrap } from "../community.api";
 import type { CommunityActivityResponseDto } from "../community.dto";
 import { AuthorProfile, DeleteConfirmDialog, EmptyState, PostItem, formatRelativeTime } from "./CommunityShared";
@@ -26,6 +27,7 @@ export function CommunityActivityPage() {
   const [message, setMessage] = useState("");
   const [confirmTarget, setConfirmTarget] = useState<ConfirmState>(null);
   const tab = toActivityTab(searchParams.get("tab"));
+  useBodyScrollLock(Boolean(confirmTarget));
 
   useEffect(() => {
     getCurrentUser()

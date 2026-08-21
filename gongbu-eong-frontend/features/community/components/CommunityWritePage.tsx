@@ -139,11 +139,20 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
         window.sessionStorage.setItem("gongbu_pending_ticket_reward", JSON.stringify({
           message: "진단권 1장이 추가되었습니다.",
           balanceAfter: response.creditReward.balanceAfter,
+          progress: response.creditReward.progress,
         }));
         window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
           detail: {
             message: "진단권 1장이 추가되었습니다.",
             balanceAfter: response.creditReward.balanceAfter,
+            progress: response.creditReward.progress,
+          },
+        }));
+      } else if (response.creditReward?.progress) {
+        window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+          detail: {
+            balanceAfter: response.creditReward.balanceAfter,
+            progress: response.creditReward.progress,
           },
         }));
       }

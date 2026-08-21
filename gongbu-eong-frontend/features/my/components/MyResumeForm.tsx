@@ -14,6 +14,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { createResume, getResume, getResumeParseJob, updateResume, uploadResumeFile } from "../my.api";
 import type { ResumeEntryDto, ResumePayloadDto } from "../my.dto";
 import styles from "./My.module.css";
@@ -165,6 +166,8 @@ export function MyResumeForm({
   const [parseJobMessage, setParseJobMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useBodyScrollLock(Boolean(entryModal));
 
   useEffect(() => {
     if (mode !== "edit" || !resumeId) return;

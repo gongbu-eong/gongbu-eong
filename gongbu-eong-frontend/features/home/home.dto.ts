@@ -26,6 +26,13 @@ export type CurrentUserDto = {
   diagnosisResultId: string | null;
   creditBalance?: number;
   unreadNotificationCount?: number;
+  communityActivityRewardProgress?: {
+    activityCount: number;
+    milestoneCount: number;
+    currentCount: number;
+    remainingCount: number;
+    percent: number;
+  };
 };
 
 export type CurrentUserResponseDto = {

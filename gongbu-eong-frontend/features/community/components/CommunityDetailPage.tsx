@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CSSProperties, FormEvent, useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import {
   createCommunityComment,
   deleteCommunityComment,
@@ -61,6 +62,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   const [selectedReason, setSelectedReason] = useState(REPORT_REASONS[0]);
   const [saving, setSaving] = useState(false);
   const loadedPostId = post?.id;
+  useBodyScrollLock(Boolean(modal));
 
   useEffect(() => {
     getCommunityPost(postId)
@@ -139,6 +141,14 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
           detail: {
             message: "진단권 1장이 추가되었습니다.",
             balanceAfter: response.creditReward.balanceAfter,
+            progress: response.creditReward.progress,
+          },
+        }));
+      } else if (response.creditReward?.progress) {
+        window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+          detail: {
+            balanceAfter: response.creditReward.balanceAfter,
+            progress: response.creditReward.progress,
           },
         }));
       }
@@ -178,6 +188,14 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
           detail: {
             message: "진단권 1장이 추가되었습니다.",
             balanceAfter: response.creditReward.balanceAfter,
+            progress: response.creditReward.progress,
+          },
+        }));
+      } else if (response.creditReward?.progress) {
+        window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+          detail: {
+            balanceAfter: response.creditReward.balanceAfter,
+            progress: response.creditReward.progress,
           },
         }));
       }

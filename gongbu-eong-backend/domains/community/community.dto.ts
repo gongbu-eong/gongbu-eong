@@ -76,6 +76,17 @@ export type CommunityListResponseDto = {
 export type CommunityDetailResponseDto = {
   ok: true;
   post: CommunityPostDetailDto;
+  creditReward?: {
+    granted: boolean;
+    balanceAfter: number;
+    progress?: {
+      activityCount: number;
+      milestoneCount: number;
+      currentCount: number;
+      remainingCount: number;
+      percent: number;
+    };
+  } | null;
 };
 
 export type CommunityActivityResponseDto = {

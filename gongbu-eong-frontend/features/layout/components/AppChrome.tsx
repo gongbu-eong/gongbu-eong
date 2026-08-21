@@ -72,20 +72,34 @@ export function AppHeader({
   const isAuthenticated = Boolean(user);
   const effectiveTicketCount =
     ticketCount ?? user?.creditBalance ?? fetchedUser?.creditBalance ?? 0;
+  const effectiveCommunityActivityRewardProgress =
+    user?.communityActivityRewardProgress ?? fetchedUser?.communityActivityRewardProgress;
   const effectiveUnreadNotificationCount =
     user?.unreadNotificationCount ?? fetchedUser?.unreadNotificationCount ?? 0;
 
   useEffect(() => {
     let active = true;
-    const showPendingReward = (message: string, balanceAfter?: number) => {
+    const showPendingReward = (
+      message: string,
+      balanceAfter?: number,
+      progress?: CurrentUserDto["communityActivityRewardProgress"],
+    ) => {
       window.setTimeout(() => {
         if (!active) return;
-        if (typeof balanceAfter === "number") {
+        if (typeof balanceAfter === "number" || progress) {
           setFetchedUser((current) =>
-            current ? { ...current, creditBalance: balanceAfter } : current,
+            current
+              ? {
+                  ...current,
+                  creditBalance:
+                    typeof balanceAfter === "number" ? balanceAfter : current.creditBalance,
+                  communityActivityRewardProgress:
+                    progress ?? current.communityActivityRewardProgress,
+                }
+              : current,
           );
           window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
-            detail: { balance: balanceAfter },
+            detail: { balance: balanceAfter, progress },
           }));
         }
         setTicketRewardMessage(message);
@@ -96,18 +110,40 @@ export function AppHeader({
     if (pendingReward) {
       window.sessionStorage.removeItem("gongbu_pending_ticket_reward");
       try {
-        const parsed = JSON.parse(pendingReward) as { message?: string; balanceAfter?: number };
-        showPendingReward(parsed.message || "진단권 한장이 추가되었습니다.", parsed.balanceAfter);
+        const parsed = JSON.parse(pendingReward) as {
+          message?: string;
+          balanceAfter?: number;
+          progress?: CurrentUserDto["communityActivityRewardProgress"];
+        };
+        showPendingReward(
+          parsed.message || "진단권 한장이 추가되었습니다.",
+          parsed.balanceAfter,
+          parsed.progress,
+        );
       } catch {
         showPendingReward("진단권 한장이 추가되었습니다.");
       }
     }
 
     const handleReward = (event: Event) => {
-      const detail = (event as CustomEvent<{ message?: string; balanceAfter?: number }>).detail;
-      if (typeof detail?.balanceAfter === "number") {
+      const detail = (event as CustomEvent<{
+        message?: string;
+        balanceAfter?: number;
+        progress?: CurrentUserDto["communityActivityRewardProgress"];
+      }>).detail;
+      if (typeof detail?.balanceAfter === "number" || detail?.progress) {
         setFetchedUser((current) =>
-          current ? { ...current, creditBalance: detail.balanceAfter } : current,
+          current
+            ? {
+                ...current,
+                creditBalance:
+                  typeof detail.balanceAfter === "number"
+                    ? detail.balanceAfter
+                    : current.creditBalance,
+                communityActivityRewardProgress:
+                  detail.progress ?? current.communityActivityRewardProgress,
+              }
+            : current,
         );
       }
       setTicketRewardMessage(detail?.message || "진단권 한장이 추가되었습니다.");
@@ -147,7 +183,11 @@ export function AppHeader({
       </div>
       <div className={styles.headerActions}>
         {showTicketStatus && isAuthenticated ? (
-          <AppTicketStatus ticketCount={effectiveTicketCount} hasTicketAlert={hasTicketAlert} />
+          <AppTicketStatus
+            ticketCount={effectiveTicketCount}
+            hasTicketAlert={hasTicketAlert}
+            communityActivityRewardProgress={effectiveCommunityActivityRewardProgress}
+          />
         ) : null}
         {/*
         {isAuthenticated ? (
@@ -198,21 +238,36 @@ function formatBadgeCount(count: number) {
 export function AppTicketStatus({
   ticketCount = 10,
   hasTicketAlert = true,
+  communityActivityRewardProgress,
 }: {
   ticketCount?: number;
   hasTicketAlert?: boolean;
+  communityActivityRewardProgress?: CurrentUserDto["communityActivityRewardProgress"];
 }) {
   const [eventTicketCount, setEventTicketCount] = useState<number | null>(null);
+  const [eventProgress, setEventProgress] = useState<CurrentUserDto["communityActivityRewardProgress"] | null>(null);
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
   const displayTicketCount = eventTicketCount ?? ticketCount;
+  const progress = eventProgress ?? communityActivityRewardProgress;
+  const progressPercent = Math.max(0, Math.min(100, progress?.percent ?? 0));
+  const currentProgressCount = progress?.currentCount ?? 0;
+  const milestoneCount = progress?.milestoneCount ?? 3;
 
   useEffect(() => {
     const handleBalanceChange = (event: Event) => {
-      const balance = (event as CustomEvent<{ balance?: number; balanceAfter?: number }>).detail?.balance;
-      const balanceAfter = (event as CustomEvent<{ balance?: number; balanceAfter?: number }>).detail?.balanceAfter;
+      const detail = (event as CustomEvent<{
+        balance?: number;
+        balanceAfter?: number;
+        progress?: CurrentUserDto["communityActivityRewardProgress"];
+      }>).detail;
+      const balance = detail?.balance;
+      const balanceAfter = detail?.balanceAfter;
       const nextBalance = typeof balanceAfter === "number" ? balanceAfter : balance;
       if (typeof nextBalance === "number") {
         setEventTicketCount(nextBalance);
+      }
+      if (detail?.progress) {
+        setEventProgress(detail.progress);
       }
     };
 
@@ -225,8 +280,13 @@ export function AppTicketStatus({
   }, []);
 
   return (
-    <div className={styles.headerTicketStatus} aria-label={`보유 진단권 ${displayTicketCount}개`}>
-      <span className={styles.headerTicketProgress} aria-hidden="true" />
+    <div
+      className={styles.headerTicketStatus}
+      aria-label={`보유 진단권 ${displayTicketCount}개, 커뮤니티 활동 보상 ${currentProgressCount}/${milestoneCount}`}
+    >
+      <span className={styles.headerTicketProgress} aria-hidden="true">
+        <span style={{ width: `${progressPercent}%` }} />
+      </span>
       <Image src="/my/header-score.png" alt="" width={23} height={12} className={styles.headerTicketIcon} />
       <span className={styles.headerTicketCount}>{displayTicketCount}</span>
       {hasTicketAlert ? (
@@ -244,7 +304,7 @@ export function AppTicketStatus({
           <b>!</b>
           {isTooltipOpen ? (
             <span className={styles.headerTicketTooltip} role="tooltip">
-              커뮤니티에서 댓글과 글을 작성하면, 진단권이 추가됩니다.
+              커뮤니티 글, 댓글, 답글 3개마다 진단권 1장이 추가됩니다.
             </span>
           ) : null}
         </button>

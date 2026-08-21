@@ -1,5 +1,8 @@
 import { db } from "@/lib/db";
-import { grantWelcomeSignupCredits } from "@/domains/credits/credits.repository";
+import {
+  getCommunityActivityRewardProgress,
+  grantWelcomeSignupCredits,
+} from "@/domains/credits/credits.repository";
 import { generateUniqueCommunityNickname } from "./community-nickname";
 
 type OAuthProvider = "kakao" | "naver";
@@ -413,6 +416,8 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     return null;
   }
 
+  const communityActivityRewardProgress = await getCommunityActivityRewardProgress(user.id);
+
   return {
     id: user.id,
     email: user.email,
@@ -432,6 +437,7 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     diagnosisResultId: user.diagnosis_result_id,
     creditBalance: Number(user.credit_balance || 0),
     unreadNotificationCount: Number(user.unread_notification_count || 0),
+    communityActivityRewardProgress,
   };
 }
 

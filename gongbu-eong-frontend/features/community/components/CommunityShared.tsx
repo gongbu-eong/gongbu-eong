@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { FormEvent } from "react";
 import { useState } from "react";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { COMMUNITY_CATEGORIES, type CommunityAuthorDto, type CommunityCategory, type CommunityPostSummaryDto } from "../community.dto";
 import { toProfileAvatarSrc } from "../avatar";
 import styles from "./Community.module.css";
@@ -234,6 +235,7 @@ export function DeleteConfirmDialog({
 
 export function CommunityQuickActions() {
   const [open, setOpen] = useState(false);
+  useBodyScrollLock(open);
 
   return (
     <>
