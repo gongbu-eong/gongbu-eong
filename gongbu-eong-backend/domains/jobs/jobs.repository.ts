@@ -479,9 +479,7 @@ export async function findCalendarJobPostings(args: {
   userId?: string;
   personalityCode?: string;
   bookmarkedOnly?: boolean;
-  limit?: number;
 }) {
-  const limit = Math.min(Math.max(args.limit || 500, 1), 1000);
   const bookmarkFilter = args.bookmarkedOnly
     ? `AND $1::uuid IS NOT NULL
        AND EXISTS (
@@ -534,7 +532,7 @@ export async function findCalendarJobPostings(args: {
           ON personality_types.id = mappings.personality_type_id
         JOIN public.job_categories categories
           ON categories.id = mappings.job_category_id
-        WHERE personality_types.code = $5
+        WHERE personality_types.code = $4
           AND categories.is_active = TRUE
         ORDER BY
           mappings.fit_weight DESC,
@@ -558,10 +556,17 @@ export async function findCalendarJobPostings(args: {
         ON posting_categories.job_posting_id = postings.id
       LEFT JOIN public.job_categories categories
         ON categories.id = posting_categories.job_category_id
-      WHERE (
-          postings.application_start_at::date BETWEEN $2::date AND $3::date
-          OR postings.application_end_at::date BETWEEN $2::date AND $3::date
-        )
+      WHERE COALESCE(
+          postings.application_start_at,
+          postings.application_end_at,
+          postings.announcement_at,
+          postings.created_at
+        ) < ($3::date + INTERVAL '1 day')
+        AND COALESCE(
+          postings.application_end_at,
+          postings.application_start_at,
+          'infinity'::timestamptz
+        ) >= $2::date
         ${bookmarkFilter}
       GROUP BY postings.id, institutions.name
       ORDER BY
@@ -571,9 +576,8 @@ export async function findCalendarJobPostings(args: {
         ) ASC,
         postings.view_count DESC,
         postings.created_at DESC
-      LIMIT $4
     `,
-    [args.userId || null, args.startDate, args.endDate, limit, args.personalityCode || null],
+    [args.userId || null, args.startDate, args.endDate, args.personalityCode || null],
   );
 
   return {

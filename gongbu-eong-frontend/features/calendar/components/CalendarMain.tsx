@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
   getCalendarJobPostings,
@@ -101,8 +101,12 @@ export function CalendarMain({
   );
   const [filters, setFilters] = useState<CalendarFilters>(DEFAULT_FILTERS);
   const [jobs, setJobs] = useState<JobPostingDto[]>([]);
+  const [monthCache, setMonthCache] = useState<Record<string, JobPostingDto[]>>(
+    {},
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [bookmarkPendingId, setBookmarkPendingId] = useState<string | null>(null);
+  const pendingMonthKeysRef = useRef(new Set<string>());
 
   const bounds = useMemo(() => {
     const current = startOfMonth(new Date());
@@ -110,7 +114,25 @@ export function CalendarMain({
     const min = addMonths(current, -12);
     return { min, max };
   }, []);
-  const range = useMemo(() => getMonthRange(month), [month]);
+  const selectedWeekDays = useMemo(
+    () => buildWeekDays(selectedWeekStart),
+    [selectedWeekStart],
+  );
+  const mineRange = useMemo(() => getYearRange(month), [month]);
+  const selectedRange = useMemo(() => {
+    if (mode === "list") return getWeekRange(selectedWeekStart);
+    return getMonthRange(month);
+  }, [mode, month, selectedWeekStart]);
+  const activeMonthKeys = useMemo(() => {
+    if (mode === "list") {
+      return getMonthKeysForDates(selectedWeekDays);
+    }
+    return [toMonthKey(month)];
+  }, [mode, month, selectedWeekDays]);
+  const preloadMonthKeys = useMemo(
+    () => getPreloadMonthKeys(month, activeMonthKeys),
+    [activeMonthKeys, month],
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -127,14 +149,16 @@ export function CalendarMain({
   }, []);
 
   useEffect(() => {
+    if (scope !== "mine") return;
+
     let ignore = false;
     queueMicrotask(() => {
       if (!ignore) setIsLoading(true);
     });
     getCalendarJobPostings({
-      startDate: range.startDate,
-      endDate: range.endDate,
-      view: scope === "mine" ? "bookmarked" : "all",
+      startDate: mineRange.startDate,
+      endDate: mineRange.endDate,
+      view: "bookmarked",
     })
       .then((response) => {
         if (!ignore) setJobs(response.items);
@@ -149,9 +173,71 @@ export function CalendarMain({
     return () => {
       ignore = true;
     };
-  }, [range.endDate, range.startDate, scope]);
+  }, [mineRange.endDate, mineRange.startDate, scope]);
 
-  const jobEvents = useMemo(() => buildJobEvents(jobs), [jobs]);
+  useEffect(() => {
+    if (scope !== "all") return;
+
+    let ignore = false;
+    const activeCacheReady = activeMonthKeys.every((key) => monthCache[key]);
+    queueMicrotask(() => {
+      if (!ignore) setIsLoading(!activeCacheReady);
+    });
+
+    const missingKeys = preloadMonthKeys.filter(
+      (key) => !monthCache[key] && !pendingMonthKeysRef.current.has(key),
+    );
+    if (missingKeys.length === 0) {
+      return () => {
+        ignore = true;
+      };
+    }
+
+    missingKeys.forEach((key) => pendingMonthKeysRef.current.add(key));
+
+    Promise.all(
+      missingKeys.map(async (key) => {
+        const range = getMonthRangeFromKey(key);
+        const response = await getCalendarJobPostings({
+          startDate: range.startDate,
+          endDate: range.endDate,
+          view: "all",
+        });
+        return { key, items: response.items };
+      }),
+    )
+      .then((results) => {
+        if (ignore) return;
+        setMonthCache((current) => {
+          const next = { ...current };
+          results.forEach(({ key, items }) => {
+            next[key] = items;
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        if (!ignore) setIsLoading(false);
+      })
+      .finally(() => {
+        missingKeys.forEach((key) => pendingMonthKeysRef.current.delete(key));
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [activeMonthKeys, monthCache, preloadMonthKeys, scope]);
+
+  const calendarJobs = useMemo(
+    () => collectCachedJobs(monthCache, activeMonthKeys),
+    [activeMonthKeys, monthCache],
+  );
+  const jobEvents = useMemo(
+    () => buildJobEvents(calendarJobs).filter((event) =>
+      isDateKeyInRange(event.dateKey, selectedRange),
+    ),
+    [calendarJobs, selectedRange],
+  );
   const bookmarkedJobEvents = useMemo(() => buildBookmarkedJobEvents(jobs), [jobs]);
   const monthEvents = useMemo(() => groupEventsByDate(jobEvents), [jobEvents]);
   const monthDays = useMemo(
@@ -167,16 +253,12 @@ export function CalendarMain({
     () => applyEventFilters(selectedDateEvents, filters),
     [filters, selectedDateEvents],
   );
-  const selectedWeekDays = useMemo(
-    () => buildWeekDays(selectedWeekStart),
-    [selectedWeekStart],
-  );
   const filterOptions = useMemo(
     () => ({
-      regions: getAvailableRegions(jobs),
-      employmentTypes: getAvailableEmploymentTypes(jobs),
+      regions: getAvailableRegions(calendarJobs),
+      employmentTypes: getAvailableEmploymentTypes(calendarJobs),
     }),
-    [jobs],
+    [calendarJobs],
   );
 
   const canPrevMonth = month.getTime() > bounds.min.getTime();
@@ -250,6 +332,18 @@ export function CalendarMain({
             : item,
         );
       });
+      setMonthCache((current) =>
+        Object.fromEntries(
+          Object.entries(current).map(([key, items]) => [
+            key,
+            items.map((item) =>
+              item.id === job.id
+                ? { ...item, isBookmarked: response.isBookmarked }
+                : item,
+            ),
+          ]),
+        ),
+      );
     } catch {
       window.alert("찜 상태를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
@@ -762,6 +856,71 @@ function getMonthRange(month: Date) {
     startDate: toDateKey(start),
     endDate: toDateKey(end),
   };
+}
+
+function getMonthRangeFromKey(monthKey: string) {
+  const [year, month] = monthKey.split("-").map(Number);
+  return getMonthRange(new Date(year, month - 1, 1));
+}
+
+function getWeekRange(weekStart: Date) {
+  const start = stripTime(weekStart);
+  const end = addDays(start, 6);
+  return {
+    startDate: toDateKey(start),
+    endDate: toDateKey(end),
+  };
+}
+
+function getYearRange(date: Date) {
+  return {
+    startDate: toDateKey(new Date(date.getFullYear(), 0, 1)),
+    endDate: toDateKey(new Date(date.getFullYear(), 11, 31)),
+  };
+}
+
+function getPreloadMonthKeys(month: Date, activeMonthKeys: string[]) {
+  return [
+    ...new Set([
+      ...activeMonthKeys,
+      toMonthKey(addMonths(month, -1)),
+      toMonthKey(month),
+      toMonthKey(addMonths(month, 1)),
+    ]),
+  ];
+}
+
+function getMonthKeysForDates(dates: Date[]) {
+  return [...new Set(dates.map(toMonthKey))];
+}
+
+function toMonthKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
+function collectCachedJobs(
+  monthCache: Record<string, JobPostingDto[]>,
+  monthKeys: string[],
+) {
+  const seen = new Set<string>();
+  const jobs: JobPostingDto[] = [];
+  monthKeys.forEach((key) => {
+    (monthCache[key] || []).forEach((job) => {
+      if (seen.has(job.id)) return;
+      seen.add(job.id);
+      jobs.push(job);
+    });
+  });
+  return jobs;
+}
+
+function isDateKeyInRange(
+  dateKey: string,
+  range: { startDate: string; endDate: string },
+) {
+  return dateKey >= range.startDate && dateKey <= range.endDate;
 }
 
 function startOfMonth(date: Date) {

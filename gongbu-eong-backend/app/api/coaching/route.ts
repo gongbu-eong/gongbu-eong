@@ -12,6 +12,7 @@ import { jsonWithCors } from "@/lib/cors";
 import type { CoachingQuestionInput } from "@/domains/coaching/coaching.dto";
 
 export const runtime = "nodejs";
+const MAX_QUESTION_TEXT_LENGTH = 200;
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,6 +31,9 @@ export async function POST(request: NextRequest) {
     if (inputType === "file" && !file) return jsonWithCors(request, { ok: false, message: "자소서 파일을 첨부해 주세요." }, { status: 400 });
     if (!questions.length || questions.length > 5 || questions.some((item) => !item.question || !item.characterLimit || item.characterLimit < 100 || item.characterLimit > 2000)) {
       return jsonWithCors(request, { ok: false, message: "자소서 문항과 100자 이상 2000자 이하의 글자 수 제한을 입력해 주세요." }, { status: 400 });
+    }
+    if (questions.some((item) => item.question.length > MAX_QUESTION_TEXT_LENGTH)) {
+      return jsonWithCors(request, { ok: false, message: `자소서 문항은 ${MAX_QUESTION_TEXT_LENGTH}자까지 입력할 수 있습니다.` }, { status: 400 });
     }
     if (file && !allowedCoachingExtensions.has(file.name.split(".").pop()?.toLowerCase() || "")) return jsonWithCors(request, { ok: false, message: "HWP, HWPX, PDF, DOC, DOCX 파일만 첨부할 수 있습니다." }, { status: 400 });
     const fileValidationMessage = file ? validateResumeFile(file) : null;
@@ -75,7 +79,7 @@ function parseQuestionInputs(value: FormDataEntryValue | null): CoachingQuestion
       .map((item) => {
         if (!item || typeof item !== "object") return null;
         const record = item as Record<string, unknown>;
-        const question = typeof record.question === "string" ? record.question.trim().slice(0, 500) : "";
+        const question = typeof record.question === "string" ? record.question.trim() : "";
         const rawLimit = Number(record.characterLimit);
         const characterLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(2000, Math.round(rawLimit)) : null;
         return question || characterLimit ? { question, characterLimit } : null;

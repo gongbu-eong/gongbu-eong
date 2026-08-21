@@ -64,13 +64,11 @@ export function AnalyticsTracker() {
       current,
     });
 
-    if (explicitAttribution || storedFirst || storedLast) {
-      syncAttribution({
-        first: storedFirst,
-        last: storedLast,
-        current: explicitAttribution,
-      });
-    }
+    syncAttribution({
+      first: storedFirst,
+      last: storedLast,
+      current,
+    });
   }, [pathname, searchParams]);
 
   return null;

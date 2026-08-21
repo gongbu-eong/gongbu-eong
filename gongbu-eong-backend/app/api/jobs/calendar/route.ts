@@ -7,8 +7,12 @@ import { jsonWithCors } from "@/lib/cors";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  const startDate = request.nextUrl.searchParams.get("startDate")?.trim();
-  const endDate = request.nextUrl.searchParams.get("endDate")?.trim();
+  const startDate =
+    request.nextUrl.searchParams.get("startDate")?.trim() ||
+    request.nextUrl.searchParams.get("from")?.trim();
+  const endDate =
+    request.nextUrl.searchParams.get("endDate")?.trim() ||
+    request.nextUrl.searchParams.get("to")?.trim();
   const requestedView = request.nextUrl.searchParams.get("view");
   const view = requestedView === "bookmarked" ? "bookmarked" : "all";
 

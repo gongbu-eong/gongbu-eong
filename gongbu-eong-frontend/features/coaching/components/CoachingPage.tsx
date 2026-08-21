@@ -16,6 +16,7 @@ import styles from "./CoachingPage.module.css";
 type QuestionRow = { id: string; question: string; characterLimit: string };
 type ConnectedJob = CoachingJob & { duty: string };
 const MAX_QUESTION_COUNT = 5;
+const MAX_QUESTION_TEXT_LENGTH = 200;
 const MIN_CHARACTER_LIMIT = 100;
 const MAX_CHARACTER_LIMIT = 2000;
 
@@ -113,6 +114,7 @@ export function CoachingPage() {
     const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || null }));
     if (!hasDiagnosis || !selectedDiagnosisId) return setError("강점·성향 진단을 먼저 완료해 주세요.");
     if (normalizedQuestions.some((item) => !item.question || !item.characterLimit)) return setError("자소서 문항과 글자 수 제한을 입력해 주세요.");
+    if (normalizedQuestions.some((item) => item.question.length > MAX_QUESTION_TEXT_LENGTH)) return setError(`자소서 문항은 ${MAX_QUESTION_TEXT_LENGTH}자까지 입력할 수 있습니다.`);
     if (normalizedQuestions.some((item) => item.characterLimit! < MIN_CHARACTER_LIMIT || item.characterLimit! > MAX_CHARACTER_LIMIT)) return setError("글자 수 제한은 100자 이상 2000자 이하로 입력해 주세요.");
     if (inputType === "text" && !text.trim()) return setError("자소서를 입력해 주세요.");
     if (inputType === "file" && !file) return setError("자소서 파일을 첨부해 주세요.");
@@ -173,7 +175,7 @@ export function CoachingPage() {
       <section className={styles.questionSection}>
         <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={addQuestion} disabled={questions.length >= MAX_QUESTION_COUNT}>+ 추가</button></div>
         {questions.map((item, index) => <div className={styles.questionRow} key={item.id}>
-          <textarea aria-label={`자소서 문항 ${index + 1}`} value={item.question} onChange={(event) => updateQuestion(setQuestions, item.id, "question", event.target.value)} placeholder="자소서 문항을 입력하세요." />
+          <textarea aria-label={`자소서 문항 ${index + 1}`} value={item.question} maxLength={MAX_QUESTION_TEXT_LENGTH} onChange={(event) => updateQuestion(setQuestions, item.id, "question", normalizeQuestionText(event.target.value))} placeholder="자소서 문항을 입력하세요." />
           <div className={styles.questionLimitRow}>
             <label htmlFor={`question-limit-${item.id}`}>글자 수 제한</label>
             <input id={`question-limit-${item.id}`} value={item.characterLimit} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", normalizeCharacterLimit(event.target.value))} inputMode="numeric" placeholder="최대 2000자" />
@@ -261,6 +263,10 @@ function createQuestionRowId() {
 
 function updateQuestion(setter: (updater: (items: QuestionRow[]) => QuestionRow[]) => void, id: string, key: "question" | "characterLimit", value: string) {
   setter((items) => items.map((item) => item.id === id ? { ...item, [key]: value } : item));
+}
+
+function normalizeQuestionText(value: string) {
+  return value.slice(0, MAX_QUESTION_TEXT_LENGTH);
 }
 
 function normalizeCharacterLimit(value: string) {

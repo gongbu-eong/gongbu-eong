@@ -1317,6 +1317,11 @@ CREATE INDEX IF NOT EXISTS idx_job_postings_active_source_external_id
   WHERE is_active = TRUE;
 CREATE INDEX IF NOT EXISTS idx_job_postings_calendar_start_end
   ON public.job_postings(application_start_at, application_end_at);
+CREATE INDEX IF NOT EXISTS idx_job_postings_calendar_range
+  ON public.job_postings(
+    COALESCE(application_start_at, application_end_at, announcement_at, created_at),
+    COALESCE(application_end_at, application_start_at, 'infinity'::timestamptz)
+  );
 CREATE INDEX IF NOT EXISTS idx_job_view_events_posting_viewed
   ON public.job_posting_view_events(job_posting_id, viewed_at DESC);
 CREATE INDEX IF NOT EXISTS idx_job_view_events_viewed_brin

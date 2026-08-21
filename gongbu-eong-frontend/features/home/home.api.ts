@@ -68,8 +68,8 @@ export function getCalendarJobPostings(args: {
   view?: "all" | "bookmarked";
 }) {
   const searchParams = new URLSearchParams();
-  searchParams.set("startDate", args.startDate);
-  searchParams.set("endDate", args.endDate);
+  searchParams.set("from", args.startDate);
+  searchParams.set("to", args.endDate);
   if (args.view === "bookmarked") searchParams.set("view", "bookmarked");
 
   return apiClient<JobPostingCalendarResponseDto>(
