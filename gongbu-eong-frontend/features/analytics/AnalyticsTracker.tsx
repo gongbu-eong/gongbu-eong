@@ -55,12 +55,12 @@ export function AnalyticsTracker() {
       },
     });
 
-    const storedFirst = explicitAttribution && !first ? explicitAttribution : first;
-    const storedLast = explicitAttribution || last;
+    const storedFirst = first || current;
+    const storedLast = current || last;
 
     saveStoredAttribution({
-      first: explicitAttribution && !first ? explicitAttribution : null,
-      last: explicitAttribution,
+      first: first ? null : current,
+      last: current,
       current,
     });
 
