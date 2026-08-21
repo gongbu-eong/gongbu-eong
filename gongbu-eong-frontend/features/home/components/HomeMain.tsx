@@ -332,7 +332,7 @@ const ignoreClickAfterDrag = (
       <section className={styles.mobileFrame} aria-label="공부엉이 메인">
         <header className={styles.header}>
           <Link href="/" className={styles.logoLink} aria-label="공부엉이 홈">
-            <Image src="/tickets/main-logo.png" alt="공부엉이" width={88} height={39} priority />
+            <Image src="/tickets/main-logo.png" alt="공부엉이" width={88} height={39} priority unoptimized/>
           </Link>
           <div className={styles.headerActions}>
             {user ? (
