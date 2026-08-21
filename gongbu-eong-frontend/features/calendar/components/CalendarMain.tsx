@@ -178,54 +178,40 @@ export function CalendarMain({
   useEffect(() => {
     if (scope !== "all") return;
 
-    let ignore = false;
     const activeCacheReady = activeMonthKeys.every((key) => monthCache[key]);
     queueMicrotask(() => {
-      if (!ignore) setIsLoading(!activeCacheReady);
+      setIsLoading(!activeCacheReady);
     });
 
     const missingKeys = preloadMonthKeys.filter(
       (key) => !monthCache[key] && !pendingMonthKeysRef.current.has(key),
     );
-    if (missingKeys.length === 0) {
-      return () => {
-        ignore = true;
-      };
-    }
+    if (missingKeys.length === 0) return;
 
     missingKeys.forEach((key) => pendingMonthKeysRef.current.add(key));
 
-    Promise.all(
-      missingKeys.map(async (key) => {
-        const range = getMonthRangeFromKey(key);
-        const response = await getCalendarJobPostings({
-          startDate: range.startDate,
-          endDate: range.endDate,
-          view: "all",
-        });
-        return { key, items: response.items };
-      }),
-    )
-      .then((results) => {
-        if (ignore) return;
-        setMonthCache((current) => {
-          const next = { ...current };
-          results.forEach(({ key, items }) => {
-            next[key] = items;
-          });
-          return next;
-        });
+    missingKeys.forEach((key) => {
+      const isActiveMonth = activeMonthKeys.includes(key);
+      const range = getMonthRangeFromKey(key);
+      getCalendarJobPostings({
+        startDate: range.startDate,
+        endDate: range.endDate,
+        view: "all",
       })
-      .catch(() => {
-        if (!ignore) setIsLoading(false);
-      })
-      .finally(() => {
-        missingKeys.forEach((key) => pendingMonthKeysRef.current.delete(key));
-      });
-
-    return () => {
-      ignore = true;
-    };
+        .then((response) => {
+          setMonthCache((current) =>
+            current[key] ? current : { ...current, [key]: response.items },
+          );
+        })
+        .catch(() => {
+          if (!isActiveMonth) return;
+          setMonthCache((current) => (current[key] ? current : { ...current, [key]: [] }));
+          setIsLoading(false);
+        })
+        .finally(() => {
+          pendingMonthKeysRef.current.delete(key);
+        });
+    });
   }, [activeMonthKeys, monthCache, preloadMonthKeys, scope]);
 
   const calendarJobs = useMemo(
