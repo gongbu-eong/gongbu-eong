@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   getDiagnosisResultHistory,
@@ -123,14 +124,25 @@ export function MyDiagnosisResults() {
         <h1 className={styles.title}>강점·성향 진단 결과</h1>
 
         {!loading && results.length === 0 ? (
-          <div className={styles.emptyBox}>
-            <div>
-              <strong>진단 결과가 없습니다.</strong>
-              <div style={{ marginTop: "0.875rem" }}>
-                <Link href="/ai-tools/diagnosis">진단하러 가기</Link>
-              </div>
+          <section className={styles.diagnosisEmptyState}>
+            <div className={styles.diagnosisEmptyCard}>
+              <Image
+                src="/my/diagnosis-empty-owl.png"
+                alt=""
+                width={125}
+                height={134}
+                className={styles.diagnosisEmptyImage}
+              />
+              <strong>
+                현재 검사한 결과가 없습니다.
+                <br />
+                검사를 진행하세요.
+              </strong>
             </div>
-          </div>
+            <Link href="/ai-tools/diagnosis" className={styles.diagnosisEmptyButton}>
+              강점·성향 진단 검사하러 가기 →
+            </Link>
+          </section>
         ) : null}
 
         <div className={styles.resumeList}>

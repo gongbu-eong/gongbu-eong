@@ -239,6 +239,55 @@
   font-weight: 900;
 }
 
+.diagnosisEmptyState {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.diagnosisEmptyCard {
+  display: flex;
+  min-height: 14.875rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  background: #e8f1ff;
+  text-align: center;
+}
+
+.diagnosisEmptyImage {
+  display: block;
+  width: 7.8125rem;
+  height: 8.375rem;
+  object-fit: cover;
+}
+
+.diagnosisEmptyCard strong {
+  display: block;
+  margin-top: 0.875rem;
+  color: #5a6580;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
+.diagnosisEmptyButton {
+  display: flex;
+  width: 100%;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e4e8ef;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #5a6580;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+}
+
 .resumeList {
   display: grid;
   gap: 0.625rem;

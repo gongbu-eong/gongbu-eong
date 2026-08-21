@@ -575,7 +575,7 @@ export function DiagnosisResultDetail() {
                 </article>
               ))}
             </div>
-            <div className={styles.tipNotice}><span aria-hidden="true">💬</span><p><strong>이 팁은 {subjectLabel} 유형에 대한 조언이에요.</strong><br />지원할 회사·직무별 맞춤 전략은 자소서 코칭에서 내 유형과 함께 분석해드려요.</p></div>
+            <div className={styles.tipNotice}><span className={styles.tipNoticeIcon} aria-hidden="true" /><p><strong>이 팁은 {subjectLabel} 유형에 대한 조언이에요.</strong><br />지원할 회사·직무별 맞춤 전략은 자소서 코칭에서 내 유형과 함께 분석해드려요.</p></div>
             {isPublicView ? (
               <Link href="/ai-tools/diagnosis" className={styles.publicDiagnosisButton}>나의 강점·성향 유형 검사하기&nbsp;&nbsp;&gt;</Link>
             ) : (
@@ -626,7 +626,7 @@ export function DiagnosisResultDetail() {
         <div className={styles.historyOverlay} role="dialog" aria-modal="true" aria-label="이전 진단 결과">
           <button className={styles.historyBackdrop} type="button" onClick={() => setHistoryOpen(false)} aria-label="닫기" />
           <section className={styles.historySheet}>
-            <header><h2>강점·성향 진단 결과</h2><button type="button" onClick={() => setHistoryOpen(false)} aria-label="닫기">×</button></header>
+            <header><h2>이전 결과</h2><button type="button" onClick={() => setHistoryOpen(false)} aria-label="닫기">×</button></header>
             <div className={styles.historyList}>
               {history.map((item) => (
                 <button type="button" key={item.resultId} className={item.resultId === result.resultId ? styles.selectedHistory : ""} onClick={async () => {
