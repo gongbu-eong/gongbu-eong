@@ -3097,8 +3097,12 @@
 }
 
 @media (max-width: 37.5rem) {
+  .quickActionWrap {
+    bottom: calc(12.75rem + env(safe-area-inset-bottom) + (100vh - 100dvh));
+  }
+
   .quickActionWrap.quickActionOpen {
-    bottom: calc(16.5rem + env(safe-area-inset-bottom) + (100vh - 100dvh));
+    bottom: calc(19rem + env(safe-area-inset-bottom) + (100vh - 100dvh));
   }
 }
 
