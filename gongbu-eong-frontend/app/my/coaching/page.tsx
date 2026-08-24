@@ -10,12 +10,12 @@ import styles from "./CoachingHistoryPage.module.css";
 
 type HistoryFilter = "all" | "linked" | "general";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
 export default function CoachingHistoryPage() {
   const [items, setItems] = useState<CoachingHistoryItem[]>([]);
   const [filter, setFilter] = useState<HistoryFilter>("all");
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let active = true;
@@ -36,9 +36,11 @@ export default function CoachingHistoryPage() {
   const displayItems = useMemo(() => {
     if (filter === "linked") return linkedItems;
     if (filter === "general") return generalItems;
-    return [...linkedItems, ...generalItems];
-  }, [filter, generalItems, linkedItems]);
-  const visibleItems = displayItems.slice(0, visibleCount);
+    return sortRecent(items);
+  }, [filter, generalItems, items, linkedItems]);
+  const pageCount = Math.max(1, Math.ceil(displayItems.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+  const visibleItems = displayItems.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className={styles.page}>
@@ -54,13 +56,14 @@ export default function CoachingHistoryPage() {
           <Image src="/coaching/history-hero.png" alt="" width={172} height={142} className={styles.heroImage} priority />
         </section>
 
+        {/* 면접 준비 목록은 추후 재노출 예정입니다.
         {linkedItems.length ? (
           <section className={styles.interviewList} aria-label="면접 준비 공고">
             {linkedItems.slice(0, 2).map((item) => (
               <HistoryJobCard item={item} variant="interview" key={`interview-${item.id}`} />
             ))}
           </section>
-        ) : null}
+        ) : null} */}
 
         <section className={styles.historySection}>
           <div className={styles.sectionTitle}>
@@ -93,10 +96,26 @@ export default function CoachingHistoryPage() {
             </div>
           )}
 
-          {visibleCount < displayItems.length ? (
-            <button type="button" className={styles.moreButton} onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
-              더 보기
-            </button>
+          {displayItems.length > PAGE_SIZE ? (
+            <nav className={styles.pagination} aria-label="코칭 목록 페이지">
+              <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} aria-label="이전 페이지">
+                &lt;
+              </button>
+              {makePageNumbers(currentPage, pageCount).map((pageNumber) => (
+                <button
+                  type="button"
+                  key={pageNumber}
+                  className={pageNumber === currentPage ? styles.activePage : undefined}
+                  onClick={() => setPage(pageNumber)}
+                  aria-current={pageNumber === currentPage ? "page" : undefined}
+                >
+                  {pageNumber}
+                </button>
+              ))}
+              <button type="button" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={currentPage === pageCount} aria-label="다음 페이지">
+                &gt;
+              </button>
+            </nav>
           ) : null}
         </section>
       </main>
@@ -106,7 +125,7 @@ export default function CoachingHistoryPage() {
 
   function changeFilter(nextFilter: HistoryFilter) {
     setFilter(nextFilter);
-    setVisibleCount(PAGE_SIZE);
+    setPage(1);
   }
 }
 
@@ -135,6 +154,12 @@ function HistoryJobCard({ item, variant }: { item: CoachingHistoryItem; variant:
 
 function sortRecent(items: CoachingHistoryItem[]) {
   return [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+function makePageNumbers(currentPage: number, pageCount: number) {
+  if (pageCount <= 10) return Array.from({ length: pageCount }, (_, index) => index + 1);
+  const start = Math.min(Math.max(1, currentPage - 4), pageCount - 9);
+  return Array.from({ length: 10 }, (_, index) => start + index);
 }
 
 function makeJobTitle(institutionName: string, title: string) {

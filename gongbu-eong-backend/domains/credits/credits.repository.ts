@@ -111,11 +111,11 @@ export async function grantCommunityActivityMilestoneReward(
       return { granted: false, balanceAfter: currentBalance, progress };
     }
 
+    const isMilestoneBoundary =
+      activityCount > 0 && activityCount % progress.milestoneCount === 0;
     const achievedMilestone = Math.floor(activityCount / progress.milestoneCount);
-    const rewardedMilestoneCount = await getCommunityActivityRewardedMilestoneCount(userId, client);
-    const nextRewardMilestone = rewardedMilestoneCount + 1;
 
-    if (achievedMilestone < nextRewardMilestone) {
+    if (!isMilestoneBoundary) {
       await client.query("COMMIT");
       return { granted: false, balanceAfter: currentBalance, progress };
     }
@@ -125,11 +125,11 @@ export async function grantCommunityActivityMilestoneReward(
       amount: policy.amount,
       transactionType: "event_grant",
       sourceType: CREDIT_REWARD_POLICY.communityActivityMilestone.sourceType,
-      sourceId: `activity:${nextRewardMilestone}`,
+      sourceId: `activity:${achievedMilestone}`,
       reason: `${policy.reason} (${activityCount}번째 활동)`,
       metadata: {
         source,
-        milestone: nextRewardMilestone,
+        milestone: achievedMilestone,
         activityCount,
         milestoneCount: progress.milestoneCount,
       },
@@ -325,25 +325,6 @@ async function getCommunityActivityCount(userId: string, client: DbClient) {
       ) AS count
     `,
     [userId],
-  );
-
-  return Number(result.rows[0]?.count || 0);
-}
-
-async function getCommunityActivityRewardedMilestoneCount(
-  userId: string,
-  client: DbClient,
-) {
-  const result = await client.query<{ count: string }>(
-    `
-      SELECT COUNT(*) AS count
-      FROM public.credit_transactions
-      WHERE user_id = $1
-        AND transaction_type = 'event_grant'::public.credit_transaction_type
-        AND source_type = $2::varchar(80)
-        AND amount > 0
-    `,
-    [userId, CREDIT_REWARD_POLICY.communityActivityMilestone.sourceType],
   );
 
   return Number(result.rows[0]?.count || 0);
