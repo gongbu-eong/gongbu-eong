@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { CommunityDetailPage } from "@/features/community/components/CommunityDetailPage";
 import {
   COMMUNITY_SHARE_DESCRIPTION,
@@ -16,8 +17,14 @@ export async function generateMetadata({
   params: Promise<{ postId: string }>;
 }): Promise<Metadata> {
   const { postId } = await params;
-  const url = getCommunityPostShareUrl(postId);
-  const imageUrl = getCommunityShareImageUrl();
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
+  const protocol =
+    requestHeaders.get("x-forwarded-proto") ||
+    (host.includes("localhost") ? "http" : "https");
+  const requestOrigin = host ? `${protocol}://${host}` : undefined;
+  const url = getCommunityPostShareUrl(postId, requestOrigin);
+  const imageUrl = getCommunityShareImageUrl(requestOrigin);
 
   return {
     title: COMMUNITY_SHARE_TITLE,

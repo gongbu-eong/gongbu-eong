@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
+import { loadKakaoSdk } from "@/shared/kakao-share";
 import {
   createCommunityComment,
   deleteCommunityComment,
@@ -21,7 +22,10 @@ import {
 } from "../community.api";
 import {
   COMMUNITY_SHARE_DESCRIPTION,
+  COMMUNITY_SHARE_IMAGE_HEIGHT,
+  COMMUNITY_SHARE_IMAGE_WIDTH,
   COMMUNITY_SHARE_TITLE,
+  getCommunityPostShareUrl,
   getCommunityShareImageUrl,
 } from "../community-share";
 import type { CommunityCommentDto, CommunityPostDetailDto, CommunityPostSummaryDto } from "../community.dto";
@@ -316,7 +320,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
 
   const shareWithKakao = async () => {
     if (!post) return;
-    const url = window.location.href;
+    const url = getCommunityPostShareUrl(post.id, window.location.origin);
     const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
 
     if (!kakaoKey) {
@@ -327,9 +331,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     }
 
     try {
-      await loadKakaoSdk();
-      const kakao = window.Kakao;
-      if (!kakao) throw new Error("카카오 공유를 준비하지 못했습니다.");
+      const kakao = await loadKakaoSdk();
       if (!kakao.isInitialized()) kakao.init(kakaoKey);
       if (!kakao.Share?.sendDefault) throw new Error("카카오 공유를 준비하지 못했습니다.");
       kakao.Share.sendDefault({
@@ -338,6 +340,8 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
           title: COMMUNITY_SHARE_TITLE,
           description: COMMUNITY_SHARE_DESCRIPTION,
           imageUrl: getCommunityShareImageUrl(window.location.origin),
+          imageWidth: COMMUNITY_SHARE_IMAGE_WIDTH,
+          imageHeight: COMMUNITY_SHARE_IMAGE_HEIGHT,
           link: { mobileWebUrl: url, webUrl: url },
         },
         buttons: [{ title: "글 보러가기", link: { mobileWebUrl: url, webUrl: url } }],
@@ -551,14 +555,14 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
               <h2>공유하기</h2>
               <div className={styles.shareActions}>
                 <button type="button" onClick={() => void shareWithKakao()}>
-                  <span className={styles.shareIconCircle}>
+                  <span className={`${styles.shareIconCircle} ${styles.kakaoShareIconCircle}`}>
                     <Image src="/community/kakao.png" alt="" width={42} height={42} />
                   </span>
                   카카오톡
                 </button>
                 <button type="button" onClick={() => void copyShareLink()}>
-                  <span className={styles.shareIconCircle}>
-                    <Image src="/community/link.svg" alt="" width={32} height={32} />
+                  <span className={`${styles.shareIconCircle} ${styles.linkShareIconCircle}`}>
+                    <Image src="/community/link.svg" alt="" width={32} height={32} unoptimized />
                   </span>
                   링크
                 </button>
@@ -593,41 +597,6 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       ) : null}
     </div>
   );
-}
-
-declare global {
-  interface Window {
-    Kakao?: {
-      isInitialized: () => boolean;
-      init: (key: string) => void;
-      Share?: {
-        sendDefault: (options: Record<string, unknown>) => void;
-        sendScrap?: (options: Record<string, unknown>) => void;
-      };
-    };
-  }
-}
-
-function loadKakaoSdk() {
-  return new Promise<void>((resolve, reject) => {
-    if (window.Kakao) {
-      resolve();
-      return;
-    }
-    const existing = document.querySelector<HTMLScriptElement>("script[data-kakao-sdk]");
-    if (existing) {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("카카오 SDK를 불러오지 못했습니다.")), { once: true });
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js";
-    script.async = true;
-    script.dataset.kakaoSdk = "true";
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("카카오 SDK를 불러오지 못했습니다."));
-    document.head.appendChild(script);
-  });
 }
 
 function CommunityComment({

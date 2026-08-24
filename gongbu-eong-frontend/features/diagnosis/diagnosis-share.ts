@@ -33,6 +33,10 @@ export function getDiagnosisResultShareUrl(resultId?: string, origin = getPublic
   return url.toString();
 }
 
+export function getDiagnosisIntroShareUrl(origin = getPublicBaseUrl()) {
+  return new URL("/ai-tools/diagnosis", getPublicBaseUrl(origin)).toString();
+}
+
 function toAbsoluteUrl(value: string, origin: string) {
   try {
     return new URL(value, origin).toString();

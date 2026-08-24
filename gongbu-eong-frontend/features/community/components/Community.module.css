@@ -1477,6 +1477,14 @@
   background: #f7f8fa;
 }
 
+.kakaoShareIconCircle {
+  background: #ffdc00;
+}
+
+.linkShareIconCircle {
+  background: #9aa4b8;
+}
+
 .sheetCancel,
 .sheetSubmit {
   height: 3.25rem;

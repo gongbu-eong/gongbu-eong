@@ -13,11 +13,20 @@ import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import {
+  DIAGNOSIS_SHARE_DESCRIPTION,
+  DIAGNOSIS_SHARE_IMAGE_HEIGHT,
+  DIAGNOSIS_SHARE_IMAGE_WIDTH,
+  DIAGNOSIS_SHARE_TITLE,
+  getDiagnosisIntroShareUrl,
+  getDiagnosisShareImageUrl,
+} from "../diagnosis-share";
+import {
   DiagnosisAnswerRequestDto,
   DiagnosisQuestionDto,
   DiagnosisResultResponseDto,
 } from "../diagnosis.dto";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
+import { loadKakaoSdk } from "@/shared/kakao-share";
 import styles from "./DiagnosisFlow.module.css";
 
 type FlowState =
@@ -451,6 +460,59 @@ function DiagnosisIntro({
       className: styles.introTypeFlexible,
     },
   ];
+  const shareDiagnosisIntro = async () => {
+    const publicOrigin = window.location.origin;
+    const shareUrl = getDiagnosisIntroShareUrl(publicOrigin);
+    const shareImageUrl = getDiagnosisShareImageUrl(publicOrigin);
+    const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY?.trim();
+
+    try {
+      if (kakaoKey) {
+        const kakao = await loadKakaoSdk();
+        if (!kakao.isInitialized()) kakao.init(kakaoKey);
+        if (kakao.Share?.sendDefault) {
+          kakao.Share.sendDefault({
+            objectType: "feed",
+            content: {
+              title: DIAGNOSIS_SHARE_TITLE,
+              description: DIAGNOSIS_SHARE_DESCRIPTION,
+              imageUrl: shareImageUrl,
+              imageWidth: DIAGNOSIS_SHARE_IMAGE_WIDTH,
+              imageHeight: DIAGNOSIS_SHARE_IMAGE_HEIGHT,
+              link: {
+                mobileWebUrl: shareUrl,
+                webUrl: shareUrl,
+              },
+            },
+            buttonTitle: "테스트 하러가기",
+            buttons: [
+              {
+                title: "테스트 하러가기",
+                link: {
+                  mobileWebUrl: shareUrl,
+                  webUrl: shareUrl,
+                },
+              },
+            ],
+          });
+          return;
+        }
+      }
+
+      if (navigator.share) {
+        await navigator.share({
+          title: DIAGNOSIS_SHARE_TITLE,
+          text: DIAGNOSIS_SHARE_DESCRIPTION,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard?.writeText(shareUrl);
+    } catch {
+      await navigator.clipboard?.writeText(shareUrl);
+    }
+  };
 
   return (
     <div className={isEmbedded ? styles.embeddedIntro : styles.page}>
@@ -542,12 +604,7 @@ function DiagnosisIntro({
         <button
           className={styles.shareButton}
           type="button"
-          onClick={() => {
-            navigator.share?.({
-              title: "공부엉이 강점·성향 진단",
-              url: window.location.href,
-            });
-          }}
+          onClick={() => void shareDiagnosisIntro()}
           aria-label="테스트 공유하기"
         >
           <span aria-hidden="true" className={styles.shareIcon}>
