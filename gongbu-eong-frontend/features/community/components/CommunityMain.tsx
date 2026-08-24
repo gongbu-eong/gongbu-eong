@@ -41,6 +41,7 @@ export function CommunityMain({
       q: query,
       category: selectedCategory,
       sort,
+      popularPeriod,
       limit: PAGE_SIZE,
       offset: (currentPage - 1) * PAGE_SIZE,
     })
@@ -55,7 +56,7 @@ export function CommunityMain({
     return () => {
       active = false;
     };
-  }, [currentPage, query, selectedCategory, sort]);
+  }, [currentPage, query, popularPeriod, selectedCategory, sort]);
 
   const searchHref = useMemo(() => {
     const params = new URLSearchParams();

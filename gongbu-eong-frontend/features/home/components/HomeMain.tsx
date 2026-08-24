@@ -10,7 +10,7 @@ import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
 import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAlert";
 import { getCommunityPosts } from "@/features/community/community.api";
 import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
-import { PostItem } from "@/features/community/components/CommunityShared";
+import { formatClockTime, formatNumber } from "@/features/community/components/CommunityShared";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "../home.api";
 import type {
   CurrentUserDto,
@@ -545,7 +545,7 @@ const ignoreClickAfterDrag = (
           <SectionHeader title="커뮤니티" href={user ? "/community" : "/login"} />
           <div className={styles.listGroup}>
             {communityPreview.map((post) => (
-              <PostItem
+              <HomeCommunityCard
                 key={post.id}
                 post={post}
                 href={user ? `/community/${post.id}` : "/login"}
@@ -582,6 +582,33 @@ const ignoreClickAfterDrag = (
         ) : null}
       </section>
     </main>
+  );
+}
+
+function HomeCommunityCard({
+  post,
+  href,
+}: {
+  post: CommunityPostSummaryDto;
+  href: string;
+}) {
+  return (
+    <Link href={href} className={styles.communityItem}>
+      <span className={styles.communityCategory}>{post.category}</span>
+      <strong>{post.title}</strong>
+      <span className={styles.communityAuthor}>
+        <span>{post.author.nickname}</span>
+        {post.author.diagnosisTypeName ? (
+          <b className={styles.communityType}>{post.author.diagnosisTypeName}</b>
+        ) : null}
+      </span>
+      <span className={styles.communityMeta}>
+        <span>조회수 : {formatNumber(post.viewCount)}</span>
+        <span>추천수 : {formatNumber(post.recommendCount)}</span>
+        <span>댓글 : {formatNumber(post.commentCount)}</span>
+        <time>{formatClockTime(post.createdAt)}</time>
+      </span>
+    </Link>
   );
 }
 

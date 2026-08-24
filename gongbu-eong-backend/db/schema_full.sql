@@ -1402,6 +1402,9 @@ CREATE INDEX IF NOT EXISTS idx_comments_post_created ON public.community_comment
 CREATE INDEX IF NOT EXISTS community_comments_active_post_idx
   ON public.community_comments(post_id, created_at)
   WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS community_comments_active_post_parent_user_idx
+  ON public.community_comments(post_id, parent_comment_id, user_id)
+  WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS community_comments_parent_idx
   ON public.community_comments(parent_comment_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS community_reactions_user_idx

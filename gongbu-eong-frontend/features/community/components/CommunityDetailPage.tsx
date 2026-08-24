@@ -71,12 +71,18 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   const [boardPage, setBoardPage] = useState(1);
   const [boardSort, setBoardSort] = useState<"latest" | "popular">("latest");
   const [toast, setToast] = useState("");
+  const [toastTone, setToastTone] = useState<"default" | "scrap">("default");
   const [modal, setModal] = useState<ModalState>(null);
   const [selectedReason, setSelectedReason] = useState(REPORT_REASONS[0]);
   const [saving, setSaving] = useState(false);
   const requestedPostIdsRef = useRef<Set<string>>(new Set());
   const loadedPostId = post?.id;
   useBodyScrollLock(Boolean(modal));
+
+  const showToast = (message: string, tone: "default" | "scrap" = "default") => {
+    setToastTone(tone);
+    setToast(message);
+  };
 
   useEffect(() => {
     if (requestedPostIdsRef.current.has(postId)) return;
@@ -95,7 +101,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       })
       .catch((error) => {
         requestedPostIdsRef.current.delete(postId);
-        setToast(error instanceof Error ? error.message : "게시글을 불러오지 못했습니다.");
+        showToast(error instanceof Error ? error.message : "게시글을 불러오지 못했습니다.");
       });
   }, [postId]);
 
@@ -112,7 +118,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
         setBoardItems(response.items);
         setBoardTotal(response.total);
       })
-      .catch((error) => active && setToast(error instanceof Error ? error.message : "게시판 글을 불러오지 못했습니다."));
+      .catch((error) => active && showToast(error instanceof Error ? error.message : "게시판 글을 불러오지 못했습니다."));
 
     return () => {
       active = false;
@@ -131,10 +137,9 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     try {
       const response = await setCommunityRecommend(post.id, enabled);
       setPost((current) => current ? { ...current, ...response.reaction } : current);
-      if (enabled) setToast("추천을 눌러 베스트로 올려주세요!");
     } catch (error) {
       setPost(previous);
-      setToast(error instanceof Error ? error.message : "추천 처리에 실패했습니다.");
+      showToast(error instanceof Error ? error.message : "추천 처리에 실패했습니다.");
     }
   };
 
@@ -150,9 +155,10 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     try {
       const response = await setCommunityScrap(post.id, enabled);
       setPost((current) => current ? { ...current, ...response.reaction } : current);
+      showToast(enabled ? "스크랩이 완료 됐습니다." : "스크랩이 취소되었습니다.", "scrap");
     } catch (error) {
       setPost(previous);
-      setToast(error instanceof Error ? error.message : "스크랩 처리에 실패했습니다.");
+      showToast(error instanceof Error ? error.message : "스크랩 처리에 실패했습니다.");
     }
   };
 
@@ -182,7 +188,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
         }));
       }
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "댓글 등록에 실패했습니다.");
+      showToast(error instanceof Error ? error.message : "댓글 등록에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -251,7 +257,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
         }));
       }
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "답글 등록에 실패했습니다.");
+      showToast(error instanceof Error ? error.message : "답글 등록에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -280,7 +286,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       setEditingCommentId(null);
       setEditingCommentText("");
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "댓글 수정에 실패했습니다.");
+      showToast(error instanceof Error ? error.message : "댓글 수정에 실패했습니다.");
     } finally {
       setSaving(false);
     }
@@ -304,7 +310,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
         ? { ...current, comments: updateCommentReaction(current.comments, response.reaction) }
         : current);
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "댓글 반응 처리에 실패했습니다.");
+      showToast(error instanceof Error ? error.message : "댓글 반응 처리에 실패했습니다.");
     }
   };
 
@@ -315,7 +321,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
 
     if (!kakaoKey) {
       await navigator.clipboard?.writeText(url);
-      setToast("카카오 공유 설정이 없어 링크를 복사했습니다.");
+      showToast("카카오 공유 설정이 없어 링크를 복사했습니다.");
       setModal(null);
       return;
     }
@@ -339,14 +345,14 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
       setModal(null);
     } catch (error) {
       await navigator.clipboard?.writeText(url);
-      setToast(error instanceof Error ? `${error.message} 링크를 복사했습니다.` : "카카오 공유에 실패해 링크를 복사했습니다.");
+      showToast(error instanceof Error ? `${error.message} 링크를 복사했습니다.` : "카카오 공유에 실패해 링크를 복사했습니다.");
       setModal(null);
     }
   };
 
   const copyShareLink = async () => {
     await navigator.clipboard?.writeText(window.location.href);
-    setToast("게시글 링크를 복사했습니다.");
+    showToast("게시글 링크를 복사했습니다.");
     setModal(null);
   };
 
@@ -355,14 +361,14 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     try {
       if (modal.type === "report-post") {
         await reportCommunityPost(post.id, selectedReason);
-        setToast("신고가 접수되었습니다.");
+        showToast("신고가 접수되었습니다.");
       }
       if (modal.type === "report-comment") {
         await reportCommunityComment(modal.commentId, selectedReason);
-        setToast("댓글 신고가 접수되었습니다.");
+        showToast("댓글 신고가 접수되었습니다.");
       }
     } catch (error) {
-      setToast(error instanceof Error ? error.message : "요청 처리에 실패했습니다.");
+      showToast(error instanceof Error ? error.message : "요청 처리에 실패했습니다.");
     } finally {
       setModal(null);
     }
@@ -427,7 +433,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                 </button>
               </div>
               {toast ? (
-                <div className={styles.toast}>
+                <div className={`${styles.toast} ${toastTone === "scrap" ? styles.scrapToast : ""}`}>
                   <span>{toast}</span>
                   <button type="button" onClick={() => setToast("")}>
                     <Image src="/community/close.svg" alt="" width={14} height={14} />
@@ -471,7 +477,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                       onReact={reactComment}
                     />
                   ))}
-                  {!post.comments.length ? <EmptyState>아직 댓글이 없습니다.</EmptyState> : null}
+                  {!post.comments.length ? <div className={styles.commentEmpty}>아직 댓글이 없습니다.</div> : null}
                 </div>
                 <Pagination
                   currentPage={safeCommentPage}

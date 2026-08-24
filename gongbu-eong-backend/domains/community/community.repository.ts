@@ -100,7 +100,7 @@ export async function listCommunityPosts(args: ListCommunityPostsInput) {
   const countFilters = buildPostFilters(args, countValues);
   const orderBy =
     args.sort === "popular"
-      ? "recommend_count DESC, comment_count DESC, posts.created_at DESC, posts.id DESC"
+      ? `${communityPostHotScoreSql("week")} DESC, ${communityPostRawScoreSql()} DESC, posts.created_at DESC, posts.id DESC`
       : "posts.created_at DESC, posts.id DESC";
   const limitParam = `$${values.push(args.limit)}`;
   const offsetParam = `$${values.push(args.offset)}`;
@@ -134,15 +134,26 @@ export async function listCommunityPosts(args: ListCommunityPostsInput) {
   };
 }
 
-export async function listPopularCommunityPosts(userId?: string) {
+export async function listPopularCommunityPosts(
+  userId?: string,
+  period: "today" | "week" = "week",
+) {
+  const createdAtFilter =
+    period === "today"
+      ? "AND posts.created_at >= date_trunc('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul'"
+      : "AND posts.created_at >= NOW() - INTERVAL '7 days'";
+
   const result = await query<PostRow>(
     `
       ${postSelectSql({ totalCountExpression: "NULL::text" })}
       WHERE posts.status = 'active'
+        ${createdAtFilter}
       ORDER BY
-        recommend_count DESC,
-        comment_count DESC,
-        posts.view_count DESC,
+        ${communityPostHotScoreSql(period)} DESC,
+        ${communityPostRawScoreSql()} DESC,
+        COALESCE(comment_counts.unique_comment_author_count, 0) DESC,
+        COALESCE(comment_counts.top_level_comment_count, 0) DESC,
+        COALESCE(comment_counts.reply_count, 0) DESC,
         posts.created_at DESC,
         posts.id DESC
       LIMIT 5
@@ -952,6 +963,9 @@ function postSelectSql(options: {
       COALESCE(reactions.recommend_count, 0)::text AS recommend_count,
       COALESCE(reactions.scrap_count, 0)::text AS scrap_count,
       COALESCE(comment_counts.comment_count, 0)::text AS comment_count,
+      COALESCE(comment_counts.top_level_comment_count, 0)::text AS top_level_comment_count,
+      COALESCE(comment_counts.reply_count, 0)::text AS reply_count,
+      COALESCE(comment_counts.unique_comment_author_count, 0)::text AS unique_comment_author_count,
       ${attachmentsSelect} AS attachments,
       ${totalCountExpression} AS total_count,
       (
@@ -986,13 +1000,40 @@ function postSelectSql(options: {
       WHERE post_id = posts.id
     ) reactions ON TRUE
     LEFT JOIN LATERAL (
-      SELECT COUNT(*) AS comment_count
+      SELECT
+        COUNT(*) AS comment_count,
+        COUNT(*) FILTER (WHERE parent_comment_id IS NULL) AS top_level_comment_count,
+        COUNT(*) FILTER (WHERE parent_comment_id IS NOT NULL) AS reply_count,
+        COUNT(DISTINCT user_id) AS unique_comment_author_count
       FROM public.community_comments
       WHERE post_id = posts.id
         AND status = 'active'
     ) comment_counts ON TRUE
     ${attachmentsJoin}
   `;
+}
+
+function communityPostRawScoreSql() {
+  return `(
+    COALESCE(reactions.recommend_count::numeric, 0) * 5
+    + COALESCE(comment_counts.top_level_comment_count::numeric, 0) * 3
+    + COALESCE(comment_counts.reply_count::numeric, 0)
+    + COALESCE(comment_counts.unique_comment_author_count::numeric, 0) * 3
+    + LOG(10, GREATEST(posts.view_count, 0)::numeric + 1) * 30
+  )`;
+}
+
+function communityPostHotScoreSql(period: "today" | "week") {
+  const ageOffsetHours = period === "today" ? 2 : 8;
+  const decayPower = period === "today" ? 1.15 : 0.35;
+
+  return `(
+    ${communityPostRawScoreSql()}
+    / POWER(
+      GREATEST(EXTRACT(EPOCH FROM (NOW() - posts.created_at)) / 3600, 0) + ${ageOffsetHours},
+      ${decayPower}
+    )
+  )`;
 }
 
 function diagnosisSql(userAlias: string) {

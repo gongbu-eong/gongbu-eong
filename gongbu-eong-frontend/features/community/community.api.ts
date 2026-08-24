@@ -14,6 +14,7 @@ export function getCommunityPosts(args?: {
   q?: string;
   category?: string;
   sort?: "latest" | "popular";
+  popularPeriod?: "today" | "week";
   limit?: number;
   offset?: number;
 }) {
@@ -21,6 +22,7 @@ export function getCommunityPosts(args?: {
   if (args?.q) params.set("q", args.q);
   if (args?.category && args.category !== "전체") params.set("category", args.category);
   if (args?.sort) params.set("sort", args.sort);
+  if (args?.popularPeriod) params.set("popularPeriod", args.popularPeriod);
   if (args?.limit != null) params.set("limit", String(args.limit));
   if (args?.offset != null) params.set("offset", String(args.offset));
   const query = params.size ? `?${params.toString()}` : "";

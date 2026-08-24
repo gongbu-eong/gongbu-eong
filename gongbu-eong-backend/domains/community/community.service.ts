@@ -54,6 +54,7 @@ export async function getCommunityPosts(request: NextRequest) {
   const searchQuery = (searchParams.get("q") || "").trim();
   const sort = searchParams.get("sort") === "popular" ? "popular" : "latest";
   const category = searchParams.get("category") || undefined;
+  const popularPeriod = searchParams.get("popularPeriod") === "today" ? "today" : "week";
 
   if (searchQuery) {
     await logCommunitySearch(user?.id, searchQuery).catch((error) => {
@@ -70,7 +71,7 @@ export async function getCommunityPosts(request: NextRequest) {
       offset,
       userId: user?.id,
     }),
-    listPopularCommunityPosts(user?.id),
+    listPopularCommunityPosts(user?.id, popularPeriod),
   ]);
 
   return {
