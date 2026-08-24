@@ -770,7 +770,12 @@ function CommentActions({
           aria-label="댓글 좋아요"
           onClick={() => onReact("like")}
         >
-          <Image src="/community/comment-like.svg" alt="" width={24} height={24} />
+          <Image
+            src={myReaction === "like" ? "/community/comment-like-active.svg" : "/community/comment-like.svg"}
+            alt=""
+            width={24}
+            height={24}
+          />
           <span>{formatNumber(likeCount)}</span>
         </button>
         <span className={styles.commentDivider} />
@@ -780,7 +785,13 @@ function CommentActions({
           aria-label="댓글 싫어요"
           onClick={() => onReact("dislike")}
         >
-          <Image className={styles.dislikeIcon} src="/community/comment-like.svg" alt="" width={24} height={24} />
+          <Image
+            className={styles.dislikeIcon}
+            src={myReaction === "dislike" ? "/community/comment-like-active.svg" : "/community/comment-like.svg"}
+            alt=""
+            width={24}
+            height={24}
+          />
           <span>{formatNumber(dislikeCount)}</span>
         </button>
         <span className={styles.commentDivider} />
@@ -791,7 +802,7 @@ function CommentActions({
         {onDelete ? (
           <>
             <span className={styles.commentDivider} />
-            <button type="button" onClick={onDelete}>
+            <button type="button" className={styles.commentDeleteButton} onClick={onDelete}>
               <span>삭제</span>
             </button>
           </>

@@ -2249,8 +2249,9 @@
 .commentReactionGroup {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.5625rem;
   margin-left: auto;
+  min-height: 1.5rem;
 }
 
 .commentReactionGroup button {
@@ -2259,11 +2260,12 @@
   justify-content: center;
   gap: 0.25rem;
   height: 1.5rem;
-  min-width: 2.75rem;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
   color: #9aa4b8;
+  font-family: "Pretendard", sans-serif;
   font-size: 0.875rem;
   line-height: 1;
   font-weight: 400;
@@ -2272,7 +2274,7 @@
 
 .commentReactionGroup .commentReactionActive {
   color: #2f7ff0;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .commentReactionLikeActive img {
@@ -2298,6 +2300,7 @@
 .commentDivider {
   width: 1px;
   height: 0.5rem;
+  flex: 0 0 1px;
   background: #e4e8ef;
 }
 
@@ -2697,8 +2700,10 @@
 .commentReactionGroup {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.5625rem;
   margin-left: auto;
+  min-height: 1.5rem;
+  color: #9aa4b8;
 }
 
 .commentReactionGroup button {
@@ -2707,12 +2712,15 @@
   justify-content: center;
   height: 1.5rem;
   gap: 0.25rem;
+  min-width: 0;
+  width: auto;
   padding: 0;
   border: 0;
   background: transparent;
   color: #9aa4b8;
+  font-family: "Pretendard", sans-serif;
   font-size: 0.875rem;
-  line-height: 1.5rem;
+  line-height: 1;
   font-weight: 400;
   white-space: nowrap;
 }
@@ -2722,13 +2730,16 @@
   align-items: center;
   height: 1.5rem;
   font-size: 0.875rem;
-  line-height: 1.5rem;
+  line-height: 1;
   font-weight: 400;
+  color: inherit;
 }
 
 .commentReactionGroup img {
   width: 1.5rem;
   height: 1.5rem;
+  flex: 0 0 1.5rem;
+  object-fit: contain;
 }
 
 .commentReactionLikeButton.commentReactionActive {
@@ -2736,7 +2747,7 @@
 }
 
 .commentReactionLikeButton.commentReactionActive img {
-  filter: brightness(0) saturate(100%) invert(44%) sepia(84%) saturate(2469%) hue-rotate(201deg) brightness(96%) contrast(95%);
+  filter: none;
 }
 
 .commentReactionDislikeButton.commentReactionActive {
@@ -2745,6 +2756,11 @@
 
 .commentReactionDislikeButton.commentReactionActive img {
   filter: brightness(0) saturate(100%) invert(8%) sepia(10%) saturate(2643%) hue-rotate(185deg) brightness(96%) contrast(91%);
+}
+
+.commentReactionGroup .commentDeleteButton,
+.commentDeleteButton span {
+  color: #ff4d4f;
 }
 
 .replyBodyMention {
@@ -2918,6 +2934,12 @@
 
 .quickActionMenu a:last-child {
   border-bottom: 0;
+}
+
+@media (max-width: 37.5rem) {
+  .quickActionWrap.quickActionOpen {
+    bottom: calc(16.5rem + env(safe-area-inset-bottom) + (100vh - 100dvh));
+  }
 }
 
 @media (max-width: 23rem) {
