@@ -12,7 +12,7 @@ import { COMMUNITY_CATEGORIES, type CommunityAttachmentDto, type CommunityCatego
 import { AuthorProfile } from "./CommunityShared";
 import styles from "./Community.module.css";
 
-const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_DATA_URL_LENGTH = 12_000_000;
 const IMAGE_MAX_DIMENSION = 1600;

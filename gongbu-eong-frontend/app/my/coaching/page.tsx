@@ -50,8 +50,8 @@ export default function CoachingHistoryPage() {
 
         <section className={styles.heroCard}>
           <div className={styles.heroCopy}>
-            <strong>면접 준비할 공고를 골라보세요</strong>
-            <span>코칭받은&nbsp;{linkedItems.length}개 공고의 면접을 대비할 수 있어요.</span>
+            <strong>내 자소서 코칭을 확인하세요.</strong>
+            <span>지금까지 받으신 &nbsp;{linkedItems.length}개 공고를 코칭 받으셨어요.</span>
           </div>
           <Image src="/coaching/history-hero.png" alt="" width={172} height={142} className={styles.heroImage} priority />
         </section>
