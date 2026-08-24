@@ -10,6 +10,7 @@ import {
   reportCommunityTarget,
   reviewCommunityReport,
   saveCommunityComment,
+  saveCommunityCommentEdit,
   saveCommunityPost,
   toggleCommunityCommentReaction,
   toggleCommunityPostReaction,
@@ -107,6 +108,10 @@ export async function PATCH(request: NextRequest, context: Context) {
 
     if (isUuid(path[0] || "") && !path[1]) {
       return jsonWithCors(request, await saveCommunityPost(request, path[0]));
+    }
+
+    if (first === "comments" && isUuid(second || "")) {
+      return jsonWithCors(request, await saveCommunityCommentEdit(request, second));
     }
 
     if (first === "reports" && isUuid(second || "")) {

@@ -517,6 +517,27 @@ export async function createCommunityComment(
   return result.rows[0]?.id || null;
 }
 
+export async function updateCommunityComment(
+  userId: string,
+  commentId: string,
+  content: string,
+) {
+  const result = await query<{ id: string; post_id: string }>(
+    `
+      UPDATE public.community_comments
+      SET content = $3,
+          updated_at = NOW()
+      WHERE id = $2
+        AND user_id = $1
+        AND status = 'active'
+      RETURNING id, post_id
+    `,
+    [userId, commentId, content],
+  );
+
+  return result.rows[0] || null;
+}
+
 export async function setCommunityCommentReaction(
   userId: string,
   commentId: string,

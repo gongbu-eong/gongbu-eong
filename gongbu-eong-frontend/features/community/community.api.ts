@@ -97,6 +97,13 @@ export function deleteCommunityComment(commentId: string) {
   });
 }
 
+export function updateCommunityComment(commentId: string, content: string) {
+  return apiClient<CommunityDetailResponseDto>(`/api/community/comments/${commentId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ content }),
+  });
+}
+
 export function reportCommunityComment(commentId: string, reasonCode?: string) {
   return apiClient<{ ok: true }>(`/api/community/comments/${commentId}/report`, {
     method: "POST",

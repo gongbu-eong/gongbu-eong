@@ -2763,6 +2763,166 @@
   color: #ff4d4f;
 }
 
+.commentHeader {
+  position: relative;
+  align-items: flex-start;
+}
+
+.commentAuthorMeta {
+  display: grid;
+  gap: 0.3125rem;
+  min-width: 0;
+  margin-left: 0.5rem;
+}
+
+.commentHeader .commentAuthorMeta .authorLine {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  color: #1a2233;
+}
+
+.commentHeader .commentAuthorMeta time {
+  margin: 0;
+  padding: 0;
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.commentMoreWrap {
+  position: relative;
+  margin-left: auto;
+  padding-left: 0.5rem;
+}
+
+.commentMoreButton {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  place-items: center;
+  background: transparent;
+}
+
+.commentMoreMenu {
+  position: absolute;
+  top: 1.5rem;
+  right: 0.6875rem;
+  z-index: 5;
+  width: 5rem;
+  overflow: hidden;
+  border: 1px solid #e4e8ef;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 0.25rem 0.75rem rgba(26, 34, 51, 0.08);
+}
+
+.commentMoreMenu button {
+  display: flex;
+  width: 100%;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #e4e8ef;
+  background: #fff;
+  color: #1a2233;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.commentMoreMenu button:last-child {
+  border-bottom: 0;
+}
+
+.comment.deletedComment,
+.replyComment.deletedComment {
+  min-height: 6.125rem;
+  padding: 1.5rem 0 1.4375rem;
+}
+
+.replyComment.deletedComment {
+  padding-right: 1rem;
+  padding-left: 1rem;
+}
+
+.deletedCommentTime {
+  display: block;
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.comment.deletedComment .commentBody,
+.replyComment.deletedComment .commentBody {
+  max-width: none;
+  margin-top: 1rem;
+  color: #5a6580;
+}
+
+.commentEditForm {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.replyComment .commentEditForm {
+  margin-left: 2rem;
+}
+
+.commentEditForm textarea {
+  width: 100%;
+  min-height: 6.25rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #e4e8ef;
+  border-radius: 5px;
+  outline: 0;
+  resize: none;
+  color: #1a2233;
+  font: inherit;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.commentEditForm textarea::placeholder {
+  color: #9aa4b8;
+}
+
+.commentEditActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.commentEditActions button {
+  height: 2.25rem;
+  border: 0;
+  border-radius: 8px;
+  background: #e4e8ef;
+  color: #5a6580;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.commentEditActions button[type="submit"] {
+  background: #9aa4b8;
+  color: #fff;
+}
+
+.commentEditActions button[type="submit"]:not(:disabled) {
+  background: #2f7ff0;
+}
+
 .replyBodyMention {
   display: inline;
   margin-right: 0.125rem;

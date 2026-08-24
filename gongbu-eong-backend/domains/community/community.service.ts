@@ -25,6 +25,7 @@ import {
   logCommunitySearch,
   setCommunityCommentReaction,
   setCommunityReaction,
+  updateCommunityComment,
   updateCommunityReport,
   updateCommunityPost,
   type CommunityPostAttachmentInput,
@@ -244,6 +245,36 @@ export async function removeCommunityComment(
   return {
     ok: true,
     post: await findCommunityPostById(deletedComment.post_id, user.id),
+  };
+}
+
+export async function saveCommunityCommentEdit(
+  request: NextRequest,
+  commentId: string,
+) {
+  const user = await requireSessionUser(request);
+  const body = await request.json().catch(() => null);
+  const content = typeof body?.content === "string" ? body.content.trim() : "";
+
+  if (!content) {
+    throwBadRequest("댓글을 입력해주세요.");
+  }
+
+  if (content.length > 500) {
+    throwBadRequest("댓글은 최대 500자까지 입력할 수 있습니다.");
+  }
+
+  const updatedComment = await updateCommunityComment(user.id, commentId, content);
+
+  if (!updatedComment) {
+    const error = new Error("수정할 댓글을 찾을 수 없습니다.");
+    error.name = "NotFoundError";
+    throw error;
+  }
+
+  return {
+    ok: true,
+    post: await findCommunityPostById(updatedComment.post_id, user.id),
   };
 }
 

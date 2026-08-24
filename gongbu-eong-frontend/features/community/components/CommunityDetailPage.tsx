@@ -17,6 +17,7 @@ import {
   setCommunityCommentReaction,
   setCommunityRecommend,
   setCommunityScrap,
+  updateCommunityComment,
 } from "../community.api";
 import {
   COMMUNITY_SHARE_DESCRIPTION,
@@ -59,6 +60,9 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   const [comment, setComment] = useState("");
   const [replyText, setReplyText] = useState("");
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentText, setEditingCommentText] = useState("");
+  const [openCommentMenuId, setOpenCommentMenuId] = useState<string | null>(null);
   const [expandedReplyIds, setExpandedReplyIds] = useState<string[]>([]);
   const [replyPages, setReplyPages] = useState<Record<string, number>>({});
   const [commentPage, setCommentPage] = useState(1);
@@ -85,6 +89,9 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
         setReplyPages({});
         setReplyTarget(null);
         setReplyText("");
+        setEditingCommentId(null);
+        setEditingCommentText("");
+        setOpenCommentMenuId(null);
       })
       .catch((error) => {
         requestedPostIdsRef.current.delete(postId);
@@ -182,6 +189,9 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   };
 
   const startReply = (comment: CommunityCommentDto) => {
+    setEditingCommentId(null);
+    setEditingCommentText("");
+    setOpenCommentMenuId(null);
     const commentId = comment.id;
     if (replyTarget?.commentId === commentId) {
       setReplyTarget(null);
@@ -247,10 +257,42 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     }
   };
 
+  const startEditComment = (comment: CommunityCommentDto) => {
+    setReplyTarget(null);
+    setReplyText("");
+    setOpenCommentMenuId(null);
+    setEditingCommentId(comment.id);
+    setEditingCommentText(comment.content);
+  };
+
+  const cancelEditComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentText("");
+  };
+
+  const submitEditComment = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!editingCommentId || !editingCommentText.trim() || saving) return;
+    setSaving(true);
+    try {
+      const response = await updateCommunityComment(editingCommentId, editingCommentText);
+      setPost(response.post);
+      setEditingCommentId(null);
+      setEditingCommentText("");
+    } catch (error) {
+      setToast(error instanceof Error ? error.message : "댓글 수정에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const confirmDeleteComment = async (commentId: string) => {
     if (!post) return;
     const response = await deleteCommunityComment(commentId);
     setPost(response.post);
+    setOpenCommentMenuId(null);
+    setEditingCommentId(null);
+    setEditingCommentText("");
     setModal(null);
   };
 
@@ -409,8 +451,16 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                       replyMentionNickname={null}
                       replyText={replyText}
                       saving={saving}
+                      editingCommentId={editingCommentId}
+                      editingCommentText={editingCommentText}
+                      openCommentMenuId={openCommentMenuId}
                       onReplyTextChange={setReplyText}
                       onReply={startReply}
+                      onEditTextChange={setEditingCommentText}
+                      onStartEdit={startEditComment}
+                      onCancelEdit={cancelEditComment}
+                      onSubmitEdit={submitEditComment}
+                      onToggleMenu={(commentId) => setOpenCommentMenuId((current) => current === commentId ? null : commentId)}
                       onToggleReplies={toggleReplies}
                       onReplyPageChange={setReplyPage}
                       onSubmitReply={submitReply}
@@ -583,8 +633,16 @@ function CommunityComment({
   replyMentionNickname,
   replyText,
   saving,
+  editingCommentId,
+  editingCommentText,
+  openCommentMenuId,
   onReplyTextChange,
   onReply,
+  onEditTextChange,
+  onStartEdit,
+  onCancelEdit,
+  onSubmitEdit,
+  onToggleMenu,
   onToggleReplies,
   onReplyPageChange,
   onSubmitReply,
@@ -602,8 +660,16 @@ function CommunityComment({
   replyMentionNickname: string | null;
   replyText: string;
   saving: boolean;
+  editingCommentId: string | null;
+  editingCommentText: string;
+  openCommentMenuId: string | null;
   onReplyTextChange: (value: string) => void;
   onReply: (comment: CommunityCommentDto) => void;
+  onEditTextChange: (value: string) => void;
+  onStartEdit: (comment: CommunityCommentDto) => void;
+  onCancelEdit: () => void;
+  onSubmitEdit: (event: FormEvent) => void;
+  onToggleMenu: (commentId: string) => void;
   onToggleReplies: (commentId: string) => void;
   onReplyPageChange: (commentId: string, page: number) => void;
   onSubmitReply: (event: FormEvent) => void;
@@ -620,35 +686,127 @@ function CommunityComment({
   const totalReplyPages = getLastPage(replyCount, REPLY_PAGE_SIZE);
   const safeReplyPage = Math.min(replyPages[comment.id] || 1, totalReplyPages);
   const visibleReplies = comment.replies.slice((safeReplyPage - 1) * REPLY_PAGE_SIZE, safeReplyPage * REPLY_PAGE_SIZE);
+  const isEditing = editingCommentId === comment.id;
+  const replyThread = replyCount ? (
+    <>
+      <button
+        type="button"
+        className={styles.replyToggle}
+        onClick={() => onToggleReplies(comment.id)}
+        aria-expanded={repliesExpanded}
+      >
+        {repliesExpanded ? "답글 모두 숨기기" : `답글 ${formatNumber(replyCount)}개 모두 보기`}
+      </button>
+      {repliesExpanded ? (
+        <>
+          <div className={styles.replyList}>
+            {visibleReplies.map((reply) => (
+              <CommunityComment
+                key={reply.id}
+                comment={reply}
+                depth={1}
+                replyTarget={replyTarget}
+                expandedReplyIds={expandedReplyIds}
+                replyPages={replyPages}
+                replyMentionNickname={findCommentNickname(comment, reply.parentCommentId)}
+                replyText={replyText}
+                saving={saving}
+                editingCommentId={editingCommentId}
+                editingCommentText={editingCommentText}
+                openCommentMenuId={openCommentMenuId}
+                onReplyTextChange={onReplyTextChange}
+                onReply={onReply}
+                onEditTextChange={onEditTextChange}
+                onStartEdit={onStartEdit}
+                onCancelEdit={onCancelEdit}
+                onSubmitEdit={onSubmitEdit}
+                onToggleMenu={onToggleMenu}
+                onToggleReplies={onToggleReplies}
+                onReplyPageChange={onReplyPageChange}
+                onSubmitReply={onSubmitReply}
+                onReport={() => onReportReply(reply.id)}
+                onDelete={() => onDeleteReply(reply.id)}
+                onReportReply={onReportReply}
+                onDeleteReply={onDeleteReply}
+                onReact={onReact}
+              />
+            ))}
+          </div>
+          <Pagination
+            currentPage={safeReplyPage}
+            totalItems={replyCount}
+            pageSize={REPLY_PAGE_SIZE}
+            onPageChange={(page) => onReplyPageChange(comment.id, page)}
+          />
+        </>
+      ) : null}
+    </>
+  ) : null;
+
+  if (isDeleted) {
+    return (
+      <article className={`${isReply ? styles.replyComment : styles.comment} ${styles.deletedComment}`}>
+        <time className={styles.deletedCommentTime}>{formatCommentDate(comment.createdAt)}</time>
+        <p className={styles.commentBody}>{comment.content}</p>
+        {replyThread}
+      </article>
+    );
+  }
 
   return (
-    <article className={`${isReply ? styles.replyComment : styles.comment} ${isDeleted ? styles.deletedComment : ""}`}>
+    <article className={isReply ? styles.replyComment : styles.comment}>
       <div className={styles.commentHeader}>
         {isReply ? <Image src="/community/reply-arrow.svg" alt="" width={24} height={24} /> : <Avatar author={comment.author} />}
-        <div className={styles.authorLine}>
-          <strong>{comment.author.nickname}</strong>
-          {comment.author.diagnosisTypeName ? <b className={styles.typeBadge}>{comment.author.diagnosisTypeName}</b> : null}
+        <div className={styles.commentAuthorMeta}>
+          <div className={styles.authorLine}>
+            <strong>{comment.author.nickname}</strong>
+            {comment.author.diagnosisTypeName ? <b className={styles.typeBadge}>{comment.author.diagnosisTypeName}</b> : null}
+          </div>
+          <time>{formatCommentDate(comment.createdAt)}</time>
         </div>
-        <time>{formatCommentDate(comment.createdAt)}</time>
+        {comment.canDelete ? (
+          <div className={styles.commentMoreWrap}>
+            <button
+              type="button"
+              className={styles.commentMoreButton}
+              aria-label="댓글 메뉴 열기"
+              aria-expanded={openCommentMenuId === comment.id}
+              onClick={() => onToggleMenu(comment.id)}
+            >
+              <Image src="/community/comment-more.svg" alt="" width={3} height={15} />
+            </button>
+            {openCommentMenuId === comment.id ? (
+              <div className={styles.commentMoreMenu}>
+                <button type="button" onClick={() => onStartEdit(comment)}>수정</button>
+                <button type="button" onClick={onDelete}>삭제</button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
-      <p className={styles.commentBody}>
-        {isReply && replyMentionNickname ? <span className={styles.replyBodyMention}>@{replyMentionNickname}</span> : null}
-        {comment.content}
-      </p>
-      {isDeleted ? (
-        <div className={styles.commentTools}>
-          <button type="button" className={styles.replyWriteButton} onClick={() => onReply(comment)}>답글 쓰기</button>
-        </div>
-      ) : (
-        <CommentActions
-          likeCount={comment.likeCount}
-          dislikeCount={comment.dislikeCount}
-          myReaction={comment.myReaction}
-          onReply={() => onReply(comment)}
-          onReact={(reactionType) => onReact(comment.id, reactionType)}
-          onReport={onReport}
-          onDelete={comment.canDelete ? onDelete : undefined}
+      {isEditing ? (
+        <CommentEditForm
+          editText={editingCommentText}
+          saving={saving}
+          onEditTextChange={onEditTextChange}
+          onCancel={onCancelEdit}
+          onSubmit={onSubmitEdit}
         />
+      ) : (
+        <>
+          <p className={styles.commentBody}>
+            {isReply && replyMentionNickname ? <span className={styles.replyBodyMention}>@{replyMentionNickname}</span> : null}
+            {comment.content}
+          </p>
+          <CommentActions
+            likeCount={comment.likeCount}
+            dislikeCount={comment.dislikeCount}
+            myReaction={comment.myReaction}
+            onReply={() => onReply(comment)}
+            onReact={(reactionType) => onReact(comment.id, reactionType)}
+            onReport={onReport}
+          />
+        </>
       )}
       {replyTarget?.commentId === comment.id ? (
         <ReplyForm
@@ -660,53 +818,7 @@ function CommunityComment({
           onSubmitReply={onSubmitReply}
         />
       ) : null}
-      {replyCount ? (
-        <>
-          <button
-            type="button"
-            className={styles.replyToggle}
-            onClick={() => onToggleReplies(comment.id)}
-            aria-expanded={repliesExpanded}
-          >
-            {repliesExpanded ? "답글 모두 숨기기" : `답글 ${formatNumber(replyCount)}개 모두 보기`}
-          </button>
-          {repliesExpanded ? (
-            <>
-              <div className={styles.replyList}>
-                {visibleReplies.map((reply) => (
-                  <CommunityComment
-                    key={reply.id}
-                    comment={reply}
-                    depth={1}
-                    replyTarget={replyTarget}
-                    expandedReplyIds={expandedReplyIds}
-                    replyPages={replyPages}
-                    replyMentionNickname={findCommentNickname(comment, reply.parentCommentId)}
-                    replyText={replyText}
-                    saving={saving}
-                    onReplyTextChange={onReplyTextChange}
-                    onReply={onReply}
-                    onToggleReplies={onToggleReplies}
-                    onReplyPageChange={onReplyPageChange}
-                    onSubmitReply={onSubmitReply}
-                    onReport={() => onReportReply(reply.id)}
-                    onDelete={() => onDeleteReply(reply.id)}
-                    onReportReply={onReportReply}
-                    onDeleteReply={onDeleteReply}
-                    onReact={onReact}
-                  />
-                ))}
-              </div>
-              <Pagination
-                currentPage={safeReplyPage}
-                totalItems={replyCount}
-                pageSize={REPLY_PAGE_SIZE}
-                onPageChange={(page) => onReplyPageChange(comment.id, page)}
-              />
-            </>
-          ) : null}
-        </>
-      ) : null}
+      {replyThread}
     </article>
   );
 }
@@ -737,6 +849,35 @@ function ReplyForm({
         placeholder={placeholder}
       />
       <button type="submit" disabled={!replyText.trim() || saving}>등록</button>
+    </form>
+  );
+}
+
+function CommentEditForm({
+  editText,
+  saving,
+  onEditTextChange,
+  onCancel,
+  onSubmit,
+}: {
+  editText: string;
+  saving: boolean;
+  onEditTextChange: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: (event: FormEvent) => void;
+}) {
+  return (
+    <form className={styles.commentEditForm} onSubmit={onSubmit}>
+      <textarea
+        value={editText}
+        maxLength={500}
+        onChange={(event) => onEditTextChange(event.target.value)}
+        placeholder="댓글을 입력하세요."
+      />
+      <div className={styles.commentEditActions}>
+        <button type="button" onClick={onCancel}>취소</button>
+        <button type="submit" disabled={!editText.trim() || saving}>수정</button>
+      </div>
     </form>
   );
 }
