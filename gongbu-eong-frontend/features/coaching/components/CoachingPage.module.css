@@ -1,5 +1,5 @@
 .page{min-height:100vh;background:#fff;color:#1a2233}
-.frame{width:100%;max-width:37.5rem;margin:0 auto;padding:1rem 1rem 7rem}.frame h1{margin:0 0 1.5rem;font-size:1.25rem}
+.frame{box-sizing:border-box;width:100%;max-width:37.5rem;margin:0 auto;padding:4rem 1rem 7rem}.frame h1{margin:0 0 1.5rem;font-size:1.25rem}
 .intro{margin-bottom:1.25rem}.intro strong,.sectionHeading h2,.writeSection h2,.resultSection h2,.submitted h2{font-size:.9375rem}.intro p,.helper,.emptyCard p,.readyCard p,.resultSection p,.resultSection li{color:#5a6580;font-size:.8125rem;line-height:1.55}
 .jobConnect{width:100%;height:3.25rem;border:1px dashed #2f7ff0;border-radius:.75rem;background:#fff;color:#2f7ff0;font-size:1rem;font-weight:800}.helper{text-align:center;margin:1rem 0 1.75rem}
 .selectedJob,.resultJob{position:relative;display:flex;flex-direction:column;gap:.3rem;padding:.75rem 3.5rem .75rem 1rem;border:1px solid #e4e8ef;border-radius:.625rem;margin:.5rem 0 1.5rem}.selectedJob span,.resultJob span,.jobResults span{color:#5a6580;font-size:.75rem}.selectedJob strong,.resultJob strong,.jobResults strong{font-size:.875rem}.selectedJob button{position:absolute;right:.75rem;top:50%;transform:translateY(-50%);border:1px solid #9aa4b8;border-radius:.4375rem;background:#fff;padding:.3rem .6rem;color:#5a6580;font-size:.75rem}
@@ -22,7 +22,7 @@
 .resultScreen .fileResult{display:flex;align-items:center;justify-content:space-between;gap:.75rem;font-size:.875rem;font-weight:600}.resultScreen .fileResult small{color:#5a6580;font-size:.75rem;font-weight:400}
 
 /* Result layout follows the 393px Figma frame and scales up to the 600px web frame. */
-.resultScreen{padding-top:1rem;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.resultScreen{padding-top:4rem;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif}
 .resultScreen .back{display:block;margin:.25rem 0 1rem;color:#5a6580;font-size:.8125rem;text-decoration:none}
 .resultScreen h1{font-size:1.125rem;line-height:1.4;margin:0 0 1rem;font-weight:800}
 .resultScreen .resultJob{margin:0 0 1.25rem}.resultScreen .resultJob strong{font-size:.875rem;line-height:1.45}
@@ -96,7 +96,7 @@
 .resultScreen .resultActions button{font-size:16px!important;font-weight:800!important}
 
 /* 2079 coaching input redesign */
-.newCoachingFrame{padding:24px 24px 108px;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.newCoachingFrame{padding:64px 24px 108px;font-family:Pretendard,"Noto Sans KR",sans-serif}
 .newCoachingFrame h1{margin:0 0 24px;color:#1a2233;font-size:20px;font-weight:800;line-height:1.25}
 .newCoachingFrame .intro{margin-bottom:24px}
 .newCoachingFrame .intro strong{display:block;color:#1a2233;font-size:17px;font-weight:800}
@@ -272,7 +272,7 @@
 @media (max-width:22.5rem){.insightGrid{grid-template-columns:1fr}.revisionHeader{align-items:flex-start;flex-direction:column}.revisionTabs{width:100%}.reviewStats{grid-template-columns:1fr}}
 
 /* Figma 2105:41542 / 2105:41727 exact result pass */
-.figmaResultScreen{max-width:37.5rem;margin:0 auto;padding:16px 16px 108px;background:#fff;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif;text-align:left}
+.figmaResultScreen{max-width:37.5rem;margin:0 auto;padding:64px 16px 108px;background:#fff;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif;text-align:left}
 .figmaResultScreen h1{margin:0 0 24px;color:#1a2233;font-size:20px;font-weight:800;line-height:normal}
 .figmaResultSubtitle{margin:0 0 16px;color:#5a6580;font-size:17px;font-weight:700;line-height:normal}
 .figmaResultScreen .resultScoreSummary{position:relative;min-height:332px;box-sizing:border-box;margin:0;padding:24px 0 0;border-top:0;border-bottom:1px solid #e8f1ff;background:#fff;text-align:center}

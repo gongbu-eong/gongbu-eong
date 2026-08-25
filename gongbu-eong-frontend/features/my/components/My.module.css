@@ -752,7 +752,7 @@
 .resumeViewFrame {
   max-width: var(--gb-container-pc);
   min-height: calc(100dvh - 3rem);
-  padding: 1rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  padding: 4rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
   border: 0;
   background: #fff;
 }
@@ -1619,7 +1619,7 @@
 .resumeFormFrame {
   max-width: var(--gb-container-pc);
   min-height: calc(100dvh - 3rem);
-  padding: 0 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  padding: 3rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
   background: #fff;
 }
 

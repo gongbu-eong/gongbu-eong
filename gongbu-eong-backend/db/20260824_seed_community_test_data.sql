@@ -9,7 +9,8 @@
 --    - The rest have 1-10 top-level comments.
 -- 5. Inserts replies on a realistic subset of top-level comments:
 --    - Most comments have no replies.
---    - Some threads have 1-27 replies, including long paging-test threads.
+--    - Some posts have reply clusters spread across several comments, including
+--      long paging-test threads without concentrating every reply on one comment.
 --
 -- Notes:
 -- - Existing real users are not deleted.
@@ -730,61 +731,72 @@ DECLARE
   comment_id UUID;
   author_id UUID;
   reply_author_id UUID;
-  parent_author_name TEXT;
   previous_reply_id UUID;
-  previous_reply_author_name TEXT;
   reply_parent_id UUID;
-  reply_parent_author_name TEXT;
   inserted_reply_id UUID;
   comment_created TIMESTAMPTZ;
   reply_created TIMESTAMPTZ;
   reply_templates_young TEXT[] := ARRAY[
-    '%s님 말 보니까 저도 그쪽으로 생각이 좀 기울어요.',
-    '%s님 의견이랑 비슷한데, 케이스마다 차이는 있는 듯해요.',
-    '%s님 말대로 시간 부족할 때 체감이 진짜 큽니다.',
-    '%s님처럼 했다가 저도 한 번 시행착오 겪었어요.',
-    '%s님 포인트는 알겠는데 저는 조금 조심해서 봐야 한다고 봐요.',
-    '%s님 댓글 보고 제 방식도 한 번 바꿔볼까 싶네요.',
-    '%s님이 말한 부분 때문에 저도 지난번에 꽤 고민했어요.',
-    '%s님 얘기처럼 해보면 적어도 방향은 빨리 잡힐 듯합니다.',
-    '%s님 말도 맞는데 저는 아직 확신은 안 서네요.',
-    '%s님 댓글 보니까 위에 글쓴 분 고민이 더 이해됩니다.'
+    '맞아요, 저도 그쪽으로 생각이 좀 기울어요.',
+    '이거 케이스마다 차이가 좀 있는 듯해요.',
+    '시간 부족할 때 체감이 진짜 큽니다.',
+    '저도 비슷하게 했다가 한 번 시행착오 겪었어요.',
+    '포인트는 알겠는데 저는 조금 조심해서 봐야 한다고 봐요.',
+    '다른 의견도 보니까 제 방식도 한 번 바꿔볼까 싶네요.',
+    '그 부분 때문에 저도 지난번에 꽤 고민했어요.',
+    '이렇게 해보면 적어도 방향은 빨리 잡힐 듯합니다.',
+    '말도 맞는데 저는 아직 확신은 안 서네요.',
+    '본문의 고민이 더 이해됩니다.'
   ];
   reply_templates_plain TEXT[] := ARRAY[
-    '%s님 댓글 보고 같은 부분이 다시 궁금해졌습니다.',
-    '%s님 말씀 기준으로 다시 보니 이해가 됩니다.',
-    '%s님 의견에 더해서 원문도 같이 확인하면 좋겠습니다.',
-    '%s님 의견도 맞지만 예외가 꽤 있어서 조심스럽습니다.',
-    '%s님 정리 덕분에 흐름이 조금 잡히네요.',
-    '%s님 말씀을 보니 제가 놓친 부분이 있었던 것 같습니다.',
-    '%s님 사례처럼 접근하면 실수를 줄일 수 있겠네요.',
-    '%s님 의견에 동의하지만 적용 범위는 한 번 더 봐야겠습니다.',
-    '%s님 댓글처럼 기준을 먼저 잡아두는 게 중요해 보입니다.',
-    '%s님 말대로 실제 경험을 기준으로 정리하는 게 낫겠습니다.'
+    '이야기를 보니 같은 부분이 다시 궁금해졌습니다.',
+    '기준을 다시 잡아보니 이해가 됩니다.',
+    '여기에 더해서 원문도 같이 확인하면 좋겠습니다.',
+    '그 의견도 맞지만 예외가 꽤 있어서 조심스럽습니다.',
+    '정리된 내용을 보니 흐름이 조금 잡히네요.',
+    '제가 놓친 부분이 있었던 것 같습니다.',
+    '이런 사례처럼 접근하면 실수를 줄일 수 있겠네요.',
+    '의견에는 동의하지만 적용 범위는 한 번 더 봐야겠습니다.',
+    '기준을 먼저 잡아두는 게 중요해 보입니다.',
+    '실제 경험을 기준으로 정리하는 게 낫겠습니다.'
   ];
   reply_templates_mature TEXT[] := ARRAY[
-    '%s님 말씀처럼 그 부분은 조금 나눠서 봐야 할 것 같습니다.',
-    '%s님 말씀은 이해합니다만, 실제 적용에서는 차이가 있었습니다.',
-    '%s님 지적처럼 저도 그 부분은 다시 확인해보겠습니다.',
-    '%s님 댓글을 보니 감정보다는 기준을 먼저 잡아야겠다는 생각이 듭니다.',
-    '%s님 말씀대로 사례를 더 모아보면 판단이 쉬울 듯합니다.',
-    '%s님 경험을 보면 이 문제를 단순하게 볼 수는 없겠네요.',
-    '%s님 의견에 덧붙이면, 결국 본인이 설명 가능한지가 핵심인 것 같습니다.',
-    '%s님 댓글처럼 준비 과정에서는 작은 기준 차이가 꽤 크게 느껴집니다.',
-    '%s님 말씀이 맞습니다. 다만 시기와 기관에 따라 달라질 수는 있겠습니다.',
-    '%s님 사례를 보니 저도 기존 방식만 고집하면 안 되겠다는 생각이 듭니다.'
+    '그 부분은 조금 나눠서 봐야 할 것 같습니다.',
+    '이해는 됩니다만, 실제 적용에서는 차이가 있었습니다.',
+    '저도 그 부분은 다시 확인해보겠습니다.',
+    '감정보다는 기준을 먼저 잡아야겠다는 생각이 듭니다.',
+    '사례를 더 모아보면 판단이 쉬울 듯합니다.',
+    '이 문제를 단순하게 볼 수는 없겠네요.',
+    '결국 본인이 설명 가능한지가 핵심인 것 같습니다.',
+    '준비 과정에서는 작은 기준 차이가 꽤 크게 느껴집니다.',
+    '맞습니다. 다만 시기와 기관에 따라 달라질 수는 있겠습니다.',
+    '기존 방식만 고집하면 안 되겠다는 생각이 듭니다.'
   ];
   reply_templates_senior TEXT[] := ARRAY[
-    '%s님 의견 감사합니다. 실제 준비에서는 이런 관점도 필요하다고 봅니다.',
-    '%s님 경험도 충분히 의미가 있다고 생각합니다.',
-    '%s님과 달리 제 경우에는 반대로 진행된 적도 있었습니다.',
-    '%s님 말씀처럼 준비생 입장에서는 작은 차이도 크게 느껴질 수 있습니다.',
-    '%s님 의견에 더해 원문과 본인의 경험을 함께 정리하는 것이 좋겠습니다.',
-    '%s님 말씀을 보니 서로 다른 사례를 남겨두는 것도 의미가 있겠습니다.',
-    '%s님처럼 실제로 겪은 내용을 기준으로 말해주시면 다른 분들께도 도움이 됩니다.',
-    '%s님 의견에 동의합니다. 다만 너무 서두르지 않고 확인하는 태도도 필요합니다.',
-    '%s님 댓글을 보며 기본을 다시 확인하는 계기가 되었습니다.',
-    '%s님 사례와 본문을 함께 보면 준비 방향을 조금 더 현실적으로 잡을 수 있겠습니다.'
+    '실제 준비에서는 이런 관점도 필요하다고 봅니다.',
+    '이런 경험도 충분히 의미가 있다고 생각합니다.',
+    '제 경우에는 반대로 진행된 적도 있었습니다.',
+    '준비생 입장에서는 작은 차이도 크게 느껴질 수 있습니다.',
+    '원문과 본인의 경험을 함께 정리하는 것이 좋겠습니다.',
+    '서로 다른 사례를 남겨두는 것도 의미가 있겠습니다.',
+    '실제로 겪은 내용을 기준으로 말해주시면 다른 분들께도 도움이 됩니다.',
+    '의견에 동의합니다. 다만 너무 서두르지 않고 확인하는 태도도 필요합니다.',
+    '기본을 다시 확인하는 계기가 되었습니다.',
+    '사례와 본문을 함께 보면 준비 방향을 조금 더 현실적으로 잡을 수 있겠습니다.'
+  ];
+  reply_short_templates TEXT[] := ARRAY[
+    '감사합니다.',
+    '고맙습니다~',
+    '좋습니다!!',
+    '저도 참고할게요.',
+    '공감합니다.',
+    '확인해볼게요.',
+    '좋은 정보 감사합니다.',
+    '오, 도움됐어요.',
+    '저도 그렇게 해봐야겠네요.',
+    '이건 저장해둘게요.',
+    '맞는 말 같아요.',
+    '짧게라도 남겨주셔서 좋아요.'
   ];
   tone_value TEXT;
   comment_text TEXT;
@@ -837,7 +849,7 @@ BEGIN
             (ARRAY[
               '다들 비슷하게 무너졌다가 다시 붙잡는 과정이 있는 것 같아요.',
               '오늘 하루가 별로였다고 준비 전체가 틀어진 건 아니니까요.',
-              '댓글 보면서 본인한테 맞는 방식만 골라가면 충분할 것 같습니다.',
+              '여러 의견 중에서 본인한테 맞는 방식만 골라가면 충분할 것 같습니다.',
               '가끔은 조언보다 같이 버티자는 말이 더 크게 와닿습니다.',
               '저도 이런 분위기의 글을 보면 커뮤니티가 좀 살아 있다는 느낌을 받습니다.',
               '너무 진지하게만 굴지 않아도 오래 가는 게 더 중요하다고 봐요.',
@@ -963,7 +975,7 @@ BEGIN
               '잠깐 웃었으니 이제 다시 풀러 가야겠습니다.',
               '웃긴데 제 얘기라서 마냥 웃지는 못하겠네요.',
               '가끔 이런 글이 오래 버티는 데 더 도움이 됩니다.',
-              '댓글까지 보니까 다들 비슷한 상태라 위로가 됩니다.',
+              '다들 비슷한 상태인 것 같아서 위로가 됩니다.',
               '이런 가벼운 공감도 커뮤니티에는 필요하다고 봅니다.',
               '저장해두고 공부 안 될 때 한 번씩 봐야겠습니다.',
               '오늘 하루 망했다고 생각했는데 조금 덜 외로워졌습니다.',
@@ -996,27 +1008,71 @@ BEGIN
       )
       RETURNING id INTO comment_id;
 
-      -- Keep most comments without replies while selected threads still reach
-      -- up to 27 replies for reply pagination testing.
-      IF comment_idx = 1 AND post_row.seq % 4 = 0 THEN
-        reply_count := 27;
-      ELSIF comment_idx = 2 AND post_row.seq % 6 = 0 THEN
-        reply_count := 12 + (post_row.seq % 10);
-      ELSIF comment_idx = 3 AND post_row.seq % 9 = 0 THEN
-        reply_count := 4 + (post_row.seq % 7);
-      ELSIF comment_idx = 4 AND post_row.seq % 11 = 0 THEN
-        reply_count := 1 + (post_row.seq % 3);
-      ELSE
-        reply_count := 0;
+      -- Keep most comments without replies. When a post has active discussion,
+      -- spread replies across a few different top-level comments instead of
+      -- stacking the whole thread under the first comment.
+      reply_count := 0;
+
+      IF post_row.seq % 4 = 0 THEN
+        IF comment_idx = ((post_row.seq * 2) % comment_count) + 1 THEN
+          reply_count := reply_count + 9 + (post_row.seq % 7);
+        END IF;
+
+        IF comment_count >= 3
+           AND comment_idx = ((post_row.seq * 2 + 2) % comment_count) + 1 THEN
+          reply_count := reply_count + 5 + (post_row.seq % 5);
+        END IF;
+
+        IF comment_count >= 6
+           AND comment_idx = ((post_row.seq * 2 + 5) % comment_count) + 1 THEN
+          reply_count := reply_count + 3 + (post_row.seq % 4);
+        END IF;
       END IF;
 
-      SELECT community_nickname
-      INTO parent_author_name
-      FROM public.users
-      WHERE id = author_id;
+      IF post_row.seq % 6 = 0 THEN
+        IF comment_idx = ((post_row.seq * 3 + 1) % comment_count) + 1 THEN
+          reply_count := reply_count + 6 + (post_row.seq % 6);
+        END IF;
+
+        IF comment_count >= 4
+           AND comment_idx = ((post_row.seq * 3 + 4) % comment_count) + 1 THEN
+          reply_count := reply_count + 2 + (post_row.seq % 4);
+        END IF;
+      END IF;
+
+      IF post_row.seq % 9 = 0 THEN
+        IF comment_idx = ((post_row.seq * 5) % comment_count) + 1 THEN
+          reply_count := reply_count + 2 + (post_row.seq % 4);
+        END IF;
+
+        IF comment_count >= 5
+           AND comment_idx = ((post_row.seq * 5 + 4) % comment_count) + 1 THEN
+          reply_count := reply_count + 1 + (post_row.seq % 2);
+        END IF;
+      END IF;
+
+      IF post_row.seq % 11 = 0
+         AND comment_idx = ((post_row.seq * 7 + 2) % comment_count) + 1 THEN
+        reply_count := reply_count + 1 + (post_row.seq % 3);
+      END IF;
+
+      IF reply_count = 0 AND (post_row.seq + comment_idx) % 17 = 0 THEN
+        reply_count := 1;
+      ELSIF reply_count = 0 AND (post_row.seq * comment_idx) % 31 = 0 THEN
+        reply_count := 2;
+      END IF;
+
+      IF comment_count = 1 AND reply_count > 3 THEN
+        reply_count := 2 + (post_row.seq % 2);
+      ELSIF comment_count = 2 AND reply_count > 6 THEN
+        reply_count := 4 + ((post_row.seq + comment_idx) % 3);
+      ELSIF comment_count = 3 AND reply_count > 12 THEN
+        reply_count := 8 + ((post_row.seq + comment_idx) % 5);
+      ELSIF reply_count > 16 THEN
+        reply_count := 12 + ((post_row.seq + comment_idx) % 5);
+      END IF;
 
       previous_reply_id := NULL;
-      previous_reply_author_name := NULL;
 
       FOR reply_idx IN 1..reply_count LOOP
         SELECT id, tone_key
@@ -1024,53 +1080,40 @@ BEGIN
         FROM _community_seed_users
         WHERE seq = ((post_row.seq * 5 + comment_idx + reply_idx * 7) % 80) + 1;
 
-        IF previous_reply_id IS NOT NULL AND reply_idx % 4 = 0 THEN
+        IF previous_reply_id IS NOT NULL AND reply_idx % 5 = 0 THEN
           reply_parent_id := previous_reply_id;
-          reply_parent_author_name := previous_reply_author_name;
         ELSE
           reply_parent_id := comment_id;
-          reply_parent_author_name := parent_author_name;
         END IF;
 
-        IF post_row.seq = 1 THEN
-          reply_text := format(
-            (ARRAY[
-              '%s님 말처럼 처음에는 질문을 자주 남기는 게 제일 빠르게 적응하는 방법 같습니다.',
-              '%s님 댓글 보고 저도 처음 시작했을 때 공고 용어부터 찾아봤던 기억이 났습니다.',
-              '%s님처럼 작은 기록부터 남기면 나중에 자기 루틴을 찾는 데 꽤 도움이 되더라고요.',
-              '%s님 말에 공감합니다. 처음 글에는 완벽한 정보보다 계속 오겠다는 마음이 더 중요하죠.',
-              '%s님 조언처럼 처음부터 너무 크게 잡지 말고 질문 하나씩 정리하는 게 좋겠습니다.',
-              '%s님 댓글 덕분에 새로 온 분도 덜 부담스러울 것 같아요.',
-              '%s님 말씀대로 캘린더랑 공고를 같이 보는 습관만 생겨도 시작은 충분하다고 봅니다.',
-              '%s님처럼 환영해주는 댓글이 있으면 글쓴 분도 다음 글 쓰기 편할 것 같습니다.',
-              '%s님 의견에 더해, 공부 기록은 짧게라도 남겨두면 나중에 복기할 때 도움이 됩니다.',
-              '%s님 말처럼 여기서 질문하고 답 받으면서 천천히 방향 잡아가면 될 것 같아요.',
-              '%s님 댓글 보니 저도 처음 눈팅하던 때가 생각납니다. 작은 질문이라도 올리는 게 시작이더라고요.',
-              '%s님 조언처럼 너무 조급하게 준비하지 않아도 됩니다. 일단 꾸준히 들어오는 것부터가 시작입니다.'
-            ])[((post_row.seq + reply_idx + comment_idx) % 12) + 1],
-            reply_parent_author_name
-          );
+        IF (post_row.seq + comment_idx * 2 + reply_idx * 3) % 5 = 0 THEN
+          reply_text := reply_short_templates[
+            ((post_row.seq * 7 + comment_idx * 5 + reply_idx) % array_length(reply_short_templates, 1)) + 1
+          ];
+        ELSIF post_row.seq = 1 THEN
+          reply_text := (ARRAY[
+            '처음에는 질문을 자주 남기는 게 제일 빠르게 적응하는 방법 같습니다.',
+            '저도 처음 시작했을 때 공고 용어부터 찾아봤던 기억이 났습니다.',
+            '작은 기록부터 남기면 나중에 자기 루틴을 찾는 데 꽤 도움이 되더라고요.',
+            '처음 글에는 완벽한 정보보다 계속 오겠다는 마음이 더 중요하죠.',
+            '처음부터 너무 크게 잡지 말고 질문 하나씩 정리하는 게 좋겠습니다.',
+            '이런 반응이면 새로 온 분도 덜 부담스러울 것 같아요.',
+            '캘린더랑 공고를 같이 보는 습관만 생겨도 시작은 충분하다고 봅니다.',
+            '환영해주는 댓글이 있으면 글쓴 분도 다음 글 쓰기 편할 것 같습니다.',
+            '공부 기록은 짧게라도 남겨두면 나중에 복기할 때 도움이 됩니다.',
+            '여기서 질문하고 답 받으면서 천천히 방향 잡아가면 될 것 같아요.',
+            '저도 처음 눈팅하던 때가 생각납니다. 작은 질문이라도 올리는 게 시작이더라고요.',
+            '너무 조급하게 준비하지 않아도 됩니다. 일단 꾸준히 들어오는 것부터가 시작입니다.'
+          ])[((post_row.seq + reply_idx + comment_idx) % 12) + 1];
         ELSE
           IF tone_value = 'young' THEN
-            reply_text := format(
-              reply_templates_young[((reply_idx + comment_idx - 1) % array_length(reply_templates_young, 1)) + 1],
-              reply_parent_author_name
-            );
+            reply_text := reply_templates_young[((reply_idx + comment_idx - 1) % array_length(reply_templates_young, 1)) + 1];
           ELSIF tone_value = 'plain' THEN
-            reply_text := format(
-              reply_templates_plain[((reply_idx + comment_idx - 1) % array_length(reply_templates_plain, 1)) + 1],
-              reply_parent_author_name
-            );
+            reply_text := reply_templates_plain[((reply_idx + comment_idx - 1) % array_length(reply_templates_plain, 1)) + 1];
           ELSIF tone_value = 'mature' THEN
-            reply_text := format(
-              reply_templates_mature[((reply_idx + comment_idx - 1) % array_length(reply_templates_mature, 1)) + 1],
-              reply_parent_author_name
-            );
+            reply_text := reply_templates_mature[((reply_idx + comment_idx - 1) % array_length(reply_templates_mature, 1)) + 1];
           ELSE
-            reply_text := format(
-              reply_templates_senior[((reply_idx + comment_idx - 1) % array_length(reply_templates_senior, 1)) + 1],
-              reply_parent_author_name
-            );
+            reply_text := reply_templates_senior[((reply_idx + comment_idx - 1) % array_length(reply_templates_senior, 1)) + 1];
           END IF;
 
           reply_text := reply_text || ' ' || CASE post_row.category
@@ -1078,7 +1121,7 @@ BEGIN
             (ARRAY[
               '저도 커뮤니티 보면서 덜 외롭다는 말에는 공감합니다.',
               '이런 글에는 해결책보다 같이 버티는 말이 더 도움 될 때가 있더라고요.',
-              '위 댓글들처럼 루틴보다 마음이 먼저 무너지는 날도 있는 것 같아요.',
+              '이럴 때는 루틴보다 마음이 먼저 무너지는 날도 있는 것 같아요.',
               '그래도 첫 글에 이렇게 이야기 이어지는 게 커뮤니티 느낌 나서 좋네요.',
               '저는 이런 날에는 목표를 낮추고 책상에 앉는 것만 성공으로 칩니다.',
               '비교만 안 해도 준비 기간이 훨씬 덜 괴롭더라고요.',
@@ -1088,7 +1131,7 @@ BEGIN
           WHEN '공시 정보' THEN
             (ARRAY[
               '그래서 첨부파일 버전하고 마감 시간을 같이 확인하는 게 안전하다고 봅니다.',
-              '위 댓글처럼 원문 확인은 필수고, 애매하면 채용 Q&A까지 보는 게 낫습니다.',
+              '원문 확인은 필수고, 애매하면 채용 Q&A까지 보는 게 낫습니다.',
               '우대사항보다 증빙 가능 여부를 먼저 보는 쪽에 저도 동의합니다.',
               '이런 공고 정보는 댓글에서 서로 체크해주면 실수가 확 줄더라고요.',
               '저는 마감일보다 제출서류 누락에서 더 많이 실수할 뻔했습니다.',
@@ -1099,7 +1142,7 @@ BEGIN
           WHEN '공부·스터디' THEN
             (ARRAY[
               '스터디 방식은 처음부터 고정하지 말고 한 주 해본 뒤 바꾸는 게 현실적입니다.',
-              '위 댓글처럼 오답을 어떻게 공유할지부터 정하면 훨씬 덜 흐트러집니다.',
+              '오답을 어떻게 공유할지부터 정하면 훨씬 덜 흐트러집니다.',
               '시간 재고 푸는 날과 개념 보는 날을 나누자는 의견에 저도 한 표입니다.',
               '벌금보다 인증 방식이 오래 간다는 말은 제 스터디에서도 맞았습니다.',
               '저는 스터디에서 말로 설명하는 시간이 제일 효과가 컸습니다.',
@@ -1110,7 +1153,7 @@ BEGIN
           WHEN '질문·답변' THEN
             (ARRAY[
               '질문하신 상황이면 저도 보수적으로 적고 면접에서 풀어 설명할 것 같습니다.',
-              '위 댓글처럼 기관마다 기준이 달라서 공고 문구를 먼저 잡는 게 맞아 보입니다.',
+              '기관마다 기준이 달라서 공고 문구를 먼저 잡는 게 맞아 보입니다.',
               '정답이 하나인 질문은 아니라서 여러 사례를 모아보는 게 좋겠습니다.',
               '면접 답변이라면 결론보다 왜 그렇게 판단했는지 흐름이 더 중요해 보입니다.',
               '저라면 애매한 경험은 과감히 빼고 확실한 사례를 더 깊게 준비하겠습니다.',
@@ -1121,7 +1164,7 @@ BEGIN
           WHEN '합격·면접 후기' THEN
             (ARRAY[
               '이런 복기는 다음 면접 준비할 때 질문 흐름 잡는 데 진짜 도움 됩니다.',
-              '위 댓글처럼 압박 질문은 답 자체보다 태도를 보는 느낌이 강했습니다.',
+              '압박 질문은 답 자체보다 태도를 보는 느낌이 강했습니다.',
               '사례를 짧게 끊어 말했다는 부분은 저도 다음 면접 때 써보려고 합니다.',
               '후기 글에서는 이런 세부 분위기 공유가 제일 값진 것 같아요.',
               '저도 면접 끝나고 바로 복기했을 때 다음 준비가 훨씬 수월했습니다.',
@@ -1132,7 +1175,7 @@ BEGIN
           ELSE
             (ARRAY[
               '웃기긴 한데 다들 겪는 상황이라 더 공감됩니다.',
-              '위 댓글 말대로 잠깐 웃고 다시 책상으로 가면 그걸로 충분하죠.',
+              '잠깐 웃고 다시 책상으로 가면 그걸로 충분하죠.',
               '이런 가벼운 글이 중간중간 있어야 오래 버티는 것 같습니다.',
               '농담처럼 보여도 준비생 생활이 그대로 담겨 있어서 웃프네요.',
               '저도 이런 글 보고 잠깐 웃다가 결국 다시 문제집 폅니다.',
@@ -1145,16 +1188,16 @@ BEGIN
           reply_text := reply_text || CASE
             WHEN reply_idx % 23 = 0 THEN E'\n' ||
               '저는 이 부분에서 의견이 조금 다릅니다. 준비생 입장에서는 작은 차이도 크게 느껴질 수 있고, 실제로 그 차이 때문에 지원 여부를 바꾸는 경우도 있거든요.'
-            WHEN reply_idx % 12 = 0 THEN ' 다만 위에서 말한 방식이 모두에게 맞는 건 아니라서 본인 상황에 맞게 조정해야 할 것 같습니다.'
+            WHEN reply_idx % 12 = 0 THEN ' 다만 이런 방식이 모두에게 맞는 건 아니라서 본인 상황에 맞게 조정해야 할 것 같습니다.'
             WHEN reply_idx % 7 = 0 THEN ' 저는 비슷하게 했다가 중간에 한 번 바꿨는데, 바꾸고 나서 오히려 정리가 잘 됐습니다.'
-            WHEN reply_idx % 5 = 0 THEN ' 그래서 저는 위 댓글 둘을 합쳐서 보는 쪽이 더 현실적이라고 생각합니다.'
+            WHEN reply_idx % 5 = 0 THEN ' 그래서 저는 여러 의견을 합쳐서 보는 쪽이 더 현실적이라고 생각합니다.'
             ELSE ''
           END;
         END IF;
 
         reply_created := comment_created
-          + (reply_idx || ' minutes')::interval
-          + (((reply_idx * 7) % 30) || ' seconds')::interval;
+          + ((reply_idx * (2 + ((post_row.seq + comment_idx) % 4))) || ' minutes')::interval
+          + ((((reply_idx * 7) + (comment_idx * 11)) % 45) || ' seconds')::interval;
 
         INSERT INTO public.community_comments (
           post_id,
@@ -1177,11 +1220,6 @@ BEGIN
         RETURNING id INTO inserted_reply_id;
 
         previous_reply_id := inserted_reply_id;
-
-        SELECT community_nickname
-        INTO previous_reply_author_name
-        FROM public.users
-        WHERE id = reply_author_id;
       END LOOP;
     END LOOP;
   END LOOP;
