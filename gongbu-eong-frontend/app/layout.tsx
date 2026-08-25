@@ -48,18 +48,6 @@ export default function RootLayout({
           type="font/woff2"
           crossOrigin="anonymous"
         />
-        <link
-          rel="preload"
-          href="/diagnosis-result-heroes.svg"
-          as="image"
-          type="image/svg+xml"
-        />
-        <link
-          rel="preload"
-          href="/diagnosis-question-owls.svg"
-          as="image"
-          type="image/svg+xml"
-        />
       </head>
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <Suspense fallback={null}>
