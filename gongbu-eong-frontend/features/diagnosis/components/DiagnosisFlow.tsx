@@ -95,23 +95,18 @@ const RESULT_TYPE_DETAILS: Record<
   },
 };
 
-const RESULT_HERO_POSITION: Record<
+const RESULT_HERO_IMAGE_SRC: Record<
   DiagnosisResultResponseDto["typeCode"],
-  { x: number; y: number }
+  string
 > = {
-  stability: { x: 80, y: 80 },
-  challenge: { x: 497, y: 80 },
-  teamwork: { x: 914, y: 80 },
-  individual: { x: 1331, y: 80 },
-  execution: { x: 80, y: 406 },
-  planning: { x: 497, y: 406 },
-  principle: { x: 914, y: 406 },
-  flexibility: { x: 1331, y: 406 },
-};
-
-const RESULT_HERO_CARD = {
-  width: 393,
-  height: 302,
+  stability: "/diagnosis/result-heroes/stability.webp",
+  challenge: "/diagnosis/result-heroes/challenge.webp",
+  teamwork: "/diagnosis/result-heroes/teamwork.webp",
+  individual: "/diagnosis/result-heroes/individual.webp",
+  execution: "/diagnosis/result-heroes/execution.webp",
+  planning: "/diagnosis/result-heroes/planning.webp",
+  principle: "/diagnosis/result-heroes/principle.webp",
+  flexibility: "/diagnosis/result-heroes/flexibility.webp",
 };
 
 const RESULT_HERO_COLOR: Record<
@@ -795,7 +790,6 @@ function DiagnosisResult({
     anonymousId,
   );
   const typeDetail = RESULT_TYPE_DETAILS[displayResult.typeCode];
-  const heroPosition = RESULT_HERO_POSITION[displayResult.typeCode];
   const pointCards = buildPointCards(displayResult);
 
   return (
@@ -805,19 +799,13 @@ function DiagnosisResult({
         aria-label={`나의 강점·성향 유형은 ${displayResult.typeName}. ${typeDetail.heroSummary}`}
         style={
           {
-            "--result-hero-left": `${
-              (-heroPosition.x / RESULT_HERO_CARD.width) * 100
-            }%`,
-            "--result-hero-top": `${
-              (-heroPosition.y / RESULT_HERO_CARD.height) * 100
-            }%`,
             "--result-hero-color": RESULT_HERO_COLOR[displayResult.typeCode],
           } as CSSProperties
         }
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/diagnosis-result-heroes.svg"
+          src={RESULT_HERO_IMAGE_SRC[displayResult.typeCode]}
           alt=""
           className={styles.resultHeroSprite}
           draggable={false}
