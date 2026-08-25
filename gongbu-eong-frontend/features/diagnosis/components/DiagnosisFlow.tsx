@@ -173,10 +173,6 @@ export function DiagnosisFlow() {
 
   useEffect(() => {
     let ignore = false;
-    const resultHeroImage = new window.Image();
-    resultHeroImage.src = "/diagnosis-result-heroes.svg";
-    const questionOwlImage = new window.Image();
-    questionOwlImage.src = "/diagnosis-question-owls.svg";
 
     getCurrentUser()
       .then((response) => {
