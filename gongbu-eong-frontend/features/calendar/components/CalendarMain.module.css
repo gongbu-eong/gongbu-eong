@@ -6,10 +6,12 @@
 }
 
 .frame {
+  box-sizing: border-box;
   width: 100%;
   max-width: 37.5rem;
   min-height: 100dvh;
   margin: 0 auto;
+  padding-top: 3rem;
   background: #fff;
   font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
 }

@@ -80,8 +80,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
         <p className={styles.oneStep}>가입과 로그인이 한 번에 진행돼요</p>
         <p className={styles.terms}>
-          계속 진행하면 <a href="#">이용약관</a> 및{" "}
-          <a href="#">개인정보처리방침</a>에 동의하는 것으로 간주됩니다.
+          계속 진행하면&nbsp;<Link href="/my/policies/terms">이용약관</Link> 및{" "}
+          <Link href="/my/policies/privacy">개인정보처리방침</Link>에
+          <br />
+          동의하는 것으로 간주됩니다.
         </p>
       </section>
     </main>

@@ -125,6 +125,17 @@ function clearWelcomeTicketRewardQuery() {
   );
 }
 
+function getRecommendedJobsHref(user: CurrentUserDto | null | undefined) {
+  if (!user) return "/login";
+  if (!user.diagnosisResultId) return "/jobs?view=recommended";
+
+  const params = new URLSearchParams({
+    view: "recommended",
+    resultId: user.diagnosisResultId,
+  });
+  return `/jobs?${params.toString()}`;
+}
+
 export function HomeMain({
   initialUser = null,
   authResolved = false,
@@ -496,7 +507,7 @@ const ignoreClickAfterDrag = (
         <div className={styles.contentBand}>
           <SectionHeader
             title={user ? "진단결과 추천 공고" : "강점·성향 진단결과 추천 공고"}
-            href={user ? "/jobs?view=recommended" : "/login"}
+            href={getRecommendedJobsHref(user)}
           />
           <div className={styles.listGroup}>
             {jobs.recommendedJobs.slice(0, 5).map((job) => (
@@ -707,7 +718,7 @@ export function HomeMenuDrawer({
             items={["채용 공고", "진단결과 추천 공고", "찜한 공고"]}
             hrefs={[
               "/jobs",
-              user ? "/jobs?view=recommended" : "/login",
+              getRecommendedJobsHref(user),
               user ? "/jobs?view=bookmarked" : "/login",
             ]}
             badge={String(bookmarkCount)}

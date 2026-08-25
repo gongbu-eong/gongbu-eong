@@ -234,10 +234,27 @@ export async function findRecommendedJobPostings(
     monthlyRegularOnly?: boolean;
     regularOnly?: boolean;
     ncsCategory?: string;
+    region?: string;
+    employmentType?: string;
+    educationRequirement?: string;
+    careerRequirement?: string;
+    startDate?: string;
+    endDate?: string;
+    sort?: "closing" | "latest" | "views" | "recommended";
   },
 ) {
   const values: unknown[] = [args.personalityCode];
   const categoryFilter = buildAnyTextFilter("categories.name", args.ncsCategory, values);
+  const regionFilter = buildAnyTextFilter("postings.work_region", args.region, values);
+  const employmentFilter = buildEmploymentTypeFilter(args.employmentType, values);
+  const educationFilter = buildAnyTextFilter("postings.education_requirement", args.educationRequirement, values);
+  const careerFilter = buildAnyTextFilter("postings.career_requirement", args.careerRequirement, values);
+  const startDateFilter = args.startDate
+    ? `AND postings.announcement_at::date >= $${values.push(args.startDate)}::date`
+    : "";
+  const endDateFilter = args.endDate
+    ? `AND postings.announcement_at::date <= $${values.push(args.endDate)}::date`
+    : "";
   const limitParam = `$${values.push(args.limit)}`;
   const userParam = `$${values.push(args.userId || null)}`;
   const offsetParam = `$${values.push(args.offset || 0)}`;
@@ -259,6 +276,23 @@ export async function findRecommendedJobPostings(
         AND COALESCE(postings.application_end_at, 'infinity'::timestamptz)
           >= DATE_TRUNC('month', CURRENT_DATE)`
     : "";
+  const orderBy =
+    args.sort === "latest"
+      ? "postings.announcement_at DESC NULLS LAST, postings.created_at DESC"
+      : args.sort === "views"
+        ? "postings.view_count DESC, postings.application_end_at ASC NULLS LAST"
+        : `
+          MAX(matched_categories.fit_weight) DESC,
+          CASE
+            WHEN postings.employment_type = '정규직' THEN 0
+            WHEN postings.employment_type ILIKE '%정규%'
+              AND postings.employment_type NOT ILIKE '%비정규%' THEN 0
+            ELSE 1
+          END,
+          postings.application_end_at ASC NULLS LAST,
+          postings.view_count DESC,
+          postings.created_at DESC
+        `;
   const result = await query<JobPostingRow & { total_count: string }>(
     `
       WITH mapped_categories AS (
@@ -322,18 +356,14 @@ export async function findRecommendedJobPostings(
         AND (postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE)
         ${regularEmploymentFilter}
         ${monthlyDateFilter}
+        ${regionFilter}
+        ${employmentFilter}
+        ${educationFilter}
+        ${careerFilter}
+        ${startDateFilter}
+        ${endDateFilter}
       GROUP BY postings.id, institutions.name
-      ORDER BY
-        postings.application_end_at ASC NULLS LAST,
-        CASE
-          WHEN postings.employment_type = '정규직' THEN 0
-          WHEN postings.employment_type ILIKE '%정규%'
-            AND postings.employment_type NOT ILIKE '%비정규%' THEN 0
-          ELSE 1
-        END,
-        postings.view_count DESC,
-        MAX(matched_categories.fit_weight) DESC,
-        postings.created_at DESC
+      ORDER BY ${orderBy}
       LIMIT ${limitParam}
       OFFSET ${offsetParam}
     `,

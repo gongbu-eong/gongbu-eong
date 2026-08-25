@@ -10,15 +10,15 @@
   width: 100%;
   max-width: 37.5rem;
   margin: 0 auto;
-  padding: 1rem 1rem 7.5rem;
+  padding: 4rem 1rem 7.5rem;
 }
 
 .frame h1 {
   margin: 0 0 1rem;
   color: #1a2233;
   font-size: 1.25rem;
-  font-weight: 800;
-  line-height: 1;
+  font-weight: 700;
+  line-height: 1.2;
   letter-spacing: 0;
 }
 

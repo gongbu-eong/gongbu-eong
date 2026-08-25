@@ -9,15 +9,15 @@
 
 .page > header,
 .page > footer {
-  max-width: var(--gb-container-pc);
+  max-width: 37.5rem;
 }
 
 .frame {
   width: 100%;
-  max-width: var(--gb-container-pc);
+  max-width: 37.5rem;
   min-height: calc(100dvh - 3rem);
   margin: 0 auto;
-  padding: 1rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  padding: 4rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
   background: #fff;
 }
 
@@ -108,9 +108,9 @@
 
 .policyDescription {
   overflow-wrap: anywhere;
-  color: #5a6580;
+  color: #9aa4b8;
   font-size: 0.875rem;
-  line-height: 1;
+  line-height: 1.2143;
   font-weight: 400;
 }
 
@@ -124,9 +124,9 @@
 
 .infoBox {
   display: grid;
-  gap: 0.4375rem;
+  gap: 0;
   min-height: 7rem;
-  margin-top: 2.5rem;
+  margin-top: 1.5rem;
   padding: 1rem;
   border-radius: 0.4375rem;
   background: #f5f7fa;
@@ -136,7 +136,7 @@
   margin: 0;
   color: #9aa4b8;
   font-size: 0.8125rem;
-  line-height: 1;
+  line-height: 1.5385;
   font-weight: 400;
 }
 

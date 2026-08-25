@@ -11,6 +11,7 @@ const policyItems = [
     iconHeight: 26,
     title: "서비스 이용약관",
     description: "서비스 이용 조건과 회원의 권리·의무",
+    required: true,
   },
   {
     href: "/my/policies/privacy",
@@ -19,6 +20,7 @@ const policyItems = [
     iconHeight: 30,
     title: "개인정보 처리방침",
     description: "수집 항목·이용 목적·보관 기간 안내",
+    required: true,
   },
   {
     href: "/my/policies/marketing",
@@ -47,7 +49,7 @@ export function MyPoliciesPage() {
               <span className={styles.policyText}>
                 <span className={styles.policyTitleRow}>
                   <strong>{item.title}</strong>
-                  <b>필수</b>
+                  {item.required ? <b>필수</b> : null}
                 </span>
                 <span className={styles.policyDescription}>{item.description}</span>
               </span>

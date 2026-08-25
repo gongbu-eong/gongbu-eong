@@ -11,6 +11,7 @@
   width: 100%;
   max-width: 37.5rem;
   min-height: 100dvh;
+  padding-top: 3rem;
   padding-bottom: calc(5rem + env(safe-area-inset-bottom));
   background: #fff;
 }
@@ -146,7 +147,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 4.25rem;
+  gap: 0.5rem;
+  height: 3.25rem;
   padding: 0 1rem;
   color: #5a6580;
   font-size: 0.875rem;
@@ -154,8 +156,10 @@
 
 .resultBar > span {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .resultBar em {
@@ -182,8 +186,17 @@
   background: #2f7ff0;
   color: #fff;
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 400;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+.resultControls {
+  display: flex;
+  min-width: 0;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .sortSelect {
@@ -217,6 +230,24 @@
   stroke: #5a6580;
   stroke-width: 1.5;
   transform: translateY(-50%);
+}
+
+.resultFilterButton {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.resultFilterButton img {
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 .list {
@@ -400,6 +431,197 @@
 
 .visualEmpty p {
   margin: 0;
+}
+
+.noDiagnosisContent {
+  display: grid;
+  gap: 1rem;
+  padding: 0 1rem;
+}
+
+.diagnosisEmptyCard {
+  display: flex;
+  height: 14.875rem;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border-radius: 0.625rem;
+  background: #e8f1ff;
+}
+
+.diagnosisEmptyCard img {
+  display: block;
+  width: 7.8125rem;
+  height: auto;
+}
+
+.diagnosisEmptyCard p {
+  margin: 0.6875rem 0 0;
+  color: #5a6580;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.outlineCta,
+.primaryOutlineCta,
+.recommendAgainButton {
+  display: flex;
+  width: 100%;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e4e8ef;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #5a6580;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primaryOutlineCta,
+.recommendAgainButton {
+  border-color: #2f7ff0;
+  color: #2f7ff0;
+}
+
+.recommendationSetup {
+  display: grid;
+  gap: 0;
+  padding: 0 1rem;
+}
+
+.recommendationSetup h2 {
+  margin: 0 0 0.625rem;
+  color: #1a2233;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+}
+
+.selectedDiagnosisCard {
+  display: flex;
+  height: 3.0625rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.8125rem 0 1rem;
+  border-radius: 0.75rem;
+  background: #f5f7fa;
+}
+
+.selectedDiagnosisCard strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #1a2233;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.0625rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectedDiagnosisCard button {
+  flex: 0 0 auto;
+  width: 2.9375rem;
+  height: 1.75rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.4375rem;
+  background: #9aa4b8;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.recommendationSetup .primaryOutlineCta {
+  margin-top: 1rem;
+}
+
+.recommendAgainButton {
+  margin-top: 0;
+}
+
+.diagnosisPickerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1700;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.diagnosisPickerDim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.diagnosisPickerSheet {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  max-width: 37.5rem;
+  max-height: min(calc(100dvh - 2rem), 28rem);
+  padding: 2.625rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0.9375rem 0.9375rem 0 0;
+  background: #fff;
+}
+
+.diagnosisPickerList {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 0.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 1rem;
+}
+
+.diagnosisChoiceCard {
+  display: grid;
+  width: 100%;
+  min-height: 4.6875rem;
+  align-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid #e4e8ef;
+  border-radius: 0.625rem;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.diagnosisChoiceCard strong {
+  color: #1a2233;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.125rem;
+}
+
+.diagnosisChoiceCard time {
+  color: #5a6580;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.0625rem;
+}
+
+.diagnosisChoiceSelected {
+  border-color: #2f7ff0;
+  box-shadow: 0 0 0 1px #2f7ff0 inset;
+}
+
+.diagnosisPickerSheet .primaryOutlineCta {
+  flex: 0 0 auto;
 }
 
 .loadMore {
@@ -1003,7 +1225,14 @@
   .searchSection,
   .tabs,
   .resultBar,
-  .list { padding-inline: 0.75rem; }
+  .list,
+  .noDiagnosisContent,
+  .recommendationSetup { padding-inline: 0.75rem; }
   .searchRow { grid-template-columns: minmax(0, 1fr) 3rem; }
+  .appliedFilterPill {
+    padding: 0 0.75rem;
+    font-size: 0.8125rem;
+  }
+  .sortSelect { width: 6.75rem; }
   .cardLink { padding-left: 0.875rem; }
 }

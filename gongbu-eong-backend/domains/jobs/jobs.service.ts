@@ -101,6 +101,13 @@ export async function getJobPostings(args: {
             userId: args.userId,
             monthlyRegularOnly: args.monthlyRegularOnly,
             ncsCategory: args.ncsCategory,
+            region: args.region,
+            employmentType: args.employmentType,
+            educationRequirement: args.educationRequirement,
+            careerRequirement: args.careerRequirement,
+            startDate: args.startDate,
+            endDate: args.endDate,
+            sort: args.sort,
           },
         )
       : { rows: [], total: 0 };

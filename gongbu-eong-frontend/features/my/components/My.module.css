@@ -7,19 +7,21 @@
 }
 
 .frame {
+  box-sizing: border-box;
   width: 100%;
   max-width: 37.5rem;
   min-height: calc(100dvh - 3rem);
   margin: 0 auto;
-  padding: 1rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  padding: 4rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
   background: #fff;
 }
 
 .title {
   margin: 0;
-  font-size: 1.5rem;
-  line-height: 1.35;
-  font-weight: 900;
+  color: #1a2233;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 700;
   letter-spacing: 0;
 }
 
@@ -2184,7 +2186,7 @@
 .myPage .frame {
   max-width: var(--gb-container-pc);
   min-height: 100dvh;
-  padding: 1rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
+  padding: 4rem 1rem calc(6.5rem + env(safe-area-inset-bottom));
   border: 0;
 }
 
@@ -2193,7 +2195,7 @@
   color: #1a2233;
   font-size: 1.25rem;
   line-height: 1.2;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .myPage .profile {

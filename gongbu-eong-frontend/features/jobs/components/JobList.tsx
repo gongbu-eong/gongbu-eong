@@ -2,8 +2,17 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { FormEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  getDiagnosisResultDetail,
+  getDiagnosisResultHistory,
+} from "@/features/diagnosis/diagnosis.api";
+import type {
+  DiagnosisResultDetailResponseDto,
+  DiagnosisResultHistoryItemDto,
+} from "@/features/diagnosis/diagnosis.dto";
 import {
   getCurrentUser,
   getJobPostings,
@@ -61,10 +70,18 @@ export function JobList({
   scope?: "monthly-regular";
   initialNcs?: string[];
 }) {
+  const router = useRouter();
   const view = initialView;
   const [jobs, setJobs] = useState<JobPostingDto[]>([]);
   const [total, setTotal] = useState(0);
   const [authenticated, setAuthenticated] = useState(false);
+  const [selectedResultId, setSelectedResultId] = useState(resultId || "");
+  const [diagnosisResults, setDiagnosisResults] = useState<DiagnosisResultHistoryItemDto[]>([]);
+  const [diagnosisHistoryLoading, setDiagnosisHistoryLoading] = useState(view === "recommended");
+  const [recommendationCriteriaLoading, setRecommendationCriteriaLoading] = useState(view === "recommended" && Boolean(resultId));
+  const [recommendationTypeName, setRecommendationTypeName] = useState<string | null>(null);
+  const [recommendationSetupOpen, setRecommendationSetupOpen] = useState(false);
+  const [resultPickerOpen, setResultPickerOpen] = useState(false);
   const [queryInput, setQueryInput] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<"closing" | "latest" | "views">("closing");
@@ -84,6 +101,24 @@ export function JobList({
   const [message, setMessage] = useState<string | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  const replaceRecommendedResultParam = useCallback((
+    nextResultId: string,
+    criteria?: { monthlyRegularOnly?: boolean; ncs?: string[] },
+  ) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set("view", "recommended");
+    params.set("resultId", nextResultId);
+    if (criteria?.monthlyRegularOnly) params.set("scope", "monthly-regular");
+    else if (criteria) params.delete("scope");
+    if (criteria?.ncs?.length) params.set("ncs", criteria.ncs.join("|"));
+    else if (criteria) params.delete("ncs");
+
+    const nextHref = `/jobs?${params.toString()}`;
+    if (`${window.location.pathname}${window.location.search}` !== nextHref) {
+      router.replace(nextHref, { scroll: false });
+    }
+  }, [router]);
+
   useEffect(() => {
     getCurrentUser()
       .then((r) => {
@@ -93,33 +128,91 @@ export function JobList({
   }, []);
 
   useEffect(() => {
+    if (view !== "recommended") return;
+
     let mounted = true;
-    setLoading(true);
-    setMessage(null);
-    getJobPostings({
-      view,
-      query,
-      sort,
-      resultId,
-      scope: monthlyRegularOnly ? "monthly-regular" : undefined,
-      limit: PAGE_SIZE,
-      offset: 0,
-      ...toQueryFilters(filters),
-    })
-      .then((response) => {
+
+    const loadDiagnosisResults = async () => {
+      setDiagnosisHistoryLoading(true);
+      try {
+        const response = await getDiagnosisResultHistory(undefined, 20);
+        if (!mounted) return;
+        setDiagnosisResults(response.items);
+        if (!selectedResultId && response.selectedResultId) {
+          setSelectedResultId(response.selectedResultId);
+        }
+      } catch {
+        if (mounted) setDiagnosisResults([]);
+      } finally {
+        if (mounted) setDiagnosisHistoryLoading(false);
+      }
+    };
+
+    void loadDiagnosisResults();
+    return () => { mounted = false; };
+  }, [selectedResultId, view]);
+
+  useEffect(() => {
+    if (view !== "recommended" || !selectedResultId) return;
+
+    let mounted = true;
+
+    const loadResultScreenCriteria = async () => {
+      setRecommendationCriteriaLoading(true);
+      try {
+        const detail = await getDiagnosisResultDetail(selectedResultId);
+        if (!mounted) return;
+        const nextFilters = toResultScreenRecommendationFilters(detail);
+        setFilters(nextFilters);
+        setDraftFilters(nextFilters);
+        setMonthlyRegularOnly(true);
+        replaceRecommendedResultParam(selectedResultId, {
+          monthlyRegularOnly: true,
+          ncs: nextFilters.ncs,
+        });
+      } catch {
+        // If detail loading fails, keep the result-id based recommendation list available.
+      } finally {
+        if (mounted) setRecommendationCriteriaLoading(false);
+      }
+    };
+
+    void loadResultScreenCriteria();
+    return () => { mounted = false; };
+  }, [replaceRecommendedResultParam, selectedResultId, view]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadJobs = async () => {
+      setLoading(true);
+      setMessage(null);
+      try {
+        const response = await getJobPostings({
+          view,
+          query,
+          sort,
+          resultId: selectedResultId || undefined,
+          scope: monthlyRegularOnly ? "monthly-regular" : undefined,
+          limit: PAGE_SIZE,
+          offset: 0,
+          ...toQueryFilters(filters),
+        });
         if (!mounted) return;
         setJobs(response.items);
         setTotal(response.total);
-        setMessage(
-          view === "recommended" && !response.recommendationTypeName
-            ? "최근 강점·성향 진단 결과가 있어야 맞춤 공고를 볼 수 있어요."
-            : null,
-        );
-      })
-      .catch((error) => mounted && setMessage(error instanceof Error ? error.message : "공고를 불러오지 못했습니다."))
-      .finally(() => mounted && setLoading(false));
+        setRecommendationTypeName(response.recommendationTypeName || null);
+        setMessage(null);
+      } catch (error) {
+        if (mounted) setMessage(error instanceof Error ? error.message : "공고를 불러오지 못했습니다.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    void loadJobs();
     return () => { mounted = false; };
-  }, [filters, monthlyRegularOnly, query, resultId, sort, view]);
+  }, [filters, monthlyRegularOnly, query, selectedResultId, sort, view]);
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || jobs.length >= total) return;
@@ -130,7 +223,7 @@ export function JobList({
         view,
         query,
         sort,
-        resultId,
+        resultId: selectedResultId || undefined,
         scope: monthlyRegularOnly ? "monthly-regular" : undefined,
         limit: PAGE_SIZE,
         offset: jobs.length,
@@ -146,7 +239,7 @@ export function JobList({
     } finally {
       setLoadingMore(false);
     }
-  }, [filters, jobs.length, loading, loadingMore, monthlyRegularOnly, query, resultId, sort, total, view]);
+  }, [filters, jobs.length, loading, loadingMore, monthlyRegularOnly, query, selectedResultId, sort, total, view]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -184,11 +277,69 @@ export function JobList({
     };
   }, [filterOpen]);
 
+  useEffect(() => {
+    if (!resultPickerOpen) return;
+
+    const scrollY = window.scrollY;
+    const bodyPosition = document.body.style.position;
+    const bodyTop = document.body.style.top;
+    const bodyWidth = document.body.style.width;
+    const bodyOverflow = document.body.style.overflow;
+    const htmlOverflow = document.documentElement.style.overflow;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.position = bodyPosition;
+      document.body.style.top = bodyTop;
+      document.body.style.width = bodyWidth;
+      document.body.style.overflow = bodyOverflow;
+      document.documentElement.style.overflow = htmlOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [resultPickerOpen]);
+
   const activeFilterCount = useMemo(
-    () => Object.values(filters).filter((value) => Array.isArray(value) ? value.length > 0 : Boolean(value)).length,
+    () =>
+      (filters.startDate || filters.endDate ? 1 : 0) +
+      ([filters.ncs, filters.region, filters.employmentType, filters.education, filters.career]
+        .filter((value) => value.length > 0).length),
     [filters],
   );
   const showSearchControls = view === "all" || view === "closing";
+  const showResultFilterButton = view === "recommended";
+  const selectedDiagnosisResult = useMemo(
+    () =>
+      diagnosisResults.find((item) => item.resultId === selectedResultId) ||
+      diagnosisResults.find((item) => item.isSelected) ||
+      diagnosisResults[0] ||
+      null,
+    [diagnosisResults, selectedResultId],
+  );
+  const hasRecommendedDiagnosis = Boolean(recommendationTypeName) || diagnosisResults.length > 0;
+  const showNoDiagnosisRecommendation =
+    view === "recommended" &&
+    !loading &&
+    !diagnosisHistoryLoading &&
+    !recommendationCriteriaLoading &&
+    !hasRecommendedDiagnosis;
+  const showRecommendationSetup =
+    view === "recommended" &&
+    recommendationSetupOpen &&
+    Boolean(selectedDiagnosisResult);
+  const showRecommendationList =
+    !showNoDiagnosisRecommendation &&
+    !showRecommendationSetup;
+  const showRecommendationAgainButton =
+    view === "recommended" &&
+    !loading &&
+    !diagnosisHistoryLoading &&
+    !recommendationCriteriaLoading &&
+    diagnosisResults.length >= 2 &&
+    !recommendationSetupOpen;
   const pageTitle =
     view === "recommended"
       ? "진단결과 추천공고"
@@ -196,9 +347,35 @@ export function JobList({
         ? "찜한공고"
         : "채용공고";
 
+  const openFilterSheet = () => {
+    setDraftFilters(filters);
+    setOptionPicker(null);
+    setFilterOpen(true);
+  };
+
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
     setQuery(queryInput.trim());
+  };
+
+  const handleSelectDiagnosisResult = (item: DiagnosisResultHistoryItemDto) => {
+    setSelectedResultId(item.resultId);
+    setDiagnosisResults((current) =>
+      current.map((result) => ({ ...result, isSelected: result.resultId === item.resultId })),
+    );
+    setRecommendationTypeName(item.typeName);
+    setRecommendationCriteriaLoading(true);
+    setResultPickerOpen(false);
+    setRecommendationSetupOpen(false);
+    replaceRecommendedResultParam(item.resultId);
+  };
+
+  const showRecommendedJobsForResult = (item: DiagnosisResultHistoryItemDto) => {
+    setSelectedResultId(item.resultId);
+    setRecommendationTypeName(item.typeName);
+    setRecommendationCriteriaLoading(true);
+    setRecommendationSetupOpen(false);
+    replaceRecommendedResultParam(item.resultId);
   };
 
   const toggleBookmark = async (job: JobPostingDto) => {
@@ -237,74 +414,108 @@ export function JobList({
                   <Image src="/jobs/search.svg" alt="" width={25} height={25} />
                 </button>
               </label>
-              <button type="button" className={styles.filterButton} onClick={() => { setDraftFilters(filters); setOptionPicker(null); setFilterOpen(true); }}>
+              <button type="button" className={styles.filterButton} onClick={openFilterSheet}>
                 <Image src="/jobs/filter-circle.svg" alt="" width={48} height={48} />
               </button>
             </form>
           ) : null}
         </section>
 
-        <div className={styles.resultBar}>
-          <span>
-            총 {total.toLocaleString("ko-KR")}건
-            {monthlyRegularOnly ? <em>이번 달 · 정규직</em> : null}
-            {activeFilterCount ? (
-              <button
-                type="button"
-                className={styles.appliedFilterPill}
-                onClick={() => { setDraftFilters(filters); setOptionPicker(null); setFilterOpen(true); }}
-              >
-                필터 적용 {activeFilterCount}
-              </button>
-            ) : null}
-          </span>
-            <label className={styles.sortSelect}>
-              <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
-                <option value="closing">{view === "recommended" ? "추천순" : "마감순"}</option>
-                <option value="latest">등록순</option>
-                <option value="views">조회순</option>
-              </select>
-              <ChevronIcon />
-            </label>
-        </div>
+        {showNoDiagnosisRecommendation ? (
+          <NoDiagnosisRecommendation />
+        ) : null}
 
-        {message ? <p className={styles.message}>{message}</p> : null}
-        <div className={styles.list}>
-          {jobs.map((job) => (
-            <article key={job.id} className={styles.card}>
-              <Link href={`/jobs/${job.id}`} className={styles.cardLink}>
-                <small className={styles.company}>{job.institutionName}</small>
-                <strong>{job.title}</strong>
-                <span className={styles.tags}>
-                  {job.employmentType ? <em>{job.employmentType}</em> : null}
-                  {job.region ? <em>{formatRegionLabel(job.region)}</em> : null}
-                  {job.careerRequirement ? <em>{job.careerRequirement}</em> : null}
-                </span>
-                <span className={styles.cardBottom}>
-                  <time>{toEndDate(job.applicationEndAt)}</time>
-                  <b className={getDdayClass(job)}>{job.isClosed ? "마감" : job.dday}</b>
-                </span>
-              </Link>
-              <button
-                type="button"
-                className={`${styles.star} ${job.isBookmarked ? styles.starActive : ""}`}
-                aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
-                disabled={pendingJobId === job.id}
-                onClick={() => void toggleBookmark(job)}
-              >
-              <StarIcon filled={job.isBookmarked} />
-            </button>
-          </article>
-          ))}
-          {!loading && jobs.length === 0 ? <EmptyState view={view} query={query} /> : null}
-          <div ref={loadMoreRef} className={styles.loadMore} aria-live="polite">
-            {loadingMore ? "공고를 더 불러오는 중..." : null}
-          </div>
-        </div>
+        {showRecommendationSetup && selectedDiagnosisResult ? (
+          <RecommendationSetup
+            selectedResult={selectedDiagnosisResult}
+            onOpenPicker={() => setResultPickerOpen(true)}
+            onRecommend={() => showRecommendedJobsForResult(selectedDiagnosisResult)}
+          />
+        ) : null}
+
+        {showRecommendationList ? (
+          <>
+            <div className={styles.resultBar}>
+              <span>
+                총 {total.toLocaleString("ko-KR")}건
+              </span>
+              <div className={styles.resultControls}>
+                {activeFilterCount ? (
+                  <button
+                    type="button"
+                    className={styles.appliedFilterPill}
+                    onClick={openFilterSheet}
+                  >
+                    필터 적용 {activeFilterCount}
+                  </button>
+                ) : null}
+                <label className={styles.sortSelect}>
+                  <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+                    <option value="closing">{view === "recommended" ? "추천순" : "마감순"}</option>
+                    <option value="latest">등록순</option>
+                    <option value="views">조회순</option>
+                  </select>
+                  <ChevronIcon />
+                </label>
+                {showResultFilterButton ? (
+                  <button type="button" className={styles.resultFilterButton} onClick={openFilterSheet} aria-label="상세 필터">
+                    <Image src="/jobs/filter-circle.svg" alt="" width={36} height={36} />
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {message ? <p className={styles.message}>{message}</p> : null}
+            <div className={styles.list}>
+              {jobs.map((job) => (
+                <article key={job.id} className={styles.card}>
+                  <Link href={`/jobs/${job.id}`} className={styles.cardLink}>
+                    <small className={styles.company}>{job.institutionName}</small>
+                    <strong>{job.title}</strong>
+                    <span className={styles.tags}>
+                      {job.employmentType ? <em>{job.employmentType}</em> : null}
+                      {job.region ? <em>{formatRegionLabel(job.region)}</em> : null}
+                      {job.careerRequirement ? <em>{job.careerRequirement}</em> : null}
+                    </span>
+                    <span className={styles.cardBottom}>
+                      <time>{toEndDate(job.applicationEndAt)}</time>
+                      <b className={getDdayClass(job)}>{job.isClosed ? "마감" : job.dday}</b>
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    className={`${styles.star} ${job.isBookmarked ? styles.starActive : ""}`}
+                    aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
+                    disabled={pendingJobId === job.id}
+                    onClick={() => void toggleBookmark(job)}
+                  >
+                    <StarIcon filled={job.isBookmarked} />
+                  </button>
+                </article>
+              ))}
+              {!loading && jobs.length === 0 ? <EmptyState view={view} query={query} /> : null}
+              {showRecommendationAgainButton ? (
+                <button
+                  type="button"
+                  className={styles.recommendAgainButton}
+                  onClick={() => {
+                    setRecommendationSetupOpen(true);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                >
+                  맞춤 추천 다시 받기
+                </button>
+              ) : null}
+              <div ref={loadMoreRef} className={styles.loadMore} aria-live="polite">
+                {loadingMore ? "공고를 더 불러오는 중..." : null}
+              </div>
+            </div>
+          </>
+        ) : null}
         <AppFooter />
       </section>
 
-      {loading ? <JobLoadingOverlay /> : null}
+      {loading || diagnosisHistoryLoading || recommendationCriteriaLoading ? <JobLoadingOverlay /> : null}
 
       {filterOpen ? (
         <div className={styles.filterOverlay} role="dialog" aria-modal="true" aria-label="상세 필터">
@@ -384,7 +595,95 @@ export function JobList({
           </section>
         </div>
       ) : null}
+
+      {resultPickerOpen && typeof document !== "undefined" ? createPortal(
+        <DiagnosisResultPicker
+          results={diagnosisResults}
+          selectedResultId={selectedDiagnosisResult?.resultId || selectedResultId}
+          onClose={() => setResultPickerOpen(false)}
+          onSelect={handleSelectDiagnosisResult}
+        />,
+        document.body,
+      ) : null}
     </main>
+  );
+}
+
+function NoDiagnosisRecommendation() {
+  return (
+    <section className={styles.noDiagnosisContent}>
+      <div className={styles.diagnosisEmptyCard}>
+        <Image src="/jobs/diagnosis-empty-owl.png" alt="" width={125} height={134} />
+        <p>
+          현재 검사한 결과가 없습니다.
+          <br />
+          검사를 진행하세요.
+        </p>
+      </div>
+      <Link href="/ai-tools/diagnosis" className={styles.outlineCta}>
+        강점·성향 진단 검사하러 가기 →
+      </Link>
+    </section>
+  );
+}
+
+function RecommendationSetup({
+  selectedResult,
+  onOpenPicker,
+  onRecommend,
+}: {
+  selectedResult: DiagnosisResultHistoryItemDto;
+  onOpenPicker: () => void;
+  onRecommend: () => void;
+}) {
+  return (
+    <section className={styles.recommendationSetup}>
+      <h2>강점·성향 진단 결과</h2>
+      <div className={styles.selectedDiagnosisCard}>
+        <strong>{selectedResult.typeName}</strong>
+        <button type="button" onClick={onOpenPicker}>변경</button>
+      </div>
+      <button type="button" className={styles.primaryOutlineCta} onClick={onRecommend}>
+        맞춤 추천 받기
+      </button>
+    </section>
+  );
+}
+
+function DiagnosisResultPicker({
+  results,
+  selectedResultId,
+  onClose,
+  onSelect,
+}: {
+  results: DiagnosisResultHistoryItemDto[];
+  selectedResultId: string;
+  onClose: () => void;
+  onSelect: (item: DiagnosisResultHistoryItemDto) => void;
+}) {
+  return (
+    <div className={styles.diagnosisPickerOverlay} role="dialog" aria-modal="true" aria-label="진단 결과 선택">
+      <button type="button" className={styles.diagnosisPickerDim} aria-label="닫기" onClick={onClose} />
+      <section className={styles.diagnosisPickerSheet}>
+        <span className={styles.sheetHandle} aria-hidden="true" />
+        <div className={styles.diagnosisPickerList}>
+          {results.map((item) => (
+            <button
+              type="button"
+              key={item.resultId}
+              className={`${styles.diagnosisChoiceCard} ${item.resultId === selectedResultId ? styles.diagnosisChoiceSelected : ""}`}
+              onClick={() => onSelect(item)}
+            >
+              <strong>{item.typeName}</strong>
+              <time>{formatHistoryDate(item.completedAt)}</time>
+            </button>
+          ))}
+        </div>
+        <Link href="/ai-tools/diagnosis" className={styles.primaryOutlineCta}>
+          강점·성향 진단 다시 테스트하기
+        </Link>
+      </section>
+    </div>
   );
 }
 
@@ -639,6 +938,32 @@ function toQueryFilters(filters: Filters) {
   };
 }
 
+function toResultScreenRecommendationFilters(detail: DiagnosisResultDetailResponseDto): Filters {
+  const currentMonth = getCurrentMonthDateRange();
+
+  return {
+    ...EMPTY_FILTERS,
+    startDate: currentMonth.startDate,
+    endDate: currentMonth.endDate,
+    ncs: normalizeFilterOptions(
+      detail.monthlyHiring.categories.map((category) => category.name).filter(Boolean),
+      NCS_OPTIONS,
+    ),
+    employmentType: ["정규직"],
+  };
+}
+
+function getCurrentMonthDateRange() {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+  return {
+    startDate: formatDateValue(firstDay),
+    endDate: formatDateValue(lastDay),
+  };
+}
+
 function normalizeFilterOptions(values: string[], options: string[]) {
   const optionMap = new Map(options.map((option) => [normalizeOptionKey(option), option]));
 
@@ -681,6 +1006,18 @@ function clampDayToMonth(year: number, month: number, day: number) {
 function isSameDate(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
+
+function formatHistoryDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "진단 완료";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}. ${month}. ${day} 진단 완료`;
+}
+
 function toEndDate(value: string | null) {
   if (!value) return "상시 채용";
   const date = new Date(value);
