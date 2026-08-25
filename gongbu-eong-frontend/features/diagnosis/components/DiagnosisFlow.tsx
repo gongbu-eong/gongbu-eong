@@ -128,23 +128,23 @@ const RESULT_HERO_COLOR: Record<
   flexibility: "#0b778b",
 };
 
-const QUESTION_OWL_BOUNDS: Array<{ x: number; y: number; width: number }> = [
-  { x: 151, y: 372, width: 252 },
-  { x: 622, y: 372, width: 256 },
-  { x: 1107, y: 372, width: 232 },
-  { x: 1582, y: 372, width: 227 },
-  { x: 151, y: 1344, width: 251 },
-  { x: 641, y: 1344, width: 217 },
-  { x: 1106, y: 1344, width: 233 },
-  { x: 1575, y: 1344, width: 241 },
-  { x: 184, y: 2316, width: 185 },
-  { x: 613, y: 2316, width: 273 },
-  { x: 1120, y: 2316, width: 205 },
-  { x: 1590, y: 2316, width: 211 },
-  { x: 170, y: 3288, width: 214 },
-  { x: 651, y: 3288, width: 198 },
-  { x: 1120, y: 3288, width: 205 },
-  { x: 1588, y: 3288, width: 215 },
+const QUESTION_OWLS: Array<{ src: string; width: number }> = [
+  { src: "/diagnosis/question-owls/question-owl-01.webp", width: 252 },
+  { src: "/diagnosis/question-owls/question-owl-02.webp", width: 256 },
+  { src: "/diagnosis/question-owls/question-owl-03.webp", width: 232 },
+  { src: "/diagnosis/question-owls/question-owl-04.webp", width: 227 },
+  { src: "/diagnosis/question-owls/question-owl-05.webp", width: 251 },
+  { src: "/diagnosis/question-owls/question-owl-06.webp", width: 217 },
+  { src: "/diagnosis/question-owls/question-owl-07.webp", width: 233 },
+  { src: "/diagnosis/question-owls/question-owl-08.webp", width: 241 },
+  { src: "/diagnosis/question-owls/question-owl-09.webp", width: 185 },
+  { src: "/diagnosis/question-owls/question-owl-10.webp", width: 273 },
+  { src: "/diagnosis/question-owls/question-owl-11.webp", width: 205 },
+  { src: "/diagnosis/question-owls/question-owl-12.webp", width: 211 },
+  { src: "/diagnosis/question-owls/question-owl-13.webp", width: 214 },
+  { src: "/diagnosis/question-owls/question-owl-14.webp", width: 198 },
+  { src: "/diagnosis/question-owls/question-owl-15.webp", width: 205 },
+  { src: "/diagnosis/question-owls/question-owl-16.webp", width: 215 },
 ];
 
 const POINT_CARD_TITLES: Record<
@@ -572,7 +572,7 @@ function DiagnosisIntro({
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/diagnosis/intro/asset-9-1727x1300.png"
+          src="/diagnosis/intro/main-owl.webp"
           alt=""
           className={styles.introOwl}
           draggable={false}
@@ -658,7 +658,7 @@ function DiagnosisSurvey({
   const progressRatio = questionCount <= 1 ? 0 : index / (questionCount - 1);
   const stepNo = index + 1;
   const owlIndex = Math.max(0, Math.min(stepNo - 1, 15));
-  const owlBounds = QUESTION_OWL_BOUNDS[owlIndex];
+  const owl = QUESTION_OWLS[owlIndex];
 
   return (
     <div className={`${styles.page} ${styles.questionPage}`}>
@@ -668,14 +668,16 @@ function DiagnosisSurvey({
         }`}
         aria-label="강점·성향 진단 문항"
       >
-        <div
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={owl.src}
+          alt=""
           className={styles.questionOwl}
           aria-hidden="true"
+          draggable={false}
           style={
             {
-              "--question-owl-x": `-${owlBounds.x}px`,
-              "--question-owl-y": `-${owlBounds.y}px`,
-              "--question-owl-width": `${owlBounds.width}px`,
+              "--question-owl-width": `${owl.width}px`,
             } as CSSProperties
           }
         />

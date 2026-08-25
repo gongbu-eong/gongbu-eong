@@ -88,7 +88,7 @@
   height: 100svh;
   overflow: hidden;
   background:
-    url("/diagnosis/intro/asset-0-768x1376.png") center / 100% 100% no-repeat,
+    url("/diagnosis/intro/intro-bg.webp") center / 100% 100% no-repeat,
     var(--gb-color-surface);
   box-shadow: none;
 }
@@ -347,7 +347,7 @@
   height: 100svh;
   overflow: hidden;
   background:
-    url("/diagnosis/intro/asset-0-768x1376.png") center / 100% 100% no-repeat,
+    url("/diagnosis/intro/intro-bg.webp") center / 100% 100% no-repeat,
     #d8f8ff;
   box-shadow: none;
   font-family: var(--gb-font-sans);
@@ -456,9 +456,8 @@
   top: 292px;
   width: var(--question-owl-width);
   height: 220px;
-  background:
-    url("/diagnosis-question-owls.svg") var(--question-owl-x) var(--question-owl-y) /
-    1972px 3928px no-repeat;
+  display: block;
+  object-fit: contain;
   transform: translateX(-50%);
   pointer-events: none;
   z-index: 1;
@@ -1447,7 +1446,7 @@
     height: auto;
     flex: 0 0 auto;
     background:
-      url("/diagnosis/intro/asset-0-768x1376.png") center top / 100% 53.25rem no-repeat,
+      url("/diagnosis/intro/intro-bg.webp") center top / 100% 53.25rem no-repeat,
       linear-gradient(
         90deg,
         #fbdcee 0%,
@@ -1572,7 +1571,7 @@
     height: auto;
     flex: 0 0 auto;
     background:
-      url("/diagnosis/intro/asset-0-768x1376.png") center top / 100% 53.25rem no-repeat,
+      url("/diagnosis/intro/intro-bg.webp") center top / 100% 53.25rem no-repeat,
       linear-gradient(
         90deg,
         #fbdcee 0%,
