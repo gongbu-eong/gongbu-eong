@@ -11,6 +11,7 @@
 --    - Most comments have no replies.
 --    - Some posts have reply clusters spread across several comments, including
 --      long paging-test threads without concentrating every reply on one comment.
+-- 6. Inserts recent popular search terms related to public-sector exam prep.
 --
 -- Notes:
 -- - Existing real users are not deleted.
@@ -675,6 +676,24 @@ BEGIN
         '공기업 준비를 시작한 지 얼마 안 돼서 아직 모르는 게 많습니다. 그래도 여기 글들 보면서 방향을 조금 잡고 있어요.' || E'\n' ||
         '앞으로 질문도 하고 후기나 공부 기록도 남겨보겠습니다. 잘 부탁드립니다.' || E'\n\n' ||
         '처음이라 글이 조금 어색할 수 있는데, 그래도 이렇게 써두면 나중에 제가 어디서 시작했는지 기억할 수 있을 것 같아서 남깁니다.'
+      WHEN title_value = '합격 후기라기보다 준비 과정 기록입니다' THEN
+        '합격 후기라고 쓰기에는 아직 조심스럽고, 정확히는 제가 공무원 준비를 하면서 어떤 식으로 버텼는지 남기는 과정 기록입니다.' || E'\n\n' ||
+        '처음 시작할 때는 합격 수기만 계속 찾아봤습니다. 그런데 합격한 사람들의 마지막 장면만 보면 동기부여는 되지만, 실제로 하루를 어떻게 쪼개고 무너진 계획을 어떻게 복구했는지는 잘 보이지 않더라고요. 그래서 저는 제 준비 과정을 월별로 남겨두는 방식으로 정리했습니다.' || E'\n\n' ||
+        '1. 시작 단계' || E'\n' ||
+        '처음 한 달은 국어, 영어, 한국사, 행정법, 행정학 범위를 한 번에 잡으려다가 거의 매일 계획을 실패했습니다. 이때 제일 크게 바꾼 건 하루 목표를 과목 수가 아니라 공부 단위로 쪼갠 점입니다. 예를 들면 국어 문법 20쪽, 영어 독해 5지문, 한국사 강의 2강처럼 바로 확인 가능한 단위로 적었습니다.' || E'\n\n' ||
+        '2. 기본 강의 회독' || E'\n' ||
+        '기본 강의를 들을 때는 완강 자체가 목표가 되면 위험했습니다. 강의는 끝냈는데 머리에 남는 게 없어서, 강의 직후 10분이라도 빈 종이에 오늘 들은 내용을 적어봤습니다. 못 적는 부분은 다시 강의로 돌아갔고, 적을 수 있는 부분은 다음 날 문제로 확인했습니다.' || E'\n\n' ||
+        '3. 기출 전환 시기' || E'\n' ||
+        '기출을 시작하면서 점수가 바로 오르지는 않았습니다. 특히 행정법은 지문을 읽어도 왜 틀렸는지 잘 몰라서, 처음에는 정답률보다 선지 판단 근거를 적는 데 시간을 더 썼습니다. 맞힌 문제도 근거 없이 감으로 맞혔으면 오답으로 표시했습니다.' || E'\n\n' ||
+        '4. 슬럼프 구간' || E'\n' ||
+        '가장 힘들었던 건 공부량이 줄어든 날보다, 줄어든 공부량을 보고 다음 날까지 자책하는 흐름이었습니다. 그래서 저는 최소 기준을 따로 만들었습니다. 컨디션이 안 좋은 날에는 영어 단어, 한국사 기출 20문제, 행정법 판례 10개만 해도 그날은 끊기지 않은 것으로 봤습니다.' || E'\n\n' ||
+        '5. 모의고사와 시간 관리' || E'\n' ||
+        '모의고사는 점수 확인용이라기보다 시간 사용 습관을 보는 용도로 썼습니다. 문제를 틀린 이유를 지식 부족, 시간 부족, 실수, 지문 오독으로 나눠 적었고, 같은 유형의 실수가 세 번 이상 반복되면 다음 주 계획에 따로 넣었습니다.' || E'\n\n' ||
+        '6. 면접 준비' || E'\n' ||
+        '필기 이후에는 갑자기 말하기 연습을 시작하는 것보다, 준비 기간 동안 겪은 장면을 정리해두는 게 도움이 됐습니다. 민원 상황, 협업 경험, 규칙을 지켜야 했던 경험처럼 질문으로 바뀔 수 있는 소재를 짧게 정리했습니다.' || E'\n\n' ||
+        '정리해보면 제 준비 과정에서 제일 중요했던 건 완벽한 계획이 아니라 복구 가능한 계획이었습니다. 계획이 무너진 날을 실패로 끝내지 않고, 다음 날 다시 돌아올 수 있게 최소 기준을 만들어두는 게 오래 버티는 데 가장 도움이 됐습니다.' || E'\n\n' ||
+        '비슷하게 준비하시는 분들 의견도 궁금합니다.' || E'\n\n' ||
+        '이 부분은 사람마다 생각이 다를 수 있어서 댓글로 다른 의견 남겨주셔도 괜찮습니다.'
       ELSE
         opener_value || E'\n\n' ||
         category_note || E'\n' ||
@@ -1224,6 +1243,51 @@ BEGIN
     END LOOP;
   END LOOP;
 END $$;
+
+-- Seed recent popular searches so the popular keyword UI has realistic data.
+CREATE TEMP TABLE _community_seed_search_terms (
+  rank_no INTEGER PRIMARY KEY,
+  query VARCHAR(80) NOT NULL,
+  search_count INTEGER NOT NULL
+) ON COMMIT DROP;
+
+INSERT INTO _community_seed_search_terms (rank_no, query, search_count)
+VALUES
+  (1, '공무원 시험', 45),
+  (2, '9급 공무원', 42),
+  (3, '행정법 기출', 39),
+  (4, '지방직 공무원', 29),
+  (5, '국가직 공무원', 20),
+  (6, '공무원 면접', 14),
+  (7, '한국사 기출', 11),
+  (8, '공무원 공부법', 9),
+  (9, '공무원 영어', 7),
+  (10, '공무원 합격수기', 5);
+
+INSERT INTO public.community_search_logs (user_id, query, created_at)
+SELECT
+  users.id,
+  terms.query,
+  NOW() - ((terms.rank_no * 11 + search_numbers.search_no) || ' minutes')::interval
+FROM _community_seed_search_terms terms
+CROSS JOIN LATERAL generate_series(1, terms.search_count) AS search_numbers(search_no)
+JOIN _community_seed_users users
+  ON users.seq = ((terms.rank_no * 9 + search_numbers.search_no * 7) % 80) + 1;
+
+INSERT INTO public.community_search_terms (query, search_count, last_searched_at, updated_at)
+SELECT
+  logs.query,
+  COUNT(DISTINCT logs.user_id)::integer,
+  MAX(logs.created_at),
+  MAX(logs.created_at)
+FROM public.community_search_logs logs
+WHERE logs.query IN (SELECT query FROM _community_seed_search_terms)
+  AND logs.user_id IS NOT NULL
+GROUP BY logs.query
+ON CONFLICT (query) DO UPDATE SET
+  search_count = EXCLUDED.search_count,
+  last_searched_at = EXCLUDED.last_searched_at,
+  updated_at = EXCLUDED.updated_at;
 
 -- Add a light spread of post/comment reactions for list/detail count testing.
 INSERT INTO public.community_post_reactions (post_id, user_id, reaction_type, created_at)

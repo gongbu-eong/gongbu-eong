@@ -864,12 +864,24 @@ export async function logCommunitySearch(userId: string | undefined, searchQuery
   );
   await query(
     `
+      WITH search_term_stats AS (
+        SELECT
+          $1::VARCHAR(80) AS query,
+          COUNT(DISTINCT user_id)::integer AS search_count,
+          MAX(created_at) AS last_searched_at
+        FROM public.community_search_logs
+        WHERE query = $1
+          AND user_id IS NOT NULL
+          AND created_at >= NOW() - INTERVAL '24 hours'
+      )
       INSERT INTO public.community_search_terms (query, search_count, last_searched_at)
-      VALUES ($1, 1, NOW())
+      SELECT query, search_count, COALESCE(last_searched_at, NOW())
+      FROM search_term_stats
+      WHERE search_count > 0
       ON CONFLICT (query)
       DO UPDATE SET
-        search_count = public.community_search_terms.search_count + 1,
-        last_searched_at = NOW(),
+        search_count = EXCLUDED.search_count,
+        last_searched_at = EXCLUDED.last_searched_at,
         updated_at = NOW()
     `,
     [trimmed],
@@ -879,22 +891,27 @@ export async function logCommunitySearch(userId: string | undefined, searchQuery
 export async function listPopularCommunitySearchQueries() {
   const result = await query<{ query: string }>(
     `
-      WITH recent_searches AS (
-        SELECT query, created_at
+      WITH recent_unique_searches AS (
+        SELECT
+          query,
+          user_id,
+          MIN(created_at) AS first_searched_at
         FROM public.community_search_logs
         WHERE created_at >= NOW() - INTERVAL '24 hours'
+          AND user_id IS NOT NULL
+        GROUP BY query, user_id
       )
       SELECT query
       FROM (
         SELECT
           query,
           COUNT(*) AS search_count,
-          MIN(created_at) AS first_searched_at
-        FROM recent_searches
+          MIN(first_searched_at) AS first_searched_at
+        FROM recent_unique_searches
         GROUP BY query
       ) ranked
       ORDER BY search_count DESC, first_searched_at ASC, query ASC
-      LIMIT 6
+      LIMIT 10
     `,
   );
 
