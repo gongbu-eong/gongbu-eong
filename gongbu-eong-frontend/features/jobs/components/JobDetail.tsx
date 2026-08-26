@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import {
   getCurrentUser,
   getJobPosting,
@@ -23,6 +23,9 @@ export function JobDetail({ jobId }: { jobId: string }) {
   const [loading, setLoading] = useState(true);
   const [bookmarkPending, setBookmarkPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [disqualificationExpanded, setDisqualificationExpanded] =
+    useState(false);
+  const [preferenceExpanded, setPreferenceExpanded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -96,15 +99,26 @@ export function JobDetail({ jobId }: { jobId: string }) {
               </section>
 
               <section className={styles.factGrid}>
-                <Fact label="접수 기간" value={toCompactPeriod(job.applicationStartAt, job.applicationEndAt)} />
+                <Fact
+                  label="접수 기간"
+                  value={
+                    job.isClosed
+                      ? "마감"
+                      : toShortDeadline(job.applicationEndAt) ||
+                        toCompactPeriod(
+                          job.applicationStartAt,
+                          job.applicationEndAt,
+                        )
+                  }
+                />
                 <Fact label="근무지" value={job.region || "정보 없음"} />
                 <Fact label="채용인원" value={toHiringCount(job.hiringCount)} />
                 <Fact label="고용형태" value={job.employmentType || "정보 없음"} />
               </section>
 
               <div className={getDeadlineNoticeClass(job)}>
-                <strong>{job.isClosed ? "이 공고는 접수가 마감되었어요" : `지금 접수 중이에요! ${toRemainingText(job.applicationEndAt)}`}</strong>
-                <span>{job.isClosed ? `(${toCompactPeriod(job.applicationStartAt, job.applicationEndAt)})` : toDeadlineDetail(job.applicationEndAt)}</span>
+                <strong>{toDeadlineNoticeTitle(job)}</strong>
+                <span>{toDeadlineNoticeDetail(job)}</span>
               </div>
 
               <DetailSection title="기본 정보" icon="📋">
@@ -126,12 +140,29 @@ export function JobDetail({ jobId }: { jobId: string }) {
 
               {job.disqualification ? (
                 <DetailSection title="결격사유" icon="🚫">
-                  <RichText value={job.disqualification} />
+                  <CollapsibleRichText
+                    value={job.disqualification}
+                    label="결격사유"
+                    expanded={disqualificationExpanded}
+                    collapsedLines={6}
+                    onToggle={() =>
+                      setDisqualificationExpanded((expanded) => !expanded)
+                    }
+                  />
                 </DetailSection>
               ) : null}
 
               <DetailSection title="우대내용" icon="⭐">
-                <RichText value={job.preference} empty="등록된 우대 조건이 없습니다." />
+                <CollapsibleRichText
+                  value={job.preference}
+                  empty="등록된 우대 조건이 없습니다."
+                  label="우대내용"
+                  expanded={preferenceExpanded}
+                  collapsedLines={8}
+                  onToggle={() =>
+                    setPreferenceExpanded((expanded) => !expanded)
+                  }
+                />
               </DetailSection>
 
               <DetailSection title="전형절차 / 방법" icon="⭐">
@@ -212,19 +243,65 @@ function RichText({ value, empty }: { value: string | null; empty?: string }) {
   return <p className={styles.richText}>{value?.trim() || empty}</p>;
 }
 
+function CollapsibleRichText({
+  value,
+  empty,
+  label,
+  expanded,
+  collapsedLines,
+  onToggle,
+}: {
+  value: string | null;
+  empty?: string;
+  label: string;
+  expanded: boolean;
+  collapsedLines: number;
+  onToggle: () => void;
+}) {
+  const text = value?.trim();
+
+  if (!text) {
+    return <RichText value={value} empty={empty} />;
+  }
+
+  const shouldCollapse = text.length > 180 || text.includes("\n");
+
+  if (!shouldCollapse) {
+    return <RichText value={text} empty={empty} />;
+  }
+
+  return (
+    <div className={styles.collapsibleContent}>
+      <p
+        className={`${styles.richText} ${styles.collapsibleText} ${
+          expanded ? styles.expandedText : ""
+        }`}
+        style={{ "--collapsed-lines": collapsedLines } as CSSProperties}
+      >
+        {text}
+      </p>
+      <button
+        type="button"
+        className={styles.moreButton}
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        {label} {expanded ? "접기  ▲" : "더보기  ▼"}
+      </button>
+    </div>
+  );
+}
+
 function toHiringCount(value: number | null) {
   return value == null ? "정보 없음" : `${value.toLocaleString("ko-KR")}명`;
 }
 
 function toDate(value: string | null) {
-  if (!value) return null;
-  return new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value));
+  return toSeoulDateText(value, "full");
 }
 
 function toCompactPeriod(start: string | null, end: string | null) {
-  const format = (value: string | null) => value
-    ? new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(value)).replace(/\s/g, "")
-    : "";
+  const format = (value: string | null) => toSeoulDateText(value, "full") ?? "";
   const formattedStart = format(start);
   const formattedEnd = format(end);
   if (!formattedStart && !formattedEnd) return "상시";
@@ -232,12 +309,12 @@ function toCompactPeriod(start: string | null, end: string | null) {
   if (!formattedEnd) return `${formattedStart}~`;
   return `${formattedStart}~${formattedEnd}`;
 }
-function toDateTime(value: string | null) {
-  if (!value) return "상시";
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
-  }).format(new Date(value)).replace(/\s/g, " ");
+
+function toShortDeadline(value: string | null) {
+  const formatted = toSeoulDateText(value, "short");
+  return formatted ? `~ ${formatted}` : null;
 }
+
 function toRemainingText(value: string | null) {
   if (!value) return "상시 채용 중이에요";
   const days = daysUntilDate(value);
@@ -252,6 +329,29 @@ const jobDetailDateFormatter = new Intl.DateTimeFormat("en-US", {
   day: "2-digit",
 });
 
+function getSeoulDateParts(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = jobDetailDateFormatter.formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  if (!year || !month || !day) return null;
+
+  return { year, month, day };
+}
+
+function toSeoulDateText(value: string | null, variant: "full" | "short") {
+  if (!value) return null;
+  const parts = getSeoulDateParts(value);
+  if (!parts) return null;
+
+  return variant === "full"
+    ? `${parts.year}.${parts.month}.${parts.day}`
+    : `${parts.month}.${parts.day}`;
+}
+
 function daysUntilDate(value: string) {
   const endDay = toSeoulDayNumber(value);
   const todayDay = toSeoulDayNumber(new Date());
@@ -260,20 +360,38 @@ function daysUntilDate(value: string) {
 }
 
 function toSeoulDayNumber(value: string | Date) {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-
-  const parts = jobDetailDateFormatter.formatToParts(date);
-  const year = Number(parts.find((part) => part.type === "year")?.value);
-  const month = Number(parts.find((part) => part.type === "month")?.value);
-  const day = Number(parts.find((part) => part.type === "day")?.value);
-  if (!year || !month || !day) return null;
+  const parts = getSeoulDateParts(value);
+  if (!parts) return null;
+  const year = Number(parts.year);
+  const month = Number(parts.month);
+  const day = Number(parts.day);
 
   return Math.floor(Date.UTC(year, month - 1, day) / JOB_DETAIL_DAY_IN_MS);
 }
 
-function toDeadlineDetail(value: string | null) {
-  return value ? `(~ ${toDateTime(value)})` : "(마감일 정보 없음)";
+function toDeadlineNoticeTitle(
+  job: Pick<
+    JobPostingDetailDto,
+    "applicationEndAt" | "isClosed"
+  >,
+) {
+  if (job.isClosed) return "이 공고는 접수가 마감되었어요";
+  if (!job.applicationEndAt) return "지금 접수 중이에요";
+  return `지금 접수 중이에요! ${toRemainingText(job.applicationEndAt)}`;
+}
+
+function toDeadlineNoticeDetail(
+  job: Pick<
+    JobPostingDetailDto,
+    "applicationStartAt" | "applicationEndAt" | "isClosed"
+  >,
+) {
+  if (job.isClosed) {
+    return `(${toCompactPeriod(job.applicationStartAt, job.applicationEndAt)})`;
+  }
+
+  const formattedEnd = toSeoulDateText(job.applicationEndAt, "full");
+  return formattedEnd ? `(~ ${formattedEnd})` : "(마감일 정보 없음)";
 }
 function isUrgentJob(job: Pick<JobPostingDetailDto, "dday" | "isClosed">) {
   return job.isClosed || job.dday === "D-Day" || job.dday === "D-1";

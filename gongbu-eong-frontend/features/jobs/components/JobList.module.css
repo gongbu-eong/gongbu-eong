@@ -467,7 +467,7 @@
 }
 
 .visualEmpty {
-  min-height: 27rem;
+  min-height: clamp(27rem, calc(100dvh - 13.75rem), 39.5rem);
   border: 0;
   background: #fff;
   align-content: center;

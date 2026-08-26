@@ -387,6 +387,8 @@ export function CalendarMain({
                   emptyLabel="아직 찜한 공고가 없어요."
                   emptyDescription="채용 공고에서 별표를 눌러 나만의 캘린더에 담아보세요."
                   emptyVariant="bookmark"
+                  emptyHref="/jobs"
+                  emptyAction="공고 찜하러 가기"
                   onToggleBookmark={toggleBookmark}
                   pendingBookmarkId={bookmarkPendingId}
                   showEventBadge={false}
@@ -668,6 +670,8 @@ function JobList({
   emptyLabel,
   emptyDescription,
   emptyVariant = "schedule",
+  emptyHref,
+  emptyAction,
   onToggleBookmark,
   pendingBookmarkId,
   showEventBadge = true,
@@ -676,6 +680,8 @@ function JobList({
   emptyLabel: string;
   emptyDescription: string;
   emptyVariant?: EmptyVariant;
+  emptyHref?: string;
+  emptyAction?: string;
   onToggleBookmark: (job: JobPostingDto) => void;
   pendingBookmarkId: string | null;
   showEventBadge?: boolean;
@@ -686,6 +692,8 @@ function JobList({
         title={emptyLabel}
         description={emptyDescription}
         variant={emptyVariant}
+        href={emptyHref}
+        action={emptyAction}
       />
     );
   }
@@ -838,7 +846,14 @@ function EmptyState({
         <span>{title}</span>
         <span>{description}</span>
       </p>
-      {href && action ? <Link href={href}>{action}</Link> : null}
+      {href && action ? (
+        <Link
+          href={href}
+          className={variant === "bookmark" ? styles.emptyBookmarkCta : undefined}
+        >
+          {action}
+        </Link>
+      ) : null}
     </section>
   );
 }
