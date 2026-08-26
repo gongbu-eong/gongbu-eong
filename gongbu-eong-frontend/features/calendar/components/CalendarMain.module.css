@@ -334,12 +334,10 @@
 .jobCard {
   position: relative;
   display: grid;
-  grid-template-columns: 2.875rem minmax(0, 1fr) 1.5625rem;
   min-width: 0;
-  min-height: 7.3125rem;
-  gap: 1rem;
-  align-items: start;
-  padding: 1rem;
+  height: 8.5625rem;
+  grid-template-rows: 1.5rem 1fr;
+  padding: 1rem 3rem 1rem 1rem;
   border: 1px solid #e4e8ef;
   border-radius: 0.625rem;
   background: #fff;
@@ -349,13 +347,15 @@
 }
 
 .jobCardWithoutBadge {
-  grid-template-columns: minmax(0, 1fr) 1.5625rem;
+  padding-left: 1rem;
 }
 
-.jobCopy {
-  display: grid;
+.jobTopRow {
+  display: flex;
   min-width: 0;
-  gap: 0.5625rem;
+  height: 1.5rem;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .company {
@@ -368,12 +368,21 @@
   white-space: nowrap;
 }
 
+.jobCopy {
+  display: grid;
+  min-width: 0;
+  grid-template-rows: 2.5rem 1.25rem;
+  align-content: center;
+  gap: 0.625rem;
+}
+
 .jobCard strong {
   display: -webkit-box;
   overflow: hidden;
+  height: 2.5rem;
   color: #1a2233;
   font-size: 0.9375rem;
-  line-height: 1.2;
+  line-height: 1.25rem;
   font-weight: 500;
   text-overflow: ellipsis;
   word-break: keep-all;
@@ -383,17 +392,25 @@
 
 .tags {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
+  min-height: 1.25rem;
   gap: 0;
   color: #9aa4b8;
+  overflow: hidden;
 }
 
 .tags small {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 9rem;
+  overflow: hidden;
   color: #9aa4b8;
   font-size: 0.8125rem;
   line-height: 1;
   font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tags small + small::before {
@@ -420,7 +437,7 @@
 .dday {
   display: inline-flex;
   width: 2.875rem;
-  height: 2.875rem;
+  height: 1.5rem;
   align-items: center;
   justify-content: center;
   padding: 0;
@@ -442,6 +459,9 @@
 }
 
 .starIcon {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
   display: grid;
   width: 1.5625rem;
   height: 1.5625rem;

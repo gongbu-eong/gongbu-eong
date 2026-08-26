@@ -6,6 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
+import {
+  formatJobEmploymentLabel,
+  formatJobRegionLabel,
+} from "@/features/jobs/job-display";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { loadKakaoSdk } from "@/shared/kakao-share";
@@ -705,14 +709,14 @@ function ShareRewardNotice() {
   return (
     <section className={styles.shareRewardNotice} aria-label="공유 혜택 안내">
       <strong>꼭 확인해 주세요!</strong>
-      <ul>
-        <li>공유 가능 횟수: 무제한</li>
-        <li>진단권 지급: ID당 최초 1회 제한</li>
-      </ul>
+      <div className={styles.shareRewardNoticeList}>
+        <span>· 공유 가능 횟수: 무제한</span>
+        <span>· 진단권 지급: ID당 최초 1회 제한</span>
+      </div>
       <p>
         ※ 링크 공유는 제한 없이 자유롭게 하실 수 있으나, 진단권 혜택은
         <br />
-        계정당 1회만 적용됩니다.
+        <span className={styles.shareRewardNoticeIndent}>계정당 1회만 적용됩니다.</span>
       </p>
     </section>
   );
@@ -731,7 +735,11 @@ function RecommendedPosting({ posting }: { posting: DiagnosisResultDetailRespons
       <small>{posting.institutionName}</small>
       <strong>{posting.title}</strong>
       <div className={styles.postingBadges}>
-        {[posting.employmentType, posting.region, posting.careerRequirement].filter(Boolean).map((label) => <span key={label}>{label}</span>)}
+        {[
+          formatJobEmploymentLabel(posting.employmentType),
+          formatJobRegionLabel(posting.region),
+          posting.careerRequirement,
+        ].filter(Boolean).map((label) => <span key={label}>{label}</span>)}
       </div>
       <div className={styles.postingMeta}><time>{posting.applicationEndAt ? `~ ${formatPostingDate(posting.applicationEndAt)}` : "상시 채용"}</time><b className={ddayClass}>{posting.dday}</b><i aria-hidden="true"><Image src="/diagnosis/result-detail/bookmark.svg" alt="" width={25} height={25} /></i></div>
     </Link>

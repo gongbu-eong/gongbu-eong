@@ -9,6 +9,10 @@ import {
   getDiagnosisResultDetail,
   getDiagnosisResultHistory,
 } from "@/features/diagnosis/diagnosis.api";
+import {
+  formatJobEmploymentLabel,
+  formatJobRegionLabel,
+} from "@/features/jobs/job-display";
 import type {
   DiagnosisResultDetailResponseDto,
   DiagnosisResultHistoryItemDto,
@@ -80,6 +84,7 @@ export function JobList({
   const [diagnosisResults, setDiagnosisResults] = useState<DiagnosisResultHistoryItemDto[]>([]);
   const [diagnosisHistoryLoading, setDiagnosisHistoryLoading] = useState(view === "recommended");
   const [recommendationCriteriaLoading, setRecommendationCriteriaLoading] = useState(view === "recommended" && Boolean(resultId));
+  const [recommendationCriteriaReadyResultId, setRecommendationCriteriaReadyResultId] = useState("");
   const [recommendationTypeName, setRecommendationTypeName] = useState<string | null>(null);
   const [recommendationSetupOpen, setRecommendationSetupOpen] = useState(false);
   const [resultPickerOpen, setResultPickerOpen] = useState(false);
@@ -102,17 +107,12 @@ export function JobList({
   const [message, setMessage] = useState<string | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const replaceRecommendedResultParam = useCallback((
-    nextResultId: string,
-    criteria?: { monthlyRegularOnly?: boolean; ncs?: string[] },
-  ) => {
+  const replaceRecommendedResultParam = useCallback((nextResultId: string) => {
     const params = new URLSearchParams(window.location.search);
     params.set("view", "recommended");
     params.set("resultId", nextResultId);
-    if (criteria?.monthlyRegularOnly) params.set("scope", "monthly-regular");
-    else if (criteria) params.delete("scope");
-    if (criteria?.ncs?.length) params.set("ncs", criteria.ncs.join("|"));
-    else if (criteria) params.delete("ncs");
+    params.delete("scope");
+    params.delete("ncs");
 
     const nextHref = `/jobs?${params.toString()}`;
     if (`${window.location.pathname}${window.location.search}` !== nextHref) {
@@ -139,9 +139,7 @@ export function JobList({
         const response = await getDiagnosisResultHistory(undefined, 20);
         if (!mounted) return;
         setDiagnosisResults(response.items);
-        if (!selectedResultId && response.selectedResultId) {
-          setSelectedResultId(response.selectedResultId);
-        }
+        setSelectedResultId((current) => current || response.selectedResultId || "");
       } catch {
         if (mounted) setDiagnosisResults([]);
       } finally {
@@ -151,7 +149,7 @@ export function JobList({
 
     void loadDiagnosisResults();
     return () => { mounted = false; };
-  }, [selectedResultId, view]);
+  }, [view]);
 
   useEffect(() => {
     if (view !== "recommended" || !selectedResultId) return;
@@ -167,22 +165,26 @@ export function JobList({
         setFilters(nextFilters);
         setDraftFilters(nextFilters);
         setMonthlyRegularOnly(true);
-        replaceRecommendedResultParam(selectedResultId, {
-          monthlyRegularOnly: true,
-          ncs: nextFilters.ncs,
-        });
       } catch {
         // If detail loading fails, keep the result-id based recommendation list available.
       } finally {
-        if (mounted) setRecommendationCriteriaLoading(false);
+        if (mounted) {
+          setRecommendationCriteriaReadyResultId(selectedResultId);
+          setRecommendationCriteriaLoading(false);
+        }
       }
     };
 
     void loadResultScreenCriteria();
     return () => { mounted = false; };
-  }, [replaceRecommendedResultParam, selectedResultId, view]);
+  }, [selectedResultId, view]);
 
   useEffect(() => {
+    if (view === "recommended") {
+      if (diagnosisHistoryLoading) return;
+      if (selectedResultId && recommendationCriteriaReadyResultId !== selectedResultId) return;
+    }
+
     let mounted = true;
 
     const loadJobs = async () => {
@@ -213,7 +215,16 @@ export function JobList({
 
     void loadJobs();
     return () => { mounted = false; };
-  }, [filters, monthlyRegularOnly, query, selectedResultId, sort, view]);
+  }, [
+    diagnosisHistoryLoading,
+    filters,
+    monthlyRegularOnly,
+    query,
+    recommendationCriteriaReadyResultId,
+    selectedResultId,
+    sort,
+    view,
+  ]);
 
   const loadMore = useCallback(async () => {
     if (loading || loadingMore || jobs.length >= total) return;
@@ -365,21 +376,25 @@ export function JobList({
   };
 
   const handleSelectDiagnosisResult = (item: DiagnosisResultHistoryItemDto) => {
+    const isSameResult = item.resultId === selectedResultId;
     setSelectedResultId(item.resultId);
     setDiagnosisResults((current) =>
       current.map((result) => ({ ...result, isSelected: result.resultId === item.resultId })),
     );
     setRecommendationTypeName(item.typeName);
-    setRecommendationCriteriaLoading(true);
+    setRecommendationCriteriaLoading(!isSameResult);
+    setRecommendationCriteriaReadyResultId(isSameResult ? item.resultId : "");
     setResultPickerOpen(false);
     setRecommendationSetupOpen(false);
     replaceRecommendedResultParam(item.resultId);
   };
 
   const showRecommendedJobsForResult = (item: DiagnosisResultHistoryItemDto) => {
+    const isSameResult = item.resultId === selectedResultId;
     setSelectedResultId(item.resultId);
     setRecommendationTypeName(item.typeName);
-    setRecommendationCriteriaLoading(true);
+    setRecommendationCriteriaLoading(!isSameResult);
+    setRecommendationCriteriaReadyResultId(isSameResult ? item.resultId : "");
     setRecommendationSetupOpen(false);
     replaceRecommendedResultParam(item.resultId);
   };
@@ -496,8 +511,8 @@ export function JobList({
                     <small className={styles.company}>{job.institutionName}</small>
                     <strong>{job.title}</strong>
                     <span className={styles.tags}>
-                      {job.employmentType ? <em>{job.employmentType}</em> : null}
-                      {job.region ? <em>{formatRegionLabel(job.region)}</em> : null}
+                      {job.employmentType ? <em>{formatJobEmploymentLabel(job.employmentType)}</em> : null}
+                      {job.region ? <em>{formatJobRegionLabel(job.region)}</em> : null}
                       {job.careerRequirement ? <em>{job.careerRequirement}</em> : null}
                     </span>
                     <span className={styles.cardBottom}>
@@ -1045,19 +1060,6 @@ function toEndDate(value: string | null) {
   return `~ ${year}. ${month}. ${day}(${weekday})`;
 }
 
-function splitDelimitedOption(value: string | null | undefined) {
-  if (!value) return [];
-  return value
-    .split(/[,.\/·|]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function formatRegionLabel(value: string | null | undefined) {
-  const regions = splitDelimitedOption(value);
-  if (regions.length <= 3) return regions.join(" · ") || "";
-  return `${regions.slice(0, 3).join(" · ")} 외 ${regions.length - 3}개`;
-}
 function getDdayClass(job: JobPostingDto) {
   if (job.isClosed || job.dday === "D-Day" || job.dday === "D-1") return styles.urgent;
   return styles.dday;

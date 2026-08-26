@@ -12,6 +12,10 @@ import type {
   CurrentUserDto,
   JobPostingDto,
 } from "@/features/home/home.dto";
+import {
+  formatJobEmploymentLabel,
+  formatJobRegionLabel,
+} from "@/features/jobs/job-display";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import styles from "./CalendarMain.module.css";
 
@@ -766,18 +770,19 @@ function CalendarJobCard({
 
   return (
     <Link href={`/jobs/${job.id}`} className={`${styles.jobCard} ${!showEventBadge ? styles.jobCardWithoutBadge : ""}`}>
-      {showEventBadge ? (
-        <span className={getEventBadgeClass(event.kind)}>
-          {event.kind === "start" ? "시작" : "마감"}
-        </span>
-      ) : null}
-      <span className={styles.jobCopy}>
+      <span className={styles.jobTopRow}>
+        {showEventBadge ? (
+          <span className={getEventBadgeClass(event.kind)}>
+            {event.kind === "start" ? "시작" : "마감"}
+          </span>
+        ) : null}
         <small className={styles.company}>{job.institutionName}</small>
+      </span>
+      <span className={styles.jobCopy}>
         <strong>{job.title}</strong>
         <span className={styles.tags}>
-          {job.employmentType ? <small>{job.employmentType}</small> : null}
-          {job.region ? <small>{formatRegionLabel(job.region)}</small> : null}
-          {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
+          {job.region ? <small>{formatJobRegionLabel(job.region)}</small> : null}
+          {job.employmentType ? <small>{formatJobEmploymentLabel(job.employmentType)}</small> : null}
           {job.matchScore != null ? <em>유형추천</em> : null}
         </span>
       </span>
@@ -1074,12 +1079,6 @@ function splitDelimitedOption(value: string | null | undefined) {
     .split(/[,.\/·|]+/)
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function formatRegionLabel(value: string | null | undefined) {
-  const regions = splitDelimitedOption(value);
-  if (regions.length <= 3) return regions.join(" · ") || "";
-  return `${regions.slice(0, 3).join(" · ")} 외 ${regions.length - 3}개`;
 }
 
 function getWeekendClass(date: Date) {

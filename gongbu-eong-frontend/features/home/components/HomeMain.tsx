@@ -11,6 +11,10 @@ import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAler
 import { getCommunityPosts } from "@/features/community/community.api";
 import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
 import { formatClockTime, formatNumber } from "@/features/community/components/CommunityShared";
+import {
+  formatJobEmploymentLabel,
+  formatJobRegionLabel,
+} from "@/features/jobs/job-display";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "../home.api";
 import type {
   CurrentUserDto,
@@ -519,8 +523,8 @@ const ignoreClickAfterDrag = (
                 <small className={styles.company}>{job.institutionName}</small>
                 <strong>{job.title}</strong>
                 <span className={styles.recommendTags}>
-                  {job.employmentType ? <small>{job.employmentType}</small> : null}
-                  {job.region ? <small>{formatRegionLabel(job.region)}</small> : null}
+                  {job.employmentType ? <small>{formatJobEmploymentLabel(job.employmentType)}</small> : null}
+                  {job.region ? <small>{formatJobRegionLabel(job.region)}</small> : null}
                   {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
                 </span>
                 <span className={styles.recommendFooter}>
@@ -792,7 +796,7 @@ export function HomeMenuDrawer({
 }
 
 function toJobMeta(job: JobPostingDto) {
-  return [job.employmentType, formatRegionLabel(job.region)].filter(Boolean).join(" · ") || job.institutionName;
+  return [formatJobEmploymentLabel(job.employmentType), formatJobRegionLabel(job.region)].filter(Boolean).join(" · ") || job.institutionName;
 }
 
 function isUrgentDday(dday: string) {
@@ -812,22 +816,6 @@ function toEndDate(value: string | null) {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `~ ${year}. ${month}. ${day}(${weekday})`;
-}
-
-function splitDelimitedOption(value: string | null | undefined) {
-  if (!value) return [];
-
-  return value
-    .split(/[,.\/·|]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function formatRegionLabel(value: string | null | undefined) {
-  const regions = splitDelimitedOption(value);
-  if (regions.length <= 3) return regions.join(" · ") || "";
-
-  return `${regions.slice(0, 3).join(" · ")} 외 ${regions.length - 3}개`;
 }
 
 function toProfileAvatarSrc(key: string | null | undefined) {

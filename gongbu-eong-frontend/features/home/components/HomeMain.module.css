@@ -660,7 +660,7 @@
 .listItem {
   position: relative;
   display: flex;
-  min-height: 164px;
+  height: 164px;
   flex-direction: column;
   padding: 16px;
   border: 1px solid #e4e8ef;
@@ -671,6 +671,7 @@
 .listItem strong {
   display: -webkit-box;
   max-width: calc(100% - 40px);
+  height: 40px;
   margin-top: 9px;
   overflow: hidden;
   font-size: 0.9375rem;
@@ -694,12 +695,18 @@
 }
 
 .recommendFooter {
+  position: absolute;
+  right: 52px;
+  bottom: 2px;
+  left: 16px;
   display: flex;
+  box-sizing: border-box;
+  height: 34px;
   align-items: center;
   gap: 10px;
-  margin-top: auto;
-  padding-top: 16px;
-  padding-right: 36px;
+  margin-top: 0;
+  padding-top: 14px;
+  padding-right: 0;
   border-top: 1px solid #e4e8ef;
 }
 
@@ -723,13 +730,17 @@
 
 .recommendTags {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 5px;
   margin-top: 8px;
+  overflow: hidden;
 }
 
 .recommendTags small {
   display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 9rem;
   align-items: center;
   height: 22px;
   margin: 0;
@@ -739,6 +750,9 @@
   color: #5a6580;
   font-size: 0.6875rem;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .listItem .recommendDate {
@@ -750,7 +764,7 @@
 .recommendStar {
   position: absolute;
   right: 16px;
-  bottom: 15px;
+  bottom: 6px;
   display: flex;
   width: 25px;
   height: 25px;
