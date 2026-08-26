@@ -12,6 +12,7 @@ import { loadKakaoSdk } from "@/shared/kakao-share";
 import {
   getDiagnosisResultDetail,
   getDiagnosisResultHistory,
+  grantDiagnosisShareReward,
   selectDiagnosisResult,
 } from "../diagnosis.api";
 import {
@@ -362,6 +363,42 @@ export function DiagnosisResultDetail() {
     shareRewardPollingRef.current = window.setTimeout(poll, 1500);
   }, []);
 
+  const resetShareMessage = useCallback((message = "공유하고 코칭 받기 →") => {
+    window.setTimeout(() => setShareMessage(message), 1600);
+  }, []);
+
+  const grantShareRewardAfterShare = useCallback(async (resultId: string, previousBalance?: number) => {
+    if (!user) return;
+
+    try {
+      const reward = await grantDiagnosisShareReward(resultId);
+      setUser((current) => current ? { ...current, creditBalance: reward.balanceAfter } : current);
+
+      if (reward.granted) {
+        window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
+          detail: {
+            message: "진단권 1장이 추가되었습니다.",
+            balanceAfter: reward.balanceAfter,
+          },
+        }));
+        setShareMessage("티켓 지급 완료!");
+        resetShareMessage();
+        return;
+      }
+
+      setShareMessage("공유 완료!");
+      resetShareMessage();
+    } catch {
+      if (typeof previousBalance === "number") {
+        waitForShareReward(previousBalance);
+        return;
+      }
+
+      setShareMessage("공유 완료!");
+      resetShareMessage();
+    }
+  }, [resetShareMessage, user, waitForShareReward]);
+
   if (loading) return <ResultState message="진단 결과를 불러오고 있어요." />;
   if (!detail || error) return <ResultState message={error || "진단 결과가 없습니다."} />;
 
@@ -395,11 +432,23 @@ export function DiagnosisResultDetail() {
     const shareUrl = getDiagnosisResultShareUrl(result.resultId, publicOrigin);
     const shareImageUrl = getDiagnosisShareImageUrl(publicOrigin);
     const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY?.trim();
+    const previousBalance = user?.creditBalance;
     try {
       if (!kakaoKey) {
-        await navigator.clipboard.writeText(shareUrl);
-        setShareMessage("링크 복사 완료!");
-        window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
+        if (navigator.share) {
+          await navigator.share({
+            title: DIAGNOSIS_SHARE_TITLE,
+            text: DIAGNOSIS_SHARE_DESCRIPTION,
+            url: shareUrl,
+          });
+          setShareMessage("공유 완료!");
+        } else {
+          await navigator.clipboard.writeText(shareUrl);
+          setShareMessage("링크 복사 완료!");
+        }
+
+        if (user) void grantShareRewardAfterShare(result.resultId, previousBalance);
+        else resetShareMessage();
         return;
       }
 
@@ -453,10 +502,25 @@ export function DiagnosisResultDetail() {
         waitForShareReward(user.creditBalance);
       } else {
         setShareMessage("공유 완료!");
-        window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
+        resetShareMessage();
       }
-    } catch {
-      setShareMessage("다시 시도해 주세요");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        setShareMessage("공유가 취소되었습니다.");
+      } else {
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          setShareMessage("링크 복사 완료!");
+          if (user) {
+            void grantShareRewardAfterShare(result.resultId, previousBalance);
+          } else {
+            resetShareMessage();
+          }
+        } catch {
+          setShareMessage("다시 시도해 주세요");
+          resetShareMessage();
+        }
+      }
     }
   };
 
@@ -606,6 +670,8 @@ export function DiagnosisResultDetail() {
             ) : null}
             <button type="button" className={styles.shareButton} onClick={shareResult}>공유하고 자소서 코칭 티켓 받기!</button>
           </div>}
+
+          <ShareRewardNotice />
         </div>
 
         {isPublicView ? null : <AppFooter active="ai" />}
@@ -632,6 +698,23 @@ export function DiagnosisResultDetail() {
         </div>
       ) : null}
     </main>
+  );
+}
+
+function ShareRewardNotice() {
+  return (
+    <section className={styles.shareRewardNotice} aria-label="공유 혜택 안내">
+      <strong>꼭 확인해 주세요!</strong>
+      <ul>
+        <li>공유 가능 횟수: 무제한</li>
+        <li>진단권 지급: ID당 최초 1회 제한</li>
+      </ul>
+      <p>
+        ※ 링크 공유는 제한 없이 자유롭게 하실 수 있으나, 진단권 혜택은
+        <br />
+        계정당 1회만 적용됩니다.
+      </p>
+    </section>
   );
 }
 

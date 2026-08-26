@@ -705,6 +705,35 @@
   transform: translateY(1px);
 }
 
+.shareRewardNotice {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 1.25rem 1rem;
+  background: #f5f7fa;
+  color: #5a6580;
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.shareRewardNotice strong {
+  color: #5a6580;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.shareRewardNotice ul {
+  display: grid;
+  gap: 0.125rem;
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.shareRewardNotice p {
+  margin: 0;
+}
+
 .footer {
   position: fixed;
   bottom: 0;

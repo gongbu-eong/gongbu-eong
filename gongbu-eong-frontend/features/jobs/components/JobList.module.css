@@ -26,10 +26,40 @@
 }
 
 .searchSection h1 {
-  margin: 0 0 1rem;
+  margin: 0;
   font-size: 1.25rem;
   line-height: 1;
   font-weight: 700;
+}
+
+.titleRow {
+  display: flex;
+  min-height: 1.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.titleOnlySection .titleRow {
+  margin-bottom: 0;
+}
+
+.recommendAgainIconButton {
+  display: grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 34.6875rem;
+  background: #5a6580;
+  cursor: pointer;
+}
+
+.recommendAgainIconButton img {
+  display: block;
+  width: 0.8125rem;
+  height: 1rem;
 }
 
 .searchRow {
@@ -431,6 +461,22 @@
 
 .visualEmpty p {
   margin: 0;
+}
+
+.emptyCta {
+  display: flex;
+  width: 100%;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #2f7ff0;
+  border-radius: 0.75rem;
+  background: #fff;
+  color: #2f7ff0;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
 }
 
 .noDiagnosisContent {

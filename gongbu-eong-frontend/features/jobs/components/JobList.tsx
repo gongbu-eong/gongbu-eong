@@ -354,6 +354,11 @@ export function JobList({
     setFilterOpen(true);
   };
 
+  const openRecommendationSetup = () => {
+    setRecommendationSetupOpen(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
     setQuery(queryInput.trim().slice(0, MAX_JOB_SEARCH_QUERY_LENGTH));
@@ -406,7 +411,19 @@ export function JobList({
       <section className={styles.frame}>
         <AppHeader />
         <section className={`${styles.searchSection} ${showSearchControls ? "" : styles.titleOnlySection}`}>
-          <h1>{pageTitle}</h1>
+          <div className={styles.titleRow}>
+            <h1>{pageTitle}</h1>
+            {showRecommendationAgainButton ? (
+              <button
+                type="button"
+                className={styles.recommendAgainIconButton}
+                onClick={openRecommendationSetup}
+                aria-label="맞춤 추천 다시 받기"
+              >
+                <Image src="/jobs/recommend-refresh.svg" alt="" width={13} height={16} />
+              </button>
+            ) : null}
+          </div>
           {showSearchControls ? (
             <form onSubmit={submitSearch} className={styles.searchRow}>
               <label className={styles.searchBox}>
@@ -500,18 +517,6 @@ export function JobList({
                 </article>
               ))}
               {!loading && jobs.length === 0 ? <EmptyState view={view} query={query} /> : null}
-              {showRecommendationAgainButton ? (
-                <button
-                  type="button"
-                  className={styles.recommendAgainButton}
-                  onClick={() => {
-                    setRecommendationSetupOpen(true);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                >
-                  맞춤 추천 다시 받기
-                </button>
-              ) : null}
               <div ref={loadMoreRef} className={styles.loadMore} aria-live="polite">
                 {loadingMore ? "공고를 더 불러오는 중..." : null}
               </div>
@@ -774,6 +779,9 @@ function EmptyState({ view, query }: { view: JobListView; query: string }) {
           <br />
           채용 공고에서 별표를 눌러 찜 하세요.
         </p>
+        <Link href="/jobs" className={styles.emptyCta}>
+          공고 찜하러 가기
+        </Link>
       </div>
     );
   }
