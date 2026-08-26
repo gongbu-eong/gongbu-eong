@@ -250,7 +250,7 @@ export function AppTicketStatus({
   const displayTicketCount = eventTicketCount ?? ticketCount;
   const progress = eventProgress ?? communityActivityRewardProgress;
   const currentProgressCount = progress?.currentCount ?? 0;
-  const milestoneCount = progress?.milestoneCount ?? 3;
+  const milestoneCount = progress?.milestoneCount ?? 5;
   const isMaxed = Boolean(progress?.isMaxed || displayTicketCount >= 20);
   const progressPercent = isMaxed
     ? 0
@@ -313,7 +313,7 @@ export function AppTicketStatus({
             <span className={styles.headerTicketTooltip} role="tooltip">
               {isMaxed
                 ? "진단권은 최대 20장까지 보유할 수 있습니다."
-                : "커뮤니티 글, 댓글, 답글 3개마다 진단권 1장이 추가됩니다."}
+                : "커뮤니티에서 댓글과 글을 작성하면, 진단권이 추가됩니다."}
             </span>
           ) : null}
         </button>

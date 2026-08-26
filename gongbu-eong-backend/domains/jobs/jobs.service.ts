@@ -21,6 +21,8 @@ import {
   type JobPostingRow,
 } from "./jobs.repository";
 
+const MAX_JOB_SEARCH_QUERY_LENGTH = 100;
+
 export async function getJobPostingFile(fileId: string) {
   const file = await findJobPostingFileById(fileId);
   if (!file) return null;
@@ -82,6 +84,7 @@ export async function getJobPostings(args: {
   const limit = clamp(args.limit ?? 20, 1, 100);
   const offset = Math.max(args.offset ?? 0, 0);
   const view = args.view || "all";
+  const searchQuery = args.query?.trim().slice(0, MAX_JOB_SEARCH_QUERY_LENGTH) || undefined;
 
   if (view === "recommended") {
     const diagnosisType = args.userId
@@ -127,7 +130,7 @@ export async function getJobPostings(args: {
     offset,
     userId: args.userId,
     bookmarkedOnly: view === "bookmarked",
-    query: args.query,
+    query: searchQuery,
     ncsCategory: args.ncsCategory,
     region: args.region,
     employmentType: args.employmentType,

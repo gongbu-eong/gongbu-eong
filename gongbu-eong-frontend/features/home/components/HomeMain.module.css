@@ -267,52 +267,59 @@
 
 .resultOwl {
   position: absolute;
-  bottom: 0;
   z-index: 0;
   height: auto;
-  max-height: 100%;
   object-fit: contain;
-  object-position: center bottom;
+  object-position: center;
+  pointer-events: none;
 }
 
 .resultOwlStability {
-  right: 38px;
-  width: 208px;
+  top: 31px;
+  right: 24px;
+  width: min(100px, 28%);
 }
 
 .resultOwlChallenge {
-  right: 6.6%;
-  width: 44.9%;
+  top: 27px;
+  right: 24px;
+  width: min(162px, 45%);
 }
 
 .resultOwlTeamwork {
-  right: 6.6%;
-  width: 52.4%;
+  top: 34px;
+  right: 24px;
+  width: min(189px, 52%);
 }
 
 .resultOwlIndividual {
-  right: 6.6%;
-  width: 34.4%;
+  top: 31px;
+  right: 24px;
+  width: min(124px, 34%);
 }
 
 .resultOwlExecution {
-  right: 4.4%;
-  width: 55.4%;
+  top: 30px;
+  right: 16px;
+  width: min(200px, 55%);
 }
 
 .resultOwlPlanning {
-  right: 4.4%;
-  width: 50.7%;
+  top: 31px;
+  right: 16px;
+  width: min(183px, 51%);
 }
 
 .resultOwlPrinciple {
-  right: 6.6%;
-  width: 32.7%;
+  top: 31px;
+  right: 24px;
+  width: min(118px, 33%);
 }
 
 .resultOwlFlexibility {
-  right: 6.6%;
-  width: 39.1%;
+  top: 25px;
+  right: 24px;
+  width: min(141px, 39%);
 }
 
 .sectionHeader {
@@ -1139,9 +1146,4 @@
   .resultLink {
     left: 16px;
   }
-
-  .resultOwl {
-    right: -8px;
-  }
-
 }

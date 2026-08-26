@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "공부엉이",
-  description: "Frontend app for Gongbu Eong",
+  description: "공기업 취준생의 합격 메이트",
 };
 
 export const viewport: Viewport = {

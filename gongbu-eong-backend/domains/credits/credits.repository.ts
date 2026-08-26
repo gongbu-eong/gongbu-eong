@@ -13,7 +13,7 @@ export const CREDIT_REWARD_POLICY = {
   },
   communityActivityMilestone: {
     amount: 1,
-    milestoneCount: 3,
+    milestoneCount: 5,
     sourceType: "community_activity_milestone",
     reason: "커뮤니티 글·댓글 활동 보상",
   },
@@ -125,7 +125,7 @@ export async function grantCommunityActivityMilestoneReward(
       amount: policy.amount,
       transactionType: "event_grant",
       sourceType: CREDIT_REWARD_POLICY.communityActivityMilestone.sourceType,
-      sourceId: `activity:${achievedMilestone}`,
+      sourceId: `activity:${progress.milestoneCount}:${achievedMilestone}`,
       reason: `${policy.reason} (${activityCount}번째 활동)`,
       metadata: {
         source,

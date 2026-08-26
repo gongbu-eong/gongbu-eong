@@ -49,49 +49,49 @@ const RESULT_TYPE_DETAILS: Record<
     heroSummary: "묵묵히 준비해 결국 붙는 타입",
     personTitle: "안정 추구형은 이런 사람이에요",
     personDescription:
-      "정해진 기준과 절차가 명확할 때 집중력이 살아나는 타입이에요. 계획을 꾸준히 지키고, 갑작스러운 변화보다 검증된 방식으로 안정적인 결과를 만드는 데 강합니다.",
+      "정해진 기준과 절차가 명확할 때 집중력이 살아나는 타입입니다.\n해야 할 일이 보이면 무리하게 속도를 내기보다 일정한 리듬으로 끝까지 이어갑니다.\n갑작스러운 변화 앞에서는 신중해질 수 있지만, 한번 방향을 잡으면 안정적인 결과를 꾸준히 쌓아 신뢰를 만드는 사람입니다.",
   },
   challenge: {
     heroSummary: "빠르게 부딪히며 성장하는 타입",
     personTitle: "도전 개척형은 이런 사람이에요",
     personDescription:
-      "낯선 방식이나 높은 목표 앞에서 움츠러들기보다 먼저 시도해보는 타입이에요. 실패 가능성이 있어도 성장 가능성이 보이면 빠르게 움직이며 경험으로 방향을 잡습니다.",
+      "낯선 방식이나 높은 목표 앞에서 움츠러들기보다 먼저 시도해보는 타입입니다.\n처음부터 정답이 보이지 않아도 직접 부딪히며 정보를 모으고, 경험을 통해 다음 방향을 빠르게 잡습니다.\n실패 가능성이 있어도 성장 가능성이 보이면 움직이는 편이라 변화가 많은 환경에서 에너지가 살아납니다.",
   },
   teamwork: {
     heroSummary: "함께 맞춰가며 성과를 내는 타입",
     personTitle: "협업 조력형은 이런 사람이에요",
     personDescription:
-      "혼자 밀어붙이기보다 주변과 방향을 맞추고 역할을 나눌 때 강점이 살아나는 타입이에요. 협의와 피드백을 통해 안정적인 결론을 만들고 관계 안에서 성과를 냅니다.",
+      "혼자 밀어붙이기보다 주변과 방향을 맞추고 역할을 나눌 때 강점이 살아나는 타입입니다.\n서로 다른 의견이 있어도 바로 판단하기보다 각자의 입장을 듣고 공통된 목표를 찾으려 합니다.\n사람과 일의 흐름을 이어주는 힘이 있어 팀 안에서 안정적인 결론과 관계 기반의 성과를 만들어내는 사람입니다.",
   },
   individual: {
     heroSummary: "몰입해서 완성도를 높이는 타입",
     personTitle: "독립 몰입형은 이런 사람이에요",
     personDescription:
-      "여러 사람과 계속 맞추기보다 스스로 몰입할 시간이 있을 때 결과가 좋아지는 타입이에요. 독립적으로 기준을 세우고 깊게 파고들며, 방해가 적은 환경에서 집중력이 살아납니다.",
+      "여러 사람과 계속 맞추기보다 스스로 몰입할 시간이 있을 때 결과가 좋아지는 타입입니다.\n문제를 맡으면 자신의 기준으로 구조를 파악하고, 필요한 자료와 방법을 찾아 끝까지 파고드는 힘이 있습니다.\n조용히 집중할 수 있는 환경에서 완성도를 끌어올리며, 독립적인 책임이 분명할수록 역량이 잘 드러나는 사람입니다.",
   },
   execution: {
     heroSummary: "먼저 움직이며 길을 찾는 타입",
     personTitle: "실행 추진형은 이런 사람이에요",
     personDescription:
-      "완벽한 계획을 기다리기보다 작은 행동으로 시작하며 방향을 잡는 타입이에요. 해야 할 일이 보이면 빠르게 움직이고, 실행 과정에서 필요한 정보를 보완해갑니다.",
+      "완벽한 계획을 기다리기보다 작은 행동으로 시작하며 방향을 잡는 타입입니다.\n해야 할 일이 보이면 오래 망설이지 않고 먼저 움직이면서 필요한 정보와 사람을 연결합니다.\n실행 과정에서 문제를 발견하고 바로 조정하는 편이라, 정체된 상황에 속도를 붙이고 결과를 앞으로 밀어내는 사람입니다.",
   },
   planning: {
     heroSummary: "계획으로 합격 가능성을 높이는 타입",
     personTitle: "전략 기획형은 이런 사람이에요",
     personDescription:
-      "시작 전 목표와 기준, 순서를 정리해야 힘이 나는 타입이에요. 정보를 비교하고 가능성을 분석해 우선순위를 세우며, 복잡한 상황을 구조화하는 데 강합니다.",
+      "시작 전 목표와 기준, 순서를 정리해야 힘이 나는 타입입니다.\n여러 정보가 섞여 있어도 중요한 조건을 분리하고, 무엇부터 처리해야 효율적인지 차분히 판단합니다.\n큰 그림과 세부 단계를 함께 보며 복잡한 상황을 실행 가능한 계획으로 바꾸는 데 강한 사람입니다.",
   },
   principle: {
     heroSummary: "정확하게 확인하며 실수를 줄이는 타입",
     personTitle: "정밀 관리형은 이런 사람이에요",
     personDescription:
-      "규칙과 원칙, 빠진 조건을 중요하게 보는 타입이에요. 작은 오류도 그냥 넘기지 않고 다시 확인하며, 정확성과 신뢰가 중요한 일에서 강점을 발휘합니다.",
+      "규칙과 원칙, 빠진 조건을 중요하게 보는 타입입니다.\n작은 오류도 결과에 영향을 줄 수 있다고 생각해 다시 확인하고, 기준이 흐려지는 상황에서도 필요한 절차를 지키려 합니다.\n정확성과 신뢰가 중요한 업무에서 안정감을 주며, 세부 사항을 챙겨 전체 결과의 완성도를 높이는 사람입니다.",
   },
   flexibility: {
     heroSummary: "상황에 맞춰 유연하게 돌파하는 타입",
     personTitle: "유연 대응형은 이런 사람이에요",
     personDescription:
-      "계획대로 되지 않아도 멈추기보다 그때그때 가능한 방법을 찾는 타입이에요. 기존 기준에만 묶이지 않고 상황을 읽으며 현실적인 선택지를 조정합니다.",
+      "계획대로 되지 않아도 멈추기보다 그때그때 가능한 방법을 찾는 타입입니다.\n갑작스러운 변경이나 제약이 생겨도 현재 쓸 수 있는 자원과 조건을 빠르게 살피며 대안을 조정합니다.\n고정된 방식보다 실제 상황에 맞는 해결책을 중요하게 생각해, 변화가 잦은 환경에서도 흐름을 이어가는 사람입니다.",
   },
 };
 
@@ -99,14 +99,14 @@ const RESULT_HERO_IMAGE_SRC: Record<
   DiagnosisResultResponseDto["typeCode"],
   string
 > = {
-  stability: "/diagnosis/result-heroes/stability.webp",
-  challenge: "/diagnosis/result-heroes/challenge.webp",
-  teamwork: "/diagnosis/result-heroes/teamwork.webp",
-  individual: "/diagnosis/result-heroes/individual.webp",
-  execution: "/diagnosis/result-heroes/execution.webp",
-  planning: "/diagnosis/result-heroes/planning.webp",
-  principle: "/diagnosis/result-heroes/principle.webp",
-  flexibility: "/diagnosis/result-heroes/flexibility.webp",
+  stability: "/home/result-types/stability.webp",
+  challenge: "/home/result-types/challenge.webp",
+  teamwork: "/home/result-types/teamwork.webp",
+  individual: "/home/result-types/individual.webp",
+  execution: "/home/result-types/execution.webp",
+  planning: "/home/result-types/planning.webp",
+  principle: "/home/result-types/principle.webp",
+  flexibility: "/home/result-types/flexibility.webp",
 };
 
 const RESULT_HERO_COLOR: Record<
@@ -807,7 +807,7 @@ function DiagnosisResult({
         <img
           src={RESULT_HERO_IMAGE_SRC[displayResult.typeCode]}
           alt=""
-          className={styles.resultHeroSprite}
+          className={`${styles.resultHeroSprite} ${styles[`resultHeroSprite_${displayResult.typeCode}`]}`}
           draggable={false}
         />
         <div className={styles.resultHeroText}>
@@ -862,11 +862,11 @@ function DiagnosisResult({
                   card.kind === "growth" ? styles.pointCardGrowth : ""
                 }`}
               >
-                <PointIcon kind={card.kind} />
-                <div>
+                <div className={styles.pointCardHeader}>
+                  <PointIcon kind={card.kind} index={index} />
                   <strong>{card.title}</strong>
-                  <p>{card.text}</p>
                 </div>
+                <p>{card.text}</p>
               </article>
             ))}
           </div>
@@ -939,89 +939,34 @@ function SurveyHomeIcon() {
   );
 }
 
-function ResultTitleIcon({
-  type,
-}: {
-  type: "person" | "chart" | "growth" | "job";
-}) {
+function ResultTitleIcon({ type }: { type: "person" | "chart" | "growth" | "job" }) {
+  const iconClassName =
+    type === "person"
+      ? styles.resultSectionIcon_person
+      : type === "chart"
+        ? styles.resultSectionIcon_analysis
+        : type === "growth"
+          ? styles.resultSectionIcon_strength
+          : styles.resultSectionIcon_jobs;
+
   return (
-    <span className={styles.titleIcon} aria-hidden="true">
-      {type === "person" ? (
-        <svg viewBox="0 0 24 24" focusable="false">
-          <circle cx="10" cy="10" r="6.25" fill="#d8efff" stroke="#64748b" strokeWidth="1.5" />
-          <circle cx="8.5" cy="8.5" r="2" fill="#ffffff" opacity="0.9" />
-          <path d="m14.7 14.7 5.15 5.15" fill="none" stroke="#2f7ff0" strokeWidth="3" strokeLinecap="round" />
-        </svg>
-      ) : null}
-      {type === "chart" ? (
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path d="M3.5 3.5v17h17" fill="none" stroke="#172033" strokeWidth="1.5" strokeLinecap="round" />
-          <rect x="6" y="12" width="3" height="6" rx="0.75" fill="#20b66f" />
-          <rect x="10.5" y="8" width="3" height="10" rx="0.75" fill="#f0445b" />
-          <rect x="15" y="5" width="3" height="13" rx="0.75" fill="#2f7ff0" />
-        </svg>
-      ) : null}
-      {type === "growth" ? (
-        <svg viewBox="0 0 24 24" focusable="false">
-          <path d="M5.2 20.2c2.2-1.3 3.3-3.1 3.5-5.6l.2-2.4 2.1 1.1 2-4.7c.5-1.2 2.1-1.5 3-.6.5.5.6 1.2.3 1.9l-1.2 2.8 2.1-.9c1.6-.7 3.3.5 3.3 2.2v1.5c0 2.9-2.3 5.2-5.2 5.2H9.1c-1.4 0-2.7-.2-3.9-.5Z" fill="#ffc83d" stroke="#e99018" strokeWidth="1.25" strokeLinejoin="round" />
-          <path d="m7.2 13.8-2.6-.7-1.2 5.6 3.2.8" fill="#ffd85f" stroke="#e99018" strokeWidth="1.25" strokeLinejoin="round" />
-        </svg>
-      ) : null}
-      {type === "job" ? (
-        <svg viewBox="0 0 24 24" focusable="false">
-          <circle cx="11" cy="13" r="8" fill="#ffffff" stroke="#ef4056" strokeWidth="2" />
-          <circle cx="11" cy="13" r="5" fill="#ef4056" />
-          <circle cx="11" cy="13" r="2" fill="#ffffff" />
-          <path d="m11 13 7.8-7.8" fill="none" stroke="#2f7ff0" strokeWidth="1.7" strokeLinecap="round" />
-          <path d="m18.3 5.7.1-3 1.3 1.3 2.8.1-2.2 2.2Z" fill="#59c58a" stroke="#23734f" strokeWidth="0.7" strokeLinejoin="round" />
-        </svg>
-      ) : null}
-    </span>
+    <span className={`${styles.resultSectionIcon} ${iconClassName}`} aria-hidden="true" />
   );
 }
 
-function PointIcon({ kind }: { kind: "strength" | "growth" }) {
-  if (kind === "growth") {
-    return (
-      <span className={styles.pointIcon} aria-hidden="true">
-        <svg viewBox="32 1069 48 48" focusable="false">
-          <path
-            d="M55.5803 1090.58L55.1935 1090.16C55.1935 1090.16 55.5803 1083.2 49.7261 1080.44C49.7261 1080.44 44.2146 1078.89 42.0061 1080.87C42.0061 1080.87 41.5556 1088.19 48.3745 1091.16C48.3745 1091.16 51.6995 1092.4 54.0574 1091.59C54.0574 1091.59 54.7234 1092.5 54.787 1093.59V1099.56H56.6748V1092.81C56.6748 1092.81 57.189 1090.02 58.0043 1089.52C58.0043 1089.52 62.8081 1090.93 66.8603 1086.79C66.8603 1086.79 70.1853 1083.1 69.9919 1078.06C69.9919 1078.06 68.2559 1075.83 62.3136 1077.85C62.3136 1077.85 56.3957 1080.65 56.7801 1088.41L55.5803 1090.58V1090.58Z"
-            fill="#BCDB8B"
-          />
-          <path
-            d="M68.584 1106.61C69.3332 1107.52 68.8851 1108.99 67.7882 1109.2C65.2223 1109.71 60.8102 1109.2 55.7957 1109.2C50.7813 1109.2 46.3692 1109.71 43.8033 1109.2C42.7064 1108.99 42.2583 1107.52 43.0075 1106.61C45.3801 1103.72 50.2157 1098.84 55.7957 1098.84C61.3758 1098.84 66.2114 1103.72 68.584 1106.61Z"
-            fill="#BF9567"
-          />
-        </svg>
-      </span>
-    );
-  }
-
+function PointIcon({ kind, index }: { kind: "strength" | "growth"; index: number }) {
   return (
     <span className={styles.pointIcon} aria-hidden="true">
-      <svg viewBox="32 796 48 48" focusable="false">
-        <path
-          d="M54.4247 816.648C54.4247 816.648 54.5185 828.09 47.7336 834.257C47.7336 834.257 44.4349 837.55 47.9694 839.116C51.5039 840.682 54.4247 831.749 54.4247 831.749C54.4247 831.749 56.9677 822.604 56.7319 817.798L54.422 816.648H54.4247Z"
-          fill="#66C08C"
-        />
-        <path
-          d="M55.2824 808.543L55.6039 811.203C55.9335 813.456 56.3194 815.67 56.7481 817.914C58.8436 817.84 60.9016 817.715 62.9784 817.531C63.7099 817.465 64.4093 817.385 65.1382 817.272C66.4565 817.061 67.7133 816.687 68.7771 815.816C69.8409 814.945 70.5993 813.605 70.7976 812.119C71.1808 809.215 69.4015 806.496 66.7406 806.19C66.1136 806.118 65.5079 806.19 64.8943 806.38C64.9747 803.877 63.5652 801.72 61.384 801.143C59.9932 800.778 58.5328 801.122 57.3832 802.061C56.5338 802.754 55.9201 803.708 55.5771 804.808C55.202 806.005 55.1752 807.254 55.2797 808.546L55.2824 808.543Z"
-          fill="#8FD3A1"
-        />
-        <path
-          d="M65.3149 818.232L62.9032 818.009C60.8479 817.884 58.8167 817.828 56.748 817.81C56.3621 820.096 56.0325 822.351 55.7485 824.643C55.6493 825.448 55.5689 826.224 55.5127 827.035C55.4135 828.509 55.4752 829.951 56.0138 831.291C56.5631 832.658 57.5706 833.74 58.8381 834.272C61.3114 835.309 64.0902 833.966 64.929 831.148C65.1273 830.483 65.1943 829.814 65.1594 829.107C67.346 829.731 69.5487 828.667 70.5241 826.429C71.1458 825.002 71.1538 823.347 70.575 821.899C70.1463 820.833 69.4388 819.962 68.5465 819.353C67.5711 818.69 66.4778 818.393 65.3175 818.229L65.3149 818.232Z"
-          fill="#66C08C"
-        />
-        <path
-          d="M54.4408 808.65L55.1804 811.206C55.7565 813.399 56.2656 815.581 56.748 817.81C54.8267 818.743 52.9214 819.611 50.9733 820.434C50.2873 820.725 49.6228 820.987 48.9234 821.231C47.6505 821.67 46.3723 821.932 45.0727 821.653C43.749 821.367 42.5699 820.526 41.8169 819.278C40.3458 816.841 40.8978 813.533 43.1809 811.991C43.7195 811.625 44.2929 811.402 44.9226 811.28C43.8803 809.06 44.3144 806.439 46.0615 804.879C47.1736 803.886 48.6259 803.5 50.0274 803.8C51.0617 804.02 51.9862 804.588 52.7231 805.417C53.5243 806.32 54.0362 807.435 54.4408 808.65Z"
-          fill="#66C08C"
-        />
-        <path
-          d="M56.5551 827.359L56.7266 824.681C56.815 822.401 56.8445 820.146 56.8338 817.851C54.7678 817.45 52.7312 817.111 50.6625 816.823C49.9337 816.722 49.2343 816.642 48.5027 816.588C47.1736 816.496 45.874 816.579 44.6708 817.194C43.4435 817.819 42.4815 818.948 42.0153 820.36C41.1069 823.115 42.3529 826.182 44.9013 827.079C45.5015 827.29 46.1071 827.359 46.7449 827.311C46.2063 829.742 47.1924 832.173 49.2209 833.228C50.5152 833.9 52.0077 833.891 53.3047 833.231C54.2613 832.744 55.0384 831.95 55.577 830.952C56.1639 829.864 56.4184 828.645 56.5524 827.359H56.5551Z"
-          fill="#8FD3A1"
-        />
-      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={
+          kind === "growth"
+            ? "/diagnosis/result-detail/growth.svg"
+            : `/diagnosis/result-detail/strength-${Math.min(index + 1, 3)}.svg`
+        }
+        alt=""
+        draggable={false}
+      />
     </span>
   );
 }

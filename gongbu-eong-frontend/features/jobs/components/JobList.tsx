@@ -35,6 +35,7 @@ const EMPLOYMENTS = ["정규직", "무기계약직", "비정규직", "청년인�
 const EDUCATIONS = ["학력무관", "고졸", "대졸(2~3년)", "대졸(4년)", "석사", "박사"];
 const CAREERS = ["신입", "경력", "신입+경력"];
 const PAGE_SIZE = 20;
+const MAX_JOB_SEARCH_QUERY_LENGTH = 100;
 
 type Filters = {
   startDate: string;
@@ -355,7 +356,7 @@ export function JobList({
 
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
-    setQuery(queryInput.trim());
+    setQuery(queryInput.trim().slice(0, MAX_JOB_SEARCH_QUERY_LENGTH));
   };
 
   const handleSelectDiagnosisResult = (item: DiagnosisResultHistoryItemDto) => {
@@ -409,7 +410,12 @@ export function JobList({
           {showSearchControls ? (
             <form onSubmit={submitSearch} className={styles.searchRow}>
               <label className={styles.searchBox}>
-                <input value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="공고명, 기업명을 검색하세요." />
+                <input
+                  value={queryInput}
+                  maxLength={MAX_JOB_SEARCH_QUERY_LENGTH}
+                  onChange={(e) => setQueryInput(e.target.value.slice(0, MAX_JOB_SEARCH_QUERY_LENGTH))}
+                  placeholder="공고명, 기업명을 검색하세요."
+                />
                 <button type="submit" aria-label="검색">
                   <Image src="/jobs/search.svg" alt="" width={25} height={25} />
                 </button>

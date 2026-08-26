@@ -1570,9 +1570,9 @@ VALUES
     '커뮤니티 글·댓글 활동 보상',
     1,
     NULL,
-    3,
+    5,
     TRUE,
-    '{"reward_rule": "active_posts_plus_active_comments_every_3"}'::JSONB
+    '{"reward_rule": "active_posts_plus_active_comments_every_5"}'::JSONB
   ),
   (
     'diagnosis_result_share',

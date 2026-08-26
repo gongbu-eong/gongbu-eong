@@ -418,32 +418,34 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                   <img key={attachment.id} src={attachment.dataUrl} className={styles.detailImage} alt={attachment.fileName} />
                 ) : null)}
               </article>
-              <div className={styles.actionRow}>
-                <button type="button" className={post.isRecommended ? styles.actionActive : ""} onClick={toggleRecommend}>
-                  <Image src={post.isRecommended ? "/community/heart-filled.svg" : "/community/heart-outline.svg"} alt="" width={24} height={24} />
-                   {formatNumber(post.recommendCount)}
-                </button>
-                <button type="button" className={post.isScrapped ? styles.actionActive : ""} onClick={toggleScrap}>
-                  <Image src={post.isScrapped ? "/community/bookmark-filled.svg" : "/community/bookmark-outline.svg"} alt="" width={24} height={24} />
-                  스크랩
-                </button>
-                <button type="button" onClick={() => setModal({ type: "share" })}>
-                  <Image src="/community/share.svg" alt="" width={24} height={24} />
-                  공유
-                </button>
-                <button type="button" onClick={() => setModal({ type: "report-post" })}>
-                  <Image src="/community/report.svg" alt="" width={24} height={24} />
-                  신고
-                </button>
-              </div>
-              {toast ? (
-                <div className={`${styles.toast} ${toastTone === "scrap" ? styles.scrapToast : ""}`}>
-                  <span>{toast}</span>
-                  <button type="button" onClick={() => setToast("")}>
-                    <Image src="/community/close.svg" alt="" width={14} height={14} />
+              <div className={styles.actionArea}>
+                <div className={styles.actionRow}>
+                  <button type="button" className={post.isRecommended ? styles.actionActive : ""} onClick={toggleRecommend}>
+                    <Image src={post.isRecommended ? "/community/heart-filled.svg" : "/community/heart-outline.svg"} alt="" width={24} height={24} />
+                    {formatNumber(post.recommendCount)}
+                  </button>
+                  <button type="button" className={post.isScrapped ? styles.actionActive : ""} onClick={toggleScrap}>
+                    <Image src={post.isScrapped ? "/community/bookmark-filled.svg" : "/community/bookmark-outline.svg"} alt="" width={24} height={24} />
+                    스크랩
+                  </button>
+                  <button type="button" onClick={() => setModal({ type: "share" })}>
+                    <Image src="/community/share.svg" alt="" width={24} height={24} />
+                    공유
+                  </button>
+                  <button type="button" onClick={() => setModal({ type: "report-post" })}>
+                    <Image src="/community/report.svg" alt="" width={24} height={24} />
+                    신고
                   </button>
                 </div>
-              ) : null}
+                {toast ? (
+                  <div className={`${styles.toast} ${toastTone === "scrap" ? styles.scrapToast : ""}`}>
+                    <span>{toast}</span>
+                    <button type="button" onClick={() => setToast("")}>
+                      <Image src="/community/close.svg" alt="" width={14} height={14} />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
               <section className={styles.commentSection}>
                 <h2>댓글 {formatNumber(post.commentCount)}</h2>
                 <form className={styles.commentForm} onSubmit={submitComment}>
