@@ -168,6 +168,10 @@
   box-shadow: 0 0 0 1px #2f7ff0;
 }
 
+.emailField {
+  margin-top: 34px;
+}
+
 .textField p {
   grid-column: 1 / -1;
   margin: 0;
@@ -228,6 +232,11 @@
   text-align: center;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.errorMessage {
+  color: #e8544d;
+  font-weight: 600;
 }
 
 .saveButton {

@@ -10,6 +10,7 @@ import {
   submitDiagnosis,
 } from "../diagnosis.api";
 import { getCurrentUser } from "@/features/home/home.api";
+import { trackProductEvent } from "@/features/analytics/analytics.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import {
@@ -899,11 +900,23 @@ function DiagnosisResult({
               가입하면 <strong>전체 결과 + 맞춤 공고</strong>를 볼 수 있어요
             </p>
             <div className={styles.loginActions}>
-              <a className={styles.kakaoButton} href={kakaoLoginUrl}>
+              <a
+                className={styles.kakaoButton}
+                href={kakaoLoginUrl}
+                onClick={() =>
+                  trackDiagnosisSignupClick("kakao", displayResult)
+                }
+              >
                 <span className={styles.quickBadge}>3초 컷!</span>
                 카카오로 시작하기
               </a>
-              <a className={styles.naverButton} href={naverLoginUrl}>
+              <a
+                className={styles.naverButton}
+                href={naverLoginUrl}
+                onClick={() =>
+                  trackDiagnosisSignupClick("naver", displayResult)
+                }
+              >
                 네이버로 시작하기
               </a>
             </div>
@@ -1000,10 +1013,27 @@ function buildLoginUrl(
   }
 
   const url = new URL(baseUrl);
+  url.searchParams.set("entrySource", "diagnosis");
   url.searchParams.set("diagnosisRunId", diagnosisRunId);
   url.searchParams.set("anonymousId", anonymousId);
 
   return url.toString();
+}
+
+function trackDiagnosisSignupClick(
+  provider: "kakao" | "naver",
+  result: DiagnosisResultResponseDto,
+) {
+  trackProductEvent({
+    eventType: "diagnosis_result_signup_click",
+    diagnosisRunId: result.runId,
+    diagnosisResultId: result.resultId,
+    properties: {
+      provider,
+      diagnosis_type: result.typeCode,
+      diagnosis_type_name: result.typeName,
+    },
+  });
 }
 
 function MobileFrame({

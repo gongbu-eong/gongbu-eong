@@ -67,6 +67,40 @@ export function syncAttribution(args: {
   });
 }
 
+export function trackProductEvent(args: {
+  eventType: string;
+  diagnosisRunId?: string | null;
+  diagnosisResultId?: string | null;
+  properties?: Record<string, unknown>;
+}) {
+  const path = `${window.location.pathname}${window.location.search}`;
+
+  fetch(`${backendUrl}/api/product-events`, {
+    method: "POST",
+    keepalive: true,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      anonymousId: getAnonymousId(),
+      eventType: args.eventType,
+      eventSource: "client",
+      diagnosisRunId: args.diagnosisRunId || null,
+      diagnosisResultId: args.diagnosisResultId || null,
+      attribution: getStoredAttributionContext(),
+      properties: {
+        path,
+        title: document.title,
+        referrer: document.referrer || null,
+        ...(args.properties || {}),
+      },
+    }),
+  }).catch(() => {
+    // Product event logging must never block the user flow.
+  });
+}
+
 function readAttribution(key: string): AttributionSnapshot | null {
   try {
     const raw = window.localStorage.getItem(key);

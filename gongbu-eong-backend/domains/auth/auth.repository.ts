@@ -122,18 +122,16 @@ export async function upsertOAuthUser(args: {
         `
           UPDATE public.users
           SET
-            email = COALESCE($2, email),
-            nickname = COALESCE($3, nickname),
-            display_name = COALESCE($3, display_name),
-            avatar_url = COALESCE($4, avatar_url),
-            community_nickname = COALESCE(community_nickname, $5),
+            nickname = COALESCE($2, nickname),
+            display_name = COALESCE($2, display_name),
+            avatar_url = COALESCE($3, avatar_url),
+            community_nickname = COALESCE(community_nickname, $4),
             last_login_at = NOW(),
             updated_at = NOW()
           WHERE id = $1
         `,
         [
           userId,
-          args.profile.email || null,
           args.profile.nickname || null,
           args.profile.avatarUrl || null,
           communityNickname,

@@ -60,12 +60,25 @@ function readProfilePayload(payload: unknown) {
   }
 
   const value = payload as Record<string, unknown>;
+  const email = readTrimmedString(value.email).toLowerCase();
   const communityNickname = readTrimmedString(value.communityNickname);
   const profileStatusMessage = readTrimmedString(value.profileStatusMessage);
   const profileAvatarKey = readEnum(value.profileAvatarKey, PROFILE_AVATAR_KEYS, "아바타를 선택해 주세요.");
   const profileBackgroundColor = readEnum(value.profileBackgroundColor, PROFILE_BACKGROUND_COLORS, "프로필 배경색을 선택해 주세요.");
   const gender = readNullableEnum(value.gender, PROFILE_GENDERS, "성별을 확인해 주세요.");
   const ageGroup = readNullableEnum(value.ageGroup, PROFILE_AGE_GROUPS, "연령대를 확인해 주세요.");
+
+  if (!email) {
+    throw badRequest("이메일을 입력해 주세요.");
+  }
+
+  if (email.length > 60) {
+    throw badRequest("이메일은 60자 이하로 입력해 주세요.");
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw badRequest("이메일 형식을 확인해 주세요.");
+  }
 
   if (!communityNickname) {
     throw badRequest("닉네임을 입력해 주세요.");
@@ -80,6 +93,7 @@ function readProfilePayload(payload: unknown) {
   }
 
   return {
+    email,
     communityNickname,
     profileStatusMessage: profileStatusMessage || null,
     profileAvatarKey: profileAvatarKey as ProfileAvatarKey,
@@ -124,7 +138,7 @@ function handleError(request: NextRequest, error: unknown) {
   const status =
     error instanceof Error && error.name === "UnauthorizedError"
       ? 401
-      : error instanceof Error && error.name === "DuplicateNicknameError"
+      : error instanceof Error && (error.name === "DuplicateNicknameError" || error.name === "DuplicateEmailError")
         ? 409
       : error instanceof Error && error.name === "BadRequestError"
         ? 400

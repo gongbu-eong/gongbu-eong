@@ -24,3 +24,13 @@ export type ProductEventAttributionContextDto = {
   last?: AttributionSnapshotDto | null;
   current?: AttributionSnapshotDto | null;
 };
+
+export type RecordProductEventRequestDto = {
+  anonymousId?: string | null;
+  eventType: string;
+  eventSource?: "client" | "server";
+  attribution?: ProductEventAttributionContextDto | null;
+  diagnosisRunId?: string | null;
+  diagnosisResultId?: string | null;
+  properties?: Record<string, unknown>;
+};

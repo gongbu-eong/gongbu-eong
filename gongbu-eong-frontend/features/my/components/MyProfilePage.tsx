@@ -64,9 +64,11 @@ export function MyProfilePage() {
   const [statusMessage, setStatusMessage] = useState("");
   const [gender, setGender] = useState<ProfileGender | null>(null);
   const [ageGroup, setAgeGroup] = useState<ProfileAgeGroup | null>(null);
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageType, setMessageType] = useState<"error" | "success" | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -88,10 +90,12 @@ export function MyProfilePage() {
         setStatusMessage(nextProfile.profileStatusMessage || "");
         setGender(nextProfile.gender);
         setAgeGroup(nextProfile.ageGroup);
+        setEmail(nextProfile.email || "");
       })
       .catch((error) => {
         if (!active) return;
         setMessage(error instanceof Error ? error.message : "프로필을 불러오지 못했습니다.");
+        setMessageType("error");
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -112,17 +116,27 @@ export function MyProfilePage() {
     if (saving) return;
     const nickname = communityNickname.trim();
     const trimmedStatus = statusMessage.trim();
+    const trimmedEmail = email.trim();
 
     if (!nickname) {
       setMessage("닉네임을 입력해 주세요.");
+      setMessageType("error");
+      return;
+    }
+
+    if (!trimmedEmail) {
+      setMessage("이메일을 입력해 주세요.");
+      setMessageType("error");
       return;
     }
 
     setSaving(true);
     setMessage(null);
+    setMessageType(null);
 
     try {
       const response = await updateMyProfile({
+        email: trimmedEmail,
         communityNickname: nickname,
         profileStatusMessage: trimmedStatus || null,
         profileAvatarKey: avatarKey,
@@ -132,10 +146,12 @@ export function MyProfilePage() {
       });
       setProfile(response.profile);
       setMessage("프로필이 저장되었습니다.");
+      setMessageType("success");
       router.replace("/my");
       router.refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "프로필 저장에 실패했습니다.");
+      setMessageType("error");
     } finally {
       setSaving(false);
     }
@@ -255,13 +271,37 @@ export function MyProfilePage() {
               </div>
             </section>
 
+            <section className={`${styles.textField} ${styles.emailField}`}>
+              <label htmlFor="profileEmail">이메일</label>
+              <span>{email.length}/60</span>
+              <input
+                id="profileEmail"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                maxLength={60}
+                placeholder="이메일을 입력하세요."
+                onChange={(event) => setEmail(event.target.value.slice(0, 60))}
+              />
+            </section>
+
             <div className={styles.privateNotice}>
               🔒 성별과 연령은 노출되지 않습니다.
               <br />
               성별·연령대는 같은 조건의 인기 글을 추천하는 데만 쓰여요.
             </div>
 
-            {message ? <p className={styles.message}>{message}</p> : null}
+            {message ? (
+              <p
+                className={`${styles.message} ${
+                  messageType === "error" ? styles.errorMessage : ""
+                }`}
+                role={messageType === "error" ? "alert" : undefined}
+              >
+                {message}
+              </p>
+            ) : null}
 
             <button
               type="button"

@@ -145,6 +145,7 @@ export type UserProfileDto = {
 };
 
 export type UserProfilePayloadDto = {
+  email: string;
   communityNickname: string;
   profileStatusMessage: string | null;
   profileAvatarKey: ProfileAvatarKey;

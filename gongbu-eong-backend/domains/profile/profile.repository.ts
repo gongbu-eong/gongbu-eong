@@ -65,6 +65,7 @@ type UserProfileRow = {
 };
 
 export type UpdateUserProfileInput = {
+  email: string;
   communityNickname: string;
   profileStatusMessage: string | null;
   profileAvatarKey: ProfileAvatarKey;
@@ -102,6 +103,24 @@ export async function updateUserProfile(
   userId: string,
   input: UpdateUserProfileInput,
 ) {
+  const duplicatedEmail = await db.query<{ exists: boolean }>(
+    `
+      SELECT EXISTS (
+        SELECT 1
+        FROM public.users
+        WHERE email = $1::citext
+          AND id <> $2
+      ) AS exists
+    `,
+    [input.email, userId],
+  );
+
+  if (duplicatedEmail.rows[0]?.exists) {
+    const error = new Error("이미 사용 중인 이메일입니다.");
+    error.name = "DuplicateEmailError";
+    throw error;
+  }
+
   const duplicated = await db.query<{ exists: boolean }>(
     `
       SELECT EXISTS (
@@ -125,12 +144,13 @@ export async function updateUserProfile(
     `
       UPDATE public.users
       SET
-        community_nickname = $2,
-        profile_status_message = $3,
-        profile_avatar_key = $4,
-        profile_background_color = $5,
-        gender = $6,
-        age_group = $7,
+        email = $2::citext,
+        community_nickname = $3,
+        profile_status_message = $4,
+        profile_avatar_key = $5,
+        profile_background_color = $6,
+        gender = $7,
+        age_group = $8,
         updated_at = NOW()
       WHERE id = $1
         AND status = 'active'
@@ -148,6 +168,7 @@ export async function updateUserProfile(
     `,
     [
       userId,
+      input.email,
       input.communityNickname,
       input.profileStatusMessage,
       input.profileAvatarKey,

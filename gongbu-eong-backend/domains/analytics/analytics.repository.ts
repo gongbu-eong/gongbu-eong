@@ -2,6 +2,7 @@ import { query } from "@/lib/db";
 import type {
   AttributionSnapshotDto,
   ProductEventAttributionContextDto,
+  RecordProductEventRequestDto,
   SaveAttributionRequestDto,
 } from "./analytics.dto";
 
@@ -236,6 +237,163 @@ export async function recordDiagnosisCompleteEvent(args: {
   );
 
   return { attemptNo: result.rows[0]?.attempt_no ?? null };
+}
+
+export async function recordProductEvent(args: {
+  body: RecordProductEventRequestDto;
+  userId?: string;
+}) {
+  const eventType = clean(args.body.eventType, { maxLength: 100 });
+
+  if (!eventType || !/^[a-z0-9][a-z0-9_.:-]{1,99}$/i.test(eventType)) {
+    throw new Error("Invalid event type.");
+  }
+
+  const eventSource = args.body.eventSource === "server" ? "server" : "client";
+  const anonymousId = isUuid(args.body.anonymousId || "") ? args.body.anonymousId || null : null;
+  const diagnosisRunId = isUuid(args.body.diagnosisRunId || "") ? args.body.diagnosisRunId || null : null;
+  const diagnosisResultId = isUuid(args.body.diagnosisResultId || "") ? args.body.diagnosisResultId || null : null;
+  const first = normalizeSnapshot(args.body.attribution?.first);
+  const current =
+    normalizeSnapshot(args.body.attribution?.current) ||
+    normalizeSnapshot(args.body.attribution?.last);
+
+  await query(
+    `
+      WITH user_saved_attribution AS (
+        SELECT
+          first_source,
+          first_medium,
+          first_campaign,
+          first_content,
+          first_term,
+          first_gclid,
+          first_fbclid,
+          first_landing_url,
+          first_landing_path,
+          first_referrer,
+          first_seen_at,
+          first_raw_payload,
+          last_source,
+          last_medium,
+          last_campaign,
+          last_content,
+          last_term,
+          last_gclid,
+          last_fbclid,
+          last_landing_url,
+          last_landing_path,
+          last_referrer,
+          last_seen_at,
+          last_raw_payload
+        FROM public.user_attributions
+        WHERE user_id = $1::uuid
+        LIMIT 1
+      )
+      INSERT INTO public.product_events (
+        user_id,
+        anonymous_id,
+        event_type,
+        event_source,
+        first_source,
+        first_medium,
+        first_campaign,
+        first_content,
+        first_term,
+        first_gclid,
+        first_fbclid,
+        first_landing_url,
+        first_landing_path,
+        first_referrer,
+        first_seen_at,
+        first_raw_payload,
+        current_source,
+        current_medium,
+        current_campaign,
+        current_content,
+        current_term,
+        current_gclid,
+        current_fbclid,
+        current_landing_url,
+        current_landing_path,
+        current_referrer,
+        current_seen_at,
+        current_raw_payload,
+        diagnosis_run_id,
+        diagnosis_result_id,
+        properties
+      )
+      SELECT
+        $1::uuid,
+        $2::uuid,
+        $3::varchar,
+        $4::varchar,
+        COALESCE($7::varchar, user_saved_attribution.first_source),
+        COALESCE($8::varchar, user_saved_attribution.first_medium),
+        COALESCE($9::varchar, user_saved_attribution.first_campaign),
+        COALESCE($10::varchar, user_saved_attribution.first_content),
+        COALESCE($11::varchar, user_saved_attribution.first_term),
+        COALESCE($12::varchar, user_saved_attribution.first_gclid),
+        COALESCE($13::varchar, user_saved_attribution.first_fbclid),
+        COALESCE($14::text, user_saved_attribution.first_landing_url),
+        COALESCE($15::text, user_saved_attribution.first_landing_path),
+        COALESCE($16::text, user_saved_attribution.first_referrer),
+        COALESCE($17::timestamptz, user_saved_attribution.first_seen_at),
+        COALESCE($18::jsonb, user_saved_attribution.first_raw_payload),
+        COALESCE($19::varchar, user_saved_attribution.last_source),
+        COALESCE($20::varchar, user_saved_attribution.last_medium),
+        COALESCE($21::varchar, user_saved_attribution.last_campaign),
+        COALESCE($22::varchar, user_saved_attribution.last_content),
+        COALESCE($23::varchar, user_saved_attribution.last_term),
+        COALESCE($24::varchar, user_saved_attribution.last_gclid),
+        COALESCE($25::varchar, user_saved_attribution.last_fbclid),
+        COALESCE($26::text, user_saved_attribution.last_landing_url),
+        COALESCE($27::text, user_saved_attribution.last_landing_path),
+        COALESCE($28::text, user_saved_attribution.last_referrer),
+        COALESCE($29::timestamptz, user_saved_attribution.last_seen_at),
+        COALESCE($30::jsonb, user_saved_attribution.last_raw_payload),
+        $5::uuid,
+        $6::uuid,
+        $31::jsonb
+      FROM (SELECT 1) seed
+      LEFT JOIN user_saved_attribution ON TRUE
+    `,
+    [
+      args.userId || null,
+      anonymousId,
+      eventType,
+      eventSource,
+      diagnosisRunId,
+      diagnosisResultId,
+      first?.source || null,
+      first?.medium || null,
+      first?.campaign || null,
+      first?.content || null,
+      first?.term || null,
+      first?.gclid || null,
+      first?.fbclid || null,
+      first?.landingUrl || null,
+      first?.landingPath || null,
+      first?.referrer || null,
+      first?.seenAt || null,
+      first ? JSON.stringify(first.raw) : null,
+      current?.source || null,
+      current?.medium || null,
+      current?.campaign || null,
+      current?.content || null,
+      current?.term || null,
+      current?.gclid || null,
+      current?.fbclid || null,
+      current?.landingUrl || null,
+      current?.landingPath || null,
+      current?.referrer || null,
+      current?.seenAt || null,
+      current ? JSON.stringify(current.raw) : null,
+      JSON.stringify(args.body.properties || {}),
+    ],
+  );
+
+  return { saved: true };
 }
 
 function insertAttributionEvent(args: {
