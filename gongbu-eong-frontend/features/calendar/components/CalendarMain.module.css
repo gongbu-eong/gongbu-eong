@@ -333,11 +333,10 @@
 
 .jobCard {
   position: relative;
-  display: grid;
+  display: block;
   min-width: 0;
   height: 8.5625rem;
-  grid-template-rows: 1.5rem 1fr;
-  padding: 1rem 3rem 1rem 1rem;
+  padding: 0;
   border: 1px solid #e4e8ef;
   border-radius: 0.625rem;
   background: #fff;
@@ -347,10 +346,22 @@
 }
 
 .jobCardWithoutBadge {
-  padding-left: 1rem;
+  padding-left: 0;
+}
+
+.jobCardWithoutBadge .jobTopRow {
+  height: 1.5rem;
+}
+
+.jobCardWithoutBadge .jobCopy {
+  left: 1rem;
 }
 
 .jobTopRow {
+  position: absolute;
+  top: 1rem;
+  right: 3rem;
+  left: 1rem;
   display: flex;
   min-width: 0;
   height: 1.5rem;
@@ -369,10 +380,14 @@
 }
 
 .jobCopy {
+  position: absolute;
+  top: 3.5rem;
+  right: 3rem;
+  left: 1rem;
   display: grid;
   min-width: 0;
   grid-template-rows: 2.5rem 1.25rem;
-  align-content: center;
+  align-content: start;
   gap: 0.625rem;
 }
 
@@ -689,7 +704,6 @@
   }
 
   .jobCard {
-    gap: 1rem;
-    padding: 1rem;
+    padding: 0;
   }
 }

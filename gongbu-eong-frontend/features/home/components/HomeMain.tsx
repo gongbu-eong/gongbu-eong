@@ -694,7 +694,7 @@ export function HomeMenuDrawer({
             {user ? (
               <Image src={profileAvatarSrc} alt="" width={64} height={64} unoptimized />
             ) : (
-              <span>☺️</span>
+              <span className={styles.drawerGuestAvatarMark} />
             )}
           </div>
           <div>
@@ -708,9 +708,7 @@ export function HomeMenuDrawer({
             )}
           </div>
           <button type="button" className={styles.drawerClose} aria-label="메뉴 닫기" onClick={onClose}>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5.4 5.4 18.6 18.6M18.6 5.4 5.4 18.6" />
-            </svg>
+            <Image src="/home/menu/drawer-close.svg" alt="" width={24} height={24} unoptimized />
           </button>
         </header>
 
@@ -891,6 +889,20 @@ function DrawerSection({
 }
 
 function getDrawerIcon(icon: "home" | "megaphone" | "calendar" | "ai" | "community" | "my") {
+  const drawerIconAssets: Partial<Record<typeof icon, string>> = {
+    home: "/home/menu/drawer-home.svg",
+    megaphone: "/home/menu/drawer-jobs.svg",
+    calendar: "/home/menu/drawer-calendar.svg",
+    ai: "/home/menu/drawer-ai.svg",
+    community: "/home/menu/drawer-community.svg",
+    my: "/home/menu/drawer-my.svg",
+  };
+  const drawerIconSrc = drawerIconAssets[icon];
+
+  if (drawerIconSrc) {
+    return <Image src={drawerIconSrc} alt="" width={28} height={28} unoptimized />;
+  }
+
   if (icon === "home") {
     return (
       <svg viewBox="0 0 23.013 23.405" aria-hidden="true">
