@@ -687,14 +687,14 @@ export function HomeMenuDrawer({
       <div className={styles.drawer}>
         <header className={styles.drawerHeader}>
           <div
-            className={styles.drawerAvatar}
+            className={`${styles.drawerAvatar} ${user ? "" : styles.drawerGuestAvatar}`}
             style={user ? { backgroundColor: profileBackgroundColor } : undefined}
             aria-hidden="true"
           >
             {user ? (
               <Image src={profileAvatarSrc} alt="" width={64} height={64} unoptimized />
             ) : (
-              <span className={styles.drawerGuestAvatarMark} />
+              <span className={styles.drawerGuestAvatarMark}>☺️</span>
             )}
           </div>
           <div>

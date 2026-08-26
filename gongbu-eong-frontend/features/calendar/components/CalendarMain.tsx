@@ -21,13 +21,13 @@ import styles from "./CalendarMain.module.css";
 
 type CalendarScope = "all" | "mine";
 type CalendarMode = "list" | "month";
-type StatusFilter = "all" | "open" | "closed";
 type SortFilter = "latest" | "deadline";
 type CalendarEventKind = "start" | "end";
+type EventKindFilter = "all" | CalendarEventKind;
 type EmptyVariant = "schedule" | "bookmark";
 
 type CalendarFilters = {
-  status: StatusFilter;
+  eventKind: EventKindFilter;
   sort: SortFilter;
   region: string;
   employmentType: string;
@@ -84,7 +84,7 @@ const EMPLOYMENT_TYPE_ORDER = [
   "청년인턴(채용형)",
 ];
 const DEFAULT_FILTERS: CalendarFilters = {
-  status: "all",
+  eventKind: "all",
   sort: "latest",
   region: "all",
   employmentType: "all",
@@ -615,14 +615,17 @@ function FilterRow({
       <div className={styles.filterRow}>
         <label className={styles.filterControl}>
           <select
-            value={filters.status}
+            value={filters.eventKind}
             onChange={(event) => {
-              onChange({ ...filters, status: event.target.value as StatusFilter });
+              onChange({
+                ...filters,
+                eventKind: event.target.value as EventKindFilter,
+              });
             }}
           >
             <option value="all">공고 전체</option>
-            <option value="open">진행 공고</option>
-            <option value="closed">마감 공고</option>
+            <option value="start">시작 공고</option>
+            <option value="end">마감 공고</option>
           </select>
         </label>
         <label className={styles.filterControl}>
@@ -1016,9 +1019,10 @@ function groupEventsByDate(events: CalendarJobEvent[]) {
 
 function applyEventFilters(events: CalendarJobEvent[], filters: CalendarFilters) {
   return events
-    .filter(({ job }) => {
-      if (filters.status === "open" && job.isClosed) return false;
-      if (filters.status === "closed" && !job.isClosed) return false;
+    .filter(({ kind, job }) => {
+      if (filters.eventKind !== "all" && kind !== filters.eventKind) {
+        return false;
+      }
       if (filters.region !== "all" && !matchesRegion(job.region, filters.region)) {
         return false;
       }

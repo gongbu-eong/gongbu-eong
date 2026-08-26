@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   getCurrentUser,
@@ -16,6 +17,7 @@ const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
 export function JobDetail({ jobId }: { jobId: string }) {
+  const router = useRouter();
   const [job, setJob] = useState<JobPostingDetailDto | null>(null);
   const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
   const toggleBookmark = async () => {
     if (!job) return;
     if (!authenticated) {
-      setMessage("찜한 공고를 저장하려면 로그인이 필요합니다.");
+      router.push("/login");
       return;
     }
     setBookmarkPending(true);

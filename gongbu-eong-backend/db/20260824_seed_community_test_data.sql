@@ -4,13 +4,17 @@
 -- 1. Removes current community posts/comments and dependent community data.
 -- 2. Creates deterministic test-only authors with real-looking reserved nicknames.
 -- 3. Inserts 102 community posts by at least 80 different-looking authors.
--- 4. Inserts comments for about 96% of posts:
+--    Post dates are spread across 2026-08-02 through 2026-08-26, with
+--    a heavier concentration near 2026-08-26.
+-- 4. Inserts active comments for about 96% of posts:
 --    - 4 posts have no comments.
 --    - The rest have 1-10 top-level comments.
 -- 5. Inserts replies on a realistic subset of top-level comments:
 --    - Most comments have no replies.
 --    - Some posts have reply clusters spread across several comments, including
 --      long paging-test threads without concentrating every reply on one comment.
+--    - Some active conversations include deleted comments/replies mixed into
+--      the timeline, while other conversations have no deleted entries.
 -- 6. Inserts recent popular search terms related to public-sector exam prep.
 --
 -- Notes:
@@ -98,6 +102,7 @@ CREATE TEMP TABLE _community_seed_users (
   gender VARCHAR(20) NOT NULL,
   age_group VARCHAR(20) NOT NULL,
   tone_key VARCHAR(20) NOT NULL,
+  speech_key VARCHAR(20) NOT NULL DEFAULT 'polite',
   diagnosis_code VARCHAR(50) NOT NULL
 ) ON COMMIT DROP;
 
@@ -115,10 +120,10 @@ INSERT INTO _community_seed_users (
   diagnosis_code
 )
 VALUES
-  (1, '공부엉이', '공부엉이', '공부엉이', '첫 가입 환영합니다', 'fox', '#c6d5ff', 'female', 'early_20s', 'young', 'challenge'),
-  (2, '민', '민', '민', '오늘도 한 문제', 'monkey', '#d1c2ff', 'male', 'early_20s', 'young', 'execution'),
-  (3, '봄', '봄', '봄', '천천히 준비 중', 'penguin', '#c7ecdc', 'female', 'early_20s', 'young', 'teamwork'),
-  (4, '솔', '솔', '솔', 'NCS 다시 시작', 'cat', '#b9c9ff', 'male', 'early_20s', 'young', 'individual'),
+  (1, '공부엉이', '공부엉이', '공부엉이', '첫 가입 환영합니다', 'fox', '#c6d5ff', 'female', 'teens', 'young', 'challenge'),
+  (2, '민', '민', '민', '오늘도 한 문제', 'monkey', '#d1c2ff', 'male', 'teens', 'young', 'execution'),
+  (3, '봄', '봄', '봄', '천천히 준비 중', 'penguin', '#c7ecdc', 'female', 'teens', 'young', 'teamwork'),
+  (4, '솔', '솔', '솔', 'NCS 다시 시작', 'cat', '#b9c9ff', 'male', 'teens', 'young', 'individual'),
   (5, '준', '준', '준', '필기부터 차근차근', 'bear', '#c4c6ca', 'male', 'late_20s', 'young', 'planning'),
   (6, '현', '현', '현', '스터디 구해요', 'cow', '#c7ecdc', 'female', 'late_20s', 'young', 'principle'),
   (7, '은', '은', '은', '면접 복기 저장', 'chick', '#f5d2b0', 'female', 'late_20s', 'young', 'flexibility'),
@@ -163,8 +168,8 @@ VALUES
   (46, '린', '린', '린', '다시 도전', 'penguin', '#d1c2ff', 'female', 'over_40', 'senior', 'challenge'),
   (47, '결', '결', '결', '끝까지 갑니다', 'chicken', '#f5bfd9', 'male', 'over_40', 'senior', 'execution'),
   (48, '찬', '찬', '찬', '조용히 공부', 'cow', '#c7ecdc', 'male', 'over_40', 'senior', 'flexibility'),
-  (49, '라미', '라미', '라미', '스터디 찾는 중', 'fox', '#c6d5ff', 'female', 'early_20s', 'young', 'teamwork'),
-  (50, '쿠키', '쿠키', '쿠키', '당 충전 필요', 'chick', '#f5d2b0', 'female', 'early_20s', 'young', 'flexibility'),
+  (49, '라미', '라미', '라미', '스터디 찾는 중', 'fox', '#c6d5ff', 'female', 'teens', 'young', 'teamwork'),
+  (50, '쿠키', '쿠키', '쿠키', '당 충전 필요', 'chick', '#f5d2b0', 'female', 'teens', 'young', 'flexibility'),
   (51, '제로', '제로', '제로', '처음부터 다시', 'bear', '#c4c6ca', 'male', 'early_20s', 'young', 'challenge'),
   (52, '모듈', '모듈', '모듈', '모듈형 싫어요', 'cat', '#b9c9ff', 'male', 'late_20s', 'young', 'individual'),
   (53, '오답왕', '오답왕', '오답왕', '틀려도 기록', 'monkey', '#f5d2b0', 'female', 'late_20s', 'young', 'principle'),
@@ -187,14 +192,18 @@ VALUES
   (70, 'PassNote', 'PassNote', 'PassNote', 'pass note', 'cat', '#b9c9ff', 'female', 'late_20s', 'young', 'planning'),
   (71, 'JobReader', 'JobReader', 'JobReader', 'read first', 'bear', '#c4c6ca', 'male', 'late_30s', 'mature', 'individual'),
   (72, 'EssayFix', 'EssayFix', 'EssayFix', 'rewrite', 'cow', '#c7ecdc', 'female', 'late_30s', 'mature', 'flexibility'),
-  (73, 'PublicBee', 'PublicBee', 'PublicBee', 'busy bee', 'monkey', '#f5d2b0', 'female', 'early_20s', 'young', 'challenge'),
-  (74, 'StudyMoon', 'StudyMoon', 'StudyMoon', 'night study', 'penguin', '#d1c2ff', 'male', 'early_20s', 'young', 'stability'),
+  (73, 'PublicBee', 'PublicBee', 'PublicBee', 'busy bee', 'monkey', '#f5d2b0', 'female', 'teens', 'young', 'challenge'),
+  (74, 'StudyMoon', 'StudyMoon', 'StudyMoon', 'night study', 'penguin', '#d1c2ff', 'male', 'teens', 'young', 'stability'),
   (75, 'BlueNCS', 'BlueNCS', 'BlueNCS', 'blue book', 'fox', '#c6d5ff', 'female', 'early_30s', 'plain', 'planning'),
   (76, 'GreenPass', 'GreenPass', 'GreenPass', 'green pass', 'cat', '#c7ecdc', 'male', 'early_30s', 'plain', 'teamwork'),
   (77, 'CalmPublic', 'CalmPublic', 'CalmPublic', 'calm public', 'bear', '#c4c6ca', 'female', 'over_40', 'senior', 'principle'),
   (78, 'WarmOffice', 'WarmOffice', 'WarmOffice', 'office dream', 'cow', '#c9d6d8', 'male', 'over_40', 'senior', 'stability'),
   (79, 'FinalTry', 'FinalTry', 'FinalTry', 'last push', 'chick', '#f5d2b0', 'female', 'late_20s', 'young', 'execution'),
   (80, 'QuietWin', 'QuietWin', 'QuietWin', 'quiet win', 'monkey', '#f5d2b0', 'male', 'late_30s', 'mature', 'individual');
+
+UPDATE _community_seed_users
+SET speech_key = 'casual'
+WHERE seq IN (2, 3, 4, 8, 27, 29, 30, 49, 50, 52);
 
 INSERT INTO public.users (
   id,
@@ -424,14 +433,22 @@ DECLARE
   opener_value TEXT;
   category_note TEXT;
   detail_note TEXT;
+  thesis_value TEXT;
+  context_value TEXT;
+  close_value TEXT;
   length_tail TEXT;
   body_value TEXT;
   tone_value TEXT;
+  author_age_group TEXT;
+  author_speech_key TEXT;
+  compact_body BOOLEAN;
+  body_style INTEGER;
+  day_offset INTEGER;
   created_value TIMESTAMPTZ;
 BEGIN
   FOR post_idx IN 1..102 LOOP
-    SELECT id, tone_key
-    INTO author_id, tone_value
+    SELECT id, tone_key, age_group, speech_key
+    INTO author_id, tone_value, author_age_group, author_speech_key
     FROM _community_seed_users
     WHERE seq = CASE WHEN post_idx = 1 THEN 1 ELSE ((post_idx * 37) % 80) + 1 END;
 
@@ -447,163 +464,210 @@ BEGIN
       WHEN post_idx = 1 THEN '첫 가입했습니다 다들 반가워요'
       ELSE CASE category_value
       WHEN '자유·잡담' THEN (ARRAY[
-        '오늘 공부가 너무 안 돼서 잠깐 들어왔어요',
-        '퇴근하고 공부하는 분들 루틴 궁금합니다',
+        '오늘 공부가 너무 안 되는데 다들 이럴 때 뭐 하세요?',
+        '퇴근하고 공부하는 분들 루틴 궁금합니다.',
         '멘탈 떨어질 때 다시 잡는 방법 있나요',
-        '공기업 준비 시작했는데 뭐부터 해야 할까요',
+        '공기업 준비 시작했는데 뭐부터 해야 할까요?',
         '이번 주 공부 잘 되고 계신가요',
-        '혼자 준비하니까 기준 잡기가 어렵네요',
+        '혼자 준비하니까 기준 잡기가 어렵네요.',
         '오늘은 책상에 앉는 것만 겨우 성공했습니다',
         '주말마다 계획이 무너지는 분들 계신가요',
-        '공기업 준비한다고 말하기도 조금 부담스럽네요',
-        '오래 준비하신 분들은 슬럼프 어떻게 넘기셨나요',
+        '공기업 준비한다고 말하기도 조금 부담스럽네요.',
+        '오래 준비하신 분들은 슬럼프 어떻게 넘기셨나요?',
         '공고는 많은데 마음은 왜 더 복잡할까요',
-        '아침형 공부가 정말 맞는 사람만 가능한 건가요',
+        '아침형 공부가 정말 맞는 사람만 가능한 건가요?',
         '회사 다니면서 준비하는 분들 존경합니다',
         '오늘 하루 공부 인증 대신 짧은 기록 남깁니다',
-        '준비 시작하고 인간관계가 많이 줄었어요',
+        '준비 시작하고 인간관계가 많이 줄었어요.',
         '합격 후기 보다가 괜히 마음이 급해졌습니다',
         '커뮤니티 글 보면서 마음 다잡는 중입니다',
-        '다들 공부 안 되는 날에도 책상에 앉으시나요',
-        '이번 달 목표를 너무 크게 잡은 것 같습니다',
+        '다들 공부 안 되는 날에도 책상에 앉으시나요?',
+        '이번 달 목표를 너무 크게 잡은 것 같습니다.',
         '공기업 준비한다고 가족한테 설명하기 어렵네요',
-        '가끔은 그냥 아무 얘기라도 하고 싶습니다',
+        '가끔은 그냥 아무 얘기라도 하고 싶습니다.',
         '오늘 계획 절반만 해도 성공으로 쳐도 될까요',
-        '비슷한 처지 분들 얘기 들으면 좀 낫네요',
+        '비슷한 처지 분들 얘기 들으면 좀 낫네요.',
         '혼자 준비하는 사람의 밤 공부 기록'
       ])[category_title_index]
       WHEN '공시 정보' THEN (ARRAY[
-        '한국절도공사 채용공고 바뀐 부분 정리',
-        '국민업센터 접수 기간 확인하세요',
+        '한국철도공사 채용공고 바뀐 부분 정리했습니다.',
+        '국민업센터 접수 기간 확인하셨나요?',
         '이번 공고 우대사항 체크한 내용 공유',
-        '신입 채용 공고 마감일 헷갈리는 분들 보세요',
+        '신입 채용 공고 마감일 헷갈리는 분들 보세요.',
         '공고문 첨부파일에서 중요한 부분만 뽑아봤어요',
-        '서류 제출 전에 증빙서류 목록 다시 확인하세요',
+        '서류 제출 전에 증빙서류 목록 다시 확인하세요!',
         '수정 공지 올라온 공고 몇 개 정리했습니다',
-        '접수 마감 시간이 기관마다 달라서 체크 필요해요',
-        '우대사항 적용 기준이 애매한 공고가 있네요',
+        '접수 마감 시간이 기관마다 다른 거 아셨나요?',
+        '우대사항 적용 기준이 애매한 공고가 있네요.',
         '채용 Q&A에 올라온 답변 중 중요한 것들',
-        '경력 인정 기준 문구가 바뀐 것 같습니다',
+        '경력 인정 기준 문구가 바뀐 것 같습니다.',
         '오늘 마감 공고 중 놓치기 쉬운 부분',
         '블라인드 위반 가능 표현 정리해봤습니다',
-        '지원서 저장 후 최종 제출 꼭 확인하세요',
-        '공고문 본문이랑 첨부파일 내용이 다릅니다',
+        '지원서 저장 후 최종 제출 확인하셨나요?',
+        '공고문 본문이랑 첨부파일 내용이 다릅니다.',
         '기관별 제출서류 차이 정리해두면 편하네요',
-        '고졸 제한 공고 지원자격 확인 필요합니다',
-        '지역 제한 조건 헷갈리는 분들 참고하세요',
+        '고졸 제한 공고 지원자격 확인 필요합니다.',
+        '지역 제한 조건 헷갈리는 분들 참고하세요.',
         '인턴 경력 인정 여부 문의해본 내용입니다',
         '서류 접수 페이지 오류 대비해서 미리 제출하세요',
         '채용인원 변동 공지 나온 곳 확인했습니다',
-        '공고 검색할 때 키워드 이렇게 보니까 편하네요',
+        '공고 검색할 때 키워드 이렇게 보니까 편하네요.',
         '우대자격증 표기 방식이 조금 헷갈립니다',
-        '필기 일정 겹치는 공고들 미리 확인하세요'
+        '필기 일정 겹치는 공고들 미리 확인하셨나요?'
       ])[category_title_index]
       WHEN '공부·스터디' THEN (ARRAY[
-        'NCS 시간 배분 스터디 하실 분',
+        'NCS 시간 배분 스터디 하실 분 있나요?',
         '전공 공부 루틴 공유합니다',
         '오답노트 방식 바꾸고 점수 조금 올랐어요',
-        '온라인 스터디 출석 체크 같이 하실 분',
-        '모듈형 기본서 회독 어디까지 하셨나요',
+        '온라인 스터디 출석 체크 같이 하실 분?',
+        '모듈형 기본서 회독 어디까지 하셨나요?',
         '이번 주 NCS 목표 같이 잡아보실 분',
-        '계산 문제만 따로 푸는 루틴 효과 있네요',
-        '스터디 벌금보다 인증 방식이 나은 것 같아요',
+        '계산 문제만 따로 푸는 루틴, 효과 있네요.',
+        '스터디 벌금보다 인증 방식이 나은 것 같아요.',
         '전공 객관식 회독 속도 어느 정도 나오세요',
-        '오답을 유형별로 묶으니 반복 실수가 보입니다',
+        '오답을 유형별로 묶으니 반복 실수가 보입니다.',
         '아침 2시간 공부 루틴 같이 하실 분',
-        '독해 지문에서 시간 줄이는 방법 공유해요',
-        'NCS 기본서보다 봉투모의고사가 맞는 분 있나요',
+        '독해 지문에서 시간 줄이는 방법 공유해요.',
+        'NCS 기본서보다 봉투모의고사가 맞는 분 있나요?',
         '스터디원이랑 진도 차이 날 때 어떻게 하세요',
-        '주말 몰아치기 공부가 잘 안 맞는 것 같습니다',
+        '주말 몰아치기 공부가 잘 안 맞는 것 같습니다.',
         '필기 전 마지막 일주일 계획 어떻게 잡으세요',
         '전공 개념서 회독표 만들어봤습니다',
-        '매일 공부 인증하는 작은 방 만들어보고 싶어요',
+        '매일 공부 인증하는 작은 방 만들어볼까요?',
         '모듈 암기 파트는 다들 어떻게 외우시나요',
         '오답노트 손글씨랑 앱 중 뭐가 편하세요',
-        '문제 풀이보다 리뷰 시간이 더 오래 걸립니다',
+        '문제 풀이보다 리뷰 시간이 더 오래 걸립니다.',
         '스터디 첫 주 운영 방식 조언 구합니다',
-        '시간 재고 풀면 점수가 확 떨어지네요',
+        '시간 재고 풀면 점수가 확 떨어지네요.',
         '공부 루틴 무너진 뒤 복구하는 방법'
       ])[category_title_index]
       WHEN '질문·답변' THEN (ARRAY[
-        '자소서 경력사항 어디까지 쓰는 게 맞나요',
-        '면접에서 모르는 질문 받으면 어떻게 답하세요',
-        '인성검사 솔직하게 찍는 게 맞나요',
+        '자소서 경력사항 어디까지 쓰는 게 맞나요?',
+        '면접에서 모르는 질문 받으면 어떻게 답하세요?',
+        '인성검사 솔직하게 찍는 게 맞나요?',
         '블라인드 채용에서 학교 얘기 나오면요',
-        '채용인원 1명 공고도 지원하시나요',
-        '자격증 하나 더 따는 게 지금 의미 있을까요',
-        '서류에 아르바이트 경험 써도 괜찮을까요',
+        '채용인원 1명 공고도 지원하시나요?',
+        '자격증 하나 더 따는 게 지금 의미 있을까요?',
+        '서류에 아르바이트 경험 써도 괜찮을까요?',
         '면접 답변이 너무 길어지는 분들 어떻게 줄이세요',
-        '공백기 질문 나오면 어디까지 말해야 할까요',
-        '지원동기에서 기관 사업명을 꼭 넣어야 하나요',
-        '지역 제한 공고 주소 기준이 헷갈립니다',
+        '공백기 질문 나오면 어디까지 말해야 할까요?',
+        '지원동기에서 기관 사업명을 꼭 넣어야 하나요?',
+        '지역 제한 공고 주소 기준이 헷갈립니다.',
         '인턴 경험이 직무랑 조금 달라도 써도 될까요',
-        '자소서 첫 문장 너무 평범하면 감점일까요',
-        '면접 복장 구두까지 꼭 맞춰야 할까요',
+        '자소서 첫 문장 너무 평범하면 감점일까요?',
+        '면접 복장 구두까지 꼭 맞춰야 할까요?',
         '필기 컷 근처면 면접에서 뒤집기 가능할까요',
-        '전공 선택과목 바꾸는 거 지금은 늦었을까요',
-        'NCS 찍기 전략 실제로 도움 되나요',
-        '면접에서 이전 회사 퇴사 이유 어떻게 말하세요',
-        '자소서에 숫자 성과가 없으면 약해 보일까요',
-        '경험 정리할 때 STAR 방식 꼭 지켜야 하나요',
-        '최종 제출 후 오타 발견하면 문의해야 할까요',
+        '전공 선택과목 바꾸는 거 지금은 늦었을까요?',
+        'NCS 찍기 전략 실제로 도움 되나요?',
+        '면접에서 이전 회사 퇴사 이유 어떻게 말하세요?',
+        '자소서에 숫자 성과가 없으면 약해 보일까요?',
+        '경험 정리할 때 STAR 방식 꼭 지켜야 하나요?',
+        '최종 제출 후 오타 발견하면 문의해야 할까요?',
         '기관 홈페이지 분석은 어디까지 해야 할까요',
-        '필기 준비랑 자소서 병행이 너무 어렵습니다',
-        '면접 스터디는 필수인지 궁금합니다'
+        '필기 준비랑 자소서 병행이 너무 어렵습니다.',
+        '면접 스터디는 필수인지 궁금합니다.'
       ])[category_title_index]
       WHEN '합격·면접 후기' THEN (ARRAY[
-        '공기업 면접 자주 나오는 질문 정리해봤어요',
+        '공기업 면접 자주 나오는 질문 정리해봤어요.',
         '필기 합격 후 면접 준비 후기 남깁니다',
         '최종 탈락했지만 면접 복기 공유합니다',
-        '오늘 면접 보고 온 후기입니다',
+        '오늘 면접 보고 온 후기입니다.',
         '합격 연락 받고 가장 도움 됐던 것들',
-        'PT 면접에서 당황했던 질문 복기합니다',
-        '인성면접 분위기 생각보다 차분했습니다',
+        'PT 면접에서 당황했던 질문 복기합니다.',
+        '인성면접 분위기, 생각보다 차분했습니다',
         '탈락 후 다시 보니 부족했던 답변들',
-        '면접관 꼬리질문이 이어진 지점 정리',
-        '첫 면접에서 긴장 줄이는 데 도움 된 것',
-        '다대다 면접에서 느낀 점 공유합니다',
+        '면접관 꼬리질문이 어디서 이어졌을까요?',
+        '첫 면접에서 긴장 줄이는 데 도움 된 것.',
+        '다대다 면접에서 느낀 점 공유합니다.',
         '면접 직후 적어둔 질문 리스트 올립니다',
-        '공기업 면접 답변 길이 조절 후기',
+        '공기업 면접 답변 길이 조절 후기.',
         '최종 합격까지 가장 도움 된 스터디 방식',
-        '압박 질문 받았을 때 대처했던 방법',
+        '압박 질문 받았을 때 어떻게 대처했나요?',
         '탈락했지만 다음 면접엔 꼭 고칠 부분',
         '면접장 분위기와 대기 시간 후기',
-        '자기소개 1분 답변 실제 반응 공유',
+        '자기소개 1분 답변 실제 반응 공유.',
         '직무 경험 질문에서 꼬리질문 많이 받았습니다',
-        '면접 복기하면서 발견한 제 말버릇',
+        '면접 복기하면서 발견한 제 말버릇.',
         '합격 후기라기보다 준비 과정 기록입니다',
         '면접 전날 하면 좋았던 것과 별로였던 것',
-        '실무진 면접과 임원 면접 느낌 차이',
-        '면접 끝나고 바로 기록해야 하는 이유'
+        '실무진 면접과 임원 면접 느낌 차이?',
+        '면접 끝나고 바로 기록해야 하는 이유.'
       ])[category_title_index]
       ELSE (ARRAY[
-        '스터디 단톡방에서 본 웃픈 상황',
-        'NCS 풀다가 계산기 찾은 사람 저뿐인가요',
-        '면접 전날 잠 안 와서 만든 짤',
+        '스터디 단톡방에서 본 웃픈 상황.',
+        'NCS 풀다가 계산기 찾은 사람 저뿐인가요?',
+        '면접 전날 잠 안 와서 만든 짤...',
         '공고 마감 5분 전의 표정',
         '오늘의 공부 책상 인증 겸 잡담',
-        '오답노트 펼치자마자 덮고 싶어진 순간',
+        '오답노트 펼치자마자 덮고 싶어진 순간.',
         '공부 시작 전 청소가 제일 재밌는 이유',
-        '봉투모의고사 뜯기 전 마음가짐',
-        '스터디 인증 사진에 커피만 늘어갑니다',
+        '봉투모의고사 뜯기 전 마음가짐?',
+        '스터디 인증 사진에 커피만 늘어갑니다.',
         '자소서 쓰다가 갑자기 방 정리한 사람',
-        '필기 전날 책상이 말해주는 현재 상태',
+        '필기 전날 책상이 말해주는 현재 상태.',
         'NCS 계산 문제 보고 잠깐 먼 산 봤습니다',
-        '면접 준비하다가 거울이랑 싸운 후기',
+        '면접 준비하다가 거울이랑 싸운 후기.',
         '공고 마감 알림이 심장을 때리는 순간',
         '모듈형 암기하다가 만든 이상한 암기법',
-        '스터디원 모두가 동시에 조용해진 이유',
+        '스터디원 모두가 동시에 조용해진 이유?',
         '공부 앱 켜놓고 딴짓한 사람 모임',
-        '자격증 책 샀을 때만 합격한 기분',
+        '자격증 책 샀을 때만 합격한 기분.',
         '오늘의 공부 플레이리스트 실패 후기',
         '필기 합격 상상하다가 문제 틀렸습니다',
-        '면접 예상질문보다 어려운 오늘 저녁 메뉴',
-        '오답률 보고 웃음이 사라지는 순간',
+        '면접 예상질문보다 어려운 오늘 저녁 메뉴?',
+        '오답률 보고 웃음이 사라지는 순간.',
         '마감 10분 전 제출 버튼의 무게',
-        '공부 책상 위 간식 비율이 이상합니다'
+        '공부 책상 위 간식 비율이 이상합니다!'
       ])[category_title_index]
       END
     END;
+
+    IF author_speech_key = 'casual' AND post_idx <> 1 THEN
+      title_value := CASE category_value
+        WHEN '자유·잡담' THEN (ARRAY[
+          '오늘 공부 진짜 안 된다',
+          '나만 루틴 또 망함?',
+          '책상엔 앉았는데 머리가 안 돌아감',
+          '계획 절반만 해도 성공으로 쳐도 됨?',
+          '공고 볼수록 마음만 더 복잡해짐'
+        ])[((post_idx + category_title_index) % 5) + 1]
+        WHEN '공시 정보' THEN (ARRAY[
+          '이 공고 첨부파일 꼭 봐',
+          '마감 시간 헷갈리는 사람 봐봐',
+          '우대사항 이거 맞음?',
+          '지원 전에 제출서류 한 번 더 봐',
+          '수정 공지 뜬 거 방금 확인함'
+        ])[((post_idx + category_title_index * 2) % 5) + 1]
+        WHEN '공부·스터디' THEN (ARRAY[
+          'NCS 시간 재면 왜 이렇게 무너짐?',
+          '오답노트 방식 바꿔보는 중',
+          '스터디 인증만 같이 할 사람?',
+          '모듈형 회독 다들 어디까지 함',
+          '오늘은 계산 문제만 따로 풀어봄'
+        ])[((post_idx + category_title_index * 3) % 5) + 1]
+        WHEN '질문·답변' THEN (ARRAY[
+          '자소서에 알바 경험 써도 됨?',
+          '면접에서 모르면 어떻게 말해야 해?',
+          '이 정도 공백기도 설명해야 하나',
+          '지원동기 첫 문장 너무 평범한가?',
+          'NCS 찍기 전략 진짜 도움 됨?'
+        ])[((post_idx + category_title_index * 5) % 5) + 1]
+        WHEN '합격·면접 후기' THEN (ARRAY[
+          '면접 보고 바로 적는 복기',
+          '꼬리질문 여기서 많이 들어옴',
+          '외운 답보다 사례가 더 중요했음',
+          '면접장 분위기 생각보다 차분했어',
+          '탈락했지만 이건 다음에 고칠 듯'
+        ])[((post_idx + category_title_index * 7) % 5) + 1]
+        ELSE (ARRAY[
+          '공부하다가 현실 웃음 나옴',
+          '이거 나만 이런 거 아니지?',
+          '마감 5분 전 표정이 딱 이럼',
+          '오답률 보고 조용히 덮었다',
+          '공부 전 청소가 제일 재밌음'
+        ])[((post_idx + category_title_index * 11) % 5) + 1]
+      END;
+    END IF;
 
     IF tone_value = 'young' THEN
       opener_value := openers_young[((post_idx - 1) % array_length(openers_young, 1)) + 1];
@@ -657,6 +721,174 @@ BEGIN
       ])[((post_idx * 17) % 3) + 1]
     END;
 
+    thesis_value := CASE category_value
+      WHEN '자유·잡담' THEN (ARRAY[
+        '오늘은 계획을 다 끝내는 것보다 다시 책상 앞에 앉은 것만으로도 충분하다고 생각했습니다.',
+        '준비 기간이 길어질수록 정보보다 마음을 덜 흔들리게 잡는 일이 더 어렵게 느껴집니다.',
+        '혼자 버티는 시간이 길어질 때는 가벼운 잡담도 생각보다 큰 도움이 됩니다.'
+      ])[((post_idx * 19) % 3) + 1]
+      WHEN '공시 정보' THEN (ARRAY[
+        '이번 공고는 마감일보다 제출서류와 우대조건 확인이 더 중요해 보입니다.',
+        '지원 전에 반드시 다시 봐야 할 부분은 공고 본문보다 첨부파일 쪽에 몰려 있었습니다.',
+        '수정 공지가 한 번이라도 있었던 공고는 접수 직전까지 확인하는 편이 안전합니다.'
+      ])[((post_idx * 23) % 3) + 1]
+      WHEN '공부·스터디' THEN (ARRAY[
+        '이번 주는 공부량을 늘리기보다 루틴을 끊기지 않게 유지하는 쪽으로 잡아보려고 합니다.',
+        '스터디는 많이 푸는 것보다 각자 틀린 이유를 설명하는 방식이 더 오래 남았습니다.',
+        '시간을 재고 푸는 연습과 개념을 다시 보는 시간을 분리했을 때 점수가 덜 흔들렸습니다.'
+      ])[((post_idx * 29) % 3) + 1]
+      WHEN '질문·답변' THEN (ARRAY[
+        '지금 고민되는 핵심은 이 경험을 서류에 넣어도 면접에서 자연스럽게 설명할 수 있느냐입니다.',
+        '검색만으로는 판단이 어려워서 실제 제출이나 면접에서 비슷한 상황을 겪은 분들 이야기가 필요했습니다.',
+        '공식 안내를 기준으로 보되, 실제 준비 과정에서는 어느 정도까지 보수적으로 적는지가 고민입니다.'
+      ])[((post_idx * 31) % 3) + 1]
+      WHEN '합격·면접 후기' THEN (ARRAY[
+        '이번 면접에서 가장 크게 느낀 건 답변을 많이 외우는 것보다 질문 의도에 맞는 사례를 고르는 연습이 중요하다는 점이었습니다.',
+        '면접 분위기는 예상보다 차분했지만, 꼬리질문은 지원자가 실제로 해본 일을 확인하는 쪽으로 이어졌습니다.',
+        '준비한 답을 그대로 말하기보다 질문 의도를 먼저 잡고 사례를 골라 말했을 때 반응이 더 좋았습니다.'
+      ])[((post_idx * 37) % 3) + 1]
+      ELSE (ARRAY[
+        '오늘은 무겁게 공부 얘기만 하기보다 잠깐 웃고 다시 돌아가자는 마음으로 올립니다.',
+        '준비생 일상은 가끔 웃긴데, 막상 내 얘기라서 완전히 웃기지만은 않은 것 같습니다.',
+        '이런 가벼운 글도 중간중간 있어야 오래 버틸 수 있다고 생각합니다.'
+      ])[((post_idx * 41) % 3) + 1]
+    END;
+
+    context_value := CASE
+      WHEN author_age_group = 'teens' AND category_value IN ('공시 정보', '질문·답변') THEN
+        '고졸 제한이나 첫 지원 자격을 같이 보려다 보니 작은 문구 하나도 더 조심스럽게 읽게 됩니다.'
+      WHEN author_age_group = 'teens' AND category_value = '공부·스터디' THEN
+        '학교 일정이랑 같이 맞추려니 평일에는 짧게, 주말에는 몰아서 보는 식으로 계획을 잡고 있습니다.'
+      WHEN category_value = '합격·면접 후기' THEN
+        '면접 직후 기억이 흐려지기 전에 분위기와 질문 흐름을 먼저 적어두었습니다.'
+      WHEN author_age_group = 'over_40' AND category_value = '자유·잡담' THEN
+        '오랜만에 다시 준비하는 입장이라 젊은 분들과 속도를 비교하기보다 제 페이스를 지키는 쪽을 더 신경 쓰고 있습니다.'
+      WHEN author_age_group = 'over_40' AND category_value IN ('공시 정보', '질문·답변') THEN
+        '경력 전환을 염두에 두고 보다 보니 지원자격과 경력 인정 문구를 특히 꼼꼼히 보게 됩니다.'
+      WHEN author_age_group IN ('early_20s', 'late_20s') THEN
+        '처음에는 주변 속도에 많이 흔들렸는데, 요즘은 제가 실제로 지킬 수 있는 기준을 따로 잡아보는 중입니다.'
+      WHEN author_age_group IN ('early_30s', 'late_30s') THEN
+        '일이나 생활 리듬과 병행해야 해서, 무리한 계획보다 놓치면 안 되는 기준을 먼저 정리하고 있습니다.'
+      ELSE
+        '각자 상황이 다르다 보니 정답처럼 말하기는 어렵지만, 실제로 해보면서 느낀 부분을 남겨봅니다.'
+    END;
+
+    close_value := CASE category_value
+      WHEN '자유·잡담' THEN (ARRAY[
+        '다들 오늘 같은 날은 어느 정도까지 하면 성공으로 보시는지도 궁금합니다.',
+        '가볍게라도 각자 버티는 방식이 있으면 이야기해 주세요.',
+        '저는 오늘은 여기까지 적고 최소 분량만 채운 뒤 마무리하려고 합니다.'
+      ])[((post_idx * 43) % 3) + 1]
+      WHEN '공시 정보' THEN (ARRAY[
+        '혹시 제가 놓친 수정 공지나 조건이 있으면 댓글로 같이 확인해 주세요.',
+        '지원하실 분들은 원문과 첨부파일을 한 번 더 확인하고 제출하시면 좋겠습니다.',
+        '비슷한 공고를 보고 계신 분들께 체크리스트 정도로만 참고가 되었으면 합니다.'
+      ])[((post_idx * 47) % 3) + 1]
+      WHEN '공부·스터디' THEN (ARRAY[
+        '실제로 오래 유지된 방식이 있으면 운영 방법까지 같이 듣고 싶습니다.',
+        '이번 주 해보고 괜찮으면 다음 주에도 같은 방식으로 이어가 볼 생각입니다.',
+        '공부량보다 복구가 잘 되는 루틴을 찾는 쪽으로 의견을 들어보고 싶습니다.'
+      ])[((post_idx * 53) % 3) + 1]
+      WHEN '질문·답변' THEN (ARRAY[
+        '최종 판단은 공고와 공식 안내를 기준으로 하되, 실제 경험담을 참고해보려고 합니다.',
+        '비슷한 상황에서 제출하거나 면접 답변으로 풀어본 분들의 사례가 있으면 도움이 될 것 같습니다.',
+        '너무 단정하기 어려운 문제라 여러 관점을 보고 보수적으로 결정하려고 합니다.'
+      ])[((post_idx * 59) % 3) + 1]
+      WHEN '합격·면접 후기' THEN (ARRAY[
+        '기관명보다 질문 흐름과 답변 준비 방식 위주로만 참고해 주세요.',
+        '결과와 별개로 복기 내용이 다음 면접 준비하시는 분들께 작은 기준이 되었으면 합니다.',
+        '제 경험이 전부는 아니니 다른 면접 흐름을 겪은 분들 이야기도 함께 보면 좋겠습니다.'
+      ])[((post_idx * 61) % 3) + 1]
+      ELSE (ARRAY[
+        '잠깐 웃고 다시 문제집으로 돌아가겠습니다.',
+        '다들 비슷한 순간이 있다면 가볍게 보고 넘겨주세요.',
+        '너무 진지하게 받기보다 오늘의 준비생 일상 정도로 봐주시면 됩니다.'
+      ])[((post_idx * 67) % 3) + 1]
+    END;
+
+    body_style := (post_idx + category_title_index) % 3;
+    compact_body := author_speech_key = 'casual' OR (post_idx % 8) IN (2, 5);
+
+    IF author_speech_key = 'casual' THEN
+      opener_value := CASE category_value
+        WHEN '자유·잡담' THEN (ARRAY[
+          '오늘 진짜 집중 안 돼서 그냥 적어봄.',
+          '나만 요즘 이렇게 루틴 무너지나 싶어서 씀.',
+          '공부하다가 답답해서 잠깐 들어왔어.'
+        ])[((post_idx * 3) % 3) + 1]
+        WHEN '공시 정보' THEN (ARRAY[
+          '이 공고 보는 사람 있으면 첨부파일 다시 봐.',
+          '마감이랑 제출서류 헷갈릴 수 있어서 적어둠.',
+          '방금 공고 보다가 놓치기 쉬운 부분 보여서 공유함.'
+        ])[((post_idx * 5) % 3) + 1]
+        WHEN '공부·스터디' THEN (ARRAY[
+          '스터디는 벌금보다 인증이 오래 가는 듯.',
+          '오늘 오답 정리하다가 방식 좀 바꿔야겠다고 느낌.',
+          '시간 재고 풀면 점수 확 떨어져서 루틴 다시 잡는 중.'
+        ])[((post_idx * 7) % 3) + 1]
+        WHEN '질문·답변' THEN (ARRAY[
+          '이거 서류에 넣어도 되는지 아직 감이 안 와.',
+          '면접에서 이렇게 말해도 괜찮은지 모르겠음.',
+          '공고 문구가 애매해서 혼자 판단하기 어렵다.'
+        ])[((post_idx * 11) % 3) + 1]
+        WHEN '합격·면접 후기' THEN (ARRAY[
+          '면접 보고 오니까 외운 답보다 내 사례 정리가 더 중요하더라.',
+          '오늘 면접 분위기 기억날 때 바로 적어둠.',
+          '후기라고 거창한 건 아니고 질문 흐름만 남겨볼게.'
+        ])[((post_idx * 13) % 3) + 1]
+        ELSE (ARRAY[
+          '오늘 상태가 딱 이래서 올려봄.',
+          '공부하다가 웃겨서 잠깐 가져옴.',
+          '이거 나만 이런 거 아니지?'
+        ])[((post_idx * 17) % 3) + 1]
+      END;
+
+      category_note := CASE category_value
+        WHEN '자유·잡담' THEN '공부 계획은 세웠는데 막상 앉으면 다른 생각만 나더라. 그래도 아예 놓는 것보다는 조금이라도 하는 게 낫다고 생각 중이야.'
+        WHEN '공시 정보' THEN '공고 본문만 보면 될 줄 알았는데 첨부파일에 조건이 더 자세히 들어가 있더라. 제출 전에 한 번 더 보는 게 맞는 것 같아.'
+        WHEN '공부·스터디' THEN '많이 푸는 것도 중요한데, 왜 틀렸는지 설명 못 하면 다음에 또 틀리더라. 요즘은 문제 수보다 리뷰 시간을 더 챙기는 중이야.'
+        WHEN '질문·답변' THEN '검색해도 답이 다 조금씩 달라서 실제로 준비해본 사람들 얘기가 더 궁금해. 공식 안내는 다시 볼 건데 경험담도 같이 보고 싶어.'
+        WHEN '합격·면접 후기' THEN '질문 자체보다 꼬리질문이 어디서 이어졌는지가 더 기억에 남았어. 질문 의도 보고 사례를 고르는 연습을 더 했으면 좋았겠더라.'
+        ELSE '웃자고 올리는 건데 사실 준비생이면 한 번쯤 겪는 상황 같아. 잠깐 웃고 다시 책상 가면 그걸로 됐지 뭐.'
+      END;
+
+      detail_note := CASE category_value
+        WHEN '자유·잡담' THEN '오늘은 목표 다 못 채워도 다시 앉은 것만 성공으로 치려고.'
+        WHEN '공시 정보' THEN '특히 마감 시간하고 증빙서류는 캘린더에 따로 적어두는 게 안전해 보여.'
+        WHEN '공부·스터디' THEN '스터디도 처음부터 빡세게 잡기보다 한 주 해보고 맞는 방식만 남기는 게 낫더라.'
+        WHEN '질문·답변' THEN '면접에서 설명할 수 있는 경험인지가 제일 중요한 기준 같긴 해.'
+        WHEN '합격·면접 후기' THEN '기관명은 빼고 분위기랑 답변 흐름만 참고해줘.'
+        ELSE '너무 진지하게 보진 말고 오늘의 상태 공유 정도로 봐줘.'
+      END;
+
+      thesis_value := CASE category_value
+        WHEN '자유·잡담' THEN '결론부터 말하면 요즘은 공부량보다 멘탈 복구가 더 어려운 것 같아.'
+        WHEN '공시 정보' THEN '결론은 원문이랑 첨부파일 둘 다 다시 봐야 한다는 거야.'
+        WHEN '공부·스터디' THEN '내 기준으로는 스터디는 오래 가는 구조가 제일 중요했어.'
+        WHEN '질문·답변' THEN '핵심은 이 경험을 나중에 질문 받아도 자연스럽게 설명할 수 있느냐인 듯.'
+        WHEN '합격·면접 후기' THEN '이번 면접에서 제일 크게 느낀 건 답변을 외우는 것보다 사례를 고르는 연습이 필요하다는 거였어.'
+        ELSE '준비생 일상은 가끔 웃긴데 내 얘기라 마냥 웃기진 않더라.'
+      END;
+
+      context_value := CASE
+        WHEN author_age_group = 'teens' AND category_value IN ('공시 정보', '질문·답변') THEN
+          '첫 지원이라 그런지 작은 문구 하나도 신경 쓰여서 더 확인하게 돼.'
+        WHEN author_age_group = 'teens' AND category_value = '공부·스터디' THEN
+          '학교 일정이랑 같이 맞추려니까 평일에는 짧게 하고 주말에 몰아서 보는 식으로 잡고 있어.'
+        ELSE
+          '주변 속도랑 비교하면 끝이 없어서 일단 내가 지킬 수 있는 기준부터 잡아보는 중이야.'
+      END;
+
+      close_value := CASE category_value
+        WHEN '자유·잡담' THEN '다들 이런 날 어떻게 넘기는지도 궁금해.'
+        WHEN '공시 정보' THEN '혹시 내가 놓친 거 있으면 댓글로 알려줘.'
+        WHEN '공부·스터디' THEN '같이 해본 방식 중에 오래 간 거 있으면 알려줘.'
+        WHEN '질문·답변' THEN '비슷하게 해본 사람 있으면 얘기 좀 해줘.'
+        WHEN '합격·면접 후기' THEN '다른 흐름 겪은 사람 있으면 같이 남겨줘.'
+        ELSE '웃고 다시 공부하러 감.'
+      END;
+    END IF;
+
     length_tail := CASE
       WHEN post_idx % 9 = 0 THEN E'\n\n' ||
         '조금 길게 적어보면, 예전에는 무조건 많이 하면 된다고 생각했습니다. 그런데 막상 몇 달 해보니 많이 하는 것보다 내가 어떤 부분에서 계속 틀리는지 알고 넘어가는 게 훨씬 중요하더라고요.' || E'\n' ||
@@ -692,26 +924,64 @@ BEGIN
         '6. 면접 준비' || E'\n' ||
         '필기 이후에는 갑자기 말하기 연습을 시작하는 것보다, 준비 기간 동안 겪은 장면을 정리해두는 게 도움이 됐습니다. 민원 상황, 협업 경험, 규칙을 지켜야 했던 경험처럼 질문으로 바뀔 수 있는 소재를 짧게 정리했습니다.' || E'\n\n' ||
         '정리해보면 제 준비 과정에서 제일 중요했던 건 완벽한 계획이 아니라 복구 가능한 계획이었습니다. 계획이 무너진 날을 실패로 끝내지 않고, 다음 날 다시 돌아올 수 있게 최소 기준을 만들어두는 게 오래 버티는 데 가장 도움이 됐습니다.' || E'\n\n' ||
-        '비슷하게 준비하시는 분들 의견도 궁금합니다.' || E'\n\n' ||
+        '저처럼 과정을 남기면서 준비하는 분들이 있다면 어떤 방식으로 기록하고 복구했는지도 궁금합니다.' || E'\n\n' ||
         '이 부분은 사람마다 생각이 다를 수 있어서 댓글로 다른 의견 남겨주셔도 괜찮습니다.'
       ELSE
-        opener_value || E'\n\n' ||
-        category_note || E'\n' ||
-        detail_note || E'\n' ||
-      body_bits[((post_idx * 2 - 1) % array_length(body_bits, 1)) + 1] || E'\n' ||
-      body_bits[((post_idx * 5 - 1) % array_length(body_bits, 1)) + 1] || E'\n\n' ||
-      CASE
-        WHEN post_idx % 13 = 0 THEN '솔직히 반대 의견도 이해는 되는데, 준비하는 입장에서는 작은 정보 하나도 꽤 크게 느껴집니다.'
-        WHEN post_idx % 11 = 0 THEN '이건 사람마다 다를 것 같아서, 너무 정답처럼 받아들이지는 않으셔도 됩니다.'
-        WHEN post_idx % 7 = 0 THEN '혹시 제가 놓친 부분 있으면 편하게 알려주세요.'
-        ELSE '비슷하게 준비하시는 분들 의견도 궁금합니다.'
-      END ||
-      length_tail
+        CASE
+          WHEN compact_body THEN
+            CASE body_style
+              WHEN 0 THEN
+                opener_value || ' ' || category_note || ' ' || detail_note || ' ' || close_value
+              WHEN 1 THEN
+                thesis_value || ' ' || context_value || ' ' || category_note || ' ' || close_value
+              ELSE
+                opener_value || ' ' || thesis_value || ' ' || detail_note || ' ' || CASE
+                  WHEN author_speech_key = 'casual' THEN close_value
+                  WHEN post_idx % 13 = 0 THEN '반대 의견도 이해합니다. 그래도 준비하는 입장에서는 작은 정보 하나가 지원 여부를 정하는 기준이 될 때가 있어서, 확인한 내용은 남겨두는 편이 낫다고 느꼈습니다.'
+                  WHEN post_idx % 11 = 0 THEN '제 상황에서는 이렇게 정리했지만, 모두에게 같은 답이 되지는 않을 수 있습니다. 각자 공고와 준비 단계에 맞춰 다르게 보시면 좋겠습니다.'
+                  WHEN post_idx % 7 = 0 THEN '혹시 제가 놓친 부분이 있으면 편하게 알려주세요. 다음에 같은 상황을 겪는 분들이 볼 때도 같이 정리되어 있으면 더 도움이 될 것 같습니다.'
+                  ELSE close_value
+                END
+            END
+          ELSE
+            CASE body_style
+              WHEN 0 THEN
+                opener_value || E'\n\n' ||
+                category_note || ' ' || detail_note || E'\n' ||
+                body_bits[((post_idx * 2 - 1) % array_length(body_bits, 1)) + 1] || E'\n' ||
+                body_bits[((post_idx * 5 - 1) % array_length(body_bits, 1)) + 1] || E'\n\n' ||
+                close_value
+              WHEN 1 THEN
+                thesis_value || E'\n\n' ||
+                opener_value || ' ' || context_value || E'\n' ||
+                body_bits[((post_idx * 5 - 1) % array_length(body_bits, 1)) + 1] || E'\n\n' ||
+                detail_note || ' ' || close_value
+              ELSE
+                context_value || E'\n\n' ||
+                thesis_value || E'\n' ||
+                detail_note || E'\n' ||
+                body_bits[((post_idx * 2 - 1) % array_length(body_bits, 1)) + 1] || E'\n\n' ||
+                CASE
+                  WHEN post_idx % 13 = 0 THEN '반대 의견도 이해합니다. 그래도 준비하는 입장에서는 작은 정보 하나가 지원 여부를 정하는 기준이 될 때가 있어서, 확인한 내용은 남겨두는 편이 낫다고 느꼈습니다.'
+                  WHEN post_idx % 11 = 0 THEN '제 상황에서는 이렇게 정리했지만, 모두에게 같은 답이 되지는 않을 수 있습니다. 각자 공고와 준비 단계에 맞춰 다르게 보시면 좋겠습니다.'
+                  WHEN post_idx % 7 = 0 THEN '혹시 제가 놓친 부분이 있으면 편하게 알려주세요. 다음에 같은 상황을 겪는 분들이 볼 때도 같이 정리되어 있으면 더 도움이 될 것 같습니다.'
+                  ELSE close_value
+                END
+            END ||
+            length_tail
+        END
       END;
 
-    created_value := NOW()
-      - ((102 - post_idx) || ' hours')::interval
-      - (((post_idx * 17) % 50) || ' minutes')::interval;
+    day_offset := CASE
+      WHEN post_idx <= 56 THEN ((post_idx * 7 + category_title_index) % 6)
+      WHEN post_idx <= 86 THEN 6 + ((post_idx * 5 + category_title_index) % 8)
+      ELSE 14 + ((post_idx * 3 + category_title_index) % 11)
+    END;
+
+    created_value := TIMESTAMPTZ '2026-08-26 22:30:00+09'
+      - (day_offset || ' days')::interval
+      - (((post_idx * 43 + category_title_index * 17) % 840) || ' minutes')::interval
+      - (((post_idx * 29) % 55) || ' seconds')::interval;
 
     INSERT INTO public.community_posts (
       user_id,
@@ -750,11 +1020,20 @@ DECLARE
   comment_id UUID;
   author_id UUID;
   reply_author_id UUID;
+  deleted_author_id UUID;
   previous_reply_id UUID;
   reply_parent_id UUID;
   inserted_reply_id UUID;
   comment_created TIMESTAMPTZ;
   reply_created TIMESTAMPTZ;
+  previous_reply_created TIMESTAMPTZ;
+  reply_parent_created TIMESTAMPTZ;
+  deleted_comment_created TIMESTAMPTZ;
+  deleted_reply_created TIMESTAMPTZ;
+  seed_end_at TIMESTAMPTZ := TIMESTAMPTZ '2026-08-26 23:50:00+09';
+  thread_anchor TEXT;
+  deleted_item_budget INTEGER;
+  deleted_inserted INTEGER;
   reply_templates_young TEXT[] := ARRAY[
     '맞아요, 저도 그쪽으로 생각이 좀 기울어요.',
     '이거 케이스마다 차이가 좀 있는 듯해요.',
@@ -818,6 +1097,8 @@ DECLARE
     '짧게라도 남겨주셔서 좋아요.'
   ];
   tone_value TEXT;
+  author_speech_key TEXT;
+  reply_speech_key TEXT;
   comment_text TEXT;
   reply_text TEXT;
 BEGIN
@@ -829,9 +1110,17 @@ BEGIN
       comment_count := 1 + ((post_row.seq * 37) % 10);
     END IF;
 
+    -- Keep some posts clean, and mix 2-10 deleted entries into the rest.
+    IF comment_count >= 3 AND post_row.seq % 6 <> 1 THEN
+      deleted_item_budget := 2 + ((post_row.seq * 13) % 9);
+    ELSE
+      deleted_item_budget := 0;
+    END IF;
+    deleted_inserted := 0;
+
     FOR comment_idx IN 1..comment_count LOOP
-      SELECT id, tone_key
-      INTO author_id, tone_value
+      SELECT id, tone_key, speech_key
+      INTO author_id, tone_value, author_speech_key
       FROM _community_seed_users
       WHERE seq = ((post_row.seq + comment_idx * 3) % 80) + 1;
 
@@ -953,26 +1242,26 @@ BEGIN
           WHEN '합격·면접 후기' THEN
             (ARRAY[
               '후기에서 질문 흐름을 알려주는 부분이 특히 도움이 됩니다.',
-              '압박 질문은 답 자체보다 태도와 회복력을 보는 느낌이 강했습니다.',
-              '사례를 상황, 행동, 결과로 짧게 끊어 말한 부분은 저도 따라 해보려고 합니다.',
+              '분위기와 질문 흐름이 같이 있어서 준비 방향 잡는 데 도움이 됩니다.',
+              '질문 흐름을 보고 답변 방향을 잡는 부분은 저도 참고해보려고 합니다.',
               '면접 분위기 공유가 실제 질문보다 더 크게 도움 될 때가 많았습니다.',
-              '면접관 표정에 흔들리지 말라는 말은 몇 번을 들어도 부족한 것 같습니다.',
+              '기관명 없이 질문 흐름 위주로 적어주셔서 보기 편합니다.',
               '복기 글은 최종 결과와 상관없이 다음 준비 자료로 가치가 있습니다.',
               '같은 질문도 기관마다 의도가 달라서 후기 여러 개를 비교해보는 게 좋았습니다.',
               '면접 끝나고 바로 적어둔 복기가 나중에 가장 정확하더라고요.',
               '질문 자체보다 꼬리질문이 어디서 이어졌는지 보는 게 중요했습니다.',
-              '경험을 길게 외우기보다 핵심 장면을 짧게 꺼내는 연습이 필요해 보입니다.',
-              '합격 후기든 탈락 후기든 구체적인 상황이 있으면 준비 방향 잡기가 훨씬 쉽습니다.',
-              '이런 글은 면접 전날 읽기보다 미리 읽고 스크립트에 반영하는 게 좋았습니다.'
+              '질문 흐름과 면접 분위기를 같이 보면서 준비하는 게 필요해 보입니다.',
+              '다른 면접 흐름과 비교해볼 기준이 생겨서 도움이 됩니다.',
+              '이런 글은 면접 전에 읽어두면 준비 방향 잡기 좋습니다.'
             ])[((post_row.seq + comment_idx * 17) % 12) + 1] || ' ' ||
             (ARRAY[
-              '공유해주신 내용은 다음 면접 준비할 때 체크리스트로 써도 될 것 같습니다.',
+              '공유해주신 내용은 다음 면접 준비할 때 분위기 체크리스트로 써도 될 것 같습니다.',
               '복기 남겨주셔서 감사합니다. 질문의 결을 보는 데 도움이 됩니다.',
-              '저도 다음 면접 전에 답변을 짧게 정리하는 연습을 더 해야겠습니다.',
+              '저도 다음 면접 전에 질문 흐름별로 답변 방향을 다시 정리해봐야겠습니다.',
               '면접 후기를 읽을 때는 답변보다 분위기와 꼬리질문을 더 유심히 보게 됩니다.',
-              '말씀하신 흐름대로라면 사례 준비의 깊이가 꽤 중요해 보입니다.',
-              '탈락 후기라도 이런 정보가 남으면 다음 사람에게는 큰 자료가 됩니다.',
-              '긴장했을 때도 구조를 잃지 않는 연습이 필요하다는 생각이 듭니다.',
+              '말씀하신 흐름대로라면 면접 분위기와 꼬리질문을 함께 보는 게 중요해 보입니다.',
+              '결과와 별개로 이런 정보가 남으면 다음 사람에게는 큰 자료가 됩니다.',
+              '긴장했을 때도 질문 의도를 놓치지 않는 연습이 필요하다는 생각이 듭니다.',
               '기관명 없이도 준비 방향은 충분히 참고할 수 있는 글입니다.'
             ])[((post_row.seq * 13 + comment_idx) % 8) + 1]
           ELSE
@@ -1003,9 +1292,135 @@ BEGIN
         END;
       END IF;
 
+      IF author_speech_key = 'casual' THEN
+        comment_text := CASE
+          WHEN post_row.seq = 1 THEN (ARRAY[
+            '반가워. 처음엔 다 낯설어서 질문 많이 남기는 게 오히려 빠르더라.',
+            '나도 처음엔 눈팅만 했는데 글 쓰다 보면 생각 정리돼.',
+            '처음이면 공고랑 캘린더 같이 보는 습관부터 잡으면 될 듯.',
+            '시작한 것만으로도 이미 한 발 뗀 거니까 너무 조급해하지 마.'
+          ])[((comment_idx + post_row.seq) % 4) + 1]
+          WHEN post_row.category = '자유·잡담' THEN (ARRAY[
+            '나도 그런 날엔 목표 낮추고 책상에 앉는 것만 성공으로 쳐.',
+            '혼자 준비하면 별거 아닌 것도 크게 느껴져서 이런 글 은근 도움 됨.',
+            '오늘 망했다고 전체가 망한 건 아니니까 너무 몰아붙이지 말자.',
+            '비교 안 하는 게 제일 어려운데 그거만 줄여도 좀 낫더라.'
+          ])[((post_row.seq + comment_idx * 3) % 4) + 1]
+          WHEN post_row.category = '공시 정보' THEN (ARRAY[
+            '이건 첨부파일 버전이랑 마감 시간 같이 봐야 할 듯. 저장만 해두면 놓치기 쉽더라.',
+            '우대사항은 해당되는지도 중요하지만 증빙 가능한지가 더 중요했어.',
+            '애매하면 Q&A랑 원문 같이 보고, 문의 답변은 캡처해두는 게 마음 편해.',
+            '공고 본문만 보고 넘기면 제출서류에서 실수 나기 쉬워.'
+          ])[((post_row.seq + comment_idx * 5) % 4) + 1]
+          WHEN post_row.category = '공부·스터디' THEN (ARRAY[
+            '스터디는 빡센 것보다 오래 가는 방식이 진짜 중요하더라.',
+            '오답을 말로 설명해보면 내가 뭘 모르는지 바로 티 나서 좋았어.',
+            '벌금보다 인증이 오래 간다는 말 공감. 너무 세게 잡으면 빨리 지침.',
+            '처음 한 주는 테스트라고 생각하고 방식 안 맞으면 빨리 바꾸는 게 낫더라.'
+          ])[((post_row.seq + comment_idx * 7) % 4) + 1]
+          WHEN post_row.category = '질문·답변' THEN (ARRAY[
+            '나였으면 면접에서 설명 가능한 경험만 서류에 남길 것 같아.',
+            '기관마다 기준 달라서 이건 공고 문구 먼저 보는 게 맞아 보여.',
+            '애매한 건 크게 쓰기보다 면접에서 보충하는 쪽이 더 안전할 듯.',
+            '꼬리질문 들어와도 말할 수 있는지가 기준이면 덜 흔들릴 거야.'
+          ])[((post_row.seq + comment_idx * 11) % 4) + 1]
+          WHEN post_row.category = '합격·면접 후기' THEN (ARRAY[
+            '이런 복기가 제일 도움 됨. 질문보다 꼬리질문 흐름 보는 게 크더라.',
+            '질문 흐름 보고 답변 방향 잡는 얘기라 도움 됨.',
+            '면접 분위기까지 적어줘서 좋다. 실제로는 그게 제일 감 안 오더라.',
+            '후기는 결과보다 어떤 지점에서 질문이 이어졌는지가 더 중요한 듯.'
+          ])[((post_row.seq + comment_idx * 13) % 4) + 1]
+          ELSE (ARRAY[
+            '웃긴데 너무 내 얘기라 마냥 웃기진 않네.',
+            '이런 글 보고 잠깐 웃고 다시 앉으면 그걸로 충분하지.',
+            '현실 고증 너무 잘돼서 저장해둠.',
+            '가벼운 글인데 오히려 숨통 트여서 좋다.'
+          ])[((post_row.seq + comment_idx * 17) % 4) + 1]
+        END;
+      END IF;
+
       comment_created := post_row.created_at
-        + (comment_idx || ' minutes')::interval
+        + ((comment_idx * (18 + (post_row.seq % 11))) || ' minutes')::interval
+        + ((((post_row.seq + comment_idx * 2) % (CASE
+              WHEN post_row.created_at < TIMESTAMPTZ '2026-08-20 00:00:00+09' THEN 5
+              WHEN post_row.created_at < TIMESTAMPTZ '2026-08-24 00:00:00+09' THEN 3
+              ELSE 1
+            END)) || ' days')::interval)
+        + (((post_row.seq * comment_idx * 37) % 720) || ' minutes')::interval
         + (((comment_idx * 13) % 40) || ' seconds')::interval;
+
+      IF comment_created > seed_end_at THEN
+        comment_created := seed_end_at - (((post_row.seq + comment_idx) % 180) || ' minutes')::interval;
+      END IF;
+
+      IF comment_created <= post_row.created_at THEN
+        comment_created := post_row.created_at
+          + ((comment_idx * 11) || ' minutes')::interval
+          + (((comment_idx * 13) % 40) || ' seconds')::interval;
+      END IF;
+
+      IF comment_created > seed_end_at THEN
+        comment_created := seed_end_at - (((comment_count - comment_idx + 1) * 4) || ' minutes')::interval;
+      END IF;
+
+      IF comment_created <= post_row.created_at THEN
+        comment_created := post_row.created_at + (comment_idx || ' minutes')::interval;
+      END IF;
+
+      IF deleted_inserted < deleted_item_budget
+         AND comment_idx > 1
+         AND comment_created > post_row.created_at + '2 seconds'::interval
+         AND (
+           comment_idx = 2
+           OR comment_idx = (comment_count / 2) + 1
+           OR comment_idx = comment_count
+           OR (post_row.seq + comment_idx * 2) % 5 = 0
+         ) THEN
+        SELECT id
+        INTO deleted_author_id
+        FROM _community_seed_users
+        WHERE seq = ((post_row.seq * 17 + comment_idx * 5) % 80) + 1;
+
+        deleted_comment_created := comment_created
+          - ((6 + ((post_row.seq + comment_idx) % 18)) || ' minutes')::interval
+          - (((post_row.seq * comment_idx) % 50) || ' seconds')::interval;
+
+        IF deleted_comment_created <= post_row.created_at THEN
+          deleted_comment_created := post_row.created_at
+            + (((EXTRACT(EPOCH FROM (comment_created - post_row.created_at))::integer / 2) || ' seconds')::interval);
+        END IF;
+
+        IF deleted_comment_created >= comment_created THEN
+          deleted_comment_created := comment_created - '1 second'::interval;
+        END IF;
+
+        IF deleted_comment_created <= post_row.created_at THEN
+          deleted_comment_created := post_row.created_at + '1 second'::interval;
+        END IF;
+
+        INSERT INTO public.community_comments (
+          post_id,
+          user_id,
+          parent_comment_id,
+          content,
+          status,
+          created_at,
+          updated_at,
+          deleted_at
+        )
+        VALUES (
+          post_row.id,
+          deleted_author_id,
+          NULL,
+          '작성자가 삭제한 댓글입니다.',
+          'deleted',
+          deleted_comment_created,
+          LEAST(seed_end_at, deleted_comment_created + ((3 + ((post_row.seq + comment_idx) % 27)) || ' minutes')::interval),
+          LEAST(seed_end_at, deleted_comment_created + ((3 + ((post_row.seq + comment_idx) % 27)) || ' minutes')::interval)
+        );
+
+        deleted_inserted := deleted_inserted + 1;
+      END IF;
 
       INSERT INTO public.community_comments (
         post_id,
@@ -1091,18 +1506,54 @@ BEGIN
         reply_count := 12 + ((post_row.seq + comment_idx) % 5);
       END IF;
 
+      thread_anchor := CASE post_row.category
+        WHEN '자유·잡담' THEN (ARRAY[
+          '결국 오늘 기준을 낮추더라도 흐름을 끊지 않는 쪽으로 보자는 이야기로 이해했습니다.',
+          '위 댓글처럼 비교를 줄이는 게 제일 어려운데, 그 부분을 같이 잡아보면 좋겠습니다.',
+          '저도 이 글은 해결책보다 같은 상황을 겪는 사람들이 있다는 데 의미가 있다고 봅니다.'
+        ])[((post_row.seq + comment_idx * 3) % 3) + 1]
+        WHEN '공시 정보' THEN (ARRAY[
+          '그래서 이 공고는 첨부파일 버전과 제출서류를 같이 확인하는 쪽으로 정리하면 될 것 같습니다.',
+          '위 댓글 기준대로 공식 Q&A와 원문을 같이 남겨두면 나중에 헷갈릴 일이 줄어들 것 같습니다.',
+          '마감 시간, 증빙 가능 여부, 수정 공지 세 가지를 같이 보는 흐름이면 충분히 안전해 보입니다.'
+        ])[((post_row.seq + comment_idx * 5) % 3) + 1]
+        WHEN '공부·스터디' THEN (ARRAY[
+          '이 스터디는 진도보다 오답을 어떻게 설명하고 복구할지 정하는 게 핵심으로 보입니다.',
+          '위 댓글처럼 첫 주를 테스트 기간으로 두고 맞는 방식만 남기는 쪽이 현실적입니다.',
+          '시간을 재는 날과 개념을 보는 날을 나누면 부담이 줄어든다는 흐름에는 저도 동의합니다.'
+        ])[((post_row.seq + comment_idx * 7) % 3) + 1]
+        WHEN '질문·답변' THEN (ARRAY[
+          '정리하면 서류에는 설명 가능한 경험만 남기고, 애매한 부분은 공식 안내를 기준으로 보는 게 좋겠습니다.',
+          '위 댓글들처럼 면접에서 꼬리질문을 받아도 설명할 수 있는지가 판단 기준이 될 것 같습니다.',
+          '최종 제출 전에는 문장을 줄이고 증빙 가능한 내용만 남기는 쪽이 안전해 보입니다.'
+        ])[((post_row.seq + comment_idx * 11) % 3) + 1]
+        WHEN '합격·면접 후기' THEN (ARRAY[
+          '이 흐름이면 예상 질문 암기보다 질문 의도에 맞는 사례를 고르는 연습이 더 중요해 보입니다.',
+          '위 댓글처럼 질문 자체보다 꼬리질문이 어디서 이어졌는지 보는 게 준비에 도움이 됩니다.',
+          '기관명보다 면접 분위기와 답변 구조를 참고하는 쪽으로 읽으면 좋겠습니다.'
+        ])[((post_row.seq + comment_idx * 13) % 3) + 1]
+        ELSE (ARRAY[
+          '다들 웃고 넘기지만 결국 다시 책상으로 돌아가는 이야기라서 더 공감되는 것 같습니다.',
+          '이런 글은 잠깐 긴장을 풀고 루틴으로 돌아가자는 정도로 보면 충분하겠습니다.',
+          '위 댓글처럼 가벼운 공감도 오래 준비하는 데 필요한 부분이라고 생각합니다.'
+        ])[((post_row.seq + comment_idx * 17) % 3) + 1]
+      END;
+
       previous_reply_id := NULL;
+      previous_reply_created := NULL;
 
       FOR reply_idx IN 1..reply_count LOOP
-        SELECT id, tone_key
-        INTO reply_author_id, tone_value
+        SELECT id, tone_key, speech_key
+        INTO reply_author_id, tone_value, reply_speech_key
         FROM _community_seed_users
         WHERE seq = ((post_row.seq * 5 + comment_idx + reply_idx * 7) % 80) + 1;
 
         IF previous_reply_id IS NOT NULL AND reply_idx % 5 = 0 THEN
           reply_parent_id := previous_reply_id;
+          reply_parent_created := previous_reply_created;
         ELSE
           reply_parent_id := comment_id;
+          reply_parent_created := comment_created;
         END IF;
 
         IF (post_row.seq + comment_idx * 2 + reply_idx * 3) % 5 = 0 THEN
@@ -1183,13 +1634,13 @@ BEGIN
           WHEN '합격·면접 후기' THEN
             (ARRAY[
               '이런 복기는 다음 면접 준비할 때 질문 흐름 잡는 데 진짜 도움 됩니다.',
-              '압박 질문은 답 자체보다 태도를 보는 느낌이 강했습니다.',
-              '사례를 짧게 끊어 말했다는 부분은 저도 다음 면접 때 써보려고 합니다.',
+              '질문 의도를 놓치지 않는 태도가 중요해 보였습니다.',
+              '질문 흐름을 보고 답변 방향을 잡는 부분은 저도 다음 면접 때 참고해보려고 합니다.',
               '후기 글에서는 이런 세부 분위기 공유가 제일 값진 것 같아요.',
               '저도 면접 끝나고 바로 복기했을 때 다음 준비가 훨씬 수월했습니다.',
               '질문 자체보다 꼬리질문이 어디서 나왔는지 보는 게 더 중요하더라고요.',
-              '면접관 표정에 흔들리지 말라는 말은 진짜 몇 번을 들어도 부족합니다.',
-              '합격 후기든 탈락 후기든 구체적인 상황이 있으면 준비 방향 잡기가 좋습니다.'
+              '질문 흐름에 흔들리지 않는 게 생각보다 중요하겠습니다.',
+              '후기에서 분위기와 질문 흐름이 같이 나오면 준비 방향 잡기가 좋습니다.'
             ])[((post_row.seq + reply_idx + comment_idx) % 8) + 1]
           ELSE
             (ARRAY[
@@ -1214,9 +1665,145 @@ BEGIN
           END;
         END IF;
 
+        IF post_row.seq <> 1 AND reply_idx > 1 THEN
+          reply_text := reply_text || ' ' || thread_anchor;
+        END IF;
+
+        IF reply_speech_key = 'casual' THEN
+          reply_text := CASE
+            WHEN post_row.seq = 1 THEN (ARRAY[
+              '맞아. 처음엔 질문 하나씩 올리면서 감 잡는 게 제일 빠른 듯.',
+              '나도 처음엔 공고 용어부터 헷갈렸어. 천천히 보면 돼.',
+              '기록 남겨두면 나중에 루틴 찾을 때 도움 되더라.',
+              '처음 글이면 이 정도면 충분하지. 부담 갖지 않아도 될 듯.'
+            ])[((reply_idx + comment_idx + post_row.seq) % 4) + 1]
+            WHEN post_row.category = '자유·잡담' THEN (ARRAY[
+              '맞아, 이런 날은 해결책보다 그냥 같이 버티는 말이 더 도움 될 때 있더라.',
+              '나도 목표 낮추고 다시 앉는 쪽으로 바꿨는데 그게 오래 갔어.',
+              '비교 줄이는 게 제일 어려운데 그래도 그거부터 해야 마음이 덜 흔들림.',
+              '이 글 보고 나도 오늘 최소 분량만 하고 넘기려고.'
+            ])[((post_row.seq + comment_idx + reply_idx * 3) % 4) + 1]
+            WHEN post_row.category = '공시 정보' THEN (ARRAY[
+              '응, 첨부파일이랑 Q&A 같이 봐야 덜 헷갈리더라.',
+              '마감 시간이랑 증빙서류는 따로 적어두는 게 진짜 안전해.',
+              '문의 답변 캡처해두라는 말 공감. 나중에 다시 볼 때 편하더라.',
+              '공고 수정 뜨면 저장해둔 내용이랑 달라질 수 있어서 마지막에 한 번 더 봐야 함.'
+            ])[((post_row.seq + comment_idx + reply_idx * 5) % 4) + 1]
+            WHEN post_row.category = '공부·스터디' THEN (ARRAY[
+              '오답 설명하는 방식 좋더라. 그냥 맞고 틀리고보다 훨씬 남아.',
+              '처음 한 주 테스트로 보는 거 괜찮다. 안 맞으면 빨리 바꾸는 게 나음.',
+              '시간 재는 날이랑 개념 보는 날 나누니까 나도 부담 좀 줄었어.',
+              '스터디는 사람 맞는 게 제일 큰 듯. 방식 안 맞으면 오래 못 가.'
+            ])[((post_row.seq + comment_idx + reply_idx * 7) % 4) + 1]
+            WHEN post_row.category = '질문·답변' THEN (ARRAY[
+              '나도 면접에서 설명 못 할 내용이면 서류에 크게 안 쓸 것 같아.',
+              '공식 안내 먼저 보고, 애매하면 보수적으로 가는 게 마음 편하더라.',
+              '꼬리질문 들어왔을 때 말할 수 있는지가 기준이라는 말 맞는 듯.',
+              '경험은 많은 것보다 직무랑 연결되는 게 더 중요해 보여.'
+            ])[((post_row.seq + comment_idx + reply_idx * 11) % 4) + 1]
+            WHEN post_row.category = '합격·면접 후기' THEN (ARRAY[
+              '맞아, 후기에서 제일 보는 게 질문 흐름이랑 꼬리질문 지점이야.',
+              '질문 흐름 보고 답변 방향 잡는 연습은 진짜 해야 할 듯.',
+              '면접장 분위기 적어준 게 더 도움 된다. 막상 가기 전엔 그게 제일 불안하니까.',
+              '외운 답 그대로 말하는 것보다 질문 흐름에 맞추는 쪽이 더 현실적인 듯.'
+            ])[((post_row.seq + comment_idx + reply_idx * 13) % 4) + 1]
+            ELSE (ARRAY[
+              '웃긴데 현실이라 더 웃김.',
+              '잠깐 웃고 다시 문제집 펴면 됐지 뭐.',
+              '이런 글 중간중간 있어야 커뮤니티 보는 맛이 있음.',
+              '내 상태랑 비슷해서 반박을 못 하겠다.'
+            ])[((post_row.seq + comment_idx + reply_idx * 17) % 4) + 1]
+          END;
+
+          IF post_row.seq <> 1 AND reply_idx > 1 THEN
+            reply_text := reply_text || ' ' || CASE post_row.category
+              WHEN '자유·잡담' THEN '위 댓글들처럼 오늘 하루로 전체를 판단하진 말자는 쪽으로 보면 될 듯.'
+              WHEN '공시 정보' THEN '위에서 말한 것처럼 원문 확인하고 제출 직전에 한 번 더 보는 게 안전해.'
+              WHEN '공부·스터디' THEN '결국 오래 가는 방식 찾는 게 핵심이라는 말로 정리되는 것 같아.'
+              WHEN '질문·답변' THEN '여러 의견 보되 마지막 기준은 공고랑 본인이 설명 가능한지로 잡으면 될 듯.'
+              WHEN '합격·면접 후기' THEN '기관명보다 흐름 참고하자는 말에 나도 동의해.'
+              ELSE '가볍게 웃고 다시 루틴으로 돌아가자는 느낌이면 충분하지.'
+            END;
+          END IF;
+        END IF;
+
         reply_created := comment_created
-          + ((reply_idx * (2 + ((post_row.seq + comment_idx) % 4))) || ' minutes')::interval
+          + ((reply_idx * (9 + ((post_row.seq + comment_idx) % 7))) || ' minutes')::interval
+          + ((((post_row.seq + comment_idx + reply_idx) % 18) || ' hours')::interval)
           + ((((reply_idx * 7) + (comment_idx * 11)) % 45) || ' seconds')::interval;
+
+        IF reply_created > seed_end_at THEN
+          reply_created := seed_end_at - (((reply_count - reply_idx + 1) * 3) || ' minutes')::interval;
+        END IF;
+
+        IF reply_created <= reply_parent_created THEN
+          reply_created := reply_parent_created
+            + ((reply_idx * 3) || ' minutes')::interval
+            + ((((reply_idx * 7) + (comment_idx * 11)) % 45) || ' seconds')::interval;
+        END IF;
+
+        IF reply_created > seed_end_at THEN
+          reply_created := reply_parent_created + ((reply_idx * 5) || ' seconds')::interval;
+        END IF;
+
+        IF reply_created > seed_end_at THEN
+          reply_created := seed_end_at - (((reply_count - reply_idx + 1) * 5) || ' seconds')::interval;
+        END IF;
+
+        IF deleted_inserted < deleted_item_budget
+           AND reply_count >= 2
+           AND reply_idx > 1
+           AND reply_created > reply_parent_created + '2 seconds'::interval
+           AND (
+             reply_idx = 2
+             OR reply_idx = (reply_count / 2) + 1
+             OR (post_row.seq + comment_idx + reply_idx * 3) % 6 = 0
+           ) THEN
+          SELECT id
+          INTO deleted_author_id
+          FROM _community_seed_users
+          WHERE seq = ((post_row.seq * 19 + comment_idx * 7 + reply_idx * 5) % 80) + 1;
+
+          deleted_reply_created := reply_created
+            - ((4 + ((post_row.seq + comment_idx + reply_idx) % 21)) || ' minutes')::interval
+            - (((post_row.seq + reply_idx * 13) % 45) || ' seconds')::interval;
+
+          IF deleted_reply_created <= reply_parent_created THEN
+            deleted_reply_created := reply_parent_created
+              + (((EXTRACT(EPOCH FROM (reply_created - reply_parent_created))::integer / 2) || ' seconds')::interval);
+          END IF;
+
+          IF deleted_reply_created >= reply_created THEN
+            deleted_reply_created := reply_created - '1 second'::interval;
+          END IF;
+
+          IF deleted_reply_created <= reply_parent_created THEN
+            deleted_reply_created := reply_parent_created + '1 second'::interval;
+          END IF;
+
+          INSERT INTO public.community_comments (
+            post_id,
+            user_id,
+            parent_comment_id,
+            content,
+            status,
+            created_at,
+            updated_at,
+            deleted_at
+          )
+          VALUES (
+            post_row.id,
+            deleted_author_id,
+            reply_parent_id,
+            '작성자가 삭제한 답글입니다.',
+            'deleted',
+            deleted_reply_created,
+            LEAST(seed_end_at, deleted_reply_created + ((2 + ((post_row.seq + comment_idx + reply_idx) % 18)) || ' minutes')::interval),
+            LEAST(seed_end_at, deleted_reply_created + ((2 + ((post_row.seq + comment_idx + reply_idx) % 18)) || ' minutes')::interval)
+          );
+
+          deleted_inserted := deleted_inserted + 1;
+        END IF;
 
         INSERT INTO public.community_comments (
           post_id,
@@ -1239,6 +1826,7 @@ BEGIN
         RETURNING id INTO inserted_reply_id;
 
         previous_reply_id := inserted_reply_id;
+        previous_reply_created := reply_created;
       END LOOP;
     END LOOP;
   END LOOP;
@@ -1360,6 +1948,7 @@ COMMIT;
 
 -- Quick check after execution:
 -- SELECT COUNT(*) AS post_count FROM public.community_posts;
--- SELECT COUNT(*) FILTER (WHERE parent_comment_id IS NULL) AS comment_count,
---        COUNT(*) FILTER (WHERE parent_comment_id IS NOT NULL) AS reply_count
+-- SELECT COUNT(*) FILTER (WHERE parent_comment_id IS NULL AND status = 'active') AS active_comment_count,
+--        COUNT(*) FILTER (WHERE parent_comment_id IS NOT NULL AND status = 'active') AS active_reply_count,
+--        COUNT(*) FILTER (WHERE status = 'deleted') AS deleted_comment_count
 -- FROM public.community_comments;

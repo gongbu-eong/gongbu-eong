@@ -942,8 +942,12 @@
   height: 64px;
   margin-right: 13px;
   border-radius: 50%;
-  background: #f8d9bd;
+  background: rgba(255, 255, 255, 0.3);
   overflow: hidden;
+}
+
+.drawerGuestAvatar {
+  overflow: visible;
 }
 
 .drawerAvatar img {
@@ -953,11 +957,13 @@
 }
 
 .drawerGuestAvatarMark {
-  display: block;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.55);
+  display: flex;
+  width: 64px;
+  height: 64px;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  line-height: 1;
 }
 
 .drawerHeader strong {
