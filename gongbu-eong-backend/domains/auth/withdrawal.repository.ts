@@ -221,9 +221,6 @@ export async function withdrawUserAccount(args: {
         UPDATE public.users
         SET
           email = NULL,
-          nickname = '탈퇴한 사용자',
-          display_name = '탈퇴한 사용자',
-          community_nickname = '탈퇴한 사용자',
           phone = NULL,
           avatar_url = NULL,
           profile_status_message = NULL,

@@ -124,9 +124,23 @@ export function MyWithdrawalPage() {
 
         <section className={styles.withdrawalNotice} aria-label="탈퇴 안내 사항">
           <ul>
-            <li>공부엉이를 탈퇴한 뒤 다시 공부엉이를 가입해도 이전 계정 데이터는 복원되지 않습니다.</li>
-            <li>탈퇴시 회원님의 개인정보는 개인정보처리방침에 따라 탈퇴일로부터 30일간 보관 후 삭제됩니다.</li>
-            <li>공부엉이에서 작성하신 게시물, 댓글은 탈퇴 후에도 삭제되지 않으므로 게시물, 댓글의 삭제를 원하시는 경우 반드시 직접 삭제하신 후 탈퇴해 주시기 바랍니다.</li>
+            <li>
+              공부엉이를 탈퇴한 뒤 다시 공부엉이를 가입해도 이전 계정
+              <br />
+              데이터는 복원되지 않습니다.
+            </li>
+            <li>
+              탈퇴시 회원님의 개인정보는 개인정보처리방침에 따라
+              <br />
+              탈퇴일로부터 30일간 보관 후 삭제됩니다.
+            </li>
+            <li>
+              공부엉이에서 작성하신 게시물, 댓글은 탈퇴 후에도
+              <br />
+              삭제되지 않으므로 게시물, 댓글의 삭제를 원하시는 경우
+              <br />
+              반드시 직접 삭제하신 후 탈퇴해 주시기 바랍니다.
+            </li>
           </ul>
         </section>
 
@@ -151,6 +165,9 @@ export function MyWithdrawalPage() {
                   checked={reasonCode === reason.code}
                   onChange={() => {
                     setReasonCode(reason.code);
+                    if (reason.code !== "other") {
+                      setReasonDetail("");
+                    }
                     setError("");
                   }}
                 />
@@ -160,10 +177,12 @@ export function MyWithdrawalPage() {
           </div>
 
           {reasonCode === "other" ? (
-            <textarea
+            <input
               className={styles.withdrawalReasonDetail}
+              type="text"
               value={reasonDetail}
               maxLength={1000}
+              placeholder="탈퇴 사유를 작성해주세요. (1000자 이내)"
               aria-label="기타 탈퇴 사유"
               onChange={(event) => setReasonDetail(event.target.value)}
             />

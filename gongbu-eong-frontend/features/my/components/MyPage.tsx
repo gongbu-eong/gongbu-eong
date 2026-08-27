@@ -108,11 +108,15 @@ export function MyPage() {
 
         <section className={styles.stats} aria-label="활동 요약">
           <div className={styles.stat}>
-            <strong>{bookmarkCount}</strong>
+            <Link href="/jobs?view=bookmarked" className={styles.statCountLink} aria-label={`찜한 공고 ${bookmarkCount}개 보기`}>
+              {bookmarkCount}
+            </Link>
             <span>찜한 공고</span>
           </div>
           <div className={styles.stat}>
-            <strong>{coverLetterCoachingCount}</strong>
+            <Link href="/my/coaching" className={styles.statCountLink} aria-label={`자소서 코칭 ${coverLetterCoachingCount}개 보기`}>
+              {coverLetterCoachingCount}
+            </Link>
             <span>자소서 코칭</span>
           </div>
           {/*
