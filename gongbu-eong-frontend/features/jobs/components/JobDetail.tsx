@@ -3,7 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   getCurrentUser,
   getJobPosting,
@@ -23,9 +29,13 @@ export function JobDetail({ jobId }: { jobId: string }) {
   const [loading, setLoading] = useState(true);
   const [bookmarkPending, setBookmarkPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [qualificationExpanded, setQualificationExpanded] = useState(false);
   const [disqualificationExpanded, setDisqualificationExpanded] =
     useState(false);
+  const [basicPreferenceExpanded, setBasicPreferenceExpanded] =
+    useState(false);
   const [preferenceExpanded, setPreferenceExpanded] = useState(false);
+  const [processExpanded, setProcessExpanded] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -69,6 +79,12 @@ export function JobDetail({ jobId }: { jobId: string }) {
     }
   };
   const emailAddress = job ? getEmailAddress(job) : null;
+  const preferenceText = job?.preference?.trim() ?? "";
+  const processText = job
+    ? [job.applicationMethod, job.screeningProcess, job.requiredDocuments]
+        .filter(Boolean)
+        .join("\n\n")
+    : "";
 
   return (
     <main className={styles.page}>
@@ -121,7 +137,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
                 <span>{toDeadlineNoticeDetail(job)}</span>
               </div>
 
-              <DetailSection title="기본 정보" icon="📋">
+              <DetailSection title="기본 정보" icon="basic">
                 <InfoRow label="표준직무(NCS)" value={job.ncsCategory || job.categories.join(" · ") || job.jobCategory} />
                 <InfoRow label="학력정보" value={job.educationRequirement} />
                 <InfoRow label="채용구분" value={job.careerRequirement} />
@@ -129,22 +145,38 @@ export function JobDetail({ jobId }: { jobId: string }) {
                 <InfoRow label="대체인력" value={extractBasicValue(job.basicInfo, "대체인력")} />
                 <InfoRow label="근무지역" value={job.region} />
                 <InfoRow label="채용인원" value={toHiringCount(job.hiringCount)} />
-                <InfoRow label="우대조건" value={job.preference} />
+                <CollapsibleInfoRow
+                  label="우대조건"
+                  value={preferenceText}
+                  expanded={basicPreferenceExpanded}
+                  onToggle={() =>
+                    setBasicPreferenceExpanded((expanded) => !expanded)
+                  }
+                />
                 <InfoRow label="채용기간" value={toCompactPeriod(job.applicationStartAt, job.applicationEndAt)} />
                 <InfoRow label="등록일" value={toDate(job.announcementAt)} />
               </DetailSection>
 
-              <DetailSection title="응시자격" icon="✅">
-                <RichText value={job.qualification} empty="등록된 지원 자격 정보가 없습니다." />
+              <DetailSection title="응시자격" icon="qualification">
+                <CollapsibleRichText
+                  value={job.qualification}
+                  empty="등록된 지원 자격 정보가 없습니다."
+                  label="응시자격"
+                  expanded={qualificationExpanded}
+                  collapsedLines={5}
+                  onToggle={() =>
+                    setQualificationExpanded((expanded) => !expanded)
+                  }
+                />
               </DetailSection>
 
               {job.disqualification ? (
-                <DetailSection title="결격사유" icon="🚫">
+                <DetailSection title="결격사유" icon="disqualification">
                   <CollapsibleRichText
                     value={job.disqualification}
                     label="결격사유"
                     expanded={disqualificationExpanded}
-                    collapsedLines={6}
+                    collapsedLines={5}
                     onToggle={() =>
                       setDisqualificationExpanded((expanded) => !expanded)
                     }
@@ -152,28 +184,34 @@ export function JobDetail({ jobId }: { jobId: string }) {
                 </DetailSection>
               ) : null}
 
-              <DetailSection title="우대내용" icon="⭐">
+              <DetailSection title="우대내용" icon="preference">
                 <CollapsibleRichText
                   value={job.preference}
                   empty="등록된 우대 조건이 없습니다."
                   label="우대내용"
                   expanded={preferenceExpanded}
-                  collapsedLines={8}
+                  collapsedLines={5}
                   onToggle={() =>
                     setPreferenceExpanded((expanded) => !expanded)
                   }
                 />
               </DetailSection>
 
-              <DetailSection title="전형절차 / 방법" icon="⭐">
-                <RichText
-                  value={[job.applicationMethod, job.screeningProcess, job.requiredDocuments].filter(Boolean).join("\n\n")}
+              <DetailSection title="전형절차 / 방법" icon="process">
+                <CollapsibleRichText
+                  value={processText}
                   empty="등록된 전형 정보가 없습니다."
+                  label="전형절차 / 방법"
+                  expanded={processExpanded}
+                  collapsedLines={5}
+                  onToggle={() =>
+                    setProcessExpanded((expanded) => !expanded)
+                  }
                 />
               </DetailSection>
 
               {job.files.length ? (
-                <DetailSection title="첨부파일" icon="📎">
+                <DetailSection title="첨부파일" icon="attachment">
                   <div className={styles.files}>
                     {job.files.map((file) => (
                       <a key={file.id} href={`${backendUrl}/api/jobs/files/${file.id}`}>
@@ -225,22 +263,179 @@ function Fact({ label, value }: { label: string; value: string }) {
   return <div className={styles.fact}><small>{label}</small><strong>{value}</strong></div>;
 }
 
-function DetailSection({ title, icon, children }: { title: string; icon: string; children: ReactNode }) {
+function DetailSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: DetailSectionIconKey;
+  children: ReactNode;
+}) {
+  const image = detailSectionIcons[icon];
+
   return (
     <section className={styles.detailSection}>
-      <h3><span aria-hidden="true">{icon}</span>{title}</h3>
+      <h3>
+        <Image
+          src={image.src}
+          alt=""
+          width={image.width}
+          height={image.height}
+          className={styles.detailSectionIcon}
+        />
+        {title}
+      </h3>
       {children}
     </section>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
+type DetailSectionIconKey =
+  | "basic"
+  | "qualification"
+  | "disqualification"
+  | "preference"
+  | "process"
+  | "attachment";
+
+const detailSectionIcons: Record<
+  DetailSectionIconKey,
+  { src: string; width: number; height: number }
+> = {
+  basic: { src: "/jobs/detail/section-basic-v3.png", width: 24, height: 27 },
+  qualification: {
+    src: "/jobs/detail/section-qualification-v4.svg",
+    width: 28,
+    height: 28,
+  },
+  disqualification: {
+    src: "/jobs/detail/section-disqualification-v3.png",
+    width: 24,
+    height: 27,
+  },
+  preference: {
+    src: "/jobs/detail/section-preference-v3.png",
+    width: 24,
+    height: 27,
+  },
+  process: { src: "/jobs/detail/section-process-v3.png", width: 24, height: 27 },
+  attachment: {
+    src: "/jobs/detail/section-attachment-v3.png",
+    width: 24,
+    height: 28,
+  },
+};
+
+function InfoRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
   if (!value) return null;
-  return <dl className={styles.infoRow}><dt>{label}</dt><dd>{value}</dd></dl>;
+  return (
+    <dl className={styles.infoRow}>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </dl>
+  );
+}
+
+function CollapsibleInfoRow({
+  label,
+  value,
+  expanded,
+  onToggle,
+}: {
+  label: string;
+  value: string | null | undefined;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const text = value?.trim();
+  const valueRef = useRef<HTMLSpanElement | null>(null);
+  const [canToggle, setCanToggle] = useState(false);
+
+  useEffect(() => {
+    const measure = () => {
+      const element = valueRef.current;
+      if (!element) return;
+
+      const lineHeight = Number.parseFloat(
+        window.getComputedStyle(element).lineHeight,
+      );
+      const renderedLines = getRenderedLineCount(element, lineHeight, 22);
+
+      setCanToggle(renderedLines > 5);
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(measure);
+
+    if (resizeObserver && valueRef.current) {
+      resizeObserver.observe(valueRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", measure);
+      resizeObserver?.disconnect();
+    };
+  }, [text]);
+
+  if (!text) return null;
+
+  return (
+    <>
+      <dl className={`${styles.infoRow} ${styles.basicPreferenceRow}`}>
+        <dt>{label}</dt>
+        <dd>
+          <span
+            ref={valueRef}
+            className={`${styles.basicPreferenceValue} ${
+              canToggle && !expanded
+                ? styles.basicPreferenceValueCollapsed
+                : styles.basicPreferenceValueExpanded
+            }`}
+          >
+            {text}
+          </span>
+        </dd>
+      </dl>
+      {canToggle ? (
+        <button
+          type="button"
+          className={styles.basicMoreButton}
+          onClick={onToggle}
+          aria-expanded={expanded}
+        >
+          우대 내용 {expanded ? "접기  ▲" : "더 보기  ▼"}
+        </button>
+      ) : null}
+    </>
+  );
 }
 
 function RichText({ value, empty }: { value: string | null; empty?: string }) {
   return <p className={styles.richText}>{value?.trim() || empty}</p>;
+}
+
+function getRenderedLineCount(
+  element: HTMLElement,
+  lineHeight: number,
+  fallbackLineHeight: number,
+) {
+  const resolvedLineHeight = Number.isFinite(lineHeight)
+    ? lineHeight
+    : fallbackLineHeight;
+
+  return Math.ceil(element.scrollHeight / resolvedLineHeight);
 }
 
 function CollapsibleRichText({
@@ -259,35 +454,70 @@ function CollapsibleRichText({
   onToggle: () => void;
 }) {
   const text = value?.trim();
+  const textRef = useRef<HTMLParagraphElement | null>(null);
+  const [canToggle, setCanToggle] = useState(false);
+
+  useEffect(() => {
+    if (!text) {
+      setCanToggle(false);
+      return;
+    }
+
+    const measure = () => {
+      const element = textRef.current;
+      if (!element) return;
+
+      const lineHeight = Number.parseFloat(
+        window.getComputedStyle(element).lineHeight,
+      );
+      const renderedLines = getRenderedLineCount(element, lineHeight, 26.4);
+
+      setCanToggle(renderedLines > 5);
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(measure);
+
+    if (resizeObserver && textRef.current) {
+      resizeObserver.observe(textRef.current);
+    }
+
+    return () => {
+      window.removeEventListener("resize", measure);
+      resizeObserver?.disconnect();
+    };
+  }, [text]);
 
   if (!text) {
     return <RichText value={value} empty={empty} />;
   }
 
-  const shouldCollapse = text.length > 180 || text.includes("\n");
-
-  if (!shouldCollapse) {
-    return <RichText value={text} empty={empty} />;
-  }
-
   return (
     <div className={styles.collapsibleContent}>
       <p
+        ref={textRef}
         className={`${styles.richText} ${styles.collapsibleText} ${
-          expanded ? styles.expandedText : ""
+          canToggle && !expanded ? "" : styles.expandedText
         }`}
         style={{ "--collapsed-lines": collapsedLines } as CSSProperties}
       >
         {text}
       </p>
-      <button
-        type="button"
-        className={styles.moreButton}
-        onClick={onToggle}
-        aria-expanded={expanded}
-      >
-        {label} {expanded ? "접기  ▲" : "더보기  ▼"}
-      </button>
+      {canToggle ? (
+        <button
+          type="button"
+          className={styles.moreButton}
+          onClick={onToggle}
+          aria-expanded={expanded}
+        >
+          {label} {expanded ? "접기  ▲" : "더보기  ▼"}
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -427,9 +657,9 @@ function getEmailAddress(job: JobPostingDetailDto) {
 }
 
 function StarIcon({ filled }: { filled: boolean }) {
-  if (!filled) return <Image src="/jobs/star-outline.svg" alt="" width={28} height={28} />;
+  if (!filled) return <Image src="/jobs/detail/bookmark-star-outline.svg" alt="" width={28} height={28} />;
   return <svg viewBox="0 0 24 24"><path d="m12 2.8 2.85 5.77 6.37.93-4.61 4.49 1.09 6.34L12 17.34l-5.7 2.99 1.09-6.34L2.78 9.5l6.37-.93L12 2.8Z" fill="currentColor" /></svg>;
 }
 function DownloadIcon() {
-  return <Image src="/jobs/download.svg" alt="" width={24} height={24} />;
+  return <Image src="/jobs/detail/download-rounded.svg" alt="" width={24} height={24} />;
 }

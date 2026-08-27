@@ -27,8 +27,8 @@
 
 .titleRow h1 {
   margin: 0;
-  font-size: 1.25rem;
-  line-height: 1.2;
+  font-size: 1.375rem;
+  line-height: 1.5rem;
   font-weight: 700;
 }
 
@@ -61,15 +61,15 @@
 .summary > small {
   display: block;
   color: #5a6580;
-  font-size: 0.875rem;
-  line-height: 1.0625rem;
+  font-size: 1rem;
+  line-height: 1.1875rem;
 }
 
 .summary h2 {
   max-width: 100%;
   margin: 0.5rem 0 0;
-  font-size: 0.9375rem;
-  line-height: 1.25rem;
+  font-size: 1.0625rem;
+  line-height: 1.375rem;
   font-weight: 700;
   word-break: keep-all;
 }
@@ -82,11 +82,11 @@
   left: 0;
   display: inline-grid;
   min-width: 3.6875rem;
-  height: 1.375rem;
+  height: 1.5rem;
   padding: 0 0.625rem;
   place-items: center;
   border-radius: 999px;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 
@@ -130,13 +130,13 @@
 
 .fact small {
   color: #5a6580;
-  font-size: 0.6875rem;
-  line-height: 0.8125rem;
+  font-size: 0.8125rem;
+  line-height: 1rem;
 }
 
 .fact strong {
-  font-size: 0.875rem;
-  line-height: 1.0625rem;
+  font-size: 1rem;
+  line-height: 1.1875rem;
   white-space: normal;
   word-break: keep-all;
   overflow-wrap: anywhere;
@@ -153,8 +153,8 @@
   margin: 0 0 1.5rem;
   padding: 0.5rem 1rem;
   border-radius: 0.3125rem;
-  font-size: 0.8125rem;
-  line-height: 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.125rem;
 }
 
 .closedNotice { background: #ffedef; color: #e8544d; }
@@ -172,27 +172,29 @@
   align-items: center;
   gap: 0.25rem;
   margin: 0 0 1rem;
-  font-size: 1.0625rem;
-  line-height: 1.25rem;
+  color: #111827;
+  font-size: 1.125rem;
   font-weight: 700;
+  line-height: 1.375rem;
+  min-height: 1.75rem;
 }
 
-.detailSection h3 span {
-  display: inline-block;
-  width: 1.25rem;
-  text-align: center;
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  font-size: 1rem;
-  line-height: 1;
+.detailSectionIcon {
+  display: block;
+  width: 1.5rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  object-fit: contain;
+  object-position: center;
 }
 
 .infoRow {
   display: grid;
   grid-template-columns: 6.9375rem minmax(0, 1fr);
   margin: 0;
-  padding: 0.25rem 0;
-  font-size: 0.875rem;
-  line-height: 1.1875rem;
+  padding: 0.3125rem 0;
+  font-size: 1rem;
+  line-height: 1.375rem;
 }
 
 .infoRow dt { color: #5a6580; }
@@ -204,10 +206,31 @@
   overflow-wrap: break-word;
 }
 
+.basicPreferenceRow dd {
+  min-width: 0;
+}
+
+.basicPreferenceValue {
+  display: block;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.basicPreferenceValueCollapsed {
+  max-height: calc(5 * 1.375rem);
+  overflow: hidden;
+}
+
+.basicPreferenceValueExpanded {
+  max-height: none;
+  overflow: visible;
+}
+
 .richText {
   margin: 0;
   color: #5a6580;
-  font-size: 0.9rem;
+  font-size: 1rem;
   line-height: 1.65;
   white-space: pre-wrap;
   word-break: keep-all;
@@ -220,7 +243,7 @@
 }
 
 .collapsibleText {
-  max-height: calc(var(--collapsed-lines, 6) * 1.485rem);
+  max-height: calc(var(--collapsed-lines, 6) * 1.65rem);
   overflow: hidden;
 }
 
@@ -238,7 +261,23 @@
   border-radius: 999px;
   background: #f5f7fa;
   color: #5a6580;
-  font-size: 0.875rem;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.basicMoreButton {
+  display: inline-flex;
+  width: calc(100% - 6.9375rem);
+  min-height: 2.25rem;
+  margin: 0.5rem 0 0.5rem 6.9375rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: #f5f7fa;
+  color: #5a6580;
+  font-size: 1rem;
   line-height: 1;
   font-weight: 800;
 }
@@ -260,7 +299,7 @@
   background: #f5f7fa;
   color: #1a2233;
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .fileBadge {
@@ -272,7 +311,7 @@
   border-radius: 999px;
   background: #2f7ff0;
   color: #fff;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   font-weight: 700;
 }
 
@@ -355,7 +394,7 @@
   margin: 4rem 1rem;
   color: #7b8497;
   text-align: center;
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .error {
@@ -364,7 +403,7 @@
   background: #f5f7fa;
 }
 
-.error strong { color: #1a2233; font-size: 1rem; }
+.error strong { color: #1a2233; font-size: 1.125rem; }
 .error a {
   display: inline-grid;
   height: 2.5rem;
