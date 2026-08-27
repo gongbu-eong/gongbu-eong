@@ -14,7 +14,7 @@
   background: #ffffff;
   overflow: visible;
 
-  padding-top: 56px;
+  padding-top: 64px;
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
 
   word-break: keep-all;
@@ -31,7 +31,7 @@
   width: min(600px, 100%);
   box-sizing: border-box;
 
-  height: 56px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -41,8 +41,8 @@
 
 .logoLink {
   display: flex;
-  width: 88px;
-  height: 39px;
+  width: 59px;
+  height: 26px;
   align-items: center;
   justify-content: center;
   text-decoration: none;
@@ -50,8 +50,8 @@
 
 .logoLink img {
   display: block;
-  width: 88px;
-  height: 39px;
+  width: 59px;
+  height: 26px;
   object-fit: contain;
 }
 
@@ -125,6 +125,7 @@
   font-weight: 400;
 }
 
+.searchBar img,
 .searchBar svg {
   flex: 0 0 auto;
   color: #2f7ff0;
@@ -343,6 +344,13 @@
   font-weight: 700;
 }
 
+.sectionHeaderImage {
+  display: block;
+  width: 83px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .sectionHeader h2 span {
   font-size: 1rem;
   line-height: 1;
@@ -408,6 +416,7 @@
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
+  justify-content: center;
   align-self: flex-start;
   height: 22px;
   max-width: 100%;
@@ -417,6 +426,7 @@
   color: #1fb573;
   font-size: 0.6875rem;
   font-weight: 700;
+  line-height: 1;
 }
 
 .hotBadgeUrgent {
@@ -504,6 +514,7 @@
 .toolCopy em {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   height: 22px;
   margin-bottom: 12px;
   padding: 0 9px;
@@ -513,6 +524,7 @@
   font-size: 0.6875rem;
   font-style: normal;
   font-weight: 700;
+  line-height: 1;
 }
 
 .toolCard strong {
@@ -529,21 +541,35 @@
 
 .toolThumb {
   position: relative;
-  flex: 0 0 94px;
-  width: 94px;
-  height: 80px;
+  flex: 0 0 86px;
+  width: 86px;
+  height: 79px;
   border-radius: 0;
   overflow: hidden;
+}
+
+.toolCard:nth-child(2) .toolThumb {
+  flex-basis: 94px;
+  width: 94px;
+  height: 78px;
+}
+
+.toolCard:nth-child(3) .toolThumb {
+  flex-basis: 86px;
+  width: 86px;
+  height: 78px;
+}
+
+.toolCard:nth-child(4) .toolThumb {
+  flex-basis: 86px;
+  width: 86px;
+  height: 80px;
 }
 
 .toolThumb img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-.toolCard:nth-child(2) .toolThumb {
-  width: 94px;
 }
 
 .toolCard:nth-child(2) .toolCopy em {
@@ -554,8 +580,8 @@
   background: #ff5c5c;
 }
 
-.toolCard:nth-child(4) .toolThumb {
-  height: 80px;
+.toolCard:nth-child(4) .toolCopy em {
+  background: #ff5c5c;
 }
 
 .contentBand {
@@ -940,7 +966,7 @@
   justify-content: center;
   width: 64px;
   height: 64px;
-  margin-right: 13px;
+  margin-right: 8px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.3);
   overflow: hidden;
@@ -954,16 +980,6 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-.drawerGuestAvatarMark {
-  display: flex;
-  width: 64px;
-  height: 64px;
-  align-items: center;
-  justify-content: center;
-  font-size: 42px;
-  line-height: 1;
 }
 
 .drawerHeader strong {
@@ -1029,15 +1045,15 @@
 .drawerSection {
   display: flex;
   align-items: flex-start;
-  padding: 0 16px 0 10px;
+  padding: 0 16px 0 12px;
 }
 
 .drawerIcon {
   display: flex;
-  flex: 0 0 36px;
+  flex: 0 0 35px;
   height: 28px;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   color: #2f7ff0;
   font-size: 1.375rem;
   line-height: 1;
@@ -1120,12 +1136,12 @@
   padding: 0 0 20px 0;
 }
 
-.drawerSection:not(:last-child) .drawerSectionBody::before {
+.drawerSectionBody[data-has-items="true"]::before {
   position: absolute;
   top: 32px;
-  bottom: 0;
-  left: -23px;
+  left: -24px;
   width: 1px;
+  height: var(--drawer-line-height);
   background: #e4e8ef;
   content: "";
 }
@@ -1169,13 +1185,14 @@
 .drawerLabel {
   display: inline-flex;
   align-items: center;
-  height: 12px;
-  padding: 0 5px;
+  justify-content: center;
+  height: 22px;
+  padding: 0 9px;
   border-radius: 999px;
-  background: #ffe1e1;
-  color: #ef565d;
-  font-size: 0.5rem;
-  font-weight: 900;
+  background: #fff5db;
+  color: #f5b91e;
+  font-size: 0.6875rem;
+  font-weight: 700;
   line-height: 1;
 }
 

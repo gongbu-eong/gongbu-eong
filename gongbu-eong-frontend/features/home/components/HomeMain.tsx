@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { MouseEvent, PointerEvent } from "react";
+import type { CSSProperties, MouseEvent, PointerEvent } from "react";
 import { AppFooter, AppTicketStatus } from "@/features/layout/components/AppChrome";
 import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
 import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAlert";
@@ -49,8 +49,18 @@ const aiTools = [
     memberTag: "준비중",
     title: "Ai 면접 코칭",
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
-    image: "/home/home-tool-resume.png",
+    image: "/home/home-tool-interview.png",
     imageAlt: "Ai 면접 코칭",
+    comingSoon: true,
+  },
+  {
+    href: "#",
+    tag: "준비중",
+    memberTag: "준비중",
+    title: "탈락사례 분석",
+    description: "왜 떨어졌을까? 곧 데이터로 알려드려요.",
+    image: "/home/home-tool-failure.png",
+    imageAlt: "탈락사례 분석",
     comingSoon: true,
   }
 ];
@@ -346,7 +356,7 @@ const ignoreClickAfterDrag = (
       <section className={styles.mobileFrame} aria-label="공부엉이 메인">
         <header className={styles.header}>
           <Link href="/" className={styles.logoLink} aria-label="공부엉이 홈">
-            <Image src="/tickets/main-logo.png" alt="공부엉이" width={88} height={39} priority unoptimized/>
+            <Image src="/home/home-header-logo.png" alt="공부엉이" width={59} height={26} priority unoptimized />
           </Link>
           <div className={styles.headerActions}>
             {user ? (
@@ -373,14 +383,14 @@ const ignoreClickAfterDrag = (
               className={styles.menuButton}
               onClick={() => setIsMenuOpen(true)}
             >
-              <MenuIcon />
+              <Image src="/home/home-menu.svg" alt="" width={22} height={15} unoptimized />
             </button>
           </div>
         </header>
 
         <Link href="/jobs" className={styles.searchBar} aria-label="공고 검색">
           <span>{user ? "공고명, 기업명을 검색하세요." : "공공·기관 검색"}</span>
-          <SearchIcon />
+          <Image src="/home/home-search.svg" alt="" width={25} height={25} unoptimized />
         </Link>
 
         {hasDiagnosisResult ? (
@@ -434,7 +444,12 @@ const ignoreClickAfterDrag = (
           </Link>
         )}
 
-        <SectionHeader title="🔥 Hot 공고" />
+        <SectionHeader
+          title="Hot 공고"
+          headingImageSrc="/home/home-hot-heading.png"
+          headingImageWidth={83}
+          headingImageHeight={18}
+        />
         <div
           ref={hotListRef}
           className={styles.hotList}
@@ -694,7 +709,7 @@ export function HomeMenuDrawer({
             {user ? (
               <Image src={profileAvatarSrc} alt="" width={64} height={64} unoptimized />
             ) : (
-              <span className={styles.drawerGuestAvatarMark}>☺️</span>
+              <Image src="/home/menu/drawer-guest-avatar.png" alt="" width={64} height={64} unoptimized />
             )}
           </div>
           <div>
@@ -866,7 +881,15 @@ function DrawerSection({
       <div className={styles.drawerIcon} data-icon={icon} aria-hidden="true">
         {getDrawerIcon(icon)}
       </div>
-      <div className={styles.drawerSectionBody}>
+      <div
+        className={styles.drawerSectionBody}
+        style={
+          items.length > 0
+            ? ({ "--drawer-line-height": `${Math.max(1, items.length - 1) * 33 + 21}px` } as CSSProperties)
+            : undefined
+        }
+        data-has-items={items.length > 0 ? "true" : undefined}
+      >
         <h3>
           {titleHref ? <Link href={titleHref} onClick={onNavigate}>{title}</Link> : title}
           {label ? <span className={styles.drawerLabel}>{label}</span> : null}
@@ -989,30 +1012,6 @@ export function BellIcon() {
   );
 }
 
-export function MenuIcon() {
-  return (
-    <svg width="22" height="15" viewBox="355 17 22 15" aria-hidden="true">
-      <path d="M377 17H355V18.1H377V17Z" fill="currentColor" />
-      <path d="M377 23.9217H355V25.0217H377V23.9217Z" fill="currentColor" />
-      <path d="M377 30.8437H355V31.9437H377V30.8437Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-      <path
-        d="M12.8 20.1a7.3 7.3 0 1 0 0-14.6 7.3 7.3 0 0 0 0 14.6ZM18.4 18.4l4.4 4.4"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function BusinessInfo() {
   return (
     <section className={styles.businessInfo} aria-label="사업자 정보">
@@ -1046,12 +1045,39 @@ function BusinessInfo() {
   );
 }
 
-function SectionHeader({ icon, title, href }: { icon?: string; title: string; href?: string }) {
+function SectionHeader({
+  icon,
+  title,
+  href,
+  headingImageSrc,
+  headingImageWidth,
+  headingImageHeight,
+}: {
+  icon?: string;
+  title: string;
+  href?: string;
+  headingImageSrc?: string;
+  headingImageWidth?: number;
+  headingImageHeight?: number;
+}) {
   return (
     <div className={styles.sectionHeader}>
       <h2>
-        {icon ? <span aria-hidden="true">{icon}</span> : null}
-        {title}
+        {headingImageSrc ? (
+          <Image
+            src={headingImageSrc}
+            alt={title}
+            width={headingImageWidth ?? 83}
+            height={headingImageHeight ?? 18}
+            className={styles.sectionHeaderImage}
+            unoptimized
+          />
+        ) : (
+          <>
+            {icon ? <span aria-hidden="true">{icon}</span> : null}
+            {title}
+          </>
+        )}
       </h2>
       {href ? <Link href={href}>전체 보기 &gt;</Link> : null}
     </div>
