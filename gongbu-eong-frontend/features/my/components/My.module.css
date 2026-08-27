@@ -2402,3 +2402,227 @@
   line-height: 1;
   font-weight: 800;
 }
+
+.withdrawalLink {
+  display: flex;
+  width: max-content;
+  margin: 1.5rem auto 0;
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 0.125rem;
+}
+
+.withdrawalPage {
+  min-height: 100dvh;
+  background: #fff;
+  font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
+}
+
+.withdrawalPage > header,
+.withdrawalPage > footer {
+  max-width: var(--gb-container-pc);
+}
+
+.withdrawalFrame {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--gb-container-pc);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 4rem 1rem calc(7rem + env(safe-area-inset-bottom));
+  background: #fff;
+}
+
+.withdrawalIntro {
+  margin: 0.75rem 0 0;
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  font-weight: 400;
+}
+
+.withdrawalIntro strong {
+  color: #2f7ff0;
+  font-weight: 400;
+}
+
+.withdrawalNotice {
+  margin-top: 0.75rem;
+  padding: 1rem 0.875rem 1rem 1rem;
+  border-radius: 0.625rem;
+  background: #f5f7fa;
+}
+
+.withdrawalNotice ul {
+  display: grid;
+  gap: 0.625rem;
+  margin: 0;
+  padding-left: 1.125rem;
+  color: #9aa4b8;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.withdrawalConsent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  border-bottom: 1px solid #d9d9d9;
+  color: #5a6580;
+  font-size: 0.875rem;
+  line-height: 1.3;
+}
+
+.withdrawalConsent input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: #2f7ff0;
+}
+
+.withdrawalReasons {
+  margin-top: 1rem;
+}
+
+.withdrawalReasons h2 {
+  margin: 0 0 1rem;
+  color: #1a2233;
+  font-size: 0.9375rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.withdrawalReasonList {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.withdrawalReasonItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #5a6580;
+  font-size: 0.875rem;
+  line-height: 1.2;
+}
+
+.withdrawalReasonItem input {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+  accent-color: #2f7ff0;
+}
+
+.withdrawalReasonDetail {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.5625rem;
+  margin-top: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid #e4e8ef;
+  border-radius: 0.3125rem;
+  background: #fff;
+  color: #1a2233;
+  font: inherit;
+  resize: vertical;
+}
+
+.withdrawalError {
+  margin: 1rem 0 0;
+  color: #e8544d;
+  font-size: 0.875rem;
+  line-height: 1.2;
+}
+
+.withdrawalActions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.withdrawalCancelButton,
+.withdrawalSubmitButton {
+  display: inline-flex;
+  width: 100%;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.75rem;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.withdrawalCancelButton {
+  background: #5a6580;
+  color: #fff;
+}
+
+.withdrawalSubmitButton {
+  background: #2f7ff0;
+  color: #fff;
+  cursor: pointer;
+}
+
+.withdrawalSubmitButton:disabled {
+  background: #f5f7fa;
+  color: #9aa4b8;
+  cursor: not-allowed;
+}
+
+.withdrawalModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 50%);
+}
+
+.withdrawalModal {
+  box-sizing: border-box;
+  width: min(100%, 22.5625rem);
+  min-height: 11.625rem;
+  padding: 1.625rem 1rem 1.5rem;
+  border-radius: 0.625rem;
+  background: #fff;
+  color: #1a2233;
+  text-align: center;
+}
+
+.withdrawalModal h2 {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.withdrawalModal p {
+  margin: 1.125rem 0 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.withdrawalModal button {
+  display: inline-flex;
+  width: 10rem;
+  height: 2.875rem;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.625rem;
+  background: #2f7ff0;
+  color: #fff;
+  font-size: 0.9375rem;
+  line-height: 1;
+  font-weight: 800;
+  cursor: pointer;
+}

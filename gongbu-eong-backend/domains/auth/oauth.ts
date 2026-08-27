@@ -133,6 +133,8 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
 
     const authResult = await upsertOAuthUser({
       profile,
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
       accessTokenHash: hashValue(token.accessToken),
       refreshTokenHash: token.refreshToken ? hashValue(token.refreshToken) : undefined,
       tokenExpiresAt: token.expiresIn

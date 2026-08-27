@@ -7,6 +7,8 @@ import type {
   ResumeUploadResponseDto,
   NotificationSettingsPayloadDto,
   NotificationSettingsResponseDto,
+  UserWithdrawalPayloadDto,
+  UserWithdrawalResponseDto,
   UserProfilePayloadDto,
   UserProfileResponseDto,
 } from "./my.dto";
@@ -68,6 +70,13 @@ export function updateMyNotificationSettings(
       body: JSON.stringify(payload),
     },
   );
+}
+
+export function withdrawCurrentUser(payload: UserWithdrawalPayloadDto) {
+  return apiClient<UserWithdrawalResponseDto>("/api/users/me/withdrawal", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getResumeParseJob(jobId: string) {

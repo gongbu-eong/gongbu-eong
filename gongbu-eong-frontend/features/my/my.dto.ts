@@ -184,3 +184,27 @@ export type NotificationSettingsResponseDto = {
   ok: boolean;
   settings: NotificationSettingsDto;
 };
+
+export type WithdrawalReasonCode =
+  | "content_lack"
+  | "low_usage"
+  | "privacy_concern"
+  | "inconvenient"
+  | "other";
+
+export type UserWithdrawalPayloadDto = {
+  noticeAgreed: boolean;
+  reasonCode: WithdrawalReasonCode;
+  reasonDetail?: string | null;
+};
+
+export type UserWithdrawalResponseDto = {
+  ok: boolean;
+  withdrawalRequestId?: string;
+  privateDataPurgeAfter?: string;
+  externalUnlinkResults?: Array<{
+    provider: "kakao" | "naver";
+    status: "succeeded" | "failed" | "skipped";
+    message?: string;
+  }>;
+};

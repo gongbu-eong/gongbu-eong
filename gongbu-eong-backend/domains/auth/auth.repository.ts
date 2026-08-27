@@ -4,6 +4,8 @@ import {
   grantWelcomeSignupCredits,
 } from "@/domains/credits/credits.repository";
 import { generateUniqueCommunityNickname } from "./community-nickname";
+import { encryptOAuthToken } from "./oauth-token-crypto";
+import { hasRecentWithdrawalIdentity } from "./withdrawal.repository";
 
 type OAuthProvider = "kakao" | "naver";
 
@@ -19,6 +21,8 @@ export async function upsertOAuthUser(args: {
   profile: OAuthProfile;
   accessTokenHash?: string;
   refreshTokenHash?: string;
+  accessToken?: string;
+  refreshToken?: string;
   tokenExpiresAt?: Date;
   sessionTokenHash: string;
   entrySource: string;
@@ -35,9 +39,12 @@ export async function upsertOAuthUser(args: {
     const existingAccount = await client.query<{ user_id: string }>(
       `
         SELECT user_id
-        FROM public.user_oauth_accounts
-        WHERE provider = $1::public.oauth_provider
-          AND provider_user_id = $2
+        FROM public.user_oauth_accounts accounts
+        JOIN public.users users
+          ON users.id = accounts.user_id
+         AND users.status = 'active'
+        WHERE accounts.provider = $1::public.oauth_provider
+          AND accounts.provider_user_id = $2
         LIMIT 1
       `,
       [args.profile.provider, args.profile.providerUserId],
@@ -47,6 +54,12 @@ export async function upsertOAuthUser(args: {
     let isNewUser = false;
     let welcomeCreditsGranted = false;
     let linkedDiagnosisResultId: string | null = null;
+    const welcomeCreditsBlocked = await hasRecentWithdrawalIdentity(
+      args.profile.provider,
+      args.profile.providerUserId,
+    );
+    const accessTokenEncrypted = encryptOAuthToken(args.accessToken);
+    const refreshTokenEncrypted = encryptOAuthToken(args.refreshToken);
 
     if (!userId) {
       const communityNickname = await generateUniqueCommunityNickname(client);
@@ -90,13 +103,20 @@ export async function upsertOAuthUser(args: {
             provider_nickname,
             access_token_hash,
             refresh_token_hash,
+            access_token_encrypted,
+            refresh_token_encrypted,
+            token_encryption_key_version,
             token_expires_at,
             last_used_at
           )
-          VALUES ($1, $2::public.oauth_provider, $3, $4, $5, $6, $7, $8, NOW())
+          VALUES ($1, $2::public.oauth_provider, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
           ON CONFLICT (provider, provider_user_id) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
             access_token_hash = EXCLUDED.access_token_hash,
             refresh_token_hash = EXCLUDED.refresh_token_hash,
+            access_token_encrypted = EXCLUDED.access_token_encrypted,
+            refresh_token_encrypted = EXCLUDED.refresh_token_encrypted,
+            token_encryption_key_version = EXCLUDED.token_encryption_key_version,
             token_expires_at = EXCLUDED.token_expires_at,
             last_used_at = NOW(),
             updated_at = NOW()
@@ -109,11 +129,14 @@ export async function upsertOAuthUser(args: {
           args.profile.nickname || null,
           args.accessTokenHash || null,
           args.refreshTokenHash || null,
+          accessTokenEncrypted,
+          refreshTokenEncrypted,
+          accessTokenEncrypted || refreshTokenEncrypted ? "v1" : null,
           args.tokenExpiresAt || null,
         ],
       );
 
-      if (isNewUser) {
+      if (isNewUser && !welcomeCreditsBlocked) {
         welcomeCreditsGranted = await grantWelcomeSignupCredits(client, userId);
       }
     } else {
@@ -146,7 +169,10 @@ export async function upsertOAuthUser(args: {
             provider_nickname = $4,
             access_token_hash = $5,
             refresh_token_hash = $6,
-            token_expires_at = $7,
+            access_token_encrypted = $7,
+            refresh_token_encrypted = $8,
+            token_encryption_key_version = $9,
+            token_expires_at = $10,
             last_used_at = NOW(),
             updated_at = NOW()
           WHERE provider = $1::public.oauth_provider
@@ -159,6 +185,9 @@ export async function upsertOAuthUser(args: {
           args.profile.nickname || null,
           args.accessTokenHash || null,
           args.refreshTokenHash || null,
+          accessTokenEncrypted,
+          refreshTokenEncrypted,
+          accessTokenEncrypted || refreshTokenEncrypted ? "v1" : null,
           args.tokenExpiresAt || null,
         ],
       );

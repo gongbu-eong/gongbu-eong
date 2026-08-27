@@ -198,6 +198,9 @@ export function MyPage() {
         <button type="button" className={styles.logoutButton} onClick={handleLogout} disabled={isLoggingOut}>
           {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
         </button>
+        <Link href="/my/withdrawal" className={styles.withdrawalLink}>
+          회원탈퇴
+        </Link>
       </main>
       <AppFooter active="my" />
     </div>
