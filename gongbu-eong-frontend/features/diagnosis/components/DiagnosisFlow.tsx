@@ -413,42 +413,42 @@ function DiagnosisIntro({
   const introTypes = [
     {
       label: "안정 추구형",
-      icon: "/diagnosis/intro/asset-1-182x198.png",
+      icon: "/diagnosis/intro/type-stability.png",
       className: styles.introTypeStability,
     },
     {
       label: "도전 개척형",
-      icon: "/diagnosis/intro/asset-2-142x239.png",
+      icon: "/diagnosis/intro/type-challenge.png",
       className: styles.introTypeChallenge,
     },
     {
       label: "협업 조력형",
-      icon: "/diagnosis/intro/asset-3-222x143.png",
+      icon: "/diagnosis/intro/type-teamwork.png",
       className: styles.introTypeTeamwork,
     },
     {
       label: "독립 몰입형",
-      icon: "/diagnosis/intro/asset-4-202x198.png",
+      icon: "/diagnosis/intro/type-independent.png",
       className: styles.introTypeIndependent,
     },
     {
       label: "실행 추진형",
-      icon: "/diagnosis/intro/asset-5-133x205.png",
+      icon: "/diagnosis/intro/type-execution.png",
       className: styles.introTypeExecution,
     },
     {
       label: "전략 기획형",
-      icon: "/diagnosis/intro/asset-6-207x205.png",
+      icon: "/diagnosis/intro/type-planning.png",
       className: styles.introTypePlanning,
     },
     {
       label: "정밀 관리형",
-      icon: "/diagnosis/intro/asset-7-193x195.png",
+      icon: "/diagnosis/intro/type-principle.png",
       className: styles.introTypePrinciple,
     },
     {
       label: "유연 대응형",
-      icon: "/diagnosis/intro/asset-8-198x189.png",
+      icon: "/diagnosis/intro/type-flexible.png",
       className: styles.introTypeFlexible,
     },
   ];
@@ -509,7 +509,9 @@ function DiagnosisIntro({
   return (
     <div className={isEmbedded ? styles.embeddedIntro : styles.page}>
       <section className={styles.landing} aria-label="강점·성향 진단 도입부">
-        <p className={styles.introBrand}>공부엉이</p>
+        <Link href="/" className={styles.introBrand} aria-label="공부엉이 메인으로 이동">
+          공부엉이
+        </Link>
         <p className={styles.introPill}>3분이면 알 수 있는 나의 취업 강점</p>
         <h1 className={styles.introTitle} aria-label="나의 강점·성향 유형은?">
           <span className={styles.introTitleShadow} aria-hidden="true">
@@ -540,35 +542,35 @@ function DiagnosisIntro({
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/diagnosis/intro/asset-13-173x190.png"
+          src="/diagnosis/intro/decor-bulb.png"
           alt=""
           className={`${styles.introDecor} ${styles.introDecorBulb}`}
           draggable={false}
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/diagnosis/intro/asset-10-192x189.png"
+          src="/diagnosis/intro/decor-star-large.png"
           alt=""
           className={`${styles.introDecor} ${styles.introDecorStarLarge}`}
           draggable={false}
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/diagnosis/intro/asset-12-87x88.png"
+          src="/diagnosis/intro/decor-star-small.png"
           alt=""
           className={`${styles.introDecor} ${styles.introDecorStarSmall}`}
           draggable={false}
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/diagnosis/intro/asset-11-191x195.png"
+          src="/diagnosis/intro/decor-sparkle.png"
           alt=""
           className={`${styles.introDecor} ${styles.introDecorSparkle}`}
           draggable={false}
         />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/diagnosis/intro/main-owl.webp"
+          src="/diagnosis/intro/intro-owl-desk.png"
           alt=""
           className={styles.introOwl}
           draggable={false}
@@ -600,32 +602,8 @@ function DiagnosisIntro({
           aria-label="테스트 공유하기"
         >
           <span aria-hidden="true" className={styles.shareIcon}>
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M13.5 6C14.7426 6 15.75 4.99264 15.75 3.75C15.75 2.50736 14.7426 1.5 13.5 1.5C12.2574 1.5 11.25 2.50736 11.25 3.75C11.25 4.99264 12.2574 6 13.5 6Z"
-                fill="currentColor"
-              />
-              <path
-                d="M4.5 11.25C5.74264 11.25 6.75 10.2426 6.75 9C6.75 7.75736 5.74264 6.75 4.5 6.75C3.25736 6.75 2.25 7.75736 2.25 9C2.25 10.2426 3.25736 11.25 4.5 11.25Z"
-                fill="currentColor"
-              />
-              <path
-                d="M13.5 16.5C14.7426 16.5 15.75 15.4926 15.75 14.25C15.75 13.0074 14.7426 12 13.5 12C12.2574 12 11.25 13.0074 11.25 14.25C11.25 15.4926 12.2574 16.5 13.5 16.5Z"
-                fill="currentColor"
-              />
-              <path
-                d="M6.4425 10.1325L11.565 13.1175M11.5575 4.8825L6.4425 7.8675"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/diagnosis/intro/share.svg" alt="" draggable={false} />
           </span>
           테스트 공유하기
         </button>

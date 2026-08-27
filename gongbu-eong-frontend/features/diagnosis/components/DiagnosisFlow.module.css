@@ -68,6 +68,7 @@
 
 .authenticatedIntroContent {
   width: 100%;
+  padding-top: 3rem;
   background:
     linear-gradient(180deg, #c7f2ff 0%, #e0f6ff 44%, #f5d9ef 100%);
 }
@@ -112,6 +113,7 @@
   width: 120px;
   margin: 0;
   color: var(--gb-color-text);
+  text-decoration: none;
   font-size: 0.9375rem;
   line-height: 1.125rem;
   font-weight: 900;
@@ -1484,27 +1486,28 @@
     top: 6.4375rem;
     width: 30.75rem;
     max-width: none;
-    height: 3.875rem;
+    height: 7.5rem;
   }
 
   .introTitleFront,
   .introTitleShadow {
     width: 30.25rem;
-    height: 3.625rem;
+    height: 7.25rem;
   }
 
   .introTitleFront > span,
   .introTitleShadow > span {
-    display: inline;
+    display: block;
+    white-space: nowrap;
   }
 
   .introTitleFront > span:first-child::after,
   .introTitleShadow > span:first-child::after {
-    content: " ";
+    content: none;
   }
 
   .introTypeGrid {
-    top: calc(11.125rem + var(--desktop-space-sm));
+    top: calc(15.0625rem + var(--desktop-space-sm));
     width: 32.5625rem;
     max-width: none;
     grid-template-columns: repeat(4, 7.75rem);
@@ -1528,7 +1531,7 @@
   }
 
   .introOwl {
-    top: calc(28.5625rem + var(--desktop-space-md));
+    top: calc(32.5rem + var(--desktop-space-md));
     bottom: auto;
     width: 21.9375rem;
     max-width: none;
@@ -1537,7 +1540,7 @@
 
   .introDecorBulb {
     left: calc(50% - 10.625rem);
-    top: calc(29.9375rem + var(--desktop-space-md));
+    top: calc(33.875rem + var(--desktop-space-md));
     bottom: auto;
     width: 3.875rem;
     height: 4.25rem;
@@ -1545,7 +1548,7 @@
 
   .introDecorStarLarge {
     right: calc(50% - 8.625rem);
-    top: calc(33.0625rem + var(--desktop-space-md));
+    top: calc(37rem + var(--desktop-space-md));
     bottom: auto;
     width: 2.75rem;
     height: 2.75rem;
@@ -1553,7 +1556,7 @@
 
   .introDecorStarSmall {
     left: calc(50% - 10rem);
-    top: calc(36.8125rem + var(--desktop-space-md));
+    top: calc(40.75rem + var(--desktop-space-md));
     bottom: auto;
     width: 1.75rem;
     height: 1.75rem;
@@ -1561,20 +1564,20 @@
 
   .introDecorSparkle {
     right: calc(50% - 10.125rem);
-    top: calc(34.8125rem + var(--desktop-space-md));
+    top: calc(38.75rem + var(--desktop-space-md));
     bottom: auto;
     width: 2.125rem;
     height: 2.125rem;
   }
 
   .startButton {
-    top: calc(44.75rem + var(--desktop-space-md));
+    top: calc(48.6875rem + var(--desktop-space-md));
     bottom: auto;
     width: 28.75rem;
   }
 
   .shareButton {
-    top: calc(50.25rem + var(--desktop-space-lg));
+    top: calc(54.1875rem + var(--desktop-space-lg));
     bottom: auto;
   }
 
