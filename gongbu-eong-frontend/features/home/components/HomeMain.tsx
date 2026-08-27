@@ -52,16 +52,6 @@ const aiTools = [
     image: "/home/home-tool-interview.png",
     imageAlt: "Ai 면접 코칭",
     comingSoon: true,
-  },
-  {
-    href: "#",
-    tag: "준비중",
-    memberTag: "준비중",
-    title: "탈락사례 분석",
-    description: "왜 떨어졌을까? 곧 데이터로 알려드려요.",
-    image: "/home/home-tool-failure.png",
-    imageAlt: "탈락사례 분석",
-    comingSoon: true,
   }
 ];
 

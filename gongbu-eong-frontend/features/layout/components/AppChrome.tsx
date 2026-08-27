@@ -74,8 +74,6 @@ export function AppHeader({
     ticketCount ?? user?.creditBalance ?? fetchedUser?.creditBalance ?? 0;
   const effectiveCommunityActivityRewardProgress =
     user?.communityActivityRewardProgress ?? fetchedUser?.communityActivityRewardProgress;
-  const effectiveUnreadNotificationCount =
-    user?.unreadNotificationCount ?? fetchedUser?.unreadNotificationCount ?? 0;
 
   useEffect(() => {
     let active = true;
@@ -174,10 +172,19 @@ export function AppHeader({
   return (
     <header className={styles.header}>
       <div className={styles.headerGroup}>
-        <button type="button" onClick={() => router.back()} aria-label="뒤로 가기" className={styles.headerButton}>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="뒤로 가기"
+          className={`${styles.headerButton} ${styles.headerButtonBack}`}
+        >
           <FigmaHeaderIcon kind="back" />
         </button>
-        <Link href="/" aria-label="홈으로 이동" className={styles.headerButton}>
+        <Link
+          href="/"
+          aria-label="홈으로 이동"
+          className={`${styles.headerButton} ${styles.headerButtonHome}`}
+        >
           <FigmaHeaderIcon kind="home" />
         </Link>
       </div>
@@ -189,23 +196,11 @@ export function AppHeader({
             communityActivityRewardProgress={effectiveCommunityActivityRewardProgress}
           />
         ) : null}
-        {/*
-        {isAuthenticated ? (
-          <Link href="/notifications" aria-label="알림" className={`${styles.headerButton} ${styles.notificationButton}`}>
-            <FigmaHeaderIcon kind="bell" />
-            {effectiveUnreadNotificationCount ? (
-              <span className={styles.notificationBadge}>
-                {formatBadgeCount(effectiveUnreadNotificationCount)}
-              </span>
-            ) : null}
-          </Link>
-        ) : null}
-        */}
         <button
           type="button"
           aria-label="메인 메뉴"
           aria-expanded={isMenuOpen}
-          className={styles.headerButton}
+          className={`${styles.headerButton} ${styles.headerButtonMenu}`}
           onClick={() => setIsMenuOpen(true)}
         >
           <FigmaHeaderIcon kind="menu" />
@@ -229,10 +224,6 @@ export function AppHeader({
       ) : null}
     </header>
   );
-}
-
-function formatBadgeCount(count: number) {
-  return count > 99 ? "99+" : String(count);
 }
 
 export function AppTicketStatus({
@@ -294,7 +285,7 @@ export function AppTicketStatus({
       <span className={styles.headerTicketProgress} aria-hidden="true">
         <span style={{ width: `${progressPercent}%` }} />
       </span>
-      <Image src="/my/header-score.png" alt="" width={23} height={12} className={styles.headerTicketIcon} />
+      <Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.headerTicketIcon} />
       <span className={styles.headerTicketCount}>{displayTicketCount}</span>
       {hasTicketAlert ? (
         <button
@@ -307,7 +298,7 @@ export function AppTicketStatus({
           onMouseEnter={() => setIsTooltipOpen(true)}
           onMouseLeave={() => setIsTooltipOpen(false)}
         >
-          <Image src="/my/header-alert-bg.svg" alt="" width={16} height={16} />
+          <Image src="/layout/header-alert-bg.svg" alt="" width={16} height={16} />
           <b>!</b>
           {isTooltipOpen ? (
             <span className={styles.headerTicketTooltip} role="tooltip">
@@ -410,12 +401,29 @@ export function AppFooter({
   );
 }
 
-type FigmaHeaderIconKind = "back" | "home" | "bell" | "menu";
+type FigmaHeaderIconKind = "back" | "home" | "menu";
+
+const headerIconAssets: Record<
+  FigmaHeaderIconKind,
+  { src: string; width: number; height: number }
+> = {
+  back: { src: "/layout/header-home.svg", width: 13, height: 22 },
+  home: { src: "/layout/header-back.svg", width: 22, height: 22 },
+  menu: { src: "/layout/header-menu.svg", width: 22, height: 15 },
+};
 
 function FigmaHeaderIcon({ kind }: { kind: FigmaHeaderIconKind }) {
+  const icon = headerIconAssets[kind];
+
   return (
-    <span className={`${styles.figmaHeaderIcon} ${styles[`figmaHeaderIcon_${kind}`]}`} aria-hidden="true">
-      <Image src="/diagnosis/result-detail/header-group.svg" alt="" width={361} height={22} unoptimized />
-    </span>
+    <Image
+      src={icon.src}
+      alt=""
+      width={icon.width}
+      height={icon.height}
+      className={styles.figmaHeaderIcon}
+      aria-hidden="true"
+      unoptimized
+    />
   );
 }
