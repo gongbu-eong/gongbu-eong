@@ -273,105 +273,105 @@
 
 /* Figma 2105:41542 / 2105:41727 exact result pass */
 .figmaResultScreen{max-width:37.5rem;margin:0 auto;padding:64px 16px 108px;background:#fff;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif;text-align:left}
-.figmaResultScreen h1{margin:0 0 24px;color:#1a2233;font-size:20px;font-weight:800;line-height:normal}
-.figmaResultSubtitle{margin:0 0 16px;color:#5a6580;font-size:17px;font-weight:700;line-height:normal}
+.figmaResultScreen h1{margin:0 0 24px;color:#1a2233;font-size:22px;font-weight:800;line-height:normal}
+.figmaResultSubtitle{margin:0 0 16px;color:#5a6580;font-size:19px;font-weight:700;line-height:normal}
 .figmaResultScreen .resultScoreSummary{position:relative;min-height:332px;box-sizing:border-box;margin:0;padding:24px 0 0;border-top:0;border-bottom:1px solid #e8f1ff;background:#fff;text-align:center}
-.figmaResultScreen .resultScoreSummary span{height:26px;padding:0 12px;border-radius:5555px;background:#2f7ff0;color:#fff;font-size:12px;font-weight:700}
-.figmaResultScreen .resultScoreSummary strong{display:block;margin:12px 0 0;color:#1a2233;font-size:52px;font-weight:800;line-height:1}
-.figmaResultScreen .resultScoreSummary small{margin-left:4px;color:#5a6580;font-size:14px;font-weight:400}
-.figmaResultScreen .resultScoreSummary b{display:block;margin:28px auto 0;color:#5a6580;font-size:17px;font-weight:700;line-height:normal;white-space:pre-line;text-align:center}
-.figmaResultScreen .resultScoreSummary p{max-width:361px;margin:26px auto 0;color:#5a6580;font-size:14px;font-weight:400;line-height:19px;text-align:center;display:block;overflow:visible;white-space:pre-wrap}
+.figmaResultScreen .resultScoreSummary span{height:28px;padding:0 12px;border-radius:5555px;background:#2f7ff0;color:#fff;font-size:14px;font-weight:700}
+.figmaResultScreen .resultScoreSummary strong{display:block;margin:12px 0 0;color:#1a2233;font-size:54px;font-weight:800;line-height:1}
+.figmaResultScreen .resultScoreSummary small{margin-left:4px;color:#5a6580;font-size:16px;font-weight:400}
+.figmaResultScreen .resultScoreSummary b{display:block;margin:28px auto 0;color:#5a6580;font-size:19px;font-weight:700;line-height:normal;white-space:pre-line;text-align:center}
+.figmaResultScreen .resultScoreSummary p{max-width:361px;margin:26px auto 0;color:#5a6580;font-size:16px;font-weight:400;line-height:21px;text-align:center;display:block;overflow:visible;white-space:pre-wrap}
 .figmaResultScreen .insightGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:16px 0 24px;position:relative;z-index:1}
 .figmaResultScreen .insightGrid article{height:74px;min-height:0;padding:14px 8px;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;text-align:center}
-.figmaResultScreen .insightGrid strong{display:block;margin:0;color:#5a6580;font-size:14px;font-weight:700;line-height:normal}
-.figmaResultScreen .insightGrid span{display:block;margin-top:12px;color:#5a6580;font-size:14px;font-weight:400;line-height:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.figmaResultScreen .insightGrid strong{display:block;margin:0;color:#5a6580;font-size:16px;font-weight:700;line-height:normal}
+.figmaResultScreen .insightGrid span{display:block;margin-top:12px;color:#5a6580;font-size:16px;font-weight:400;line-height:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .figmaResultScreen .resultEvaluation{margin:24px 0 34px;padding:0;border:0;background:#fff}
-.figmaResultScreen .resultEvaluation h2{margin:0 0 16px;color:#1a2233;font-size:17px;font-weight:700;line-height:normal}
+.figmaResultScreen .resultEvaluation h2{margin:0 0 16px;color:#1a2233;font-size:19px;font-weight:700;line-height:normal}
 .figmaResultScreen .evaluationList{display:grid;gap:16px}
-.figmaResultScreen .evaluationItem strong{display:flex;align-items:center;justify-content:space-between;color:#1a2233;font-size:14px;font-weight:700;line-height:19px}
-.figmaResultScreen .evaluationItem strong b{color:#5a6580;font-size:14px;font-weight:700}
+.figmaResultScreen .evaluationItem strong{display:flex;align-items:center;justify-content:space-between;color:#1a2233;font-size:16px;font-weight:700;line-height:21px}
+.figmaResultScreen .evaluationItem strong b{color:#5a6580;font-size:16px;font-weight:700}
 .figmaResultScreen .evaluationTrack{height:12px;margin-top:8px;border-radius:55px;background:#e4e8ef;overflow:hidden}
 .figmaResultScreen .evaluationTrack span{height:12px;border-radius:55px;background:#2f7ff0}
 .figmaResultScreen .questionTabSection{margin:0 0 24px}
 .figmaResultScreen .questionTabSection h2{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .figmaResultScreen .questionTabs{display:flex;gap:8px;margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
 .figmaResultScreen .questionTabs::-webkit-scrollbar{display:none}
-.figmaResultScreen .questionTabs button{flex:0 0 auto;height:46px;max-width:none;padding:0 22px;border:0;border-radius:6666px;background:#f5f7fa;color:#5a6580;font-size:15px;font-weight:800;line-height:normal}
+.figmaResultScreen .questionTabs button{flex:0 0 auto;height:46px;max-width:none;padding:0 22px;border:0;border-radius:6666px;background:#f5f7fa;color:#5a6580;font-size:17px;font-weight:800;line-height:normal}
 .figmaResultScreen .questionTabs button::before{content:none}
 .figmaResultScreen .questionTabs span{margin-right:4px;color:inherit}
 .figmaResultScreen .questionTabs .questionTabActive{background:#1a2233;color:#fff}
 .figmaQuestionArea{margin:0 -16px;padding:24px 16px 16px;background:#f5f7fa}
-.figmaQuestionArea>h2{margin:0 0 14px;color:#1a2233;font-size:15px;font-weight:700;line-height:normal}
+.figmaQuestionArea>h2{margin:0 0 14px;color:#1a2233;font-size:17px;font-weight:700;line-height:normal}
 .figmaQuestionCard{position:relative;min-height:138px;box-sizing:border-box;padding:16px 16px 14px 72px;border:1px solid #e4e8ef;border-radius:10px 10px 0 0;background:#fff}
-.figmaQuestionMark{position:absolute;left:16px;top:16px;display:grid;place-items:center;width:32px;height:32px;border-radius:5px;background:#1a2233;color:#fff;font-size:14px;font-weight:700}
-.figmaQuestionCard strong{display:block;margin:40px 0 12px -56px;color:#1a2233;font-size:15px;font-weight:700;line-height:normal;word-break:keep-all}
+.figmaQuestionMark{position:absolute;left:16px;top:16px;display:grid;place-items:center;width:32px;height:32px;border-radius:5px;background:#1a2233;color:#fff;font-size:16px;font-weight:700}
+.figmaQuestionCard strong{display:block;margin:40px 0 12px -56px;color:#1a2233;font-size:17px;font-weight:700;line-height:normal;word-break:keep-all}
 .figmaQuestionCard div:last-child{display:flex;flex-wrap:wrap;gap:6px;margin-left:-56px}
-.figmaQuestionCard span{display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:5555px;background:#e8f1ff;color:#2f7ff0;font-size:11px;font-weight:700}
+.figmaQuestionCard span{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:5555px;background:#e8f1ff;color:#2f7ff0;font-size:13px;font-weight:700}
 .figmaDetailCard{border:1px solid #e4e8ef;border-top:0;border-radius:0 0 10px 10px;background:#fff}
 .figmaDetailCard>section{padding:16px;border-bottom:1px solid #e4e8ef}
 .figmaDetailCard>section:last-child{border-bottom:0}
-.figmaDetailCard h2{margin:0 0 16px;color:#1a2233;font-size:15px;font-weight:700;line-height:normal}
+.figmaDetailCard h2{margin:0 0 16px;color:#1a2233;font-size:17px;font-weight:700;line-height:normal}
 .figmaResultScreen .ncsEvaluationBlock article{margin:0;padding:0 0 16px;border-radius:0;border-bottom:1px solid #e4e8ef;background:#fff}
 .figmaResultScreen .ncsEvaluationBlock article+article{padding-top:16px}
 .figmaResultScreen .ncsEvaluationBlock article:last-child{border-bottom:0;padding-bottom:0}
 .figmaResultScreen .ncsEvaluationBlock article div{display:block}
-.figmaResultScreen .ncsEvaluationBlock strong{display:block;color:#5a6580;font-size:14px;font-weight:700}
-.figmaResultScreen .ncsEvaluationBlock span{display:inline-flex;align-items:center;height:26px;margin-top:10px;padding:0 12px;border-radius:5555px;background:#e4fbf1;color:#123325;font-size:12px;font-weight:700}
-.figmaResultScreen .ncsEvaluationBlock p{margin:6px 0 0;color:#5a6580;font-size:14px;font-weight:400;line-height:normal}
+.figmaResultScreen .ncsEvaluationBlock strong{display:block;color:#5a6580;font-size:16px;font-weight:700}
+.figmaResultScreen .ncsEvaluationBlock span{display:inline-flex;align-items:center;height:28px;margin-top:10px;padding:0 12px;border-radius:5555px;background:#e4fbf1;color:#123325;font-size:14px;font-weight:700}
+.figmaResultScreen .ncsEvaluationBlock p{margin:6px 0 0;color:#5a6580;font-size:16px;font-weight:400;line-height:normal}
 .figmaResultScreen .coachingPointBlock{display:grid;gap:8px}
 .figmaResultScreen .coachingPointBlock article{margin:0;padding:16px;border-radius:5px}
 .figmaResultScreen .coachingPointBlock article:nth-of-type(1){background:#e4fbf1}
 .figmaResultScreen .coachingPointBlock article:nth-of-type(2),.figmaResultScreen .coachingPointBlock article:nth-of-type(3){background:#fff5db}
-.figmaResultScreen .coachingPointBlock strong{display:block;color:#123325;font-size:15px;font-weight:700}
+.figmaResultScreen .coachingPointBlock strong{display:block;color:#123325;font-size:17px;font-weight:700}
 .figmaResultScreen .coachingPointBlock article:nth-of-type(2) strong,.figmaResultScreen .coachingPointBlock article:nth-of-type(3) strong{color:#a5760a}
-.figmaResultScreen .coachingPointBlock p{margin:10px 0 0;color:#2b7354;font-size:14px;font-weight:400;line-height:normal}
+.figmaResultScreen .coachingPointBlock p{margin:10px 0 0;color:#2b7354;font-size:16px;font-weight:400;line-height:normal}
 .figmaResultScreen .coachingPointBlock article:nth-of-type(2) p,.figmaResultScreen .coachingPointBlock article:nth-of-type(3) p{color:#60480b}
 .figmaResultScreen .structureBlock article{display:grid;grid-template-columns:64px minmax(0,1fr);gap:8px;margin:0;padding:0;border-radius:0;background:#fff}
 .figmaResultScreen .structureBlock article+article{margin-top:16px}
-.figmaResultScreen .structureBlock article>b{display:grid;place-items:center;width:64px;height:64px;border-radius:5px;background:#f5f7fa;color:#1a2233;font-size:26px;font-weight:800}
+.figmaResultScreen .structureBlock article>b{display:grid;place-items:center;width:64px;height:64px;border-radius:5px;background:#f5f7fa;color:#1a2233;font-size:28px;font-weight:800}
 .figmaResultScreen .structureBlock article>div{min-width:0;padding-top:6px}
-.figmaResultScreen .structureBlock strong{display:inline;color:#1a2233;font-size:14px;font-weight:700}
-.figmaResultScreen .structureBlock p{margin:14px 0 0;color:#5a6580;font-size:14px;font-weight:400;line-height:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.figmaResultScreen .structureGood,.figmaResultScreen .structureNeeds{display:inline-flex;height:26px;margin-left:8px;padding:0 12px;border-radius:5555px;font-size:12px;font-weight:700;vertical-align:middle}
+.figmaResultScreen .structureBlock strong{display:inline;color:#1a2233;font-size:16px;font-weight:700}
+.figmaResultScreen .structureBlock p{margin:14px 0 0;color:#5a6580;font-size:16px;font-weight:400;line-height:normal;white-space:normal;overflow:visible;text-overflow:clip}
+.figmaResultScreen .structureGood,.figmaResultScreen .structureNeeds{display:inline-flex;height:28px;margin-left:8px;padding:0 12px;border-radius:5555px;font-size:14px;font-weight:700;vertical-align:middle}
 .figmaResultScreen .structureGood{background:#e4fbf1;color:#1fb573}
 .figmaResultScreen .structureNeeds{background:#fff5db;color:#a5760a}
 .figmaResultScreen .revisionSection{padding-top:16px}
-.figmaResultScreen .revisionSection h2{height:33px;margin:0 0 8px;padding:7px 16px;border-radius:55px;background:#e8f1ff;color:#1c5fc4;font-size:14px;font-weight:700}
-.figmaResultScreen .revisionSection>p{margin:0;color:#1a2233;font-size:15px;font-weight:700;line-height:normal;word-break:keep-all}
-.figmaRevisionNote{margin-top:8px!important;color:#5a6580!important;font-size:13px!important;font-weight:400!important}
+.figmaResultScreen .revisionSection h2{height:35px;margin:0 0 8px;padding:7px 16px;border-radius:55px;background:#e8f1ff;color:#1c5fc4;font-size:16px;font-weight:700}
+.figmaResultScreen .revisionSection>p{margin:0;color:#1a2233;font-size:17px;font-weight:700;line-height:normal;word-break:keep-all}
+.figmaRevisionNote{margin-top:8px!important;color:#5a6580!important;font-size:15px!important;font-weight:400!important}
 .figmaResultScreen .revisionTabs{display:grid;grid-template-columns:1fr 1fr;width:100%;height:48px;margin:16px 0;padding:6px;border-radius:10px;background:#f5f7fa}
-.figmaResultScreen .revisionTabs button{height:36px;border:1px solid transparent;border-radius:8px;background:#fff;color:#5a6580;font-size:14px;font-weight:400}
+.figmaResultScreen .revisionTabs button{height:36px;border:1px solid transparent;border-radius:8px;background:#fff;color:#5a6580;font-size:16px;font-weight:400}
 .figmaResultScreen .revisionTabs .revisionTabActive{border-color:#2f7ff0;background:#2f7ff0;color:#fff;font-weight:800}
-.figmaResultScreen .originalTextPanel{max-height:none;padding:0;border-radius:0;background:#fff;color:#5a6580;font-size:13px;font-weight:400;line-height:normal;white-space:pre-wrap}
+.figmaResultScreen .originalTextPanel{max-height:none;padding:0;border-radius:0;background:#fff;color:#5a6580;font-size:15px;font-weight:400;line-height:normal;white-space:pre-wrap}
 .figmaResultScreen .comparisonList{display:grid;gap:16px;margin:0}
 .figmaResultScreen .comparisonList article{margin:0;padding:0;border-radius:0;background:#fff}
-.figmaResultScreen .comparisonList article>strong{display:block;margin:0 0 12px;color:#1a2233;font-size:13px;font-weight:600;line-height:normal}
+.figmaResultScreen .comparisonList article>strong{display:block;margin:0 0 12px;color:#1a2233;font-size:15px;font-weight:600;line-height:normal}
 .figmaResultScreen .comparisonList article>div{display:grid;grid-template-columns:45px 1fr;gap:8px 8px;padding-bottom:16px;border-bottom:1px solid #e4e8ef}
-.figmaResultScreen .comparisonList span{display:inline-flex;align-items:center;justify-content:center;width:44px;height:26px;margin:0;border-radius:5555px;font-size:12px;font-weight:700}
+.figmaResultScreen .comparisonList span{display:inline-flex;align-items:center;justify-content:center;width:44px;height:28px;margin:0;border-radius:5555px;font-size:14px;font-weight:700}
 .figmaResultScreen .comparisonList span:nth-of-type(1){background:#ffe6e5;color:#e8544d}
 .figmaResultScreen .comparisonList span:nth-of-type(2){background:#e4fbf1;color:#1fb573}
-.figmaResultScreen .comparisonList p{margin:2px 0 0;color:#5a6580;font-size:13px;font-weight:400;line-height:normal}
+.figmaResultScreen .comparisonList p{margin:2px 0 0;color:#5a6580;font-size:15px;font-weight:400;line-height:normal}
 .figmaResultScreen .metaReviewGrid{display:grid;grid-template-columns:1fr;gap:16px;margin:24px 0 0}
 .figmaResultScreen .metaReviewGrid article{margin:0;padding:16px;border-radius:5px;background:#f5f7fa}
-.figmaResultScreen .metaReviewGrid h3{margin:0 0 16px;color:#1a2233;font-size:15px;font-weight:700}
+.figmaResultScreen .metaReviewGrid h3{margin:0 0 16px;color:#1a2233;font-size:17px;font-weight:700}
 .figmaResultScreen .metaReviewGrid div{display:grid;grid-template-columns:32px 1fr;gap:8px;align-items:flex-start}
 .figmaResultScreen .metaReviewGrid div+div{margin-top:14px}
-.figmaResultScreen .metaReviewGrid b{display:grid;place-items:center;width:32px;height:32px;border-radius:5px;background:#e8f1ff;color:#2f7ff0;font-size:14px;font-weight:700}
-.figmaResultScreen .metaReviewGrid p{margin:0;color:#5a6580;font-size:14px;font-weight:400;line-height:normal}
+.figmaResultScreen .metaReviewGrid b{display:grid;place-items:center;width:32px;height:32px;border-radius:5px;background:#e8f1ff;color:#2f7ff0;font-size:16px;font-weight:700}
+.figmaResultScreen .metaReviewGrid p{margin:0;color:#5a6580;font-size:16px;font-weight:400;line-height:normal}
 .figmaResultScreen .overallAssessment{margin:24px 0 0;padding:0;border:0;background:transparent}
-.figmaResultScreen .overallAssessment h2{margin:0 0 16px;color:#1a2233;font-size:17px;font-weight:700}
+.figmaResultScreen .overallAssessment h2{margin:0 0 16px;color:#1a2233;font-size:19px;font-weight:700}
 .figmaResultScreen .overallAssessment article{min-height:92px;box-sizing:border-box;margin:0;padding:16px;border-radius:5px;background:#fff5db}
 .figmaResultScreen .overallAssessment article+article{margin-top:8px}
 .figmaResultScreen .overallAssessment article:first-of-type{background:#e4fbf1}
-.figmaResultScreen .overallAssessment strong{display:block;color:#a5760a;font-size:15px;font-weight:700}
+.figmaResultScreen .overallAssessment strong{display:block;color:#a5760a;font-size:17px;font-weight:700}
 .figmaResultScreen .overallAssessment article:first-of-type strong{color:#123325}
-.figmaResultScreen .overallAssessment p{margin:10px 0 0;color:#60480b;font-size:14px;font-weight:400;line-height:normal}
+.figmaResultScreen .overallAssessment p{margin:10px 0 0;color:#60480b;font-size:16px;font-weight:400;line-height:normal}
 .figmaResultScreen .overallAssessment article:first-of-type p{color:#2b7354}
-.figmaScoreNotice{min-height:80px;box-sizing:border-box;margin-top:8px;padding:16px;border-radius:5px;background:#f5f7fa;color:#5a6580;font-size:13px;font-weight:400;line-height:normal}
+.figmaScoreNotice{min-height:80px;box-sizing:border-box;margin-top:8px;padding:16px;border-radius:5px;background:#f5f7fa;color:#5a6580;font-size:15px;font-weight:400;line-height:normal}
 .figmaResultScreen .resultActions{margin:16px 0 0}
 .figmaResultScreen .resultActions button{width:100%;height:52px;border:1px solid #e4e8ef;border-radius:12px;background:#fff;color:#5a6580;font-size:16px;font-weight:800}
 @media (min-width:37.5rem){.figmaResultScreen{padding-left:24px;padding-right:24px}.figmaQuestionArea{margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px}.figmaResultScreen .questionTabs{margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px}.figmaResultScreen .resultScoreSummary p{max-width:none}}
-@media (max-width:23rem){.figmaResultScreen .resultScoreSummary p{display:block}.figmaQuestionCard strong{margin-top:38px}.figmaQuestionCard div:last-child{gap:4px}.figmaQuestionCard span{font-size:10px;padding:0 7px}.figmaResultScreen .structureBlock p{white-space:normal}}
+@media (max-width:23rem){.figmaResultScreen .resultScoreSummary p{display:block}.figmaQuestionCard strong{margin-top:38px}.figmaQuestionCard div:last-child{gap:4px}.figmaQuestionCard span{font-size:12px;padding:0 7px}.figmaResultScreen .structureBlock p{white-space:normal}}
 
 @media (max-width:37.4375rem){
   .overlay{align-items:flex-end}
