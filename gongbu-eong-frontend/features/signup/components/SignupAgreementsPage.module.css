@@ -1,0 +1,372 @@
+.page {
+  min-height: 100dvh;
+  background: #ffffff;
+  color: #1a2233;
+  font-family: "Pretendard", Arial, Helvetica, sans-serif;
+}
+
+.frame {
+  position: relative;
+  width: min(100%, 393px);
+  min-height: 852px;
+  margin: 0 auto;
+  background: #ffffff;
+}
+
+.owl {
+  position: absolute;
+  top: 124px;
+  left: calc(50% - 11.5px);
+  width: 112px;
+  height: 126px;
+  object-fit: cover;
+  transform: translateX(-50%);
+}
+
+.titleGroup {
+  position: absolute;
+  top: 270px;
+  left: 50%;
+  width: 100%;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.titleGroup h1 {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.titleGroup p {
+  margin: 13px 0 0;
+  color: #1a2233;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.allAgreement {
+  position: absolute;
+  top: 342px;
+  left: 40px;
+  display: flex;
+  align-items: center;
+  width: 313px;
+  height: 80px;
+  border: 0;
+  border-radius: 10px;
+  background: #f5f7fa;
+  padding: 0 16px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.allAgreement span:last-child {
+  display: flex;
+  flex-direction: column;
+  margin-left: 8px;
+}
+
+.allAgreement strong {
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.allAgreement small {
+  margin-top: 7px;
+  color: #5a6580;
+  font-size: 14px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.agreementList {
+  position: absolute;
+  top: 446px;
+  left: 40px;
+  width: 313px;
+}
+
+.agreementRow {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  min-height: 20px;
+  margin-bottom: 16px;
+}
+
+.agreementRowTall {
+  min-height: 58px;
+}
+
+.checkButton {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.checkbox {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #e4e8ef;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.checkboxChecked {
+  border-color: #2f7ff0;
+  background: #2f7ff0;
+}
+
+.checkboxChecked::after {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  width: 5px;
+  height: 10px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.agreementText {
+  flex: 1;
+  min-width: 0;
+  margin-left: 8px;
+}
+
+.agreementLabel {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #1a2233;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.requiredLabel {
+  color: #2f7ff0;
+  font-weight: 700;
+}
+
+.optionalLabel {
+  color: #5a6580;
+  font-weight: 700;
+}
+
+.agreementText p {
+  margin: 5px 0 0;
+  color: #9aa4b8;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 400;
+}
+
+.viewButton {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #5a6580;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.submitButton {
+  position: absolute;
+  top: 636px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 361px;
+  height: 52px;
+  border: 0;
+  border-radius: 12px;
+  background: #9aa4b8;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.submitButtonActive {
+  background: #2f7ff0;
+  cursor: pointer;
+}
+
+.submitButton:disabled {
+  cursor: default;
+}
+
+.requiredGuide {
+  position: absolute;
+  top: 712px;
+  left: 50%;
+  width: 100%;
+  margin: 0;
+  color: #9aa4b8;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 400;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  background: rgba(26, 34, 51, 0.44);
+}
+
+.modal {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 393px);
+  max-height: 100dvh;
+  background: #ffffff;
+}
+
+.modalClose {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #1a2233;
+  font-size: 24px;
+  line-height: 28px;
+  cursor: pointer;
+}
+
+.modalBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 16px 16px;
+}
+
+.modalBody h2 {
+  margin: 0 0 16px;
+  color: #1a2233;
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 700;
+}
+
+.policySection {
+  margin-top: 28px;
+}
+
+.policySection:first-of-type {
+  margin-top: 0;
+}
+
+.policySection h3 {
+  margin: 0 0 8px;
+  color: #1a2233;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.policySection p,
+.policyList {
+  margin: 0;
+  color: #5a6580;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+}
+
+.policyList {
+  padding-left: 20px;
+}
+
+.policyList + .policyList,
+.policyList + p,
+.policySection p + .policyList,
+.policySection p + .policyTable,
+.policyTable + p {
+  margin-top: 8px;
+}
+
+.policyFinal {
+  margin-top: 16px !important;
+}
+
+.policyTable {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  color: #5a6580;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.policyTable th,
+.policyTable td {
+  border: 1px solid #e4e8ef;
+  padding: 9px 10px;
+  vertical-align: top;
+  word-break: keep-all;
+}
+
+.policyTable th {
+  background: #f5f7fa;
+  font-weight: 500;
+}
+
+.modalConfirm {
+  flex: 0 0 auto;
+  width: calc(100% - 32px);
+  height: 52px;
+  margin: 16px;
+  border: 0;
+  border-radius: 12px;
+  background: #9aa4b8;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.modalConfirmActive {
+  background: #2f7ff0;
+  cursor: pointer;
+}
+
+@media (min-width: 600px) {
+  .page {
+    background: #f5f7fa;
+  }
+
+  .frame,
+  .modal {
+    width: 393px;
+  }
+}

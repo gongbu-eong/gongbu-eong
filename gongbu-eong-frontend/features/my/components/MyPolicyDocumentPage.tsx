@@ -1,14 +1,16 @@
+"use client";
+
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import styles from "./MyPolicies.module.css";
 
-type PolicyTextBlock = {
+export type PolicyTextBlock = {
   kind: "paragraph" | "ordered" | "unordered" | "final";
   text?: string;
   items?: string[];
   start?: number;
 };
 
-type PolicyTable = {
+export type PolicyTable = {
   kind: "table";
   headers: string[];
   rows: string[][];
@@ -16,7 +18,7 @@ type PolicyTable = {
   dangerFirstColumn?: boolean;
 };
 
-type PolicySection = {
+export type PolicySection = {
   title: string;
   blocks: Array<PolicyTextBlock | PolicyTable>;
 };
@@ -365,7 +367,27 @@ const privacySections: PolicySection[] = [
     ],
   },
   {
-    title: "제7조 (이용자 및 법정대리인의 권리와 행사 방법)",
+    title: "제7조 (회원 탈퇴 및 개인정보 파기)",
+    blocks: [
+      {
+        kind: "ordered",
+        items: [
+          "(탈퇴 방법) 회원은 언제든지 서비스 내에서 직접 탈퇴를 신청할 수 있으며, 회사는 이를 지체 없이 처리합니다.",
+          "탈퇴 경로 : 마이페이지 > 회원 탈퇴",
+          "탈퇴가 완료되면 해당 계정으로는 서비스 이용이 즉시 중단됩니다.",
+          "(탈퇴 시 개인정보 처리) 회원 탈퇴 시 회사가 보유한 개인정보는 원칙적으로 지체 없이 파기합니다. 다만 관계 법령에 따라 보관이 필요한 항목은 제3조(개인정보의 보유 및 이용기간)에서 정한 기간 동안 보관 후 파기합니다.",
+          "(부정 이용 방지) 재가입 악용 및 부정 이용 방지를 위하여, 탈퇴 회원의 식별값(암호화) 등 최소한의 정보를 3개월 동안 보관한 후 파기할 수 있습니다.",
+          "(게시물 및 작성 콘텐츠) 회원이 작성한 게시물·콘텐츠는 다음과 같이 처리됩니다.",
+          "개인정보와 결합된 콘텐츠(자기소개서, 진단 결과 등)는 탈퇴와 함께 파기됩니다.",
+          "커뮤니티 게시물, 댓글은 탈퇴 후에도 삭제되지 않습니다.",
+          "게시물을 완전히 삭제하려면 탈퇴 전에 직접 삭제하시길 권장합니다.",
+          "(유료 서비스·진단권) 탈퇴 시 회원이 보유한 미사용 진단권(쿠폰)은 즉시 소멸되며, 별도로 환불되지 않습니다. 관련 사항은 「서비스 이용약관」을 따릅니다.",
+        ],
+      },
+    ],
+  },
+  {
+    title: "제8조 (이용자 및 법정대리인의 권리와 행사 방법)",
     blocks: [
       {
         kind: "ordered",
@@ -378,7 +400,7 @@ const privacySections: PolicySection[] = [
     ],
   },
   {
-    title: "제8조 (개인정보의 안전성 확보조치)",
+    title: "제9조 (개인정보의 안전성 확보조치)",
     blocks: [
       { kind: "paragraph", text: "회사는 개인정보의 안전한 처리를 위해 다음과 같은 조치를 취합니다." },
       {
@@ -392,7 +414,7 @@ const privacySections: PolicySection[] = [
     ],
   },
   {
-    title: "제9조 (개인정보 자동수집 장치의 설치·운영 및 거부)",
+    title: "제10조 (개인정보 자동수집 장치의 설치·운영 및 거부)",
     blocks: [
       {
         kind: "ordered",
@@ -404,7 +426,7 @@ const privacySections: PolicySection[] = [
     ],
   },
   {
-    title: "제10조 (개인정보처리방침의 변경)",
+    title: "제11조 (개인정보처리방침의 변경)",
     blocks: [
       {
         kind: "ordered",
@@ -444,7 +466,37 @@ const marketingSections: PolicySection[] = [
     ],
   },
   {
-    title: "3. 발송되는 정보의 예시",
+    title: "3. 서비스 알림의 발송",
+    blocks: [
+      {
+        kind: "ordered",
+        items: [
+          "회사는 회원에게 서비스 이용과 관련된 알림을 카카오 알림톡 등의 방법으로 발송할 수 있습니다. 이러한 알림은 서비스 제공에 필수적이거나 회원의 활동에 대응하여 발송되는 정보성(비광고성) 메시지로, 광고성 정보 수신 동의와는 무관하게 발송됩니다.",
+          "발송되는 정보성 알림의 예시는 다음과 같습니다.",
+        ],
+      },
+      {
+        kind: "unordered",
+        items: [
+          "회원이 작성한 게시물에 대한 댓글·답글 등록 알림",
+          "진단권(쿠폰) 지급·사용·소멸 등 거래 관련 알림",
+          "결제·환불 처리 결과 알림",
+          "약관·정책 변경, 보안 및 계정 관련 필수 안내",
+        ],
+      },
+      {
+        kind: "ordered",
+        start: 3,
+        items: [
+          "(수신 설정) 회원은 위 알림 중 필수 안내(거래·계정·보안 관련)를 제외한 활동 알림(댓글·답글 등)의 수신 여부를 마이페이지 > 알림 설정에서 직접 켜거나 끌 수 있습니다. 설정 변경은 즉시 적용됩니다.",
+          "위 정보성 알림은 광고성 정보가 아니므로, 수신을 거부하더라도 서비스 이용에는 제한이 없습니다. 다만 결제·계정·보안 등 서비스 제공에 반드시 필요한 필수 안내는 수신 설정과 무관하게 발송됩니다.",
+          "회사가 별도의 광고성 정보(이벤트·프로모션 등)를 발송하는 경우에는 사전에 회원의 광고성 정보 수신 동의를 받으며, 이는 「마케팅 정보 수신 동의」 및 관련 법령에 따릅니다.",
+        ],
+      },
+    ],
+  },
+  {
+    title: "4. 발송되는 정보의 예시",
     blocks: [
       {
         kind: "unordered",
@@ -462,7 +514,7 @@ const marketingSections: PolicySection[] = [
     ],
   },
   {
-    title: "4. 야간 광고성 정보 전송",
+    title: "5. 야간 광고성 정보 전송",
     blocks: [
       {
         kind: "paragraph",
@@ -471,7 +523,7 @@ const marketingSections: PolicySection[] = [
     ],
   },
   {
-    title: "5. 수신 동의 철회 방법",
+    title: "6. 수신 동의 철회 방법",
     blocks: [
       {
         kind: "ordered",
@@ -486,7 +538,7 @@ const marketingSections: PolicySection[] = [
   },
 ];
 
-const documents: Record<PolicyDocumentKey, { title: string; sections: PolicySection[] }> = {
+export const policyDocuments: Record<PolicyDocumentKey, { title: string; sections: PolicySection[] }> = {
   terms: {
     title: "서비스 이용약관",
     sections: termsSections,
@@ -502,7 +554,7 @@ const documents: Record<PolicyDocumentKey, { title: string; sections: PolicySect
 };
 
 export function MyPolicyDocumentPage({ documentKey }: { documentKey: PolicyDocumentKey }) {
-  const document = documents[documentKey];
+  const document = policyDocuments[documentKey];
 
   return (
     <div className={styles.page}>

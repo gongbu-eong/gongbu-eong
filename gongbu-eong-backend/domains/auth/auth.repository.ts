@@ -1,13 +1,10 @@
 import { db } from "@/lib/db";
-import {
-  getCommunityActivityRewardProgress,
-  grantWelcomeSignupCredits,
-} from "@/domains/credits/credits.repository";
+import { getCommunityActivityRewardProgress } from "@/domains/credits/credits.repository";
 import { generateUniqueCommunityNickname } from "./community-nickname";
 import { encryptOAuthToken } from "./oauth-token-crypto";
-import { hasRecentWithdrawalIdentity } from "./withdrawal.repository";
 
 type OAuthProvider = "kakao" | "naver";
+type UserStatus = "active" | "blocked" | "withdrawn" | "pending_signup";
 
 export type OAuthProfile = {
   provider: OAuthProvider;
@@ -36,13 +33,20 @@ export async function upsertOAuthUser(args: {
   try {
     await client.query("BEGIN");
 
-    const existingAccount = await client.query<{ user_id: string }>(
+    const existingAccount = await client.query<{
+      user_id: string;
+      user_status: UserStatus;
+      signup_completed_at: Date | string | null;
+    }>(
       `
-        SELECT user_id
+        SELECT
+          accounts.user_id,
+          users.status AS user_status,
+          users.signup_completed_at
         FROM public.user_oauth_accounts accounts
         JOIN public.users users
           ON users.id = accounts.user_id
-         AND users.status = 'active'
+         AND users.status IN ('active', 'pending_signup')
         WHERE accounts.provider = $1::public.oauth_provider
           AND accounts.provider_user_id = $2
         LIMIT 1
@@ -50,48 +54,88 @@ export async function upsertOAuthUser(args: {
       [args.profile.provider, args.profile.providerUserId],
     );
 
-    let userId = existingAccount.rows[0]?.user_id;
+    const existingOAuthUser = existingAccount.rows[0];
+    let userId: string | undefined = existingOAuthUser?.user_id;
+    let userStatus: UserStatus | undefined = existingOAuthUser?.user_status;
+    let signupCompletedAt = existingOAuthUser?.signup_completed_at ?? null;
     let isNewUser = false;
     let welcomeCreditsGranted = false;
     let linkedDiagnosisResultId: string | null = null;
-    const welcomeCreditsBlocked = await hasRecentWithdrawalIdentity(
-      args.profile.provider,
-      args.profile.providerUserId,
-    );
     const accessTokenEncrypted = encryptOAuthToken(args.accessToken);
     const refreshTokenEncrypted = encryptOAuthToken(args.refreshToken);
 
     if (!userId) {
       const communityNickname = await generateUniqueCommunityNickname(client);
-      const user = await client.query<{ id: string; inserted: boolean }>(
-        `
-          INSERT INTO public.users (
-            email,
-            nickname,
-            display_name,
-            community_nickname,
-            avatar_url,
-            last_login_at
+      const liveEmailUser = args.profile.email
+        ? await client.query<{
+            id: string;
+            status: UserStatus;
+            signup_completed_at: Date | string | null;
+          }>(
+            `
+              SELECT id, status, signup_completed_at
+              FROM public.users
+              WHERE email = $1
+                AND status IN ('active', 'pending_signup')
+              LIMIT 1
+              FOR UPDATE
+            `,
+            [args.profile.email],
           )
-          VALUES ($1, $2, $2, $3, $4, NOW())
-          ON CONFLICT (email) DO UPDATE SET
-            nickname = COALESCE(EXCLUDED.nickname, public.users.nickname),
-            display_name = COALESCE(EXCLUDED.display_name, public.users.display_name),
-            community_nickname = COALESCE(public.users.community_nickname, EXCLUDED.community_nickname),
-            avatar_url = COALESCE(EXCLUDED.avatar_url, public.users.avatar_url),
-            last_login_at = NOW(),
-            updated_at = NOW()
-          RETURNING id, (xmax = 0) AS inserted
-        `,
-        [
-          args.profile.email || null,
-          args.profile.nickname || null,
-          communityNickname,
-          args.profile.avatarUrl || null,
-        ],
-      );
-      userId = user.rows[0].id;
-      isNewUser = Boolean(user.rows[0].inserted);
+        : null;
+
+      userId = liveEmailUser?.rows[0]?.id;
+      userStatus = liveEmailUser?.rows[0]?.status;
+      signupCompletedAt = liveEmailUser?.rows[0]?.signup_completed_at ?? null;
+
+      if (userId) {
+        await client.query(
+          `
+            UPDATE public.users
+            SET
+              nickname = COALESCE($2, nickname),
+              display_name = COALESCE($2, display_name),
+              avatar_url = COALESCE($3, avatar_url),
+              community_nickname = COALESCE(community_nickname, $4),
+              last_login_at = NOW(),
+              updated_at = NOW()
+            WHERE id = $1
+              AND status IN ('active', 'pending_signup')
+          `,
+          [
+            userId,
+            args.profile.nickname || null,
+            args.profile.avatarUrl || null,
+            communityNickname,
+          ],
+        );
+      } else {
+        const user = await client.query<{ id: string; inserted: boolean }>(
+          `
+            INSERT INTO public.users (
+              email,
+              nickname,
+              display_name,
+              community_nickname,
+              avatar_url,
+              status,
+              last_login_at
+            )
+            VALUES ($1, $2, $2, $3, $4, 'pending_signup'::public.user_status, NOW())
+            RETURNING id, TRUE AS inserted
+          `,
+          [
+            args.profile.email || null,
+            args.profile.nickname || null,
+            communityNickname,
+            args.profile.avatarUrl || null,
+          ],
+        );
+        userId = user.rows[0].id;
+        userStatus = "pending_signup";
+        signupCompletedAt = null;
+        isNewUser = Boolean(user.rows[0].inserted);
+      }
 
       await client.query(
         `
@@ -136,9 +180,6 @@ export async function upsertOAuthUser(args: {
         ],
       );
 
-      if (isNewUser && !welcomeCreditsBlocked) {
-        welcomeCreditsGranted = await grantWelcomeSignupCredits(client, userId);
-      }
     } else {
       const communityNickname = await generateUniqueCommunityNickname(client);
       await client.query(
@@ -152,6 +193,7 @@ export async function upsertOAuthUser(args: {
             last_login_at = NOW(),
             updated_at = NOW()
           WHERE id = $1
+            AND status IN ('active', 'pending_signup')
         `,
         [
           userId,
@@ -329,7 +371,14 @@ export async function upsertOAuthUser(args: {
 
     await client.query("COMMIT");
 
-    return { userId, isNewUser, welcomeCreditsGranted, diagnosisResultId: linkedDiagnosisResultId };
+    return {
+      userId,
+      isNewUser,
+      requiresSignupAgreements:
+        userStatus === "pending_signup" || !signupCompletedAt,
+      welcomeCreditsGranted,
+      diagnosisResultId: linkedDiagnosisResultId,
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -338,9 +387,13 @@ export async function upsertOAuthUser(args: {
   }
 }
 
-export async function findUserBySessionTokenHash(sessionTokenHash: string) {
+export async function findUserBySessionTokenHash(
+  sessionTokenHash: string,
+  options: { includePendingSignup?: boolean } = {},
+) {
   const result = await db.query<{
     id: string;
+    status: UserStatus;
     email: string | null;
     nickname: string | null;
     display_name: string | null;
@@ -358,10 +411,12 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     diagnosis_result_id: string | null;
     credit_balance: number | null;
     unread_notification_count: string | number;
+    signup_completed_at: Date | string | null;
   }>(
     `
       SELECT
         users.id,
+        users.status,
         users.email,
         users.nickname,
         users.display_name,
@@ -378,7 +433,8 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
         diagnosis.diagnosis_run_id,
         diagnosis.diagnosis_result_id,
         credits.balance_after AS credit_balance,
-        COALESCE(notifications.unread_count, 0)::text AS unread_notification_count
+        COALESCE(notifications.unread_count, 0)::text AS unread_notification_count,
+        users.signup_completed_at
       FROM public.user_sessions sessions
       JOIN public.users users
         ON users.id = sessions.user_id
@@ -430,11 +486,20 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
       ) notifications ON TRUE
       WHERE sessions.session_token_hash = $1
         AND sessions.expires_at > NOW()
-        AND users.status = 'active'
+        AND (
+          (users.status = 'active' AND users.signup_completed_at IS NOT NULL)
+          OR (
+            $2::boolean
+            AND (
+              users.status = 'pending_signup'
+              OR (users.status = 'active' AND users.signup_completed_at IS NULL)
+            )
+          )
+        )
       ORDER BY sessions.created_at DESC
       LIMIT 1
     `,
-    [sessionTokenHash],
+    [sessionTokenHash, Boolean(options.includePendingSignup)],
   );
 
   const user = result.rows[0];
@@ -447,6 +512,7 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
 
   return {
     id: user.id,
+    status: user.status,
     email: user.email,
     nickname: user.nickname,
     displayName: user.display_name,
@@ -464,6 +530,9 @@ export async function findUserBySessionTokenHash(sessionTokenHash: string) {
     diagnosisResultId: user.diagnosis_result_id,
     creditBalance: Number(user.credit_balance || 0),
     unreadNotificationCount: Number(user.unread_notification_count || 0),
+    signupCompletedAt: user.signup_completed_at
+      ? new Date(user.signup_completed_at).toISOString()
+      : null,
     communityActivityRewardProgress,
   };
 }

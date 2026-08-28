@@ -34,7 +34,12 @@ export async function PUT(request: NextRequest) {
     const user = await requireSessionUser(request);
     const payload = await request.json().catch(() => null);
     const input = readNotificationPayload(payload);
-    const settings = await updateNotificationSettings(user.id, input);
+    const forwardedFor = request.headers.get("x-forwarded-for");
+    const settings = await updateNotificationSettings(user.id, {
+      ...input,
+      ipAddress: forwardedFor?.split(",")[0]?.trim(),
+      userAgent: request.headers.get("user-agent") || undefined,
+    });
 
     if (!settings) {
       return jsonWithCors(

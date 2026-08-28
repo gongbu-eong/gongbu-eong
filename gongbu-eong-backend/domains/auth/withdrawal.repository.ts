@@ -277,26 +277,6 @@ export async function withdrawUserAccount(args: {
   }
 }
 
-export async function hasRecentWithdrawalIdentity(
-  provider: OAuthProvider,
-  providerUserId: string,
-) {
-  const result = await db.query<{ exists: boolean }>(
-    `
-      SELECT EXISTS (
-        SELECT 1
-        FROM public.withdrawn_oauth_identities
-        WHERE provider = $1::public.oauth_provider
-          AND provider_user_id_hash = $2
-          AND welcome_credit_blocked_until > NOW()
-      ) AS exists
-    `,
-    [provider, hashOAuthIdentity(provider, providerUserId)],
-  );
-
-  return Boolean(result.rows[0]?.exists);
-}
-
 function badRequest(message: string) {
   const error = new Error(message);
   error.name = "BadRequestError";

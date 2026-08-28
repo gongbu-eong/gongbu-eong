@@ -1204,7 +1204,11 @@ function toComment(row: CommentRow): CommunityCommentDto {
     postTitle: row.post_title || null,
     parentCommentId: row.parent_comment_id,
     status: row.status,
-    content: isDeleted ? "삭제된 댓글입니다." : row.content,
+    content: isDeleted
+      ? row.parent_comment_id
+        ? "삭제된 답글입니다."
+        : "삭제된 댓글입니다."
+      : row.content,
     author: toAuthor(row),
     createdAt: new Date(row.created_at).toISOString(),
     canDelete: Boolean(row.can_delete),

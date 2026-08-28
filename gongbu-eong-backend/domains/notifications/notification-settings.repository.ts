@@ -1,4 +1,8 @@
 import { db } from "@/lib/db";
+import {
+  SIGNUP_AGREEMENT_VERSION,
+  SIGNUP_CONSENT_KEYS,
+} from "@/domains/auth/signup-consents";
 
 export const DEADLINE_NOTIFICATION_OFFSETS = [7, 3, 0] as const;
 
@@ -22,6 +26,8 @@ export type UpdateNotificationSettingsInput = {
   deadlineEnabled: boolean;
   deadlineOffsets: DeadlineNotificationOffset[];
   marketingAgreed: boolean;
+  ipAddress?: string;
+  userAgent?: string;
 };
 
 type NotificationSettingsRow = {
@@ -32,6 +38,8 @@ type NotificationSettingsRow = {
   application_deadline_days_before: number | null;
   application_deadline_days_before_list: number[] | null;
   marketing_enabled: boolean | null;
+  marketing_consent_agreed: boolean | null;
+  marketing_consent_updated_at: Date | string | null;
   marketing_agreed_at: Date | string | null;
   marketing_revoked_at: Date | string | null;
 };
@@ -49,16 +57,26 @@ export async function findNotificationSettings(userId: string) {
         preferences.application_deadline_days_before,
         preferences.application_deadline_days_before_list,
         preferences.marketing_enabled,
+        marketing_consent.agreed AS marketing_consent_agreed,
+        marketing_consent.updated_at AS marketing_consent_updated_at,
         preferences.marketing_agreed_at,
         preferences.marketing_revoked_at
       FROM public.users users
       LEFT JOIN public.notification_preferences preferences
         ON preferences.user_id = users.id
+      LEFT JOIN LATERAL (
+        SELECT agreed, updated_at
+        FROM public.user_consents consents
+        WHERE consents.user_id = users.id
+          AND consents.terms_key = $2
+        ORDER BY consents.created_at DESC, consents.id DESC
+        LIMIT 1
+      ) marketing_consent ON TRUE
       WHERE users.id = $1
         AND users.status = 'active'
       LIMIT 1
     `,
-    [userId],
+    [userId, SIGNUP_CONSENT_KEYS.marketingNotifications],
   );
 
   return result.rows[0] ? toNotificationSettings(result.rows[0]) : null;
@@ -83,16 +101,26 @@ export async function updateNotificationSettings(
           preferences.application_deadline_days_before,
           preferences.application_deadline_days_before_list,
           preferences.marketing_enabled,
+          marketing_consent.agreed AS marketing_consent_agreed,
+          marketing_consent.updated_at AS marketing_consent_updated_at,
           preferences.marketing_agreed_at,
           preferences.marketing_revoked_at
         FROM public.users users
         LEFT JOIN public.notification_preferences preferences
           ON preferences.user_id = users.id
+        LEFT JOIN LATERAL (
+          SELECT agreed, updated_at
+          FROM public.user_consents consents
+          WHERE consents.user_id = users.id
+            AND consents.terms_key = $2
+          ORDER BY consents.created_at DESC, consents.id DESC
+          LIMIT 1
+        ) marketing_consent ON TRUE
         WHERE users.id = $1
           AND users.status = 'active'
         LIMIT 1
       `,
-      [userId],
+      [userId, SIGNUP_CONSENT_KEYS.marketingNotifications],
     );
 
     if (!currentResult.rows[0]) {
@@ -107,8 +135,6 @@ export async function updateNotificationSettings(
     const primaryDaysBefore = deadlineOffsets.includes(3)
       ? 3
       : deadlineOffsets[0];
-    const nextKakaoConnectedAt =
-      input.kakaoConnected && !current.kakaoConnectedAt ? new Date() : null;
     const nextMarketingAgreedAt =
       input.marketingAgreed && !current.marketingAgreed ? new Date() : null;
     const nextMarketingRevokedAt =
@@ -141,7 +167,7 @@ export async function updateNotificationSettings(
         )
         VALUES (
           $1, $2, $3, $4::integer[], $5,
-          CASE WHEN $6::boolean THEN NOW() ELSE NULL END,
+          $6::timestamptz,
           CASE WHEN $5::boolean THEN NULL ELSE $7::timestamptz END,
           $8,
           CASE WHEN $8::boolean THEN NOW() ELSE NULL END,
@@ -153,10 +179,11 @@ export async function updateNotificationSettings(
           application_deadline_days_before = EXCLUDED.application_deadline_days_before,
           application_deadline_days_before_list = EXCLUDED.application_deadline_days_before_list,
           marketing_enabled = EXCLUDED.marketing_enabled,
-          marketing_agreed_at = COALESCE(
-            public.notification_preferences.marketing_agreed_at,
-            CASE WHEN $6::boolean THEN NOW() ELSE NULL END
-          ),
+          marketing_agreed_at = CASE
+            WHEN EXCLUDED.marketing_enabled
+              THEN COALESCE($6::timestamptz, public.notification_preferences.marketing_agreed_at, NOW())
+            ELSE public.notification_preferences.marketing_agreed_at
+          END,
           marketing_revoked_at = CASE
             WHEN EXCLUDED.marketing_enabled THEN NULL
             ELSE COALESCE($7::timestamptz, public.notification_preferences.marketing_revoked_at)
@@ -174,9 +201,51 @@ export async function updateNotificationSettings(
         primaryDaysBefore,
         deadlineOffsets,
         input.marketingAgreed,
-        Boolean(nextMarketingAgreedAt),
+        nextMarketingAgreedAt,
         nextMarketingRevokedAt,
         input.kakaoConnected,
+      ],
+    );
+
+    await client.query(
+      `
+        INSERT INTO public.user_consents (
+          user_id,
+          terms_key,
+          terms_version,
+          agreed,
+          ip_address,
+          user_agent,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        ON CONFLICT (user_id, terms_key, terms_version)
+        DO UPDATE SET
+          agreed = EXCLUDED.agreed,
+          ip_address = CASE
+            WHEN public.user_consents.agreed IS DISTINCT FROM EXCLUDED.agreed
+            THEN EXCLUDED.ip_address
+            ELSE public.user_consents.ip_address
+          END,
+          user_agent = CASE
+            WHEN public.user_consents.agreed IS DISTINCT FROM EXCLUDED.agreed
+            THEN EXCLUDED.user_agent
+            ELSE public.user_consents.user_agent
+          END,
+          updated_at = CASE
+            WHEN public.user_consents.agreed IS DISTINCT FROM EXCLUDED.agreed
+            THEN NOW()
+            ELSE public.user_consents.updated_at
+          END
+      `,
+      [
+        userId,
+        SIGNUP_CONSENT_KEYS.marketingNotifications,
+        SIGNUP_AGREEMENT_VERSION,
+        input.marketingAgreed,
+        input.ipAddress || null,
+        input.userAgent || null,
       ],
     );
 
@@ -224,6 +293,9 @@ function toNotificationSettings(
       ),
     )
     .filter((value, index, values) => values.indexOf(value) === index);
+  const marketingAgreed = Boolean(
+    row.marketing_consent_agreed ?? row.marketing_enabled,
+  );
 
   return {
     phoneNumber: row.phone,
@@ -231,9 +303,13 @@ function toNotificationSettings(
     kakaoConnectedAt: toIso(row.kakao_connected_at),
     deadlineEnabled: row.application_deadline_enabled ?? true,
     deadlineOffsets: deadlineOffsets.length ? deadlineOffsets : [3],
-    marketingAgreed: Boolean(row.marketing_enabled),
-    marketingAgreedAt: toIso(row.marketing_agreed_at),
-    marketingRevokedAt: toIso(row.marketing_revoked_at),
+    marketingAgreed,
+    marketingAgreedAt: marketingAgreed
+      ? toIso(row.marketing_consent_updated_at ?? row.marketing_agreed_at)
+      : toIso(row.marketing_agreed_at),
+    marketingRevokedAt: marketingAgreed
+      ? null
+      : toIso(row.marketing_consent_updated_at ?? row.marketing_revoked_at),
   };
 }
 

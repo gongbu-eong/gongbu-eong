@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { HomeMenuDrawer } from "@/features/home/components/HomeMain";
@@ -28,6 +28,7 @@ export function AppHeader({
   hasTicketAlert = true,
 }: AppHeaderProps = {}) {
   const router = useRouter();
+  const pathname = usePathname();
   const [fetchedUser, setFetchedUser] = useState<CurrentUserDto | null>(null);
   const [fetchedBookmarkCount, setFetchedBookmarkCount] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -74,6 +75,16 @@ export function AppHeader({
     ticketCount ?? user?.creditBalance ?? fetchedUser?.creditBalance ?? 0;
   const effectiveCommunityActivityRewardProgress =
     user?.communityActivityRewardProgress ?? fetchedUser?.communityActivityRewardProgress;
+
+  useEffect(() => {
+    const requiresSignupAgreements =
+      user?.status === "pending_signup" || user?.signupCompletedAt === null;
+
+    if (requiresSignupAgreements && pathname !== "/signup/agreements") {
+      const next = pathname || "/";
+      router.replace(`/signup/agreements?next=${encodeURIComponent(next)}`);
+    }
+  }, [pathname, router, user]);
 
   useEffect(() => {
     let active = true;

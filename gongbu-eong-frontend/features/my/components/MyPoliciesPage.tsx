@@ -1,11 +1,16 @@
+"use client";
+
 import Image from "next/image";
-import Link from "next/link";
+import { useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { PolicyDocumentModal } from "@/features/signup/components/SignupAgreementsPage";
 import styles from "./MyPolicies.module.css";
+import type { PolicyDocumentKey } from "./MyPolicyDocumentPage";
 
 const policyItems = [
   {
     href: "/my/policies/terms",
+    documentKey: "terms" as PolicyDocumentKey,
     iconSrc: "/my/policies/terms.png",
     iconWidth: 26,
     iconHeight: 26,
@@ -15,6 +20,7 @@ const policyItems = [
   },
   {
     href: "/my/policies/privacy",
+    documentKey: "privacy" as PolicyDocumentKey,
     iconSrc: "/my/policies/privacy.png",
     iconWidth: 25,
     iconHeight: 30,
@@ -24,6 +30,7 @@ const policyItems = [
   },
   {
     href: "/my/policies/marketing",
+    documentKey: "marketing" as PolicyDocumentKey,
     iconSrc: "/my/policies/marketing.png",
     iconWidth: 27,
     iconHeight: 26,
@@ -33,6 +40,8 @@ const policyItems = [
 ];
 
 export function MyPoliciesPage() {
+  const [openDocument, setOpenDocument] = useState<PolicyDocumentKey | null>(null);
+
   return (
     <div className={styles.page}>
       <AppHeader />
@@ -42,7 +51,12 @@ export function MyPoliciesPage() {
 
         <nav className={styles.policyList} aria-label="약관 및 정책">
           {policyItems.map((item) => (
-            <Link key={item.href} href={item.href} className={styles.policyItem}>
+            <button
+              key={item.href}
+              type="button"
+              className={styles.policyItem}
+              onClick={() => setOpenDocument(item.documentKey)}
+            >
               <span className={styles.policyIcon} aria-hidden="true">
                 <Image src={item.iconSrc} alt="" width={item.iconWidth} height={item.iconHeight} />
               </span>
@@ -56,7 +70,7 @@ export function MyPoliciesPage() {
               <span className={styles.chevron} aria-hidden="true">
                 &gt;
               </span>
-            </Link>
+            </button>
           ))}
         </nav>
 
@@ -76,6 +90,13 @@ export function MyPoliciesPage() {
         </section>
       </main>
       <AppFooter active="my" />
+      {openDocument ? (
+        <PolicyDocumentModal
+          documentKey={openDocument}
+          onClose={() => setOpenDocument(null)}
+          onConfirm={() => setOpenDocument(null)}
+        />
+      ) : null}
     </div>
   );
 }

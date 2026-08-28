@@ -236,7 +236,7 @@ export function MyNotificationSettingsPage() {
         <section className={styles.marketingSection}>
           <h2 className={styles.mutedTitle}>혜택·이벤트 알림 (광고성)</h2>
           <p className={styles.sectionDescription}>
-            아래는 마케팅 정보 수신 동의가 필요한 항목이에요.
+            광고성 정보 수신 동의 상태를 변경할 수 있어요.
             <br />
             동의하지 않아도 서비스 이용에 지장이 없어요.
           </p>
@@ -245,7 +245,7 @@ export function MyNotificationSettingsPage() {
             <div className={styles.marketingCardHeader}>
               <div>
                 <strong>광고성 정보 수신 동의</strong>
-                <p>할인·이벤트·프리미엄 혜택 소식을 받아요.</p>
+                <p>댓글·답글 알림과 혜택·이벤트 소식을 받아요.</p>
               </div>
               <ToggleSwitch
                 checked={marketingAgreed}
@@ -254,7 +254,7 @@ export function MyNotificationSettingsPage() {
               />
             </div>
             <p className={styles.legalText}>
-              동의 시 (광고) 표기와 함께 카카오 알림톡/친구톡으로 발송되며,
+              동의 시 카카오 알림톡/친구톡 등으로 발송되며,
               <br />
               언제든 수신 거부할 수 있어요. 야간(21시~익일 8시)에는
               <br />

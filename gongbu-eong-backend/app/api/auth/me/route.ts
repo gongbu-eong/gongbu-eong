@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const user = await findUserBySessionTokenHash(hashValue(sessionToken));
+  const user = await findUserBySessionTokenHash(hashValue(sessionToken), {
+    includePendingSignup: true,
+  });
 
   if (!user) {
     const response = NextResponse.json(

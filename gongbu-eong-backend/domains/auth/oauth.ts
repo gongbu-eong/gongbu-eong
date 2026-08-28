@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
-import { OAuthProfile, upsertOAuthUser } from "./auth.repository";
+import {
+  findUserBySessionTokenHash,
+  OAuthProfile,
+  upsertOAuthUser,
+} from "./auth.repository";
 
 type OAuthProvider = "kakao" | "naver";
 type EntrySource =
@@ -119,6 +123,15 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
   const storedState = request.cookies.get(`${provider}_oauth_state`)?.value;
 
   if (!code || !state || !storedState || state !== storedState) {
+    const existingSessionRedirect = await redirectExistingSession(
+      provider,
+      request,
+      successRedirectUrl,
+    );
+    if (existingSessionRedirect) {
+      return existingSessionRedirect;
+    }
+
     return NextResponse.redirect(
       buildFailureRedirectUrl(failureRedirectUrl, provider),
     );
@@ -155,14 +168,29 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     });
 
     const redirectUrl = new URL(successRedirectUrl, request.url);
+    const nextUrl = new URL(successRedirectUrl, request.url);
     if (authResult.diagnosisResultId) {
-      redirectUrl.pathname = "/ai-tools/diagnosis/result";
-      redirectUrl.search = "";
-      redirectUrl.searchParams.set("resultId", authResult.diagnosisResultId);
+      nextUrl.pathname = "/ai-tools/diagnosis/result";
+      nextUrl.search = "";
+      nextUrl.searchParams.set("resultId", authResult.diagnosisResultId);
     }
-    if (authResult.welcomeCreditsGranted) {
-      redirectUrl.searchParams.set("ticketReward", "welcome");
-      redirectUrl.searchParams.set("ticketAmount", "5");
+
+    if (authResult.requiresSignupAgreements) {
+      redirectUrl.pathname = "/signup/agreements";
+      redirectUrl.search = "";
+      if (authResult.diagnosisResultId) {
+        redirectUrl.searchParams.set(
+          "next",
+          `${nextUrl.pathname}${nextUrl.search}`,
+        );
+      }
+    } else {
+      redirectUrl.pathname = nextUrl.pathname;
+      redirectUrl.search = nextUrl.search;
+      if (authResult.welcomeCreditsGranted) {
+        redirectUrl.searchParams.set("ticketReward", "welcome");
+        redirectUrl.searchParams.set("ticketAmount", "5");
+      }
     }
 
     const response = NextResponse.redirect(redirectUrl);
@@ -326,4 +354,53 @@ function buildFailureRedirectUrl(
   url.searchParams.set("oauthError", "callback_failed");
   url.searchParams.set("provider", provider);
   return url;
+}
+
+async function redirectExistingSession(
+  provider: OAuthProvider,
+  request: NextRequest,
+  successRedirectUrl: string,
+) {
+  const sessionToken = request.cookies.get("gongbu_eong_session")?.value;
+  if (!sessionToken) {
+    return null;
+  }
+
+  const user = await findUserBySessionTokenHash(hashValue(sessionToken), {
+    includePendingSignup: true,
+  }).catch(() => null);
+
+  if (!user) {
+    return null;
+  }
+
+  const redirectUrl = new URL(successRedirectUrl, request.url);
+  const nextUrl = new URL(successRedirectUrl, request.url);
+
+  if (user.diagnosisResultId) {
+    nextUrl.pathname = "/ai-tools/diagnosis/result";
+    nextUrl.search = "";
+    nextUrl.searchParams.set("resultId", user.diagnosisResultId);
+  }
+
+  if (user.status === "pending_signup" || !user.signupCompletedAt) {
+    redirectUrl.pathname = "/signup/agreements";
+    redirectUrl.search = "";
+    if (user.diagnosisResultId) {
+      redirectUrl.searchParams.set(
+        "next",
+        `${nextUrl.pathname}${nextUrl.search}`,
+      );
+    }
+  } else {
+    redirectUrl.pathname = nextUrl.pathname;
+    redirectUrl.search = nextUrl.search;
+  }
+
+  const response = NextResponse.redirect(redirectUrl);
+  response.cookies.delete(`${provider}_oauth_state`);
+  response.cookies.delete("oauth_entry_source");
+  response.cookies.delete("oauth_diagnosis_run_id");
+  response.cookies.delete("oauth_anonymous_id");
+  return response;
 }

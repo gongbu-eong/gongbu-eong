@@ -1,5 +1,6 @@
 export type CurrentUserDto = {
   id: string;
+  status?: "active" | "blocked" | "withdrawn" | "pending_signup";
   email: string | null;
   nickname: string | null;
   displayName: string | null;
@@ -26,6 +27,7 @@ export type CurrentUserDto = {
   diagnosisResultId: string | null;
   creditBalance?: number;
   unreadNotificationCount?: number;
+  signupCompletedAt?: string | null;
   communityActivityRewardProgress?: {
     activityCount: number;
     milestoneCount: number;
