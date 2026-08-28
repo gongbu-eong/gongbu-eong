@@ -199,6 +199,7 @@ export async function getJobPostingDetail(
     basicInfo: row.basic_info,
     qualification: row.qualification,
     disqualification: row.disqualification,
+    preferenceCondition: row.preference_condition,
     preference: row.preference,
     screeningProcess: row.screening_process,
     applicationMethod: row.application_method,

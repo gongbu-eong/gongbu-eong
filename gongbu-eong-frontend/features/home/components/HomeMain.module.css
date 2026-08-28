@@ -597,45 +597,6 @@
   gap: 8px;
 }
 
-.businessInfo {
-  min-height: 380px;
-  padding: 24px 16px 40px;
-  background: #f5f7fa;
-}
-
-.businessInfo h2 {
-  margin: 0;
-  color: #1a2233;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.businessInfo dl {
-  margin: 8px 0 0;
-  color: #5a6580;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.15;
-}
-
-.businessInfo dt {
-  margin: 0;
-  font-weight: 400;
-}
-
-.businessInfo dd {
-  margin: 0 0 14px;
-}
-
-.businessInfo dd:last-child {
-  margin-bottom: 0;
-}
-
-.businessInfo address {
-  font-style: normal;
-}
-
 .listGroup {
   display: grid;
   gap: 8px;

@@ -40,6 +40,7 @@ export type JobPostingDetailDto = JobPostingDto & {
   basicInfo: string | null;
   qualification: string | null;
   disqualification: string | null;
+  preferenceCondition: string | null;
   preference: string | null;
   screeningProcess: string | null;
   applicationMethod: string | null;

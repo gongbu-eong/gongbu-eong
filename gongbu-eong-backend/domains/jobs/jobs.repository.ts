@@ -26,6 +26,7 @@ export type JobPostingDetailRow = JobPostingRow & {
   basic_info: string | null;
   qualification: string | null;
   disqualification: string | null;
+  preference_condition: string | null;
   preference: string | null;
   screening_process: string | null;
   application_method: string | null;
@@ -658,6 +659,14 @@ export async function findJobPostingById(jobPostingId: string, userId?: string) 
         details.basic_info,
         details.qualification,
         details.disqualification,
+        COALESCE(
+          NULLIF(BTRIM(postings.raw_payload->'list'->>'prefCondCn'), ''),
+          NULLIF(BTRIM(postings.raw_payload->'detail'->>'prefCondCn'), ''),
+          NULLIF(BTRIM(postings.raw_payload->>'prefCondCn'), ''),
+          NULLIF(BTRIM(postings.raw_payload->'list'->>'preferenceCondition'), ''),
+          NULLIF(BTRIM(postings.raw_payload->'detail'->>'preferenceCondition'), ''),
+          NULLIF(BTRIM(postings.raw_payload->>'preferenceCondition'), '')
+        ) AS preference_condition,
         details.preference,
         details.screening_process,
         details.application_method,

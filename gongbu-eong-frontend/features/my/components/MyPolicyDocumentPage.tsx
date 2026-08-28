@@ -1,6 +1,7 @@
 "use client";
 
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { BusinessInfo } from "@/features/layout/components/BusinessInfo";
 import styles from "./MyPolicies.module.css";
 
 export type PolicyTextBlock = {
@@ -569,6 +570,7 @@ export function MyPolicyDocumentPage({ documentKey }: { documentKey: PolicyDocum
             </section>
           ))}
         </div>
+        <BusinessInfo className={styles.policyBusinessInfo} />
       </main>
       <AppFooter active="my" />
     </div>

@@ -85,6 +85,7 @@ export function JobList({
   const [diagnosisHistoryLoading, setDiagnosisHistoryLoading] = useState(view === "recommended");
   const [recommendationCriteriaLoading, setRecommendationCriteriaLoading] = useState(view === "recommended" && Boolean(resultId));
   const [recommendationCriteriaReadyResultId, setRecommendationCriteriaReadyResultId] = useState("");
+  const [recommendationScopeActive, setRecommendationScopeActive] = useState(view === "recommended");
   const [recommendationTypeName, setRecommendationTypeName] = useState<string | null>(null);
   const [recommendationSetupOpen, setRecommendationSetupOpen] = useState(false);
   const [resultPickerOpen, setResultPickerOpen] = useState(false);
@@ -106,6 +107,8 @@ export function JobList({
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const requestView: JobListView =
+    view === "recommended" && !recommendationScopeActive ? "all" : view;
 
   const replaceRecommendedResultParam = useCallback((nextResultId: string) => {
     const params = new URLSearchParams(window.location.search);
@@ -152,7 +155,7 @@ export function JobList({
   }, [view]);
 
   useEffect(() => {
-    if (view !== "recommended" || !selectedResultId) return;
+    if (view !== "recommended" || !recommendationScopeActive || !selectedResultId) return;
 
     let mounted = true;
 
@@ -177,10 +180,10 @@ export function JobList({
 
     void loadResultScreenCriteria();
     return () => { mounted = false; };
-  }, [selectedResultId, view]);
+  }, [recommendationScopeActive, selectedResultId, view]);
 
   useEffect(() => {
-    if (view === "recommended") {
+    if (requestView === "recommended") {
       if (diagnosisHistoryLoading) return;
       if (selectedResultId && recommendationCriteriaReadyResultId !== selectedResultId) return;
     }
@@ -192,11 +195,11 @@ export function JobList({
       setMessage(null);
       try {
         const response = await getJobPostings({
-          view,
+          view: requestView,
           query,
           sort,
-          resultId: selectedResultId || undefined,
-          scope: monthlyRegularOnly ? "monthly-regular" : undefined,
+          resultId: requestView === "recommended" ? selectedResultId || undefined : undefined,
+          scope: requestView === "recommended" && monthlyRegularOnly ? "monthly-regular" : undefined,
           limit: PAGE_SIZE,
           offset: 0,
           ...toQueryFilters(filters),
@@ -220,10 +223,10 @@ export function JobList({
     filters,
     monthlyRegularOnly,
     query,
+    requestView,
     recommendationCriteriaReadyResultId,
     selectedResultId,
     sort,
-    view,
   ]);
 
   const loadMore = useCallback(async () => {
@@ -232,11 +235,11 @@ export function JobList({
     setLoadingMore(true);
     try {
       const response = await getJobPostings({
-        view,
+        view: requestView,
         query,
         sort,
-        resultId: selectedResultId || undefined,
-        scope: monthlyRegularOnly ? "monthly-regular" : undefined,
+        resultId: requestView === "recommended" ? selectedResultId || undefined : undefined,
+        scope: requestView === "recommended" && monthlyRegularOnly ? "monthly-regular" : undefined,
         limit: PAGE_SIZE,
         offset: jobs.length,
         ...toQueryFilters(filters),
@@ -251,7 +254,7 @@ export function JobList({
     } finally {
       setLoadingMore(false);
     }
-  }, [filters, jobs.length, loading, loadingMore, monthlyRegularOnly, query, selectedResultId, sort, total, view]);
+  }, [filters, jobs.length, loading, loadingMore, monthlyRegularOnly, query, requestView, selectedResultId, sort, total]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -321,6 +324,7 @@ export function JobList({
         .filter((value) => value.length > 0).length),
     [filters],
   );
+  const isShowingRecommendedScope = view === "recommended" && recommendationScopeActive;
   const showSearchControls = view === "all" || view === "closing";
   const showResultFilterButton = view === "recommended";
   const selectedDiagnosisResult = useMemo(
@@ -377,13 +381,15 @@ export function JobList({
 
   const handleSelectDiagnosisResult = (item: DiagnosisResultHistoryItemDto) => {
     const isSameResult = item.resultId === selectedResultId;
+    const shouldReloadCriteria = !isSameResult || !recommendationScopeActive;
     setSelectedResultId(item.resultId);
     setDiagnosisResults((current) =>
       current.map((result) => ({ ...result, isSelected: result.resultId === item.resultId })),
     );
     setRecommendationTypeName(item.typeName);
-    setRecommendationCriteriaLoading(!isSameResult);
-    setRecommendationCriteriaReadyResultId(isSameResult ? item.resultId : "");
+    setRecommendationScopeActive(true);
+    setRecommendationCriteriaLoading(shouldReloadCriteria);
+    setRecommendationCriteriaReadyResultId(shouldReloadCriteria ? "" : item.resultId);
     setResultPickerOpen(false);
     setRecommendationSetupOpen(false);
     replaceRecommendedResultParam(item.resultId);
@@ -391,10 +397,12 @@ export function JobList({
 
   const showRecommendedJobsForResult = (item: DiagnosisResultHistoryItemDto) => {
     const isSameResult = item.resultId === selectedResultId;
+    const shouldReloadCriteria = !isSameResult || !recommendationScopeActive;
     setSelectedResultId(item.resultId);
     setRecommendationTypeName(item.typeName);
-    setRecommendationCriteriaLoading(!isSameResult);
-    setRecommendationCriteriaReadyResultId(isSameResult ? item.resultId : "");
+    setRecommendationScopeActive(true);
+    setRecommendationCriteriaLoading(shouldReloadCriteria);
+    setRecommendationCriteriaReadyResultId(shouldReloadCriteria ? "" : item.resultId);
     setRecommendationSetupOpen(false);
     replaceRecommendedResultParam(item.resultId);
   };
@@ -489,7 +497,7 @@ export function JobList({
                 ) : null}
                 <label className={styles.sortSelect}>
                   <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
-                    <option value="closing">{view === "recommended" ? "추천순" : "마감순"}</option>
+                    <option value="closing">{isShowingRecommendedScope ? "추천순" : "마감순"}</option>
                     <option value="latest">등록순</option>
                     <option value="views">조회순</option>
                   </select>
@@ -531,7 +539,7 @@ export function JobList({
                   </button>
                 </article>
               ))}
-              {!loading && jobs.length === 0 ? <EmptyState view={view} query={query} /> : null}
+              {!loading && jobs.length === 0 ? <EmptyState view={requestView} query={query} /> : null}
               <div ref={loadMoreRef} className={styles.loadMore} aria-live="polite">
                 {loadingMore ? "공고를 더 불러오는 중..." : null}
               </div>
@@ -603,7 +611,7 @@ export function JobList({
                     type="button"
                     className={styles.resetFilter}
                     onClick={() => {
-                      setDraftFilters(scopedFilters);
+                      setDraftFilters(EMPTY_FILTERS);
                       setOptionPicker(null);
                     }}
                   >
@@ -611,6 +619,9 @@ export function JobList({
                   </button>
                   <button type="button" className={styles.applyFilter} onClick={() => {
                     setFilters(draftFilters);
+                    if (view === "recommended" && areFiltersEmpty(draftFilters)) {
+                      setRecommendationScopeActive(false);
+                    }
                     if (draftFilters.employmentType.length !== 1 || draftFilters.employmentType[0] !== "정규직") setMonthlyRegularOnly(false);
                     setOptionPicker(null);
                     setFilterOpen(false);
@@ -965,6 +976,18 @@ function toQueryFilters(filters: Filters) {
     education: filters.education.join("|"),
     career: filters.career.join("|"),
   };
+}
+
+function areFiltersEmpty(filters: Filters) {
+  return (
+    !filters.startDate &&
+    !filters.endDate &&
+    filters.ncs.length === 0 &&
+    filters.region.length === 0 &&
+    filters.employmentType.length === 0 &&
+    filters.education.length === 0 &&
+    filters.career.length === 0
+  );
 }
 
 function toResultScreenRecommendationFilters(detail: DiagnosisResultDetailResponseDto): Filters {

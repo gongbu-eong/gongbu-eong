@@ -150,7 +150,12 @@
 }
 
 .documentFrame {
-  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(6.5rem + env(safe-area-inset-bottom));
+}
+
+.policyBusinessInfo {
+  width: calc(100% + 2rem);
+  margin: 1.5rem -1rem 0;
 }
 
 .documentBody {

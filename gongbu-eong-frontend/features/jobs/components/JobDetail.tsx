@@ -79,7 +79,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
     }
   };
   const emailAddress = job ? getEmailAddress(job) : null;
-  const preferenceText = job?.preference?.trim() ?? "";
+  const preferenceConditionText = job?.preferenceCondition?.trim() ?? "";
   const processText = job
     ? [job.applicationMethod, job.screeningProcess, job.requiredDocuments]
         .filter(Boolean)
@@ -147,7 +147,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
                 <InfoRow label="채용인원" value={toHiringCount(job.hiringCount)} />
                 <CollapsibleInfoRow
                   label="우대조건"
-                  value={preferenceText}
+                  value={preferenceConditionText}
                   expanded={basicPreferenceExpanded}
                   onToggle={() =>
                     setBasicPreferenceExpanded((expanded) => !expanded)
@@ -187,7 +187,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
               <DetailSection title="우대내용" icon="preference">
                 <CollapsibleRichText
                   value={job.preference}
-                  empty="등록된 우대 조건이 없습니다."
+                  empty="등록된 우대 내용이 없습니다."
                   label="우대내용"
                   expanded={preferenceExpanded}
                   collapsedLines={5}
@@ -415,7 +415,7 @@ function CollapsibleInfoRow({
           onClick={onToggle}
           aria-expanded={expanded}
         >
-          우대 내용 {expanded ? "접기  ▲" : "더 보기  ▼"}
+          {label} {expanded ? "접기  ▲" : "더 보기  ▼"}
         </button>
       ) : null}
     </>
@@ -458,10 +458,7 @@ function CollapsibleRichText({
   const [canToggle, setCanToggle] = useState(false);
 
   useEffect(() => {
-    if (!text) {
-      setCanToggle(false);
-      return;
-    }
+    if (!text) return;
 
     const measure = () => {
       const element = textRef.current;
@@ -472,7 +469,7 @@ function CollapsibleRichText({
       );
       const renderedLines = getRenderedLineCount(element, lineHeight, 26.4);
 
-      setCanToggle(renderedLines > 5);
+      setCanToggle(renderedLines > collapsedLines);
     };
 
     measure();
@@ -491,7 +488,7 @@ function CollapsibleRichText({
       window.removeEventListener("resize", measure);
       resizeObserver?.disconnect();
     };
-  }, [text]);
+  }, [collapsedLines, text]);
 
   if (!text) {
     return <RichText value={value} empty={empty} />;

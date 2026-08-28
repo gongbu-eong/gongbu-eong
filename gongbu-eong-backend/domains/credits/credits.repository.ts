@@ -1,7 +1,9 @@
 import type { PoolClient } from "pg";
 import { db } from "@/lib/db";
+import { hashOAuthIdentity } from "@/domains/auth/oauth-token-crypto";
 
 type DbClient = Pick<PoolClient, "query">;
+type OAuthProvider = "kakao" | "naver";
 
 export const MAX_CREDIT_BALANCE = 20;
 
@@ -57,6 +59,15 @@ export async function grantWelcomeSignupCredits(
 
   if (!policy.isActive) return false;
 
+  const oauthIdentities = await getUserOAuthRewardIdentities(client, userId);
+  const hasPreviousOAuthReward = await hasOAuthIdentityRewardGrant(
+    client,
+    oauthIdentities,
+    CREDIT_REWARD_POLICY.welcomeSignup.sourceType,
+  );
+
+  if (hasPreviousOAuthReward) return false;
+
   const transaction = await insertCreditTransaction(client, {
     userId,
     amount: policy.amount,
@@ -66,6 +77,16 @@ export async function grantWelcomeSignupCredits(
     reason: policy.reason,
     metadata: { grantType: "signup", freeCredits: true },
   });
+
+  if (transaction.granted) {
+    await recordOAuthIdentityRewardGrant(client, oauthIdentities, {
+      rewardKey: CREDIT_REWARD_POLICY.welcomeSignup.sourceType,
+      userId,
+      creditTransactionId: transaction.id,
+      sourceId: userId,
+      metadata: { grantType: "signup", freeCredits: true },
+    });
+  }
 
   return transaction.granted;
 }
@@ -172,6 +193,13 @@ export async function grantDiagnosisResultShareReward(
       return { granted: false, balanceAfter };
     }
 
+    const oauthIdentities = await getUserOAuthRewardIdentities(client, userId);
+    const hasPreviousOAuthReward = await hasOAuthIdentityRewardGrant(
+      client,
+      oauthIdentities,
+      CREDIT_REWARD_POLICY.diagnosisResultShare.sourceType,
+    );
+
     const previousReward = await client.query<{ id: string }>(
       `
         SELECT id
@@ -183,7 +211,7 @@ export async function grantDiagnosisResultShareReward(
       [userId, CREDIT_REWARD_POLICY.diagnosisResultShare.sourceType],
     );
 
-    if (previousReward.rows[0]) {
+    if (hasPreviousOAuthReward || previousReward.rows[0]) {
       const balanceAfter = await getCurrentCreditBalance(userId, client);
       await client.query("COMMIT");
       return { granted: false, balanceAfter };
@@ -198,6 +226,17 @@ export async function grantDiagnosisResultShareReward(
       reason: policy.reason,
       metadata: { grantType: "diagnosis_result_share", resultId },
     });
+
+    if (transaction.granted) {
+      await recordOAuthIdentityRewardGrant(client, oauthIdentities, {
+        rewardKey: CREDIT_REWARD_POLICY.diagnosisResultShare.sourceType,
+        userId,
+        creditTransactionId: transaction.id,
+        sourceId: resultId,
+        metadata: { grantType: "diagnosis_result_share", resultId },
+      });
+    }
+
     const balanceAfter =
       transaction.balanceAfter ?? (await getCurrentCreditBalance(userId, client));
 
@@ -328,6 +367,137 @@ async function getCommunityActivityCount(userId: string, client: DbClient) {
   );
 
   return Number(result.rows[0]?.count || 0);
+}
+
+async function getUserOAuthRewardIdentities(client: DbClient, userId: string) {
+  const result = await client.query<{
+    provider: OAuthProvider;
+    provider_user_id: string;
+  }>(
+    `
+      SELECT provider, provider_user_id
+      FROM public.user_oauth_accounts
+      WHERE user_id = $1
+    `,
+    [userId],
+  );
+
+  return result.rows.map((row) => ({
+    provider: row.provider,
+    providerUserIdHash: hashOAuthIdentity(row.provider, row.provider_user_id),
+  }));
+}
+
+async function hasOAuthIdentityRewardGrant(
+  client: DbClient,
+  identities: Array<{ provider: OAuthProvider; providerUserIdHash: string }>,
+  rewardKey: string,
+) {
+  if (!identities.length) return false;
+
+  for (const identity of identities) {
+    await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [
+      `oauth-reward:${rewardKey}:${identity.provider}:${identity.providerUserIdHash}`,
+    ]);
+  }
+
+  const result = await client.query<{ exists: boolean }>(
+    `
+      WITH reward_identities AS (
+        SELECT *
+        FROM unnest($1::text[], $2::text[]) AS identity(provider, provider_user_id_hash)
+      )
+      SELECT EXISTS (
+        SELECT 1
+        FROM reward_identities identity
+        WHERE EXISTS (
+          SELECT 1
+          FROM public.oauth_identity_reward_grants grants
+          WHERE grants.provider = identity.provider::public.oauth_provider
+            AND grants.provider_user_id_hash = identity.provider_user_id_hash
+            AND grants.reward_key = $3
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM public.withdrawn_oauth_identities withdrawn
+          JOIN public.credit_transactions transactions
+            ON transactions.user_id = withdrawn.withdrawn_user_id
+           AND transactions.source_type = $3
+           AND transactions.transaction_type = 'event_grant'
+           AND transactions.amount > 0
+          WHERE withdrawn.provider = identity.provider::public.oauth_provider
+            AND withdrawn.provider_user_id_hash = identity.provider_user_id_hash
+        )
+        OR (
+          $3 = 'welcome_signup'
+          AND EXISTS (
+            SELECT 1
+            FROM public.withdrawn_oauth_identities withdrawn
+            WHERE withdrawn.provider = identity.provider::public.oauth_provider
+              AND withdrawn.provider_user_id_hash = identity.provider_user_id_hash
+          )
+        )
+      ) AS exists
+    `,
+    [
+      identities.map((identity) => identity.provider),
+      identities.map((identity) => identity.providerUserIdHash),
+      rewardKey,
+    ],
+  );
+
+  return Boolean(result.rows[0]?.exists);
+}
+
+async function recordOAuthIdentityRewardGrant(
+  client: DbClient,
+  identities: Array<{ provider: OAuthProvider; providerUserIdHash: string }>,
+  args: {
+    rewardKey: string;
+    userId: string;
+    creditTransactionId?: string;
+    sourceId: string;
+    metadata: Record<string, unknown>;
+  },
+) {
+  if (!identities.length) return;
+
+  await client.query(
+    `
+      INSERT INTO public.oauth_identity_reward_grants (
+        provider,
+        provider_user_id_hash,
+        reward_key,
+        user_id,
+        credit_transaction_id,
+        source_id,
+        metadata,
+        granted_at,
+        updated_at
+      )
+      SELECT
+        identity.provider::public.oauth_provider,
+        identity.provider_user_id_hash,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7::jsonb,
+        NOW(),
+        NOW()
+      FROM unnest($1::text[], $2::text[]) AS identity(provider, provider_user_id_hash)
+      ON CONFLICT (provider, provider_user_id_hash, reward_key) DO NOTHING
+    `,
+    [
+      identities.map((identity) => identity.provider),
+      identities.map((identity) => identity.providerUserIdHash),
+      args.rewardKey,
+      args.userId,
+      args.creditTransactionId || null,
+      args.sourceId,
+      JSON.stringify(args.metadata),
+    ],
+  );
 }
 
 function buildCommunityActivityRewardProgress(
@@ -472,5 +642,5 @@ async function insertCreditTransaction(
   );
 
   const row = result.rows[0];
-  return { granted: Boolean(row), balanceAfter: row?.balance_after };
+  return { id: row?.id, granted: Boolean(row), balanceAfter: row?.balance_after };
 }

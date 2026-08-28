@@ -178,6 +178,11 @@ export async function withdrawUserAccount(args: {
     );
 
     for (const account of args.oauthAccounts) {
+      const providerUserIdHash = hashOAuthIdentity(
+        account.provider,
+        account.providerUserId,
+      );
+
       await client.query(
         `
           INSERT INTO public.withdrawn_oauth_identities (
@@ -205,7 +210,7 @@ export async function withdrawUserAccount(args: {
         `,
         [
           account.provider,
-          hashOAuthIdentity(account.provider, account.providerUserId),
+          providerUserIdHash,
           account.providerEmail
             ? hashOAuthIdentity(account.provider, account.providerEmail)
             : null,
@@ -213,6 +218,47 @@ export async function withdrawUserAccount(args: {
           withdrawalRequestId,
           privateDataPurgeAfter,
         ],
+      );
+
+      await client.query(
+        `
+          INSERT INTO public.oauth_identity_reward_grants (
+            provider,
+            provider_user_id_hash,
+            reward_key,
+            user_id,
+            credit_transaction_id,
+            source_id,
+            metadata,
+            granted_at,
+            updated_at
+          )
+          SELECT
+            $1::public.oauth_provider,
+            $2,
+            transactions.source_type,
+            $3,
+            transactions.id,
+            transactions.source_id,
+            jsonb_build_object('backfilledAtWithdrawal', TRUE),
+            transactions.created_at,
+            NOW()
+          FROM (
+            SELECT DISTINCT ON (source_type)
+              id,
+              source_type,
+              source_id,
+              created_at
+            FROM public.credit_transactions
+            WHERE user_id = $3
+              AND source_type IN ('welcome_signup', 'diagnosis_result_share')
+              AND transaction_type = 'event_grant'
+              AND amount > 0
+            ORDER BY source_type, created_at, id
+          ) transactions
+          ON CONFLICT (provider, provider_user_id_hash, reward_key) DO NOTHING
+        `,
+        [account.provider, providerUserIdHash, args.userId],
       );
     }
 
