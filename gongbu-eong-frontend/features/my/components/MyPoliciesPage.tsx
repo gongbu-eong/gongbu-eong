@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { BusinessInfo } from "@/features/layout/components/BusinessInfo";
 import styles from "./MyPolicies.module.css";
 
 const policyItems = [
@@ -65,21 +66,7 @@ export function MyPoliciesPage() {
             </Link>
           ))}
         </nav>
-
-        <section className={styles.infoBox} aria-label="운영 정보">
-          <p>
-            <strong>운영시간</strong> (주)커리어넷 · 대표 박윤수
-          </p>
-          <p>
-            <strong>사업자등록번호</strong> 220-86-73547
-          </p>
-          <p>
-            <strong>현재 적용 버전</strong> 이용약관 v1.0 / 개인정보처리방침 v1.0
-          </p>
-          <p>
-            <strong>시행일</strong> 2026.08.20
-          </p>
-        </section>
+        <BusinessInfo className={styles.policyBusinessInfo} />
       </main>
       <AppFooter active="my" />
     </div>
