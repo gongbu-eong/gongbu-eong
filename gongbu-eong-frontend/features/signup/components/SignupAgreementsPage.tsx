@@ -351,7 +351,11 @@ function PolicyBlockView({ block }: { block: PolicyTextBlock | PolicyTable }) {
 
   if (block.kind === "table") {
     return (
-      <table className={styles.policyTable}>
+      <table
+        className={`${styles.policyTable} ${block.narrowFirstColumn ? styles.policyTableNarrow : ""} ${
+          block.dangerFirstColumn ? styles.policyTableDanger : ""
+        }`}
+      >
         <thead>
           <tr>
             {block.headers.map((header) => (

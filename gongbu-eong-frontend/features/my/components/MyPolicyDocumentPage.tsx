@@ -266,7 +266,7 @@ const termsSections: PolicySection[] = [
 
 const privacySections: PolicySection[] = [
   {
-    title: "",
+    title: "개요",
     blocks: [
       {
         kind: "paragraph",

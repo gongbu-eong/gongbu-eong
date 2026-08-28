@@ -205,6 +205,14 @@
   font-weight: 400;
 }
 
+.documentBody ol.documentList li::marker {
+  content: counter(list-item) ". ";
+}
+
+.documentBody ul.documentList li::marker {
+  content: "· ";
+}
+
 .documentList li {
   margin: 0;
   padding-left: 0.125rem;
