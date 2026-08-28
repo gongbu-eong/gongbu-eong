@@ -15,7 +15,7 @@ import styles from "./CoachingPage.module.css";
 
 type QuestionRow = { id: string; question: string; characterLimit: string };
 type ConnectedJob = CoachingJob & { duty: string };
-const MAX_QUESTION_COUNT = 5;
+const MAX_QUESTION_COUNT = 7;
 const MAX_QUESTION_TEXT_LENGTH = 200;
 const MIN_CHARACTER_LIMIT = 100;
 const MAX_CHARACTER_LIMIT = 2000;
@@ -149,7 +149,7 @@ export function CoachingPage() {
 
   const addQuestion = () => {
     if (questions.length >= MAX_QUESTION_COUNT) {
-      window.alert("자소서 문항은 최대 5개까지 추가할 수 있습니다.");
+      window.alert(`자소서 문항은 최대 ${MAX_QUESTION_COUNT}개까지 추가할 수 있습니다.`);
       return;
     }
     setQuestions((items) => [...items, makeQuestionRow()]);

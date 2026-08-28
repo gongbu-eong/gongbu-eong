@@ -12,6 +12,7 @@ import { jsonWithCors } from "@/lib/cors";
 import type { CoachingQuestionInput } from "@/domains/coaching/coaching.dto";
 
 export const runtime = "nodejs";
+const MAX_QUESTION_COUNT = 7;
 const MAX_QUESTION_TEXT_LENGTH = 200;
 
 export async function POST(request: NextRequest) {
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     if (inputType === "text" && !text) return jsonWithCors(request, { ok: false, message: "자소서를 입력해 주세요." }, { status: 400 });
     if (inputType === "text" && text.length > 10000) return jsonWithCors(request, { ok: false, message: "자소서는 10,000자까지 입력할 수 있습니다." }, { status: 400 });
     if (inputType === "file" && !file) return jsonWithCors(request, { ok: false, message: "자소서 파일을 첨부해 주세요." }, { status: 400 });
-    if (!questions.length || questions.length > 5 || questions.some((item) => !item.question || !item.characterLimit || item.characterLimit < 100 || item.characterLimit > 2000)) {
+    if (!questions.length || questions.length > MAX_QUESTION_COUNT || questions.some((item) => !item.question || !item.characterLimit || item.characterLimit < 100 || item.characterLimit > 2000)) {
       return jsonWithCors(request, { ok: false, message: "자소서 문항과 100자 이상 2000자 이하의 글자 수 제한을 입력해 주세요." }, { status: 400 });
     }
     if (questions.some((item) => item.question.length > MAX_QUESTION_TEXT_LENGTH)) {
