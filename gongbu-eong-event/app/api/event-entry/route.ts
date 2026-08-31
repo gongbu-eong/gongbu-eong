@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
   };
 
   const redirectPath = normalizeNextPath(body.returnPath || nextPath);
-  const redirectResponse = NextResponse.redirect(new URL(redirectPath, request.nextUrl.origin), 302);
+  const redirectResponse = NextResponse.redirect(new URL(redirectPath, getPublicRequestOrigin(request)), 302);
   const expiresAt = new Date(body.expiresAt);
 
   redirectResponse.cookies.set(EVENT_SESSION_COOKIE, body.eventSessionToken, {
@@ -76,4 +76,18 @@ function getMainAppUrl() {
     process.env.NEXT_PUBLIC_FRONTEND_URL ||
     "http://localhost:3000"
   );
+}
+
+function getPublicRequestOrigin(request: NextRequest) {
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host");
+
+  if (!host || host.startsWith("localhost") || host.startsWith("127.0.0.1")) {
+    return getMainAppUrl();
+  }
+
+  const protocol = request.headers.get("x-forwarded-proto") || "https";
+
+  return `${protocol}://${host}`;
 }
