@@ -54,7 +54,7 @@ export async function createEventEntryRedirect(args: {
 
   const ticket = randomToken();
   const ticketHash = hashValue(ticket);
-  const eventBaseUrl = getEventBaseUrl(event.event_base_url);
+  const eventBaseUrl = getEventBaseUrl(event.event_base_url, args.request);
 
   await insertEventEntryTicket({
     eventId: event.id,
@@ -179,13 +179,46 @@ function normalizeEventPath(
   return `${parsed.pathname}${parsed.search}`;
 }
 
-function getEventBaseUrl(eventBaseUrl?: string | null) {
-  return (
+function getEventBaseUrl(eventBaseUrl: string | null | undefined, request: NextRequest) {
+  const configuredUrl =
     eventBaseUrl ||
     process.env.GONGBUEONG_EVENT_URL ||
     process.env.NEXT_PUBLIC_EVENT_URL ||
-    "http://localhost:3001"
-  );
+    "http://localhost:3001";
+
+  if (process.env.NODE_ENV === "production" && isLocalhostUrl(configuredUrl)) {
+    const requestOrigin = getPublicRequestOrigin(request);
+    if (requestOrigin) {
+      return requestOrigin;
+    }
+  }
+
+  return configuredUrl;
+}
+
+function isLocalhostUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.hostname === "localhost" || url.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
+function getPublicRequestOrigin(request: NextRequest) {
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host");
+
+  if (!host) {
+    return null;
+  }
+
+  const protocol =
+    request.headers.get("x-forwarded-proto") ||
+    (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
+
+  return `${protocol}://${host}`;
 }
 
 function getRequestIp(request: NextRequest) {
