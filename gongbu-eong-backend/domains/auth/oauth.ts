@@ -202,6 +202,7 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       httpOnly: true,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       secure: process.env.NODE_ENV === "production",
+      domain: process.env.SESSION_COOKIE_DOMAIN || undefined,
       path: "/",
       maxAge: 60 * 60 * 24 * 14,
     });

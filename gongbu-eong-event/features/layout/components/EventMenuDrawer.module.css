@@ -1,0 +1,282 @@
+.menuOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.menuDim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.5);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  right: max(0px, calc((100vw - 600px) / 2));
+  width: min(314px, calc(100vw - 48px));
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  scrollbar-width: none;
+  background: #ffffff;
+  color: #1a2233;
+}
+
+.drawer::-webkit-scrollbar {
+  display: none;
+}
+
+.drawerHeader {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  height: 112px;
+  padding: 24px 48px 24px 16px;
+  background: #2f7ff0;
+  color: #ffffff;
+}
+
+.drawerAvatar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  overflow: hidden;
+}
+
+.drawerGuestAvatar {
+  overflow: visible;
+}
+
+.drawerAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.drawerHeader strong {
+  display: block;
+  margin-top: 0;
+  font-size: 1.0625rem;
+  line-height: 1.2;
+  font-weight: 900;
+}
+
+.drawerHeader p {
+  margin: 7px 0 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.drawerLoginLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 108px;
+  height: 36px;
+  margin-top: 8px;
+  border: 1px solid #ffffff;
+  border-radius: 8px;
+  background: #2f7ff0;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.drawerClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #5a6580;
+  cursor: pointer;
+}
+
+.drawerClose img {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+
+.drawerNav {
+  flex: 1 0 auto;
+  padding: 17px 0 0;
+}
+
+.drawerSection {
+  display: flex;
+  align-items: flex-start;
+  padding: 0 16px 0 12px;
+}
+
+.drawerIcon {
+  display: flex;
+  flex: 0 0 35px;
+  height: 28px;
+  align-items: center;
+  justify-content: flex-start;
+  color: #2f7ff0;
+  font-size: 1.375rem;
+  line-height: 1;
+}
+
+.drawerIcon img {
+  display: block;
+  object-fit: contain;
+}
+
+.drawerIcon[data-icon="home"] img {
+  width: 1.4383rem;
+  height: 1.4628rem;
+}
+
+.drawerIcon[data-icon="megaphone"] img {
+  width: 1.5rem;
+  height: 1.291rem;
+}
+
+.drawerIcon[data-icon="calendar"] img {
+  width: 1.5rem;
+  height: 1.6514rem;
+}
+
+.drawerIcon[data-icon="ai"] img {
+  width: 1.6334rem;
+  height: 1.6451rem;
+}
+
+.drawerIcon[data-icon="community"] img {
+  width: 1.625rem;
+  height: 1.4288rem;
+}
+
+.drawerIcon[data-icon="my"] img {
+  width: 1.5rem;
+  height: 1.2999rem;
+}
+
+.drawerSectionBody {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  padding: 0 0 20px 0;
+}
+
+.drawerSectionBody[data-has-items="true"]::before {
+  position: absolute;
+  top: 32px;
+  left: -24px;
+  width: 1px;
+  height: var(--drawer-line-height);
+  background: #e4e8ef;
+  content: "";
+}
+
+.drawerSection h3 {
+  display: flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.drawerSection h3 > a {
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.drawerSection ul {
+  display: grid;
+  gap: 15px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.drawerSection a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #5a6580;
+  text-decoration: none;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.drawerLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #fff5db;
+  color: #f5b91e;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.drawerBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #e8f1ff;
+  color: #2f7ff0;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.logoutButton {
+  position: relative;
+  flex: 0 0 46px;
+  width: calc(100% - 48px);
+  height: 46px;
+  margin: 0 24px 43px;
+  border: 1px solid #2f7ff0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2f7ff0;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 900;
+}
+
+.logoutButton:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}

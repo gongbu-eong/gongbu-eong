@@ -1,51 +1,25 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
-import { DiagnosisFlow } from "@/features/diagnosis/components/DiagnosisFlow";
-import {
-  DIAGNOSIS_SHARE_DESCRIPTION,
-  DIAGNOSIS_SHARE_IMAGE_HEIGHT,
-  DIAGNOSIS_SHARE_IMAGE_WIDTH,
-  DIAGNOSIS_SHARE_TITLE,
-  getDiagnosisIntroShareUrl,
-  getDiagnosisShareImageUrl,
-} from "@/features/diagnosis/diagnosis-share";
+import { redirect } from "next/navigation";
+import { getDiagnosisShareImageUrl } from "@/features/diagnosis/diagnosis-share";
+import { buildSignedEventEntryUrl } from "@/shared/events/event-entry";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host") || "";
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ||
-    (host.includes("localhost") ? "http" : "https");
-  const requestOrigin = host ? `${protocol}://${host}` : undefined;
-  const url = getDiagnosisIntroShareUrl(requestOrigin);
-  const imageUrl = getDiagnosisShareImageUrl(requestOrigin);
+export const metadata: Metadata = {
+  title: "강점·성향 진단 | 공부엉이",
+  description: "20문항으로 나의 강점과 취업 성향을 확인해 보세요.",
+  openGraph: {
+    title: "강점·성향 진단 | 공부엉이",
+    description: "20문항으로 나의 강점과 취업 성향을 확인해 보세요.",
+    images: [
+      {
+        url: getDiagnosisShareImageUrl(),
+        width: 1200,
+        height: 630,
+        alt: "공부엉이 강점·성향 진단",
+      },
+    ],
+  },
+};
 
-  return {
-    title: DIAGNOSIS_SHARE_TITLE,
-    description: DIAGNOSIS_SHARE_DESCRIPTION,
-    openGraph: {
-      title: DIAGNOSIS_SHARE_TITLE,
-      description: DIAGNOSIS_SHARE_DESCRIPTION,
-      url,
-      type: "website",
-      images: [
-        {
-          url: imageUrl,
-          width: DIAGNOSIS_SHARE_IMAGE_WIDTH,
-          height: DIAGNOSIS_SHARE_IMAGE_HEIGHT,
-          alt: DIAGNOSIS_SHARE_TITLE,
-        },
-      ],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: DIAGNOSIS_SHARE_TITLE,
-      description: DIAGNOSIS_SHARE_DESCRIPTION,
-      images: [imageUrl],
-    },
-  };
-}
-
-export default function DiagnosisPage() {
-  return <DiagnosisFlow />;
+export default async function DiagnosisPage() {
+  redirect(await buildSignedEventEntryUrl("1", "/events/diagnosis"));
 }

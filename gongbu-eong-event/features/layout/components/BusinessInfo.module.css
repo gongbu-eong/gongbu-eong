@@ -1,0 +1,63 @@
+.businessInfo {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 37.5rem;
+  min-height: 11.75rem;
+  margin: 0 auto;
+  padding: 1rem 1rem 1.75rem;
+  background: #f5f7fa;
+  color: #9aa4b8;
+  font-family: Pretendard, var(--gb-font-sans), system-ui, sans-serif;
+  letter-spacing: 0;
+  word-break: keep-all;
+}
+
+.businessInfo h2 {
+  margin: 0 0 0.75rem;
+  color: #5a6580;
+  font-size: 0.9375rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.businessInfo dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.2308;
+  font-weight: 400;
+}
+
+.businessInfo div {
+  display: grid;
+  grid-template-columns: minmax(5.75rem, 7rem) minmax(0, 1fr);
+  column-gap: 0;
+}
+
+.businessInfo dt {
+  margin: 0;
+  color: #9aa4b8;
+  font-weight: 400;
+}
+
+.businessInfo dd {
+  min-width: 0;
+  margin: 0;
+  color: #9aa4b8;
+  overflow-wrap: anywhere;
+}
+
+.businessInfo address {
+  font-style: normal;
+}
+
+@media (max-width: 359px) {
+  .businessInfo {
+    padding-inline: 0.875rem;
+  }
+
+  .businessInfo div {
+    grid-template-columns: minmax(5.25rem, 6rem) minmax(0, 1fr);
+  }
+}

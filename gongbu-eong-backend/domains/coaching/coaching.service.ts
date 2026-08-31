@@ -19,6 +19,17 @@ type PreparedCoachingSource = { content: Array<Record<string, unknown>>; storage
 async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoachingSource> {
   const prompt = buildPrompt(args.job, args.questions || [], args.jobDuty);
   if (args.inputType === "file" && args.file) {
+    const imageMediaType = getCoachingImageMediaType(args.file.name);
+    if (imageMediaType) {
+      return {
+        storageText: "",
+        originalText: "",
+        content: [
+          { type: "input_image", image_url: makeOpenAiFileDataUrl(imageMediaType, args.file.buffer), detail: "low" },
+          { type: "input_text", text: `${prompt}\n\n첨부한 이미지 파일 전체가 자소서 원문입니다. 이미지 안의 자기소개서 문장을 먼저 읽고, 보이는 텍스트만 근거로 분석하세요.` },
+        ],
+      };
+    }
     if (args.file.name.toLowerCase().endsWith(".pdf")) {
       return {
         storageText: "",
@@ -39,7 +50,7 @@ async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoa
 async function requestAiFeedback(args: CoachResumeArgs, prepared: PreparedCoachingSource): Promise<CoachingFeedback> {
   try {
     const payload = await createOpenAiJsonResponse({
-      content: prepared.content as Array<{ type: "input_text"; text: string } | { type: "input_file"; filename: string; file_data: string; detail?: "low" | "high" | "auto" }>,
+      content: prepared.content as Array<{ type: "input_text"; text: string } | { type: "input_file"; filename: string; file_data: string; detail?: "low" | "high" | "auto" } | { type: "input_image"; image_url: string; detail?: "low" | "high" | "auto" }>,
       schemaName: "coaching_feedback",
       schema: coachingFeedbackTool.input_schema,
       maxOutputTokens: 24000,
@@ -51,6 +62,13 @@ async function requestAiFeedback(args: CoachResumeArgs, prepared: PreparedCoachi
     console.error("Invalid coaching response payload", error);
     throw new Error("AI 자소서 코칭 결과를 해석하지 못했습니다. 다시 시도해 주세요.");
   }
+}
+
+function getCoachingImageMediaType(filename: string) {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+  return null;
 }
 
 const coachingFeedbackTool = {

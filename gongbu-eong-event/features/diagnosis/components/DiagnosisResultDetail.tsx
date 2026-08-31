@@ -34,6 +34,15 @@ import type {
 } from "../diagnosis.dto";
 import styles from "./DiagnosisResultDetail.module.css";
 
+const mainAppUrl =
+  process.env.NEXT_PUBLIC_MAIN_APP_URL ||
+  process.env.NEXT_PUBLIC_FRONTEND_URL ||
+  "http://localhost:3000";
+
+function mainHref(path: string) {
+  return new URL(path, mainAppUrl).toString();
+}
+
 type TypeCopy = {
   color: string;
   heroSummary: string;
@@ -424,7 +433,7 @@ export function DiagnosisResultDetail() {
   if (recommendedNcsCategories.length) {
     recommendedJobsParams.set("ncs", recommendedNcsCategories.join("|"));
   }
-  const recommendedJobsHref = `/jobs?${recommendedJobsParams.toString()}`;
+  const recommendedJobsHref = mainHref(`/jobs?${recommendedJobsParams.toString()}`);
 
   const openHistory = () => {
     setHistoryOpen(true);
@@ -634,9 +643,11 @@ export function DiagnosisResultDetail() {
             </div>
             <div className={styles.tipNotice}><span className={styles.tipNoticeIcon} aria-hidden="true" /><p><strong>이 팁은 {subjectLabel} 유형에 대한 조언이에요.</strong><br />지원할 회사·직무별 맞춤 전략은 자소서 코칭에서 내 유형과 함께 분석해드려요.</p></div>
             {isPublicView ? (
-              <Link href="/ai-tools/diagnosis" className={styles.publicDiagnosisButton}>나의 강점·성향 유형 검사하기&nbsp;&nbsp;&gt;</Link>
+              <Link href="/events/diagnosis" className={styles.publicDiagnosisButton}>나의 강점·성향 유형 검사하기&nbsp;&nbsp;&gt;</Link>
             ) : (
-              <button type="button" className={styles.coachingButton} onClick={() => router.push("/ai-tools/coaching")}>내 유형 + 지원 회사로 자소서 코칭 받기 →</button>
+              <button type="button" className={styles.coachingButton} onClick={() => {
+                window.location.href = mainHref("/ai-tools/coaching");
+              }}>내 유형 + 지원 회사로 자소서 코칭 받기 →</button>
             )}
           </section>
 
@@ -691,7 +702,7 @@ export function DiagnosisResultDetail() {
                 <button type="button" key={item.resultId} className={item.resultId === result.resultId ? styles.selectedHistory : ""} onClick={async () => {
                   setHistoryOpen(false);
                   await selectDiagnosisResult(item.resultId);
-                  router.replace(`/ai-tools/diagnosis/result?resultId=${encodeURIComponent(item.resultId)}`);
+                  router.replace(`/events/diagnosis/result?resultId=${encodeURIComponent(item.resultId)}`);
                 }}>
                   <span><strong>{item.typeName}</strong><time>{formatDate(item.completedAt)}</time></span><i aria-hidden="true" />
                 </button>
@@ -731,7 +742,7 @@ function FigmaSectionIcon({ kind }: { kind: FigmaSectionIconKind }) {
 function RecommendedPosting({ posting }: { posting: DiagnosisResultDetailResponseDto["recommendedPostings"][number] }) {
   const ddayClass = posting.dday === "D-1" || posting.dday === "D-Day" ? styles.ddayUrgent : posting.dday === "D-2" ? styles.ddaySoon : styles.ddayNormal;
   return (
-    <Link href={`/jobs/${posting.id}`} className={styles.postingCard}>
+    <Link href={mainHref(`/jobs/${posting.id}`)} className={styles.postingCard}>
       <small>{posting.institutionName}</small>
       <strong>{posting.title}</strong>
       <div className={styles.postingBadges}>
@@ -747,7 +758,7 @@ function RecommendedPosting({ posting }: { posting: DiagnosisResultDetailRespons
 }
 
 function ResultState({ message }: { message: string }) {
-  return <main className={styles.page}><section className={styles.state}><p>{message}</p><Link href="/ai-tools/diagnosis">진단 화면으로 이동</Link></section></main>;
+  return <main className={styles.page}><section className={styles.state}><p>{message}</p><Link href="/events/diagnosis">진단 화면으로 이동</Link></section></main>;
 }
 
 function formatDate(value: string) {

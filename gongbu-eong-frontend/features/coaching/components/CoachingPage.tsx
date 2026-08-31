@@ -167,9 +167,9 @@ export function CoachingPage() {
   return <div className={styles.page}>
     <AppHeader />
     <main className={`${styles.frame} ${styles.newCoachingFrame}`}>
-      <h1>Ai NCS 자소서 코칭</h1>
+      <h1>{connectedJob ? "Ai NCS 자소서 코칭 결과" : "Ai NCS 자소서 코칭"}</h1>
       <section className={styles.intro}><strong>자소서를 Ai가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
-      {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button>}
+      {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <><button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button><p className={styles.helper}>공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.<br />연결하지 않아도 일반 자소서 코칭을 받을 수 있어요.</p></>}
       <StatusCard title="강점·성향 진단 결과" ready={hasDiagnosis} empty="현재 강·약점 결과가 없습니다." action="진단 시작하기 →" href="/ai-tools/diagnosis" onChange={() => setPicker("diagnosis")} selected={selectedDiagnosis?.typeName} date={formatDate(selectedDiagnosis?.completedAt)} />
 
       <section className={styles.questionSection}>
@@ -184,11 +184,11 @@ export function CoachingPage() {
         </div>)}
       </section>
 
-      <section className={styles.writeSection}><h2>자소서 작성</h2><div className={styles.tabs}><button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button><button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button></div>{inputType === "text" ? <><textarea value={text} maxLength={10000} onChange={(event) => setText(event.target.value)} placeholder="작성한 자기소개서를 붙여넣어 주세요." /><span className={styles.counter}>{text.length.toLocaleString()}자 / 10,000자</span></> : <button type="button" className={`${styles.fileDrop} ${isDragActive ? styles.fileDropActive : ""}`} onClick={() => fileInputRef.current?.click()} onDragOver={(event) => { event.preventDefault(); setIsDragActive(true); }} onDragLeave={() => setIsDragActive(false)} onDrop={(event) => { event.preventDefault(); setIsDragActive(false); handleFile(event.dataTransfer.files?.[0] || null); }}><input ref={fileInputRef} type="file" accept=".hwp,.hwpx,.pdf,.doc,.docx" onChange={(event) => handleFile(event.target.files?.[0] || null)} />{file ? <strong>{file.name}</strong> : <><span className={styles.fileSheetIcon} aria-hidden="true" /><strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong><span>HWP · HWPX · PDF · DOC · DOCX (최대 10MB)</span></>}</button>}</section>
+      <section className={styles.writeSection}><h2>자소서 작성</h2><div className={styles.tabs}><button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button><button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button></div>{inputType === "text" ? <><textarea value={text} maxLength={10000} onChange={(event) => setText(event.target.value)} placeholder="작성한 자기소개서를 붙여넣어 주세요." /><span className={styles.counter}>{text.length.toLocaleString()}자 / 10,000자</span></> : <button type="button" className={`${styles.fileDrop} ${isDragActive ? styles.fileDropActive : ""}`} onClick={() => fileInputRef.current?.click()} onDragOver={(event) => { event.preventDefault(); setIsDragActive(true); }} onDragLeave={() => setIsDragActive(false)} onDrop={(event) => { event.preventDefault(); setIsDragActive(false); handleFile(event.dataTransfer.files?.[0] || null); }}><input ref={fileInputRef} type="file" accept=".hwp,.hwpx,.pdf,.docx,.jpg,.jpeg,.png" onChange={(event) => handleFile(event.target.files?.[0] || null)} />{file ? <strong>{file.name}</strong> : <><span className={styles.fileSheetIcon} aria-hidden="true">📄</span><strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong><span>HWP · HWPX · PDF · DOCX · JPG · PNG (최대 10MB)</span></>}</button>}</section>
       {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
       <button type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsOpen(true)}><span>{termsConfirmed ? "✓" : ""}</span>자소서 약관동의를 해주세요.</button>
       {error ? <p className={styles.error}>{error}</p> : null}
-      <button className={styles.primaryButton} type="button" onClick={submit} disabled={coaching || loading || !formReady}>Ai NCS 자소서 코칭 받기</button>
+      <button className={`${styles.primaryButton} ${styles.coachingSubmitButton}`} type="button" onClick={submit} disabled={coaching || loading || !formReady}><Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.coachingSubmitIcon} />Ai NCS 자소서 코칭 받기</button>
     </main>
     <AppFooter active="ai" />
     {termsOpen ? <TermsSheet onConfirm={() => { setTermsConfirmed(true); setTermsOpen(false); }} onClose={() => setTermsOpen(false)} /> : null}
@@ -203,7 +203,7 @@ function CoachingLoadingScreen() {
 }
 
 function ConnectedJobCard({ job, onRemove }: { job: ConnectedJob; onRemove: () => void }) {
-  return <section className={styles.connectedJobCard}><button type="button" onClick={onRemove} aria-label="지원 공고 연결 해제">×</button><span>지원 공고</span><strong>{job.title}</strong><em>직무</em><p>{job.duty}</p><small>✓ 이 공고의 직무 적합성까지 함께 분석해요</small></section>;
+  return <><section className={styles.connectedJobCard}><button type="button" onClick={onRemove} aria-label="지원 공고 연결 해제"><Image src="/coaching/close-rounded.svg" alt="" width={24} height={24} /></button><span>지원 공고</span><strong>[{job.institutionName}] {job.title}</strong><em>직무</em><p>{job.duty}</p></section><small className={styles.jobFitNotice}>✓ 이 공고의 직무 적합성까지 함께 분석해요</small></>;
 }
 
 function StatusCard({ title, ready, empty, action, href, onChange, selected, date }: { title: string; ready: boolean; empty: string; action: string; href: string; onChange: () => void; selected?: string; date?: string }) {

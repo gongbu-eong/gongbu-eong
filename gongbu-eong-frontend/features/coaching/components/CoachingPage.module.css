@@ -96,19 +96,23 @@
 .resultScreen .resultActions button{font-size:16px!important;font-weight:800!important}
 
 /* 2079 coaching input redesign */
-.newCoachingFrame{padding:64px 24px 108px;font-family:Pretendard,"Noto Sans KR",sans-serif}
-.newCoachingFrame h1{margin:0 0 24px;color:#1a2233;font-size:20px;font-weight:800;line-height:1.25}
-.newCoachingFrame .intro{margin-bottom:24px}
-.newCoachingFrame .intro strong{display:block;color:#1a2233;font-size:17px;font-weight:800}
-.newCoachingFrame .intro p{margin:8px 0 0;color:#5a6580;font-size:14px;line-height:20px}
-.connectedJobCard{position:relative;margin:0 0 24px;padding:16px;border:1px solid #d8e8ff;border-radius:8px;background:#f3f8ff;color:#1a2233}
-.connectedJobCard>button{position:absolute;right:12px;top:10px;border:0;background:transparent;color:#8a94a8;font-size:22px}
-.connectedJobCard span,.connectedJobCard em{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:999px;background:#2f7ff0;color:#fff;font-size:12px;font-style:normal;font-weight:800}
-.connectedJobCard strong{display:block;margin:10px 28px 12px 0;font-size:14px;line-height:20px}
-.connectedJobCard em{background:#fff;color:#2f7ff0;border:1px solid #d8e8ff}
-.connectedJobCard p{display:inline;margin-left:8px;color:#1a2233;font-size:14px;font-weight:700}
-.connectedJobCard small{display:block;margin-top:12px;color:#1fb573;font-size:13px}
-.questionSection{margin-top:28px}
+.newCoachingFrame{padding:64px 16px 108px;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.newCoachingFrame h1{margin:0 0 24px;color:#1a2233;font-size:20px;font-weight:800;line-height:1}
+.newCoachingFrame .intro{margin-bottom:16px}
+.newCoachingFrame .intro strong{display:block;color:#1a2233;font-size:17px;font-weight:700;line-height:1}
+.newCoachingFrame .intro p{margin:10px 0 0;color:#5a6580;font-size:14px;font-weight:400;line-height:19px}
+.newCoachingFrame .jobConnect{height:52px;border:1px dashed #2f7ff0;border-radius:12px;background:#fff;color:#2f7ff0;font-size:16px;font-weight:800;line-height:1}
+.newCoachingFrame .helper{margin:16px 0 36px;color:#5a6580;font-size:13px;font-weight:400;line-height:18px;text-align:center}
+.connectedJobCard{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr) 24px;gap:8px 10px;min-height:78px;box-sizing:border-box;margin:0;padding:8px 8px 8px 8px;border:0;border-radius:5px;background:#e8f1ff;color:#5a6580}
+.connectedJobCard>button{grid-column:3;grid-row:1/3;align-self:start;width:24px;height:24px;padding:0;border:0;background:transparent;color:#1a2233}
+.connectedJobCard>button img{display:block;width:24px;height:24px}
+.connectedJobCard span,.connectedJobCard em{display:inline-flex;align-items:center;justify-content:center;justify-self:start;height:22px;padding:0 9px;border-radius:5555px;background:#2f7ff0;color:#fff;font-size:11px;font-style:normal;font-weight:700;line-height:1;white-space:nowrap}
+.connectedJobCard strong{grid-column:2;grid-row:1;margin:0 26px 0 0;color:#5a6580;font-size:13px;font-weight:400;line-height:18px;word-break:keep-all}
+.connectedJobCard em{grid-column:1;grid-row:2;background:#fff;color:#2f7ff0}
+.connectedJobCard p{grid-column:2;grid-row:2;margin:0;color:#5a6580;font-size:13px;font-weight:400;line-height:22px}
+.jobFitNotice{display:block;margin:8px 0 36px;color:#1fb573;font-size:13px;font-weight:400;line-height:1}
+.newCoachingFrame .statusSection{margin-top:0}
+.questionSection{margin-top:36px}
 .questionSection .sectionHeading{margin-bottom:8px}
 .questionSection .sectionHeading h2{margin:0;color:#1a2233;font-size:15px;font-weight:700;line-height:1}
 .questionSection .sectionHeading button{display:inline-flex;align-items:center;justify-content:center;height:22px;min-width:47px;padding:0 9px;border:0;border-radius:5555px;background:#e8f1ff;color:#2f7ff0;font-size:11px;font-weight:700;line-height:1}
@@ -122,9 +126,37 @@
 .questionLimitRow input{width:100px;height:46px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:10px;background:#fff;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif;font-size:15px;font-weight:500;line-height:1;text-align:center}
 .questionLimitRow input::placeholder{color:#9aa4b8}
 .questionDelete{width:70px;height:46px;border:0;border-radius:10px;background:#9aa4b8;color:#fff;font-size:15px;font-weight:800;line-height:1}
-.termsCheck{display:flex;align-items:center;gap:8px;width:100%;margin-top:22px;border:0;background:transparent;color:#3f4b64;font-size:14px;font-weight:700;text-align:left}
-.termsCheck span{display:grid;place-items:center;width:18px;height:18px;border:1px solid #cbd3e2;border-radius:4px;background:#fff;color:#fff;font-size:12px}
+.newCoachingFrame .sectionHeading{margin-bottom:8px}
+.newCoachingFrame .sectionHeading h2{margin:0;color:#1a2233;font-size:15px;font-weight:700;line-height:1}
+.newCoachingFrame .sectionHeading button{display:inline-flex;align-items:center;justify-content:center;height:28px;padding:0 12px;border:1px solid #9aa4b8;border-radius:7px;background:#fff;color:#5a6580;font-size:13px;font-weight:800;line-height:1}
+.newCoachingFrame .questionSection .sectionHeading button{height:22px;min-width:47px;padding:0 9px;border:0;border-radius:5555px;background:#e8f1ff;color:#2f7ff0;font-size:11px;font-weight:700}
+.newCoachingFrame .questionSection .sectionHeading button:disabled{opacity:.45;cursor:not-allowed}
+.newCoachingFrame .readyCard{min-height:75px;box-sizing:border-box;padding:16px;border:1px solid #e4e8ef;border-radius:10px;background:#fff}
+.newCoachingFrame .readyCard strong{color:#1a2233;font-size:15px;font-weight:500;line-height:1}
+.newCoachingFrame .readyCard p{margin:12px 0 0;color:#5a6580;font-size:14px;font-weight:400;line-height:1}
+.newCoachingFrame .emptyCard{min-height:75px;border:1px solid #e4e8ef;border-radius:10px;background:#fff}
+.newCoachingFrame .writeSection{margin-top:36px;padding:8px;border-radius:5px;background:#f5f7fa}
+.newCoachingFrame .writeSection h2{margin:0 0 8px;color:#1a2233;font-size:15px;font-weight:700;line-height:1}
+.newCoachingFrame .tabs{grid-template-columns:1fr 1fr;gap:9px;margin:0 0 16px;padding:0;background:transparent;border-radius:0}
+.newCoachingFrame .tabs button{height:36px;border:0;border-radius:8px;background:#f5f7fa;color:#5a6580;font-size:14px;font-weight:500;line-height:1}
+.newCoachingFrame .tabs .tabActive{border:1px solid #2f7ff0;background:#fff;color:#2f7ff0;font-weight:600}
+.newCoachingFrame .writeSection>textarea{height:168px;border:1px solid #e4e8ef;border-radius:10px;background:#fff;font-size:14px;font-weight:400;line-height:19px;resize:none}
+.newCoachingFrame .counter{color:#9aa4b8;font-size:11px;font-weight:500;line-height:1}
+.newCoachingFrame .fileDrop{min-height:168px;height:168px;padding:0 16px;border:1px dashed #2f7ff0;border-radius:10px;background:#e8f1ff;color:#1a2233;box-shadow:none}
+.newCoachingFrame .fileDropActive{border-color:#1c5fc4;background:#e8f1ff;box-shadow:none}
+.newCoachingFrame .fileDrop strong{margin:12px 0 0;color:#1a2233;font-size:13px;font-weight:400;line-height:19px}
+.newCoachingFrame .fileDrop>span:not(.fileSheetIcon){margin-top:4px;color:#9aa4b8;font-size:11px;font-weight:500;line-height:1}
+.newCoachingFrame .fileSheetIcon{display:block;width:32px;height:32px;border-radius:0;background:transparent;box-shadow:none;color:#1a2233;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:32px;line-height:32px}
+.newCoachingFrame .fileSheetIcon::before{content:none}
+.newCoachingFrame .fileSheetIcon::after{content:none}
+.newCoachingFrame .fileRemoveButton{margin-top:8px;color:#e8544d;font-size:13px;font-weight:700}
+.termsCheck{display:flex;align-items:center;gap:8px;width:100%;margin-top:16px;border:0;background:transparent;color:#9aa4b8;font-size:15px;font-weight:500;line-height:1;text-align:left}
+.termsCheck span{display:grid;place-items:center;width:22px;height:22px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:50%;background:#fff;color:#fff;font-size:13px;font-weight:800}
 .termsCheck[aria-pressed="true"] span{border-color:#2f7ff0;background:#2f7ff0}
+.newCoachingFrame .primaryButton{margin-top:16px}
+.coachingSubmitButton{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:12px;background:#2f7ff0;color:#fff;font-size:16px;font-weight:800;line-height:1}
+.coachingSubmitButton:disabled{background:#2f7ff0;opacity:.55}
+.coachingSubmitIcon{width:23px;height:12px;object-fit:contain;transform:rotate(45deg)}
 .coachingSheet{min-height:auto;max-height:min(82vh,720px);padding:0 16px 16px;border-radius:16px 16px 0 0}
 .coachingSheet .sheetHandle,.termsSheet .sheetHandle{margin-top:8px}
 .coachingSheet header,.termsSheet header{height:56px;border-bottom:1px solid #e8edf5}

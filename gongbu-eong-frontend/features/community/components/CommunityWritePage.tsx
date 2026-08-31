@@ -239,7 +239,7 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
             >
               <input type="file" accept="image/png,image/jpeg" multiple onChange={selectImage} />
               <span>
-                <span className={styles.uploadIcon}>🎨</span>
+                <span className={styles.uploadIcon} aria-hidden="true">🎨</span>
                 <strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong>
                 <small>JPG · PNG (최대 10MB)</small>
               </span>

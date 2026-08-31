@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:3000"];
+const DEFAULT_ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:3001"];
 
 function getAllowedOrigins() {
   const origins = process.env.CORS_ALLOWED_ORIGINS;
@@ -26,7 +26,7 @@ export function getCorsHeaders(request: NextRequest) {
   return {
     "Access-Control-Allow-Origin": allowedOrigin,
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Gongbu-Event-Session",
     "Access-Control-Allow-Credentials": "true",
     Vary: "Origin",
   };

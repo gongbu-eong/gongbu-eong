@@ -1,0 +1,87 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 7000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.dim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.dialog {
+  position: relative;
+  width: min(calc(100vw - 2rem), 22.5625rem);
+  min-height: 22.5625rem;
+  padding: 1.875rem 1rem 1rem;
+  border-radius: 10px;
+  background: #fff;
+  color: #1a2233;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(26, 34, 51, 0.2);
+}
+
+.owlStage {
+  position: relative;
+  display: block;
+  width: 12.9375rem;
+  height: 10.5rem;
+  margin: 0 auto;
+  overflow: visible;
+}
+
+.owlBg {
+  position: absolute;
+  left: 0;
+  top: 2.375rem;
+  width: 12.9375rem;
+  height: 7.75rem;
+  object-fit: contain;
+}
+
+.owl {
+  position: absolute;
+  left: 2.5625rem;
+  top: 0;
+  width: 7.8125rem;
+  height: 10.5rem;
+  object-fit: contain;
+  object-position: center;
+}
+
+.dialog h2 {
+  margin: 1rem 0 0;
+  color: #1a2233;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
+.dialog p {
+  margin: 0.5rem 0 0;
+  color: #5a6580;
+  font-size: 0.875rem;
+  line-height: 1.2;
+  font-weight: 400;
+}
+
+.dialog button {
+  width: 100%;
+  height: 3.25rem;
+  margin-top: 1.375rem;
+  border: 0;
+  border-radius: 12px;
+  background: #2f7ff0;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
+}

@@ -30,6 +30,11 @@ import { getAnonymousId } from "@/shared/session/anonymous-id";
 import { loadKakaoSdk } from "@/shared/kakao-share";
 import styles from "./DiagnosisFlow.module.css";
 
+const mainAppUrl =
+  process.env.NEXT_PUBLIC_MAIN_APP_URL ||
+  process.env.NEXT_PUBLIC_FRONTEND_URL ||
+  "http://localhost:3000";
+
 type FlowState =
   | { status: "intro" }
   | { status: "loading" }
@@ -249,7 +254,7 @@ export function DiagnosisFlow() {
 
       if (isAuthenticated) {
         router.push(
-          `/ai-tools/diagnosis/result?resultId=${encodeURIComponent(result.resultId)}`,
+          `/events/diagnosis/result?resultId=${encodeURIComponent(result.resultId)}`,
         );
         return;
       }
@@ -509,7 +514,7 @@ function DiagnosisIntro({
   return (
     <div className={isEmbedded ? styles.embeddedIntro : styles.page}>
       <section className={styles.landing} aria-label="강점·성향 진단 도입부">
-        <Link href="/" className={styles.introBrand} aria-label="공부엉이 메인으로 이동">
+        <Link href={mainAppUrl} className={styles.introBrand} aria-label="공부엉이 메인으로 이동">
           공부엉이
         </Link>
         <p className={styles.introPill}>3분이면 알 수 있는 나의 취업 강점</p>
@@ -681,7 +686,7 @@ function DiagnosisSurvey({
         </div>
         {isAuthenticated ? (
           <Link
-            href="/"
+            href={mainAppUrl}
             className={styles.surveyHomeButton}
             aria-label="홈으로 이동"
           >
