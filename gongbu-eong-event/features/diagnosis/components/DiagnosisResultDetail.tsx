@@ -477,12 +477,7 @@ export function DiagnosisResultDetail() {
         gb_result_id: result.resultId,
       } : undefined;
 
-      if (kakao.Share?.sendScrap) {
-        kakao.Share.sendScrap({
-          requestUrl: shareUrl,
-          ...(serverCallbackArgs ? { serverCallbackArgs } : {}),
-        });
-      } else {
+      if (kakao.Share?.sendDefault) {
         kakao.Share.sendDefault({
           objectType: "feed",
           content: {
@@ -508,6 +503,13 @@ export function DiagnosisResultDetail() {
           ],
           ...(serverCallbackArgs ? { serverCallbackArgs } : {}),
         });
+      } else if (kakao.Share?.sendScrap) {
+        kakao.Share.sendScrap({
+          requestUrl: shareUrl,
+          ...(serverCallbackArgs ? { serverCallbackArgs } : {}),
+        });
+      } else {
+        throw new Error("Kakao Share SDK is unavailable");
       }
 
       if (user) {
