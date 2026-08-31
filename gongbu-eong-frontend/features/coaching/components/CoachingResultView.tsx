@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import type { CoachingFeedback, CoachingFramework, CoachingHistoryItem, CoachingQuestionReview } from "../coaching.dto";
 import styles from "./CoachingPage.module.css";
@@ -18,10 +18,63 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
   const router = useRouter();
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   const [revisionMode, setRevisionMode] = useState<"original" | "compare">("original");
+  const questionTabsRef = useRef<HTMLDivElement>(null);
+  const questionTabsDragRef = useRef({ active: false, moved: false, scrollLeft: 0, startX: 0, suppressClick: false, targetIndex: null as number | null });
   const result = item.result;
   const review = makeSubmissionReview(result, item);
   const selectedQuestion = review.questions[selectedQuestionIndex] || review.questions[0];
   const subtitle = item.job?.institutionName ? `${item.job.institutionName} · NCS 분석 + AI 첨삭` : "NCS 분석 + AI 첨삭";
+  const selectQuestion = (index: number) => {
+    setSelectedQuestionIndex(index);
+    setRevisionMode("original");
+  };
+  const handleQuestionTabsPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    const tabs = questionTabsRef.current;
+    if (!tabs || tabs.scrollWidth <= tabs.clientWidth || (event.pointerType === "mouse" && event.button !== 0)) return;
+    const button = event.target instanceof HTMLElement ? event.target.closest<HTMLButtonElement>("button[data-question-index]") : null;
+    const targetIndex = button ? Number(button.dataset.questionIndex) : null;
+    questionTabsDragRef.current = {
+      active: true,
+      moved: false,
+      scrollLeft: tabs.scrollLeft,
+      startX: event.clientX,
+      suppressClick: false,
+      targetIndex: Number.isInteger(targetIndex) ? targetIndex : null,
+    };
+    tabs.setPointerCapture(event.pointerId);
+    tabs.classList.add(styles.questionTabsDragging);
+  };
+  const handleQuestionTabsPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const tabs = questionTabsRef.current;
+    const drag = questionTabsDragRef.current;
+    if (!tabs || !drag.active) return;
+    const deltaX = event.clientX - drag.startX;
+    if (Math.abs(deltaX) > 3) drag.moved = true;
+    tabs.scrollLeft = drag.scrollLeft - deltaX;
+    if (drag.moved) event.preventDefault();
+  };
+  const handleQuestionTabsPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    const tabs = questionTabsRef.current;
+    const drag = questionTabsDragRef.current;
+    if (!tabs || !drag.active) return;
+    drag.active = false;
+    tabs.classList.remove(styles.questionTabsDragging);
+    if (tabs.hasPointerCapture(event.pointerId)) tabs.releasePointerCapture(event.pointerId);
+    if (drag.moved) {
+      drag.suppressClick = true;
+      window.setTimeout(() => {
+        questionTabsDragRef.current.suppressClick = false;
+      }, 0);
+    } else if (event.type !== "pointercancel" && drag.targetIndex !== null) {
+      selectQuestion(drag.targetIndex);
+    }
+  };
+  const handleQuestionTabsClickCapture = (event: MouseEvent<HTMLDivElement>) => {
+    if (!questionTabsDragRef.current.suppressClick) return;
+    questionTabsDragRef.current.suppressClick = false;
+    event.preventDefault();
+    event.stopPropagation();
+  };
 
   return <div className={styles.page}>
     <AppHeader />
@@ -34,8 +87,18 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
 
       <section className={styles.questionTabSection}>
         <h2>자소서 문항</h2>
-        <div className={styles.questionTabs} role="tablist" aria-label="자소서 문항 선택">
-          {review.questions.map((question, index) => <button key={`${question.question}-${index}`} type="button" role="tab" aria-selected={selectedQuestionIndex === index} className={selectedQuestionIndex === index ? styles.questionTabActive : ""} onClick={() => { setSelectedQuestionIndex(index); setRevisionMode("original"); }}>
+        <div
+          ref={questionTabsRef}
+          className={styles.questionTabs}
+          role="tablist"
+          aria-label="자소서 문항 선택"
+          onPointerDown={handleQuestionTabsPointerDown}
+          onPointerMove={handleQuestionTabsPointerMove}
+          onPointerUp={handleQuestionTabsPointerEnd}
+          onPointerCancel={handleQuestionTabsPointerEnd}
+          onClickCapture={handleQuestionTabsClickCapture}
+        >
+          {review.questions.map((question, index) => <button key={`${question.question}-${index}`} type="button" role="tab" aria-selected={selectedQuestionIndex === index} data-question-index={index} className={selectedQuestionIndex === index ? styles.questionTabActive : ""} onClick={() => selectQuestion(index)}>
             <span>{index + 1}.</span>{question.tabTitle || makeTabTitle(question.question)}
           </button>)}
         </div>

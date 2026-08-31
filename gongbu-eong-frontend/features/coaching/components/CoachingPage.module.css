@@ -294,9 +294,10 @@
 .figmaResultScreen .evaluationTrack span{height:12px;border-radius:55px;background:#2f7ff0}
 .figmaResultScreen .questionTabSection{margin:0 0 24px}
 .figmaResultScreen .questionTabSection h2{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-.figmaResultScreen .questionTabs{display:flex;gap:8px;margin:0 -16px;padding:0 16px;overflow-x:auto;scrollbar-width:none}
+.figmaResultScreen .questionTabs{display:flex;gap:8px;margin:0 -16px;padding:0 16px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x;cursor:grab;user-select:none;scroll-snap-type:x proximity}
+.figmaResultScreen .questionTabsDragging{cursor:grabbing}
 .figmaResultScreen .questionTabs::-webkit-scrollbar{display:none}
-.figmaResultScreen .questionTabs button{flex:0 0 auto;height:46px;max-width:none;padding:0 22px;border:0;border-radius:6666px;background:#f5f7fa;color:#5a6580;font-size:17px;font-weight:800;line-height:normal}
+.figmaResultScreen .questionTabs button{flex:0 0 auto;height:46px;max-width:none;padding:0 22px;border:0;border-radius:6666px;background:#f5f7fa;color:#5a6580;font-size:17px;font-weight:800;line-height:normal;scroll-snap-align:start}
 .figmaResultScreen .questionTabs button::before{content:none}
 .figmaResultScreen .questionTabs span{margin-right:4px;color:inherit}
 .figmaResultScreen .questionTabs .questionTabActive{background:#1a2233;color:#fff}
