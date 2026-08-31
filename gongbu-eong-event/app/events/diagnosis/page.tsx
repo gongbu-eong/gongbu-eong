@@ -4,7 +4,7 @@ import { getDiagnosisShareImageUrl } from "@/features/diagnosis/diagnosis-share"
 import { requireEventSession } from "@/shared/event-session";
 
 export const metadata: Metadata = {
-  title: "강점·성향 진단 | 공부엉이",
+  title: "공부엉이",
   description: "20문항으로 나의 강점과 취업 성향을 확인해 보세요.",
   openGraph: {
     title: "강점·성향 진단 | 공부엉이",

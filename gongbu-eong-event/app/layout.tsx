@@ -6,7 +6,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "공부엉이 이벤트",
+  title: "공부엉이",
   description: "공부엉이 이벤트 전용 서비스",
 };
 

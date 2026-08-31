@@ -15,7 +15,7 @@ type DiagnosisResultPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: DIAGNOSIS_SHARE_TITLE,
+  title: "공부엉이",
   description: DIAGNOSIS_SHARE_DESCRIPTION,
   openGraph: {
     title: DIAGNOSIS_SHARE_TITLE,
