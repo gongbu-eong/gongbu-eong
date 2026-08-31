@@ -7,10 +7,13 @@ export const DIAGNOSIS_SHARE_IMAGE_HEIGHT = 400;
 const DEFAULT_SHARE_IMAGE_PATH = "/diagnosis-share-banner.png?v=20260820";
 
 export function getPublicBaseUrl(runtimeOrigin?: string) {
+  const configuredShareOrigin = process.env.NEXT_PUBLIC_SHARE_BASE_URL?.trim();
   const configuredOrigin = process.env.NEXT_PUBLIC_FRONTEND_URL?.trim();
+  const configuredShare = configuredShareOrigin ? configuredShareOrigin.replace(/\/$/, "") : "";
   const configured = configuredOrigin ? configuredOrigin.replace(/\/$/, "") : "";
   const runtime = runtimeOrigin ? runtimeOrigin.replace(/\/$/, "") : "";
 
+  if (configuredShare) return configuredShare;
   if (configured && !isLocalOrigin(configured)) return configured;
   if (runtime && !isLocalOrigin(runtime)) return runtime;
   return configured || runtime || "http://localhost:3000";
