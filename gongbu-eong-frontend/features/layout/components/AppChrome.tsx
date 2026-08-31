@@ -7,7 +7,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { HomeMenuDrawer } from "@/features/home/components/HomeMain";
-import { ComingSoonAlert } from "./ComingSoonAlert";
 import { TicketRewardAlert } from "./TicketRewardAlert";
 import styles from "./AppChrome.module.css";
 
@@ -331,7 +330,6 @@ export function AppFooter({
 }) {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -382,17 +380,13 @@ export function AppFooter({
         <Image src="/diagnosis/result-detail/footer-calendar.svg" alt="" width={24} height={26} />
         <span>캘린더</span>
       </Link>
-      <button
-        type="button"
-        className={active === "ai" ? styles.active : undefined}
-        onClick={() => setIsComingSoonOpen(true)}
-      >
+      <Link href="/ai-tools" className={active === "ai" ? styles.active : undefined}>
         <span className={styles.footerIconWrap}>
           <Image src="/diagnosis/result-detail/footer-ai.svg" alt="" width={27} height={27} />
           <b className={styles.footerBest}>BEST</b>
         </span>
         <span>AI 도구</span>
-      </button>
+      </Link>
       <Link href="/community" className={active === "community" ? styles.active : undefined}>
         <Image src="/diagnosis/result-detail/footer-community.svg" alt="" width={28} height={24} />
         <span>커뮤니티</span>
@@ -405,9 +399,6 @@ export function AppFooter({
         <Image src="/diagnosis/result-detail/footer-my.svg" alt="" width={28} height={25} />
         <span>MY</span>
       </button>
-      {isComingSoonOpen ? (
-        <ComingSoonAlert onClose={() => setIsComingSoonOpen(false)} />
-      ) : null}
     </footer>
   );
 }

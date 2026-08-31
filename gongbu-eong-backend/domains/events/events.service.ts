@@ -4,6 +4,7 @@ import { findUserBySessionTokenHash } from "@/domains/auth/auth.repository";
 import {
   consumeEventEntryTicket,
   findEventByNo,
+  findPublicEventListings,
   insertEventEntryTicket,
   validateEventSession,
 } from "./events.repository";
@@ -54,7 +55,13 @@ export async function createEventEntryRedirect(args: {
 
   const ticket = randomToken();
   const ticketHash = hashValue(ticket);
-  const eventBaseUrl = getEventBaseUrl(event.event_base_url, args.request);
+  const eventBaseUrl = getEventBaseUrl(
+    {
+      baseUrl: event.event_base_url,
+      localBaseUrl: event.local_event_base_url,
+    },
+    args.request,
+  );
 
   await insertEventEntryTicket({
     eventId: event.id,
@@ -123,6 +130,24 @@ export async function validateEventSessionToken(args: {
   };
 }
 
+export async function getPublicEventListings() {
+  const rows = await findPublicEventListings();
+
+  return {
+    ok: true,
+    items: rows.map((row) => ({
+      eventNo: row.event_no,
+      slug: row.slug,
+      title: row.title,
+      description: row.description,
+      badge: row.badge,
+      thumbnailUrl: row.thumbnail_url,
+      href: row.entry_path,
+      participantCount: Number(row.participant_count || 0),
+    })),
+  };
+}
+
 async function getCurrentSession(request: NextRequest): Promise<CurrentSession> {
   const sessionToken = request.cookies.get(MAIN_SESSION_COOKIE)?.value;
 
@@ -179,11 +204,21 @@ function normalizeEventPath(
   return `${parsed.pathname}${parsed.search}`;
 }
 
-function getEventBaseUrl(eventBaseUrl: string | null | undefined, request: NextRequest) {
-  const configuredUrl =
-    eventBaseUrl ||
+function getEventBaseUrl(
+  event: {
+    baseUrl: string | null | undefined;
+    localBaseUrl: string | null | undefined;
+  },
+  request: NextRequest,
+) {
+  const envUrl =
     process.env.GONGBUEONG_EVENT_URL ||
-    process.env.NEXT_PUBLIC_EVENT_URL ||
+    process.env.NEXT_PUBLIC_EVENT_URL;
+
+  const configuredUrl =
+    envUrl ||
+    (process.env.NODE_ENV === "production" ? event.baseUrl : event.localBaseUrl) ||
+    event.baseUrl ||
     "http://localhost:3001";
 
   if (process.env.NODE_ENV === "production" && isLocalhostUrl(configuredUrl)) {

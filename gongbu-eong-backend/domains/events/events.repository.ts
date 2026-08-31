@@ -12,8 +12,20 @@ export type EventDefinitionRow = QueryResultRow & {
   starts_at: Date | string | null;
   ends_at: Date | string | null;
   event_base_url: string | null;
+  local_event_base_url: string | null;
   entry_path: string;
   result_path: string | null;
+};
+
+export type PublicEventListRow = QueryResultRow & {
+  event_no: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  badge: string | null;
+  thumbnail_url: string | null;
+  entry_path: string;
+  participant_count: string | number;
 };
 
 export type EventTicketRow = QueryResultRow & {
@@ -50,6 +62,7 @@ export async function findEventByNo(eventNo: string) {
         starts_at,
         ends_at,
         event_base_url,
+        local_event_base_url,
         entry_path,
         result_path
       FROM public.event_definitions
@@ -60,6 +73,49 @@ export async function findEventByNo(eventNo: string) {
   );
 
   return result.rows[0] ?? null;
+}
+
+export async function findPublicEventListings() {
+  const result = await query<PublicEventListRow>(`
+    WITH event_counts AS (
+      SELECT
+        events.id AS event_id,
+        CASE
+          WHEN events.event_no = '1' THEN (
+            SELECT COUNT(*)
+            FROM public.diagnosis_runs runs
+            WHERE runs.completed_at IS NOT NULL
+          )
+          ELSE COUNT(DISTINCT sessions.id)
+        END AS participant_count
+      FROM public.event_definitions events
+      LEFT JOIN public.event_sessions sessions
+        ON sessions.event_id = events.id
+      WHERE events.is_listed = TRUE
+        AND events.status = 'active'
+        AND (events.starts_at IS NULL OR events.starts_at <= NOW())
+        AND (events.ends_at IS NULL OR events.ends_at >= NOW())
+      GROUP BY events.id, events.event_no
+    )
+    SELECT
+      events.event_no,
+      events.slug,
+      COALESCE(events.list_title, events.title) AS title,
+      events.list_description AS description,
+      events.display_badge AS badge,
+      events.thumbnail_url,
+      COALESCE(events.public_path, events.entry_path) AS entry_path,
+      event_counts.participant_count
+    FROM public.event_definitions events
+    JOIN event_counts
+      ON event_counts.event_id = events.id
+    ORDER BY
+      event_counts.participant_count DESC,
+      events.display_order ASC,
+      events.created_at DESC
+  `);
+
+  return result.rows;
 }
 
 export async function insertEventEntryTicket(args: {
