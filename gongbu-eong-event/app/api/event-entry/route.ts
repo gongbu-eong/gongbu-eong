@@ -78,16 +78,33 @@ function getMainAppUrl() {
   );
 }
 
+function getEventAppUrl() {
+  return (
+    process.env.GONGBUEONG_EVENT_URL ||
+    process.env.NEXT_PUBLIC_EVENT_URL ||
+    process.env.NEXT_PUBLIC_EVENT_APP_URL ||
+    ""
+  );
+}
+
 function getPublicRequestOrigin(request: NextRequest) {
+  const configuredEventUrl = getEventAppUrl();
+
+  if (configuredEventUrl) {
+    return configuredEventUrl;
+  }
+
   const host =
     request.headers.get("x-forwarded-host") ||
     request.headers.get("host");
 
-  if (!host || host.startsWith("localhost") || host.startsWith("127.0.0.1")) {
+  if (!host) {
     return getMainAppUrl();
   }
 
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
+  const protocol =
+    request.headers.get("x-forwarded-proto") ||
+    (host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https");
 
   return `${protocol}://${host}`;
 }
