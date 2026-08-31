@@ -5,6 +5,9 @@ const shouldUseAssetPrefix = process.env.NODE_ENV === "production" && eventAsset
 
 const nextConfig: NextConfig = {
   assetPrefix: shouldUseAssetPrefix ? eventAssetPrefix : undefined,
+  images: {
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
