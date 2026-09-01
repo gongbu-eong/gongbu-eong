@@ -23,6 +23,13 @@ const MAX_CHARACTER_LIMIT = 2000;
 export function CoachingPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const fileDropRef = useRef<HTMLButtonElement | null>(null);
+  const diagnosisRef = useRef<HTMLDivElement | null>(null);
+  const coverLetterTextRef = useRef<HTMLTextAreaElement | null>(null);
+  const termsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const alertFocusRef = useRef<HTMLElement | null>(null);
+  const questionTextRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const questionLimitRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const loginRedirectedRef = useRef(false);
   const [loading, setLoading] = useState(true);
   const [coaching, setCoaching] = useState(false);
@@ -46,7 +53,9 @@ export function CoachingPage() {
   const [jobs, setJobs] = useState<CoachingJob[]>([]);
   const [searching, setSearching] = useState(false);
   const [picker, setPicker] = useState<"diagnosis" | null>(null);
-  useBodyScrollLock(Boolean(termsOpen || jobPickerOpen || dutySheetJob || picker));
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState("");
+  useBodyScrollLock(Boolean(termsOpen || jobPickerOpen || dutySheetJob || picker || confirmOpen || alertMessage));
 
   useEffect(() => {
     let active = true;
@@ -110,16 +119,57 @@ export function CoachingPage() {
     setInputType(nextType);
   };
 
-  const submit = async () => {
+  const showAlert = (message: string, target?: HTMLElement | null) => {
+    alertFocusRef.current = target || null;
+    setError("");
+    focusField(target);
+    setAlertMessage(message);
+  };
+
+  const validateBeforeSubmit = () => {
     const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || null }));
-    if (!hasDiagnosis || !selectedDiagnosisId) return setError("강점·성향 진단을 먼저 완료해 주세요.");
-    if (normalizedQuestions.some((item) => !item.question || !item.characterLimit)) return setError("자소서 문항과 글자 수 제한을 입력해 주세요.");
-    if (normalizedQuestions.some((item) => item.question.length > MAX_QUESTION_TEXT_LENGTH)) return setError(`자소서 문항은 ${MAX_QUESTION_TEXT_LENGTH}자까지 입력할 수 있습니다.`);
-    if (normalizedQuestions.some((item) => item.characterLimit! < MIN_CHARACTER_LIMIT || item.characterLimit! > MAX_CHARACTER_LIMIT)) return setError("글자 수 제한은 100자 이상 2000자 이하로 입력해 주세요.");
-    if (inputType === "text" && !text.trim()) return setError("자소서를 입력해 주세요.");
-    if (inputType === "file" && !file) return setError("자소서 파일을 첨부해 주세요.");
-    if (!termsConfirmed) return setError("자소서 약관동의를 완료해 주세요.");
-    if (!window.confirm("진단권 한장이 소모됩니다. 진행하시겠습니까?")) return;
+    if (!hasDiagnosis || !selectedDiagnosisId) {
+      return { message: "강점·성향 진단을 먼저 완료해 주세요.", target: diagnosisRef.current, questions: normalizedQuestions };
+    }
+    for (const [index, item] of normalizedQuestions.entries()) {
+      const rowId = questions[index]?.id;
+      if (!item.question) {
+        return { message: "자소서 문항을 입력해 주세요.", target: rowId ? questionTextRefs.current[rowId] : null, questions: normalizedQuestions };
+      }
+      if (item.question.length > MAX_QUESTION_TEXT_LENGTH) {
+        return { message: `자소서 문항은 ${MAX_QUESTION_TEXT_LENGTH}자까지 입력할 수 있습니다.`, target: rowId ? questionTextRefs.current[rowId] : null, questions: normalizedQuestions };
+      }
+      if (!item.characterLimit) {
+        return { message: "글자 수 제한을 입력해 주세요.", target: rowId ? questionLimitRefs.current[rowId] : null, questions: normalizedQuestions };
+      }
+      if (item.characterLimit < MIN_CHARACTER_LIMIT || item.characterLimit > MAX_CHARACTER_LIMIT) {
+        return { message: "글자 수 제한은 100자 이상 2000자 이하로 입력해 주세요.", target: rowId ? questionLimitRefs.current[rowId] : null, questions: normalizedQuestions };
+      }
+    }
+    if (inputType === "text" && !text.trim()) {
+      return { message: "자소서를 입력해 주세요.", target: coverLetterTextRef.current, questions: normalizedQuestions };
+    }
+    if (inputType === "file" && !file) {
+      return { message: "자소서 파일을 첨부해 주세요.", target: fileDropRef.current, questions: normalizedQuestions };
+    }
+    if (!termsConfirmed) {
+      return { message: "자소서 약관동의를 완료해 주세요.", target: termsButtonRef.current, questions: normalizedQuestions };
+    }
+    return { message: "", target: null, questions: normalizedQuestions };
+  };
+
+  const submit = async () => {
+    const validation = validateBeforeSubmit();
+    if (validation.message) {
+      showAlert(validation.message, validation.target);
+      return;
+    }
+    setConfirmOpen(true);
+  };
+
+  const runCoaching = async () => {
+    const normalizedQuestions = validateBeforeSubmit().questions;
+    setConfirmOpen(false);
     setError("");
     setCoaching(true);
     try {
@@ -139,9 +189,7 @@ export function CoachingPage() {
       router.push(`/ai-tools/coaching/result/${result.resultId}`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "코칭에 실패했습니다.";
-      if (message.includes("진단권이 부족합니다")) {
-        window.alert(message);
-      }
+      showAlert(message, inputType === "text" ? coverLetterTextRef.current : fileDropRef.current);
       setError(message);
       setCoaching(false);
     }
@@ -149,7 +197,7 @@ export function CoachingPage() {
 
   const addQuestion = () => {
     if (questions.length >= MAX_QUESTION_COUNT) {
-      window.alert(`자소서 문항은 최대 ${MAX_QUESTION_COUNT}개까지 추가할 수 있습니다.`);
+      showAlert(`자소서 문항은 최대 ${MAX_QUESTION_COUNT}개까지 추가할 수 있습니다.`);
       return;
     }
     setQuestions((items) => [...items, makeQuestionRow()]);
@@ -159,10 +207,7 @@ export function CoachingPage() {
   if (coaching) return <CoachingLoadingScreen />;
 
   const selectedDiagnosis = diagnoses.find((item) => item.resultId === selectedDiagnosisId);
-  const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || 0 }));
-  const questionsReady = normalizedQuestions.length > 0 && normalizedQuestions.every((item) => item.question && item.characterLimit >= MIN_CHARACTER_LIMIT && item.characterLimit <= MAX_CHARACTER_LIMIT);
-  const coverLetterReady = inputType === "text" ? Boolean(text.trim()) : Boolean(file);
-  const formReady = Boolean(selectedDiagnosisId) && questionsReady && coverLetterReady && termsConfirmed;
+  const canRequestCoaching = termsConfirmed && !coaching && !loading;
 
   return <div className={styles.page}>
     <AppHeader />
@@ -170,31 +215,33 @@ export function CoachingPage() {
       <h1>{connectedJob ? "Ai NCS 자소서 코칭 결과" : "Ai NCS 자소서 코칭"}</h1>
       <section className={styles.intro}><strong>자소서를 Ai가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
       {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <><button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button><p className={styles.helper}>공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.<br />연결하지 않아도 일반 자소서 코칭을 받을 수 있어요.</p></>}
-      <StatusCard title="강점·성향 진단 결과" ready={hasDiagnosis} empty="현재 강·약점 결과가 없습니다." action="진단 시작하기 →" href="/ai-tools/diagnosis" onChange={() => setPicker("diagnosis")} selected={selectedDiagnosis?.typeName} date={formatDate(selectedDiagnosis?.completedAt)} />
+      <div ref={diagnosisRef}><StatusCard title="강점·성향 진단 결과" ready={hasDiagnosis} empty="현재 강·약점 결과가 없습니다." action="진단 시작하기 →" href="/ai-tools/diagnosis" onChange={() => setPicker("diagnosis")} selected={selectedDiagnosis?.typeName} date={formatDate(selectedDiagnosis?.completedAt)} /></div>
 
       <section className={styles.questionSection}>
         <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={addQuestion} disabled={questions.length >= MAX_QUESTION_COUNT}>+ 추가</button></div>
         {questions.map((item, index) => <div className={styles.questionRow} key={item.id}>
-          <textarea aria-label={`자소서 문항 ${index + 1}`} value={item.question} maxLength={MAX_QUESTION_TEXT_LENGTH} onChange={(event) => updateQuestion(setQuestions, item.id, "question", normalizeQuestionText(event.target.value))} placeholder="자소서 문항을 입력하세요." />
+          <textarea ref={(element) => { questionTextRefs.current[item.id] = element; }} aria-label={`자소서 문항 ${index + 1}`} value={item.question} maxLength={MAX_QUESTION_TEXT_LENGTH} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => updateQuestion(setQuestions, item.id, "question", normalizeQuestionText(event.target.value))} placeholder="자소서 문항을 입력하세요." />
           <div className={styles.questionLimitRow}>
             <label htmlFor={`question-limit-${item.id}`}>글자 수 제한</label>
-            <input id={`question-limit-${item.id}`} value={item.characterLimit} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", normalizeCharacterLimit(event.target.value))} inputMode="numeric" placeholder="최대 2000자" />
+            <input ref={(element) => { questionLimitRefs.current[item.id] = element; }} id={`question-limit-${item.id}`} value={item.characterLimit} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", normalizeCharacterLimit(event.target.value))} inputMode="numeric" placeholder="최대 2000자" />
             {index > 0 ? <button className={styles.questionDelete} type="button" onClick={() => setQuestions((items) => items.filter((entry) => entry.id !== item.id))}>삭제</button> : null}
           </div>
         </div>)}
       </section>
 
-      <section className={styles.writeSection}><h2>자소서 작성</h2><div className={styles.tabs}><button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button><button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button></div>{inputType === "text" ? <><textarea value={text} maxLength={10000} onChange={(event) => setText(event.target.value)} placeholder="작성한 자기소개서를 붙여넣어 주세요." /><span className={styles.counter}>{text.length.toLocaleString()}자 / 10,000자</span></> : <button type="button" className={`${styles.fileDrop} ${isDragActive ? styles.fileDropActive : ""}`} onClick={() => fileInputRef.current?.click()} onDragOver={(event) => { event.preventDefault(); setIsDragActive(true); }} onDragLeave={() => setIsDragActive(false)} onDrop={(event) => { event.preventDefault(); setIsDragActive(false); handleFile(event.dataTransfer.files?.[0] || null); }}><input ref={fileInputRef} type="file" accept=".hwp,.hwpx,.pdf,.docx,.jpg,.jpeg,.png" onChange={(event) => handleFile(event.target.files?.[0] || null)} />{file ? <strong>{file.name}</strong> : <><span className={styles.fileSheetIcon} aria-hidden="true">📄</span><strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong><span>HWP · HWPX · PDF · DOCX · JPG · PNG (최대 10MB)</span></>}</button>}</section>
+      <section className={styles.writeSection}><h2>자소서 작성</h2><div className={styles.tabs}><button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button><button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button></div>{inputType === "text" ? <><textarea ref={coverLetterTextRef} value={text} maxLength={10000} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setText(event.target.value)} placeholder="작성한 자기소개서를 항목 구분 없이 통째로 붙여넣어 주세요. (예: 지원동기, 성장과정, 입사 후 포부 등이 모두 포함된 전체 글)" /><span className={styles.counter}>{text.length.toLocaleString()}자</span></> : <button ref={fileDropRef} type="button" className={`${styles.fileDrop} ${isDragActive ? styles.fileDropActive : ""}`} onClick={() => fileInputRef.current?.click()} onFocus={(event) => focusField(event.currentTarget)} onDragOver={(event) => { event.preventDefault(); setIsDragActive(true); }} onDragLeave={() => setIsDragActive(false)} onDrop={(event) => { event.preventDefault(); setIsDragActive(false); handleFile(event.dataTransfer.files?.[0] || null); }}><input ref={fileInputRef} type="file" accept=".hwp,.hwpx,.pdf,.docx,.jpg,.jpeg,.png" onChange={(event) => handleFile(event.target.files?.[0] || null)} />{file ? <strong>{file.name}</strong> : <><span className={styles.fileSheetIcon} aria-hidden="true" /><strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong><span>HWP · HWPX · PDF · DOCX · JPG · PNG (최대 10MB)</span></>}</button>}</section>
       {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
-      <button type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsOpen(true)}><span>{termsConfirmed ? "✓" : ""}</span>자소서 약관동의를 해주세요.</button>
+      <button ref={termsButtonRef} type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsOpen(true)}><span>{termsConfirmed ? "✓" : ""}</span>자소서 약관동의를 해주세요.</button>
       {error ? <p className={styles.error}>{error}</p> : null}
-      <button className={`${styles.primaryButton} ${styles.coachingSubmitButton}`} type="button" onClick={submit} disabled={coaching || loading || !formReady}><Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.coachingSubmitIcon} />Ai NCS 자소서 코칭 받기</button>
+      <button className={`${styles.primaryButton} ${styles.coachingSubmitButton}`} type="button" onClick={submit} disabled={!canRequestCoaching}><Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.coachingSubmitIcon} />Ai NCS 자소서 코칭 받기</button>
     </main>
     <AppFooter active="ai" />
     {termsOpen ? <TermsSheet onConfirm={() => { setTermsConfirmed(true); setTermsOpen(false); }} onClose={() => setTermsOpen(false)} /> : null}
     {jobPickerOpen ? <JobPicker query={query} setQuery={setQuery} jobs={jobs} searching={searching} onSearch={searchJobs} onPick={(item) => { setJobPickerOpen(false); setDutySheetJob(item); }} onClose={() => setJobPickerOpen(false)} /> : null}
     {dutySheetJob ? <JobDutySheet job={dutySheetJob} onBack={() => { setDutySheetJob(null); setJobPickerOpen(true); }} onClose={() => setDutySheetJob(null)} onConfirm={(duty) => { setConnectedJob({ ...dutySheetJob, duty }); setDutySheetJob(null); }} /> : null}
     {picker === "diagnosis" ? <DiagnosisPicker items={diagnoses} selectedId={selectedDiagnosisId} onPick={async (item) => { await selectDiagnosisResult(item.resultId); setSelectedDiagnosisId(item.resultId); setHasDiagnosis(true); setPicker(null); }} onClose={() => setPicker(null)} /> : null}
+    {confirmOpen ? <CoachingConfirmDialog onCancel={() => setConfirmOpen(false)} onConfirm={runCoaching} /> : null}
+    {alertMessage ? <CoachingAlertDialog message={alertMessage} onClose={() => { setAlertMessage(""); window.setTimeout(() => focusField(alertFocusRef.current), 0); }} /> : null}
   </div>;
 }
 
@@ -211,12 +258,20 @@ function StatusCard({ title, ready, empty, action, href, onChange, selected, dat
 }
 
 function JobPicker({ query, setQuery, jobs, searching, onSearch, onPick, onClose }: { query: string; setQuery: (value: string) => void; jobs: CoachingJob[]; searching: boolean; onSearch: () => void; onPick: (job: CoachingJob) => void; onClose: () => void }) {
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => event.key === "Enter" && onSearch()} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div><div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : <p>검색 결과가 없습니다.</p>}</div></section></div>;
+  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet} ${styles.jobPickerSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => event.key === "Enter" && onSearch()} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div><div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : <p>검색 결과가 없습니다.</p>}</div></section></div>;
 }
 
 function JobDutySheet({ job, onBack, onClose, onConfirm }: { job: CoachingJob; onBack: () => void; onClose: () => void; onConfirm: (duty: string) => void }) {
   const [duty, setDuty] = useState("");
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet}`}><div className={styles.sheetHandle} /><header><button type="button" onClick={onBack} aria-label="이전">‹</button><h2>직무</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.jobDutySelected}><span>{job.institutionName}</span><strong>{job.title}</strong></div><label className={styles.jobDutyLabel}>직무</label><input className={styles.jobDutyInput} value={duty} onChange={(event) => setDuty(event.target.value)} placeholder="직무를 입력하세요." /><button className={styles.primaryButton} type="button" disabled={!duty.trim()} onClick={() => onConfirm(duty.trim())}>공고 연결하기</button></section></div>;
+  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet} ${styles.jobDutySheet}`}><div className={styles.sheetHandle} /><header><button type="button" onClick={onBack} aria-label="이전">‹</button><h2>직무</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.jobDutySelected}><span>{job.institutionName}</span><strong>{job.title}</strong></div><label className={styles.jobDutyLabel}>직무</label><input className={styles.jobDutyInput} value={duty} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setDuty(event.target.value)} placeholder="직무를 입력하세요." /><button className={styles.primaryButton} type="button" disabled={!duty.trim()} onClick={() => onConfirm(duty.trim())}>공고 연결하기</button></section></div>;
+}
+
+function CoachingConfirmDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  return <div className={styles.dialogOverlay} role="dialog" aria-modal="true" aria-labelledby="coaching-confirm-title"><section className={styles.figmaDialog}><div className={styles.dialogVisual}><Image src="/coaching/coaching-confirm-bg.svg" alt="" width={207} height={125} className={styles.dialogBg} /><Image src="/coaching/coaching-confirm-owl.png" alt="" width={163} height={168} className={styles.confirmOwl} priority /></div><h2 id="coaching-confirm-title">진단권을 1장을 소모하시겠습니까?</h2><div className={styles.confirmActions}><button type="button" onClick={onCancel}>취소</button><button type="button" onClick={onConfirm}>확인</button></div></section></div>;
+}
+
+function CoachingAlertDialog({ message, onClose }: { message: string; onClose: () => void }) {
+  return <div className={styles.dialogOverlay} role="alertdialog" aria-modal="true" aria-labelledby="coaching-alert-title"><section className={styles.figmaDialog}><div className={styles.dialogVisual}><Image src="/coaching/coaching-alert-bg.svg" alt="" width={207} height={125} className={styles.dialogBg} /><Image src="/coaching/coaching-alert-owl.png" alt="" width={172} height={167} className={styles.alertOwl} priority /></div><h2 id="coaching-alert-title">{message}</h2><button className={styles.alertConfirmButton} type="button" onClick={onClose}>확인</button></section></div>;
 }
 
 function TermsSheet({ onConfirm, onClose }: { onConfirm: () => void; onClose: () => void }) {
@@ -273,6 +328,14 @@ function normalizeCharacterLimit(value: string) {
   const numericValue = value.replace(/\D/g, "");
   if (!numericValue) return "";
   return String(Math.min(Number(numericValue), MAX_CHARACTER_LIMIT));
+}
+
+function focusField(element?: HTMLElement | null) {
+  if (!element) return;
+  window.setTimeout(() => {
+    element.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    if ("focus" in element) element.focus({ preventScroll: true });
+  }, 80);
 }
 
 function formatDate(value?: string | null) {

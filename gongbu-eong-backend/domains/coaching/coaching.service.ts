@@ -6,6 +6,13 @@ export type CoachResumeArgs = { userId: string; inputType: CoachingInputType; in
 
 export async function coachResume(args: CoachResumeArgs) {
   const prepared = await prepareCoachingSource(args);
+  return coachPreparedResume(args, prepared);
+}
+
+export async function coachPreparedResume(
+  args: CoachResumeArgs,
+  prepared: PreparedCoachingSource,
+) {
   const requestId = await createCoachingRequest({ ...args, inputText: prepared.storageText, jobPostingId: args.job?.id, jobSnapshot: args.job ? { ...args.job, jobDuty: args.jobDuty || null, questions: args.questions || [] } as CoachingJobDto : null, sourceFilename: args.file?.name });
   const feedback = await requestAiFeedback(args, prepared);
   const resultId = await createCoachingResult(requestId, feedback, getOpenAiModel());
@@ -14,9 +21,9 @@ export async function coachResume(args: CoachResumeArgs) {
 
 export { listCoachingHistory, findCoachingResult };
 
-type PreparedCoachingSource = { content: Array<Record<string, unknown>>; storageText: string; originalText: string };
+export type PreparedCoachingSource = { content: Array<Record<string, unknown>>; storageText: string; originalText: string };
 
-async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoachingSource> {
+export async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoachingSource> {
   const prompt = buildPrompt(args.job, args.questions || [], args.jobDuty);
   if (args.inputType === "file" && args.file) {
     const imageMediaType = getCoachingImageMediaType(args.file.name);

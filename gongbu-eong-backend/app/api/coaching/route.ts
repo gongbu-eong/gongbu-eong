@@ -3,7 +3,11 @@ import { requireSessionUser } from "@/domains/auth/session";
 import { randomUUID } from "crypto";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
 import { createPendingResumeFile, validateResumeFile } from "@/domains/resumes/resume-file-storage";
-import { coachResume } from "@/domains/coaching/coaching.service";
+import {
+  coachPreparedResume,
+  prepareCoachingSource,
+  type CoachResumeArgs,
+} from "@/domains/coaching/coaching.service";
 import {
   consumeCoachingCredit,
   refundCoachingCredit,
@@ -19,7 +23,8 @@ export async function POST(request: NextRequest) {
   try {
     const user = await requireSessionUser(request);
     const form = await request.formData();
-    const inputType = form.get("inputType") === "file" ? "file" : "text";
+    const inputType: CoachResumeArgs["inputType"] =
+      form.get("inputType") === "file" ? "file" : "text";
     const text = String(form.get("inputText") || "").trim();
     const jobId = String(form.get("jobPostingId") || "").trim() || null;
     const jobDuty = String(form.get("jobDuty") || "").trim() || null;
@@ -43,6 +48,25 @@ export async function POST(request: NextRequest) {
     if (fileValidationMessage) return jsonWithCors(request, { ok: false, message: fileValidationMessage }, { status: 400 });
     const posting = jobId ? await findJobPostingById(jobId, user.id) : null;
     if (jobId && (!posting || (posting.application_end_at && new Date(posting.application_end_at).getTime() < Date.now()))) return jsonWithCors(request, { ok: false, message: "마감된 공고는 연결할 수 없습니다." }, { status: 400 });
+    const filePayload = file ? { name: file.name, type: file.type, buffer: Buffer.from(await file.arrayBuffer()) } : undefined;
+    const coachingArgs: CoachResumeArgs = {
+      userId: user.id,
+      inputType,
+      inputText: inputType === "file" ? file?.name || "" : text,
+      file: filePayload,
+      job: posting ? {
+        id: posting.id,
+        institutionName: posting.institution_name,
+        title: posting.title,
+        applicationEndAt: posting.application_end_at ? new Date(posting.application_end_at).toISOString() : null,
+      } : null,
+      jobDuty,
+      questions,
+      resumeId: null,
+      resumeAdditionalNotes: null,
+      sourceFileId: null,
+    };
+    const preparedSource = await prepareCoachingSource(coachingArgs);
     const savedFile = file ? await createPendingResumeFile(user.id, file) : null;
     const creditSourceId = randomUUID();
     const creditUsage = await consumeCoachingCredit(user.id, creditSourceId);
@@ -59,7 +83,10 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const result = await coachResume({ userId: user.id, inputType, inputText: inputType === "file" ? file!.name : text, file: file ? { name: file.name, type: file.type, buffer: Buffer.from(await file.arrayBuffer()) } : undefined, job: posting ? { id: posting.id, institutionName: posting.institution_name, title: posting.title, applicationEndAt: posting.application_end_at ? new Date(posting.application_end_at).toISOString() : null } : null, jobDuty, questions, resumeId: null, resumeAdditionalNotes: null, sourceFileId: savedFile?.id });
+      const result = await coachPreparedResume(
+        { ...coachingArgs, sourceFileId: savedFile?.id || null },
+        preparedSource,
+      );
       return jsonWithCors(request, { ok: true, ...result, sourceFile: savedFile, creditBalance: creditUsage.balanceAfter });
     } catch (error) {
       await refundCoachingCredit(user.id, creditSourceId).catch((refundError) => {

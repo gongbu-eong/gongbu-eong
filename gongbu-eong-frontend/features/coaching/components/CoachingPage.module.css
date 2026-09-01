@@ -135,7 +135,7 @@
 .newCoachingFrame .readyCard strong{color:#1a2233;font-size:15px;font-weight:500;line-height:1}
 .newCoachingFrame .readyCard p{margin:12px 0 0;color:#5a6580;font-size:14px;font-weight:400;line-height:1}
 .newCoachingFrame .emptyCard{min-height:75px;border:1px solid #e4e8ef;border-radius:10px;background:#fff}
-.newCoachingFrame .writeSection{margin-top:36px;padding:8px;border-radius:5px;background:#f5f7fa}
+.newCoachingFrame .writeSection{margin-top:36px;padding:8px;border-radius:5px;background:#fff}
 .newCoachingFrame .writeSection h2{margin:0 0 8px;color:#1a2233;font-size:15px;font-weight:700;line-height:1}
 .newCoachingFrame .tabs{grid-template-columns:1fr 1fr;gap:9px;margin:0 0 16px;padding:0;background:transparent;border-radius:0}
 .newCoachingFrame .tabs button{height:36px;border:0;border-radius:8px;background:#f5f7fa;color:#5a6580;font-size:14px;font-weight:500;line-height:1}
@@ -157,18 +157,33 @@
 .coachingSubmitButton{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:12px;background:#2f7ff0;color:#fff;font-size:16px;font-weight:800;line-height:1}
 .coachingSubmitButton:disabled{background:#2f7ff0;opacity:.55}
 .coachingSubmitIcon{width:23px;height:12px;object-fit:contain;transform:rotate(45deg)}
-.coachingSheet{min-height:auto;max-height:min(82vh,720px);padding:0 16px 16px;border-radius:16px 16px 0 0}
+.coachingSheet{min-height:auto;max-height:min(82dvh,720px);padding:0 16px 16px;border-radius:16px 16px 0 0}
 .coachingSheet .sheetHandle,.termsSheet .sheetHandle{margin-top:8px}
 .coachingSheet header,.termsSheet header{height:56px;border-bottom:1px solid #e8edf5}
 .coachingSheet header h2,.termsSheet header h2{margin:0;color:#1a2233;font-size:17px;font-weight:800}
-.coachingSheet .search{margin:18px 0 12px}
+.coachingSheet .search{display:grid;grid-template-columns:minmax(0,1fr) 64px;gap:8px;margin:18px 0 12px}
 .coachingSheet .search input{height:44px;border:0;background:#f5f7fa}
-.coachingSheet .search button{height:44px;border-radius:8px}
+.coachingSheet .search button{width:64px;height:44px;border-radius:8px;padding:0}
+.jobPickerSheet{display:flex;flex-direction:column;height:min(82dvh,720px)}
+.jobPickerSheet .jobResults{flex:1;min-height:320px;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .jobDutySelected{margin:18px 0;padding:14px;border-radius:8px;background:#f3f8ff}
 .jobDutySelected span{display:block;color:#5a6580;font-size:12px}
 .jobDutySelected strong{display:block;margin-top:6px;color:#1a2233;font-size:14px;line-height:20px}
 .jobDutyLabel{display:block;margin:0 0 8px;color:#3f4b64;font-size:14px;font-weight:800}
 .jobDutyInput{width:100%;height:48px;box-sizing:border-box;margin-bottom:18px;border:0;border-radius:6px;background:#f5f7fa;padding:0 14px;color:#1a2233;font:inherit}
+.questionRow textarea,.questionLimitRow input,.newCoachingFrame .writeSection>textarea,.jobDutyInput,.coachingSheet .search input,.fileDrop{scroll-margin-bottom:240px}
+.figmaDialog{position:relative;width:min(361px,calc(100vw - 32px));min-height:356px;box-sizing:border-box;padding:52px 16px 40px;border-radius:10px;background:#fff;text-align:center;overflow:hidden}
+.dialogOverlay{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(26,34,51,.52)}
+.dialogVisual{position:relative;width:207px;height:168px;margin:0 auto 16px}
+.dialogBg{position:absolute;left:50%;top:42px;width:207px;height:125px;transform:translateX(-50%);object-fit:fill}
+.confirmOwl{position:absolute;left:22px;top:0;width:163px;height:168px;object-fit:contain}
+.alertOwl{position:absolute;left:18px;top:0;width:172px;height:167px;object-fit:contain}
+.figmaDialog h2{margin:0;color:#1a2233;font-size:20px;font-weight:800;line-height:1.25;word-break:keep-all}
+.confirmActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:24px}
+.confirmActions button,.alertConfirmButton{height:52px;border:0;border-radius:12px;color:#fff;font-size:16px;font-weight:800;line-height:1}
+.confirmActions button:first-child{background:#9aa4b8}
+.confirmActions button:last-child,.alertConfirmButton{background:#2f7ff0}
+.alertConfirmButton{width:100%;margin-top:24px}
 .termsSheet{display:flex;flex-direction:column;min-height:auto;height:min(84vh,729px);max-height:min(84vh,729px);padding:0 16px 16px;border-radius:16px 16px 0 0}
 .termsScroll{flex:1;min-height:0;overflow:auto;padding:18px 0 12px;color:#5a6580;font-size:14px;font-weight:400;line-height:20px}
 .termsScroll h3{margin:0 0 16px;color:#1a2233;font-size:15px;font-weight:700;line-height:1}
@@ -409,5 +424,8 @@
 @media (max-width:37.4375rem){
   .overlay{align-items:flex-end}
   .coachingSheet{max-height:calc(100dvh - 24px);padding-bottom:calc(24px + env(safe-area-inset-bottom))}
-  .jobDutyInput{scroll-margin-bottom:180px}
+  .jobPickerSheet{height:calc(100dvh - 24px)}
+  .jobDutySheet{max-height:calc(100dvh - 24px);padding-bottom:calc(180px + env(safe-area-inset-bottom))}
+  .jobDutyInput{scroll-margin-bottom:260px}
+  .newCoachingFrame{padding-bottom:calc(132px + env(safe-area-inset-bottom))}
 }

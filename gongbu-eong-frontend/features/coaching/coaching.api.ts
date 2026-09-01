@@ -10,7 +10,7 @@ export async function coachResume(args: { inputType: "text" | "file"; inputText:
   if (args.questions?.length) form.set("questions", JSON.stringify(args.questions));
   if (args.file) form.set("file", args.file);
   const response = await fetch("/api/coaching", { method: "POST", body: form, credentials: "include", cache: "no-store" });
-  const body = await response.json() as { ok: boolean; message?: string; resultId: string; requestId: string; feedback: CoachingFeedback; sourceFile?: { id: string; originalFilename: string }; creditBalance?: number };
+  const body = await readJsonResponse(response) as { ok: boolean; message?: string; resultId: string; requestId: string; feedback: CoachingFeedback; sourceFile?: { id: string; originalFilename: string }; creditBalance?: number };
   if (!response.ok || !body.ok) throw new Error(body.message || "코칭에 실패했습니다.");
   return body;
 }
@@ -25,5 +25,24 @@ export async function getCoachingResult(resultId: string) {
   const body = await response.json() as { ok: boolean; item: CoachingHistoryItem; message?: string };
   if (!response.ok || !body.ok) throw new Error(body.message || "결과를 불러오지 못했습니다.");
   return body;
+}
+
+async function readJsonResponse(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+  const text = await response.text();
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error(
+      "AI 자소서 코칭 처리 중 서버 응답 오류가 발생했습니다. 진단권이 차감된 경우 자동 환불됩니다. 잠시 후 다시 시도해 주세요.",
+    );
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    throw new Error(
+      "AI 자소서 코칭 응답을 읽지 못했습니다. 진단권이 차감된 경우 자동 환불됩니다. 잠시 후 다시 시도해 주세요.",
+    );
+  }
 }
 export type { CoachingFeedback, CoachingHistoryItem, CoachingJob };
