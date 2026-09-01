@@ -19,6 +19,10 @@ const MAX_QUESTION_COUNT = 7;
 const MAX_QUESTION_TEXT_LENGTH = 200;
 const MIN_CHARACTER_LIMIT = 100;
 const MAX_CHARACTER_LIMIT = 2000;
+const ALLOWED_COACHING_FILE_EXTENSIONS = ["hwp", "hwpx", "pdf", "docx"] as const;
+const COACHING_FILE_ACCEPT =
+  ".hwp,.hwpx,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx";
+const COACHING_FILE_GUIDE = "HWP · HWPX · PDF · DOCX (최대 10MB)";
 
 export function CoachingPage() {
   const router = useRouter();
@@ -101,7 +105,7 @@ export function CoachingPage() {
     if (!nextFile) return;
     if (nextFile.size > 10 * 1024 * 1024) return setError("10MB 이하 파일만 업로드할 수 있습니다.");
     const extension = nextFile.name.split(".").pop()?.toLowerCase() || "";
-    if (!["hwp", "hwpx", "pdf", "doc", "docx"].includes(extension)) return setError("HWP, HWPX, PDF, DOC, DOCX 파일만 첨부할 수 있습니다.");
+    if (!ALLOWED_COACHING_FILE_EXTENSIONS.includes(extension as typeof ALLOWED_COACHING_FILE_EXTENSIONS[number])) return setError("HWP, HWPX, PDF, DOCX 파일만 첨부할 수 있습니다.");
     setError("");
     setFile(nextFile);
   };
@@ -229,7 +233,71 @@ export function CoachingPage() {
         </div>)}
       </section>
 
-      <section className={styles.writeSection}><h2>자소서 작성</h2><div className={styles.tabs}><button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button><button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button></div>{inputType === "text" ? <><textarea ref={coverLetterTextRef} value={text} maxLength={10000} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setText(event.target.value)} placeholder="작성한 자기소개서를 항목 구분 없이 통째로 붙여넣어 주세요. (예: 지원동기, 성장과정, 입사 후 포부 등이 모두 포함된 전체 글)" /><span className={styles.counter}>{text.length.toLocaleString()}자</span></> : <button ref={fileDropRef} type="button" className={`${styles.fileDrop} ${isDragActive ? styles.fileDropActive : ""}`} onClick={() => fileInputRef.current?.click()} onFocus={(event) => focusField(event.currentTarget)} onDragOver={(event) => { event.preventDefault(); setIsDragActive(true); }} onDragLeave={() => setIsDragActive(false)} onDrop={(event) => { event.preventDefault(); setIsDragActive(false); handleFile(event.dataTransfer.files?.[0] || null); }}><input ref={fileInputRef} type="file" accept=".hwp,.hwpx,.pdf,.docx,.jpg,.jpeg,.png" onChange={(event) => handleFile(event.target.files?.[0] || null)} />{file ? <strong>{file.name}</strong> : <><span className={styles.fileSheetIcon} aria-hidden="true" /><strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong><span>HWP · HWPX · PDF · DOCX · JPG · PNG (최대 10MB)</span></>}</button>}</section>
+      <section className={styles.writeSection}>
+        <h2>자소서 작성</h2>
+        <div className={`${styles.writePanel} ${inputType === "file" ? styles.writePanelFile : ""}`}>
+          <div className={styles.tabs}>
+            <button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button>
+            <button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button>
+          </div>
+          {inputType === "text" ? (
+            <>
+              <textarea
+                ref={coverLetterTextRef}
+                value={text}
+                maxLength={10000}
+                onFocus={(event) => focusField(event.currentTarget)}
+                onChange={(event) => setText(event.target.value)}
+                placeholder="작성한 자기소개서를 항목 구분 없이 통째로 붙여넣어 주세요. (예: 지원동기, 성장과정, 입사 후 포부 등이 모두 포함된 전체 글)"
+              />
+              <span className={styles.counter}>{text.length.toLocaleString()}자</span>
+            </>
+          ) : (
+            <>
+              <span className={styles.fileUploadLabel}>파일로 자소서 올리기</span>
+              <button
+                ref={fileDropRef}
+                type="button"
+                className={`${styles.fileDrop} ${isDragActive ? styles.fileDropActive : ""}`}
+                onClick={() => fileInputRef.current?.click()}
+                onFocus={(event) => focusField(event.currentTarget)}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setIsDragActive(true);
+                }}
+                onDragLeave={() => setIsDragActive(false)}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  setIsDragActive(false);
+                  handleFile(event.dataTransfer.files?.[0] || null);
+                }}
+              >
+                <input
+                ref={fileInputRef}
+                type="file"
+                accept={COACHING_FILE_ACCEPT}
+                onChange={(event) => handleFile(event.target.files?.[0] || null)}
+              />
+                {file ? (
+                  <strong>{file.name}</strong>
+                ) : (
+                  <>
+                    <Image
+                      src="/coaching/file-upload-document.png"
+                      alt=""
+                      width={57}
+                      height={62}
+                      className={styles.fileSheetIcon}
+                    />
+                    <strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong>
+                    <span>{COACHING_FILE_GUIDE}</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
+        </div>
+      </section>
       {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
       <button ref={termsButtonRef} type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsOpen(true)}><span>{termsConfirmed ? "✓" : ""}</span>자소서 약관동의를 해주세요.</button>
       {error ? <p className={styles.error}>{error}</p> : null}

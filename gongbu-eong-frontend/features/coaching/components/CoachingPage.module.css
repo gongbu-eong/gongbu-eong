@@ -135,18 +135,21 @@
 .newCoachingFrame .readyCard strong{color:#1a2233;font-size:15px;font-weight:500;line-height:1}
 .newCoachingFrame .readyCard p{margin:12px 0 0;color:#5a6580;font-size:14px;font-weight:400;line-height:1}
 .newCoachingFrame .emptyCard{min-height:75px;border:1px solid #e4e8ef;border-radius:10px;background:#fff}
-.newCoachingFrame .writeSection{margin-top:36px;padding:8px;border-radius:5px;background:#fff}
+.newCoachingFrame .writeSection{margin-top:36px;padding:0;border-radius:0;background:transparent}
 .newCoachingFrame .writeSection h2{margin:0 0 8px;color:#1a2233;font-size:15px;font-weight:700;line-height:1}
+.newCoachingFrame .writePanel{min-height:303px;padding:8px;border-radius:5px;background:#f5f7fa;box-sizing:border-box}
+.newCoachingFrame .writePanelFile{min-height:269px}
 .newCoachingFrame .tabs{grid-template-columns:1fr 1fr;gap:9px;margin:0 0 16px;padding:0;background:transparent;border-radius:0}
 .newCoachingFrame .tabs button{height:36px;border:0;border-radius:8px;background:#f5f7fa;color:#5a6580;font-size:14px;font-weight:500;line-height:1}
 .newCoachingFrame .tabs .tabActive{border:1px solid #2f7ff0;background:#fff;color:#2f7ff0;font-weight:600}
-.newCoachingFrame .writeSection>textarea{height:168px;border:1px solid #e4e8ef;border-radius:10px;background:#fff;font-size:14px;font-weight:400;line-height:19px;resize:none}
-.newCoachingFrame .counter{color:#9aa4b8;font-size:11px;font-weight:500;line-height:1}
-.newCoachingFrame .fileDrop{min-height:168px;height:168px;padding:0 16px;border:1px dashed #2f7ff0;border-radius:10px;background:#e8f1ff;color:#1a2233;box-shadow:none}
+.newCoachingFrame .writePanel>textarea{height:200px;border:1px solid #e4e8ef;border-radius:5px;background:#fff;font-size:14px;font-weight:400;line-height:19px;resize:none}
+.newCoachingFrame .counter{color:#5a6580;font-size:14px;font-weight:400;line-height:1}
+.newCoachingFrame .fileUploadLabel{display:block;margin:0 8px 11px;color:#1a2233;font-size:14px;font-weight:400;line-height:1}
+.newCoachingFrame .fileDrop{width:calc(100% - 16px);min-height:168px;height:168px;margin:0 8px;padding:0 16px;border:1px dashed #1c5fc4;border-radius:10px;background:#e8f1ff;color:#1a2233;box-shadow:none}
 .newCoachingFrame .fileDropActive{border-color:#1c5fc4;background:#e8f1ff;box-shadow:none}
 .newCoachingFrame .fileDrop strong{margin:12px 0 0;color:#1a2233;font-size:13px;font-weight:400;line-height:19px}
 .newCoachingFrame .fileDrop>span:not(.fileSheetIcon){margin-top:4px;color:#9aa4b8;font-size:11px;font-weight:500;line-height:1}
-.newCoachingFrame .fileSheetIcon{display:block;width:32px;height:32px;border-radius:0;background:transparent;box-shadow:none;color:#1a2233;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;font-size:32px;line-height:32px}
+.newCoachingFrame .fileSheetIcon{display:block;width:40px;height:auto;border-radius:0;background:transparent;box-shadow:none;object-fit:contain}
 .newCoachingFrame .fileSheetIcon::before{content:none}
 .newCoachingFrame .fileSheetIcon::after{content:none}
 .newCoachingFrame .fileRemoveButton{margin-top:8px;color:#e8544d;font-size:13px;font-weight:700}
@@ -171,7 +174,7 @@
 .jobDutySelected strong{display:block;margin-top:6px;color:#1a2233;font-size:14px;line-height:20px}
 .jobDutyLabel{display:block;margin:0 0 8px;color:#3f4b64;font-size:14px;font-weight:800}
 .jobDutyInput{width:100%;height:48px;box-sizing:border-box;margin-bottom:18px;border:0;border-radius:6px;background:#f5f7fa;padding:0 14px;color:#1a2233;font:inherit}
-.questionRow textarea,.questionLimitRow input,.newCoachingFrame .writeSection>textarea,.jobDutyInput,.coachingSheet .search input,.fileDrop{scroll-margin-bottom:240px}
+.questionRow textarea,.questionLimitRow input,.newCoachingFrame .writePanel>textarea,.jobDutyInput,.coachingSheet .search input,.fileDrop{scroll-margin-bottom:240px}
 .figmaDialog{position:relative;width:min(361px,calc(100vw - 32px));min-height:356px;box-sizing:border-box;padding:52px 16px 40px;border-radius:10px;background:#fff;text-align:center;overflow:hidden}
 .dialogOverlay{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(26,34,51,.52)}
 .dialogVisual{position:relative;width:207px;height:168px;margin:0 auto 16px}

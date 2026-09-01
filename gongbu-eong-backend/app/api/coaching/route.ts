@@ -32,8 +32,7 @@ export async function POST(request: NextRequest) {
     const fileEntry = form.get("file");
     const file = fileEntry instanceof File ? fileEntry : null;
     const extension = file?.name.split(".").pop()?.toLowerCase() || "";
-    const allowedCoachingExtensions = new Set(["hwp", "hwpx", "pdf", "docx", "jpg", "jpeg", "png"]);
-    const imageCoachingExtensions = new Set(["jpg", "jpeg", "png"]);
+    const allowedCoachingExtensions = new Set(["hwp", "hwpx", "pdf", "docx"]);
     if (inputType === "text" && !text) return jsonWithCors(request, { ok: false, message: "자소서를 입력해 주세요." }, { status: 400 });
     if (inputType === "text" && text.length > 10000) return jsonWithCors(request, { ok: false, message: "자소서는 10,000자까지 입력할 수 있습니다." }, { status: 400 });
     if (inputType === "file" && !file) return jsonWithCors(request, { ok: false, message: "자소서 파일을 첨부해 주세요." }, { status: 400 });
@@ -43,8 +42,8 @@ export async function POST(request: NextRequest) {
     if (questions.some((item) => item.question.length > MAX_QUESTION_TEXT_LENGTH)) {
       return jsonWithCors(request, { ok: false, message: `자소서 문항은 ${MAX_QUESTION_TEXT_LENGTH}자까지 입력할 수 있습니다.` }, { status: 400 });
     }
-    if (file && !allowedCoachingExtensions.has(extension)) return jsonWithCors(request, { ok: false, message: "HWP, HWPX, PDF, DOCX, JPG, PNG 파일만 첨부할 수 있습니다." }, { status: 400 });
-    const fileValidationMessage = file && !imageCoachingExtensions.has(extension) ? validateResumeFile(file) : null;
+    if (file && !allowedCoachingExtensions.has(extension)) return jsonWithCors(request, { ok: false, message: "HWP, HWPX, PDF, DOCX 파일만 첨부할 수 있습니다." }, { status: 400 });
+    const fileValidationMessage = file ? validateResumeFile(file) : null;
     if (fileValidationMessage) return jsonWithCors(request, { ok: false, message: fileValidationMessage }, { status: 400 });
     const posting = jobId ? await findJobPostingById(jobId, user.id) : null;
     if (jobId && (!posting || (posting.application_end_at && new Date(posting.application_end_at).getTime() < Date.now()))) return jsonWithCors(request, { ok: false, message: "마감된 공고는 연결할 수 없습니다." }, { status: 400 });

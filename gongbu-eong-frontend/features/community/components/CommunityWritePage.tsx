@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
@@ -28,6 +28,8 @@ type FormSnapshot = {
 
 export function CommunityWritePage({ postId }: { postId?: string }) {
   const router = useRouter();
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const contentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [category, setCategory] = useState<CommunityCategory>("자유·잡담");
   const [title, setTitle] = useState("");
@@ -142,8 +144,14 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setMessage("");
-    if (!title.trim() || !content.trim()) {
-      setMessage("제목과 내용을 입력해주세요.");
+    if (!title.trim()) {
+      setMessage("제목을 입력해주세요.");
+      focusField(titleInputRef.current);
+      return;
+    }
+    if (!content.trim()) {
+      setMessage("내용을 입력해주세요.");
+      focusField(contentTextareaRef.current);
       return;
     }
     const totalDataUrlLength = attachments.reduce((total, attachment) => total + attachment.dataUrl.length, 0);
@@ -210,13 +218,15 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
             </label>
             <label className={styles.field}>
               제목
-              <input value={title} maxLength={120} onChange={(event) => setTitle(event.target.value)} placeholder="제목을 입력해주세요." />
+              <input ref={titleInputRef} value={title} maxLength={120} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setTitle(event.target.value)} placeholder="제목을 입력해주세요." />
             </label>
             <label className={styles.field}>
               내용
               <textarea
+                ref={contentTextareaRef}
                 value={content}
                 maxLength={5000}
+                onFocus={(event) => focusField(event.currentTarget)}
                 onChange={(event) => setContent(event.target.value)}
                 placeholder="운영 원칙 게시물 제재 기준에 위배되는 게시물을 등록 할 경우, 삭제 및 서비스 이용 활동정지 조치를 적용합니다."
               />
@@ -349,4 +359,13 @@ function estimateDataUrlBytes(dataUrl: string) {
 function toJpegFileName(fileName: string) {
   const baseName = fileName.replace(/\.[^.]+$/, "");
   return `${baseName || "첨부 이미지"}.jpg`;
+}
+
+function focusField(element?: HTMLElement | null) {
+  if (!element) return;
+
+  window.setTimeout(() => {
+    element.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+    element.focus({ preventScroll: true });
+  }, 80);
 }
