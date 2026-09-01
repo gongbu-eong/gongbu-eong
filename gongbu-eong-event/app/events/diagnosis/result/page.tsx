@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { DiagnosisResultViewEvent } from "@/features/diagnosis/components/DiagnosisAnalyticsEvents";
 import { DiagnosisResultDetail } from "@/features/diagnosis/components/DiagnosisResultDetail";
 import {
   DIAGNOSIS_SHARE_DESCRIPTION,
@@ -43,6 +44,7 @@ export default async function DiagnosisEventResultPage({
 
   return (
     <Suspense fallback={null}>
+      <DiagnosisResultViewEvent />
       <DiagnosisResultDetail />
     </Suspense>
   );
