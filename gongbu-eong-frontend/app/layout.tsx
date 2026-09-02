@@ -13,6 +13,12 @@ export const metadata: Metadata = {
   ),
   title: "공부엉이",
   description: "공기업 취준생의 합격 메이트",
+  verification: {
+    other: {
+      "naver-site-verification": "36afb9d57dc18fe3336504496ca1d156a553bad5",
+      "msvalidate.01": "980494DEA6041C2C6C9DF8DEEE31B95A",
+    },
+  },
 };
 
 export const viewport: Viewport = {
