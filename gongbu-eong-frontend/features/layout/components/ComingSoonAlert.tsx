@@ -7,8 +7,14 @@ import styles from "./ComingSoonAlert.module.css";
 
 export function ComingSoonAlert({
   onClose,
+  title = "아직 준비중입니다.",
+  description = "조금만 기다려주세요.",
+  confirmLabel = "확인",
 }: {
   onClose: () => void;
+  title?: string;
+  description?: string;
+  confirmLabel?: string;
 }) {
   useBodyScrollLock(true);
 
@@ -27,6 +33,7 @@ export function ComingSoonAlert({
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="coming-soon-alert-title"
+        aria-describedby={description ? "coming-soon-alert-description" : undefined}
       >
         <span className={styles.owlStage} aria-hidden="true">
           <Image
@@ -44,10 +51,10 @@ export function ComingSoonAlert({
             className={styles.owl}
           />
         </span>
-        <h2 id="coming-soon-alert-title">아직 준비중입니다.</h2>
-        <p>조금만 기다려주세요.</p>
+        <h2 id="coming-soon-alert-title">{title}</h2>
+        {description ? <p id="coming-soon-alert-description">{description}</p> : null}
         <button type="button" onClick={onClose}>
-          확인
+          {confirmLabel}
         </button>
       </section>
     </div>,

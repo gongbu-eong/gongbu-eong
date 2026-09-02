@@ -159,6 +159,40 @@
   font-style: normal;
 }
 
+.moneyField > span:first-child {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.moneyField > span:first-child label {
+  color: inherit;
+  font: inherit;
+}
+
+.moneyField > span:first-child button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9aa4b8;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.moneyField > span:first-child .moneyActionActive {
+  color: #2f7ff0;
+}
+
+.fieldGuide {
+  margin: -4px 0 0;
+  color: #9aa4b8;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
 .moneyInput,
 .textField input {
   display: grid;
@@ -193,6 +227,20 @@
 .moneyLine input::placeholder,
 .textField input::placeholder {
   color: #9aa4b8;
+}
+
+.moneyInput input:disabled {
+  color: #1a2233;
+  -webkit-text-fill-color: #1a2233;
+}
+
+.moneyDescription {
+  margin: -2px 0 0;
+  color: #5a6580;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: right;
 }
 
 .moneyInput b,

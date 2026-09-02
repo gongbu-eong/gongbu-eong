@@ -1,17 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
 import styles from "./AiJobToolsPage.module.css";
 
 type ToolKey = "salary" | "text" | "severance" | "vacation" | "unemployment" | "grade";
 type PickerMode = "date" | "month";
 
 const MIN_PICKER_YEAR = 1900;
+const MAX_MONEY_AMOUNT = 9999999999;
+const MAX_DEPENDENTS = 11;
+const MAX_CHILDREN = 10;
 
 const tools: Array<{ key: ToolKey; label: string }> = [
   { key: "salary", label: "연봉계산기" },
@@ -89,31 +93,97 @@ export function AiJobToolsPage({
 function SalaryTool() {
   const [payType, setPayType] = useState<"year" | "month">("year");
   const [retirement, setRetirement] = useState<"separate" | "included">("separate");
-  const [income, setIncome] = useState("");
-  const [dependents, setDependents] = useState("");
+  const [income, setIncome] = useState("0");
+  const [dependents, setDependents] = useState("1");
   const [children, setChildren] = useState("");
   const [taxFree, setTaxFree] = useState("200000");
+  const [taxFreeCustom, setTaxFreeCustom] = useState(false);
   const [calculated, setCalculated] = useState(false);
+  const [limitAlert, setLimitAlert] = useState<{ title: string; description: string } | null>(null);
 
+  const dependentCount = Math.max(1, number(dependents));
+  const childCount = number(children);
   const grossMonthly = payType === "year" ? number(income) / 12 : number(income);
   const taxable = Math.max(0, grossMonthly - number(taxFree));
   const pension = roundWon(Math.min(taxable, 6170000) * 0.045);
   const health = roundWon(taxable * 0.03545);
   const longTermCare = roundWon(health * 0.1295);
   const employment = roundWon(taxable * 0.009);
-  const incomeTax = roundWon(taxable * estimateTaxRate(taxable, number(dependents), number(children)));
+  const incomeTax = roundWon(taxable * estimateTaxRate(taxable, dependentCount, childCount));
   const localTax = roundWon(incomeTax * 0.1);
   const totalDeduction = pension + health + longTermCare + employment + incomeTax + localTax;
   const netPay = Math.max(0, Math.round(grossMonthly - totalDeduction));
 
+  const changePayType = (nextPayType: "year" | "month") => {
+    setPayType(nextPayType);
+    if (nextPayType === "month") {
+      setRetirement("separate");
+    }
+  };
+
   const reset = () => {
     setPayType("year");
     setRetirement("separate");
-    setIncome("");
-    setDependents("");
+    setIncome("0");
+    setDependents("1");
     setChildren("");
     setTaxFree("200000");
+    setTaxFreeCustom(false);
     setCalculated(false);
+  };
+
+  const toggleTaxFreeCustom = () => {
+    setTaxFreeCustom((current) => {
+      const next = !current;
+      setTaxFree(next ? "0" : "200000");
+      return next;
+    });
+  };
+
+  const updateIncome = (value: string) => {
+    setIncome(clampMoneyAmount(value));
+  };
+
+  const updateTaxFree = (value: string) => {
+    setTaxFree(clampMoneyAmount(value));
+  };
+
+  const updateDependents = (value: string) => {
+    setDependents(normalizeLimitedInteger(value, 1, MAX_DEPENDENTS, () => {
+      setLimitAlert({
+        title: "부양가족수(본인포함)을 확인해 주세요.",
+        description: "부양가족수 12명 이상은 11명과 동일하게 계산되므로 11까지만 입력이 가능합니다.",
+      });
+    }));
+  };
+
+  const updateChildren = (value: string) => {
+    setChildren(normalizeLimitedInteger(value, 0, MAX_CHILDREN, () => {
+      setLimitAlert({
+        title: "20세 이하 자녀수를 확인해 주세요.",
+        description: "20세 이하 자녀수 11명 이상은 10명과 동일하게 계산되므로 10명까지만 입력이 가능합니다.",
+      });
+    }));
+  };
+
+  const calculateSalary = () => {
+    if (number(income) <= 0) {
+      setLimitAlert({
+        title: "연봉이 입력되지 않았습니다",
+        description: "",
+      });
+      return;
+    }
+
+    if (number(taxFree) > grossMonthly) {
+      setLimitAlert({
+        title: "비과세액이 월급보다 많습니다.",
+        description: "",
+      });
+      return;
+    }
+
+    setCalculated(true);
   };
 
   return (
@@ -122,7 +192,7 @@ function SalaryTool() {
         <SegmentField label="연봉/월급 선택" required>
           <Segmented
             value={payType}
-            onChange={setPayType}
+            onChange={changePayType}
             options={[
               { value: "year", label: "연봉" },
               { value: "month", label: "월급" },
@@ -130,22 +200,41 @@ function SalaryTool() {
           />
         </SegmentField>
         <SegmentField label="퇴직금 포함여부" required>
-          <Segmented
-            value={retirement}
-            onChange={setRetirement}
-            options={[
-              { value: "separate", label: "별도" },
-              { value: "included", label: "포함" },
-            ]}
-          />
+          {payType === "year" ? (
+            <Segmented
+              value={retirement}
+              onChange={setRetirement}
+              options={[
+                { value: "separate", label: "별도" },
+                { value: "included", label: "포함" },
+              ]}
+            />
+          ) : (
+            <p className={styles.fieldGuide}>연봉일 경우에만 선택</p>
+          )}
         </SegmentField>
       </div>
-      <MoneyField label={payType === "year" ? "연봉" : "월급"} value={income} onChange={setIncome} required />
+      <MoneyField
+        label={payType === "year" ? "연봉" : "월급"}
+        value={income}
+        onChange={updateIncome}
+        description={income ? formatKoreanWon(number(income)) : undefined}
+        required
+      />
       <div className={styles.twoColumn}>
-        <MoneyField label="부양가족수(본인포함)" value={dependents} onChange={setDependents} />
-        <MoneyField label="20세 이하 자녀수" value={children} onChange={setChildren} />
+        <NumberField label="부양가족수(본인포함)" value={dependents} onChange={updateDependents} unit="명" />
+        <NumberField label="20세 이하 자녀수" value={children} onChange={updateChildren} unit="명" />
       </div>
-      <MoneyField label="비과세액" hint="✓ 직접선택" value={taxFree} onChange={setTaxFree} />
+      <MoneyField
+        label="비과세액"
+        actionLabel="✓ 직접선택"
+        actionActive={taxFreeCustom}
+        onActionClick={toggleTaxFreeCustom}
+        value={taxFree}
+        onChange={updateTaxFree}
+        description={taxFree ? formatKoreanWon(number(taxFree)) : undefined}
+        disabled={!taxFreeCustom}
+      />
       {calculated ? (
         <ResultBox title="한 달 기준 공제액">
           <ResultRow label="국민연금" value={pension} />
@@ -159,7 +248,7 @@ function SalaryTool() {
           <ResultRow label="월 예상 실수령액" value={netPay} accent />
         </ResultBox>
       ) : null}
-      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={() => calculated ? reset() : setCalculated(true)}>
+      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={() => calculated ? reset() : calculateSalary()}>
         {calculated ? "다시 계산하기" : "계산하기"}
       </PrimaryButton>
       <Notice lines={[
@@ -167,6 +256,13 @@ function SalaryTool() {
         "연봉 지급 조건과 상황에 따라 약간의 오차가 발생할 수 있으니",
         "참고용으로 활용하시기 바랍니다.",
       ]} />
+      {limitAlert ? (
+        <ComingSoonAlert
+          title={limitAlert.title}
+          description={limitAlert.description}
+          onClose={() => setLimitAlert(null)}
+        />
+      ) : null}
     </ToolPanel>
   );
 }
@@ -466,13 +562,72 @@ function SegmentField({ label, required, children }: { label: string; required?:
   );
 }
 
-function MoneyField({ label, hint, value, onChange, required }: { label: string; hint?: string; value: string; onChange: (value: string) => void; required?: boolean }) {
+function MoneyField({
+  label,
+  hint,
+  actionLabel,
+  actionActive,
+  onActionClick,
+  value,
+  onChange,
+  description,
+  required,
+  disabled,
+}: {
+  label: string;
+  hint?: string;
+  actionLabel?: string;
+  actionActive?: boolean;
+  onActionClick?: () => void;
+  value: string;
+  onChange: (value: string) => void;
+  description?: string;
+  required?: boolean;
+  disabled?: boolean;
+}) {
+  const inputId = useId();
+
+  return (
+    <div className={styles.moneyField}>
+      <span>
+        <label htmlFor={inputId}>{required ? <Required /> : null}{label}</label>
+        {hint ? <em>{hint}</em> : null}
+        {actionLabel ? (
+          <button
+            type="button"
+            className={actionActive ? styles.moneyActionActive : undefined}
+            onClick={(event) => {
+              event.stopPropagation();
+              onActionClick?.();
+            }}
+          >
+            {actionLabel}
+          </button>
+        ) : null}
+      </span>
+      <span className={styles.moneyInput}>
+        <input
+          id={inputId}
+          value={value ? formatNumber(number(value)) : ""}
+          onChange={(event) => onChange(onlyNumber(event.target.value))}
+          placeholder="0"
+          inputMode="numeric"
+          disabled={disabled}
+        />
+        <b>원</b>
+      </span>
+      {description ? <p className={styles.moneyDescription}>{description}</p> : null}
+    </div>
+  );
+}
+
+function NumberField({ label, value, onChange, unit }: { label: string; value: string; onChange: (value: string) => void; unit: string }) {
   return (
     <label className={styles.moneyField}>
-      <span>{required ? <Required /> : null}{label}{hint ? <em>{hint}</em> : null}</span>
+      <span>{label}</span>
       <span className={styles.moneyInput}>
         <input value={value ? formatNumber(number(value)) : ""} onChange={(event) => onChange(onlyNumber(event.target.value))} placeholder="0" inputMode="numeric" />
-        <b>원</b>
+        <b>{unit}</b>
       </span>
     </label>
   );
@@ -828,6 +983,23 @@ function onlyNumber(value: string) {
   return value.replace(/[^\d]/g, "");
 }
 
+function normalizeLimitedInteger(value: string, min: number, max: number, onLimit: () => void) {
+  const numericValue = onlyNumber(value);
+  if (!numericValue) return min > 0 ? String(min) : "";
+  const nextValue = Number(numericValue);
+  if (nextValue > max) {
+    onLimit();
+    return String(max);
+  }
+  return String(Math.max(min, nextValue));
+}
+
+function clampMoneyAmount(value: string) {
+  const numericValue = onlyNumber(value);
+  if (!numericValue) return "";
+  return String(Math.min(Number(numericValue), MAX_MONEY_AMOUNT));
+}
+
 function onlyDecimal(value: string) {
   return value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
 }
@@ -838,6 +1010,43 @@ function number(value: string) {
 
 function formatNumber(value: number) {
   return Math.round(value).toLocaleString("ko-KR");
+}
+
+function formatKoreanWon(value: number) {
+  const amount = Math.min(Math.max(0, Math.floor(value)), MAX_MONEY_AMOUNT);
+  if (!amount) return "영원";
+
+  const digits = ["", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"];
+  const smallUnits = ["", "십", "백", "천"];
+  const bigUnits = ["", "만", "억"];
+  const parts: string[] = [];
+  let rest = amount;
+  let unitIndex = 0;
+
+  while (rest > 0) {
+    const chunk = rest % 10000;
+    if (chunk > 0) {
+      parts.unshift(`${formatKoreanChunk(chunk, digits, smallUnits)}${bigUnits[unitIndex] || ""}`);
+    }
+    rest = Math.floor(rest / 10000);
+    unitIndex += 1;
+  }
+
+  return `${parts.join(" ")}원`;
+}
+
+function formatKoreanChunk(value: number, digits: string[], smallUnits: string[]) {
+  const parts: string[] = [];
+
+  for (let index = 3; index >= 0; index -= 1) {
+    const divisor = 10 ** index;
+    const digit = Math.floor(value / divisor) % 10;
+    if (digit) {
+      parts.push(`${digits[digit]}${smallUnits[index]}`);
+    }
+  }
+
+  return parts.join("");
 }
 
 function formatGrade(value: number) {

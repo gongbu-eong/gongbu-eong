@@ -137,7 +137,10 @@ export function CoachingPage() {
   };
 
   const validateBeforeSubmit = () => {
-    const normalizedQuestions = questions.map((item) => ({ question: item.question.trim(), characterLimit: Number(item.characterLimit) || null }));
+    const normalizedQuestions = questions.map((item) => ({
+      question: item.question.trim(),
+      characterLimit: parseCharacterLimit(item.characterLimit),
+    }));
     if (!hasDiagnosis || !selectedDiagnosisId) {
       return { message: "강점·성향 진단을 먼저 완료해 주세요.", target: diagnosisRef.current, questions: normalizedQuestions };
     }
@@ -153,7 +156,7 @@ export function CoachingPage() {
         return { message: "글자 수 제한을 입력해 주세요.", target: rowId ? questionLimitRefs.current[rowId] : null, questions: normalizedQuestions };
       }
       if (item.characterLimit < MIN_CHARACTER_LIMIT || item.characterLimit > MAX_CHARACTER_LIMIT) {
-        return { message: "글자 수 제한은 100자 이상 2000자 이하로 입력해 주세요.", target: rowId ? questionLimitRefs.current[rowId] : null, questions: normalizedQuestions };
+        return { message: "글자 수 제한은 100자 이상 2,000자 이하로 입력해 주세요.", target: rowId ? questionLimitRefs.current[rowId] : null, questions: normalizedQuestions };
       }
     }
     if (inputType === "text" && !text.trim()) {
@@ -238,7 +241,7 @@ export function CoachingPage() {
           <textarea ref={(element) => { questionTextRefs.current[item.id] = element; }} aria-label={`자소서 문항 ${index + 1}`} value={item.question} maxLength={MAX_QUESTION_TEXT_LENGTH} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => updateQuestion(setQuestions, item.id, "question", normalizeQuestionText(event.target.value))} placeholder="자소서 문항을 입력하세요." />
           <div className={styles.questionLimitRow}>
             <label htmlFor={`question-limit-${item.id}`}>글자 수 제한</label>
-            <input ref={(element) => { questionLimitRefs.current[item.id] = element; }} id={`question-limit-${item.id}`} value={item.characterLimit} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", normalizeCharacterLimit(event.target.value))} inputMode="numeric" placeholder="최대 2000자" />
+            <input ref={(element) => { questionLimitRefs.current[item.id] = element; }} id={`question-limit-${item.id}`} value={item.characterLimit} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => updateQuestion(setQuestions, item.id, "characterLimit", normalizeCharacterLimit(event.target.value))} inputMode="numeric" placeholder="최대 2,000자" />
             {index > 0 ? <button className={styles.questionDelete} type="button" onClick={() => setQuestions((items) => items.filter((entry) => entry.id !== item.id))}>삭제</button> : null}
           </div>
         </div>)}
@@ -261,7 +264,7 @@ export function CoachingPage() {
                 onChange={(event) => setText(event.target.value)}
                 placeholder="작성한 자기소개서를 항목 구분 없이 통째로 붙여넣어 주세요. (예: 지원동기, 성장과정, 입사 후 포부 등이 모두 포함된 전체 글)"
               />
-              <span className={styles.counter}>{text.length.toLocaleString()}자</span>
+              <span className={styles.counter}>{formatNumber(text.length)}자</span>
             </>
           ) : (
             <>
@@ -406,7 +409,17 @@ function normalizeQuestionText(value: string) {
 function normalizeCharacterLimit(value: string) {
   const numericValue = value.replace(/\D/g, "");
   if (!numericValue) return "";
-  return String(Math.min(Number(numericValue), MAX_CHARACTER_LIMIT));
+  return formatNumber(Math.min(Number(numericValue), MAX_CHARACTER_LIMIT));
+}
+
+function parseCharacterLimit(value: string) {
+  const numericValue = value.replace(/\D/g, "");
+  if (!numericValue) return null;
+  return Math.min(Number(numericValue), MAX_CHARACTER_LIMIT);
+}
+
+function formatNumber(value: number) {
+  return value.toLocaleString("ko-KR");
 }
 
 function focusField(element?: HTMLElement | null) {
