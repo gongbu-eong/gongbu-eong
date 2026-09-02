@@ -8,6 +8,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { loadKakaoSdk } from "@/shared/kakao-share";
+import { focusMobileInput } from "@/shared/mobile-focus";
 import {
   createCommunityComment,
   deleteCommunityComment,
@@ -449,7 +450,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
               <section className={styles.commentSection}>
                 <h2>댓글 {formatNumber(post.commentCount)}</h2>
                 <form className={styles.commentForm} onSubmit={submitComment}>
-                  <textarea value={comment} maxLength={500} onChange={(event) => setComment(event.target.value)} placeholder="댓글을 입력하세요." />
+                  <textarea value={comment} maxLength={500} onFocus={(event) => focusMobileInput(event.currentTarget)} onChange={(event) => setComment(event.target.value)} placeholder="댓글을 입력하세요." />
                   <button type="submit" disabled={!comment.trim() || saving}>등록</button>
                 </form>
                 <div className={styles.commentList}>
@@ -822,6 +823,7 @@ function ReplyForm({
       <textarea
         value={replyText}
         maxLength={500}
+        onFocus={(event) => focusMobileInput(event.currentTarget)}
         onChange={(event) => onReplyTextChange(event.target.value)}
         placeholder={placeholder}
       />
@@ -848,6 +850,7 @@ function CommentEditForm({
       <textarea
         value={editText}
         maxLength={500}
+        onFocus={(event) => focusMobileInput(event.currentTarget)}
         onChange={(event) => onEditTextChange(event.target.value)}
         placeholder="댓글을 입력하세요."
       />

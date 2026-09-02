@@ -30,10 +30,10 @@ const representativeTools = [
     href: "/ai-tools/coaching",
     badge: "첫 1회 무료",
     badgeTone: "green",
-    title: "NCS Ai 자소서 코칭",
+    title: "NCS AI 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",
     image: "/ai-tools/tool-resume.png",
-    imageAlt: "NCS Ai 자소서 코칭",
+    imageAlt: "NCS AI 자소서 코칭",
     thumbClass: "toolThumbResume",
     imageWidth: 94,
     imageHeight: 78,
@@ -102,7 +102,7 @@ export function AiToolsPage() {
 
   return (
     <main className={styles.page}>
-      <section className={styles.mobileFrame} aria-label="Ai 도구">
+      <section className={styles.mobileFrame} aria-label="AI 도구">
         <AppHeader
           user={authResolved ? user : undefined}
           ticketCount={user?.creditBalance}
@@ -110,7 +110,7 @@ export function AiToolsPage() {
 
         <div className={styles.content}>
           <header className={styles.titleBlock}>
-            <h1>Ai 도구</h1>
+            <h1>AI 도구</h1>
             <p>취업 준비의 모든 과정을 AI가 함께 도와드려요.</p>
           </header>
 
@@ -144,7 +144,7 @@ export function AiToolsPage() {
                 <strong>
                   로그인하고
                   <br />
-                  공부엉이의 <span>Ai 도구</span>를
+                  공부엉이의 <span>AI 도구</span>를
                   <br />
                   사용하세요.
                 </strong>

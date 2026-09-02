@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import styles from "./TicketRewardAlert.module.css";
@@ -12,7 +13,8 @@ export function TicketRewardAlert({
   message?: string;
   onClose: () => void;
 }) {
-  useBodyScrollLock(true);
+  const isHydrated = useHydrated();
+  useBodyScrollLock(isHydrated);
 
   const alert = (
     <div className={styles.overlay} role="presentation">
@@ -40,6 +42,17 @@ export function TicketRewardAlert({
     </div>
   );
 
-  if (typeof document === "undefined") return null;
+  if (!isHydrated) return null;
   return createPortal(alert, document.body);
+}
+
+function useHydrated() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      onStoreChange();
+      return () => {};
+    },
+    () => true,
+    () => false,
+  );
 }

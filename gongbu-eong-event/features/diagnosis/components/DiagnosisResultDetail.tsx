@@ -256,6 +256,7 @@ export function DiagnosisResultDetail() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const shareRewardPollingRef = useRef<number | null>(null);
+  const shareRewardCleanupRef = useRef<(() => void) | null>(null);
   useBodyScrollLock(historyOpen);
 
   useEffect(() => {
@@ -281,6 +282,7 @@ export function DiagnosisResultDetail() {
     if (shareRewardPollingRef.current) {
       window.clearTimeout(shareRewardPollingRef.current);
     }
+    shareRewardCleanupRef.current?.();
   }, []);
 
   const loadHistory = useCallback(async (cursor?: string) => {
@@ -336,10 +338,39 @@ export function DiagnosisResultDetail() {
     if (shareRewardPollingRef.current) {
       window.clearTimeout(shareRewardPollingRef.current);
     }
+    shareRewardCleanupRef.current?.();
 
     let attempts = 0;
     let observedBalance = previousBalance;
+    let running = false;
+    let resolved = false;
+
+    const cleanup = () => {
+      resolved = true;
+      if (shareRewardPollingRef.current) {
+        window.clearTimeout(shareRewardPollingRef.current);
+        shareRewardPollingRef.current = null;
+      }
+      window.removeEventListener("focus", pollWhenVisible);
+      document.removeEventListener("visibilitychange", pollWhenVisible);
+      if (shareRewardCleanupRef.current === cleanup) {
+        shareRewardCleanupRef.current = null;
+      }
+    };
+
+    const scheduleNextPoll = () => {
+      if (resolved) return;
+      if (attempts < 60) {
+        shareRewardPollingRef.current = window.setTimeout(poll, attempts < 20 ? 1000 : 2000);
+      } else {
+        cleanup();
+        setShareMessage("공유하고 코칭 받기 →");
+      }
+    };
+
     const poll = async () => {
+      if (running || resolved) return;
+      running = true;
       attempts += 1;
       try {
         const response = await getCurrentUser();
@@ -358,22 +389,33 @@ export function DiagnosisResultDetail() {
             }));
             setShareMessage("티켓 지급 완료!");
             window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
+            cleanup();
             return;
           }
           observedBalance = nextBalance;
         }
       } catch {
         // Keep polling briefly; the webhook can arrive a little after the user returns.
+      } finally {
+        running = false;
       }
 
-      if (attempts < 10) {
-        shareRewardPollingRef.current = window.setTimeout(poll, 1500);
-      } else {
-        setShareMessage("공유하고 코칭 받기 →");
-      }
+      scheduleNextPoll();
     };
 
-    shareRewardPollingRef.current = window.setTimeout(poll, 1500);
+    function pollWhenVisible() {
+      if (document.visibilityState === "hidden") return;
+      if (shareRewardPollingRef.current) {
+        window.clearTimeout(shareRewardPollingRef.current);
+        shareRewardPollingRef.current = null;
+      }
+      void poll();
+    };
+
+    window.addEventListener("focus", pollWhenVisible);
+    document.addEventListener("visibilitychange", pollWhenVisible);
+    shareRewardCleanupRef.current = cleanup;
+    shareRewardPollingRef.current = window.setTimeout(poll, 700);
   }, []);
 
   const resetShareMessage = useCallback((message = "공유하고 코칭 받기 →") => {
@@ -387,7 +429,10 @@ export function DiagnosisResultDetail() {
       const reward = await grantDiagnosisShareReward(resultId);
       setUser((current) => current ? { ...current, creditBalance: reward.balanceAfter } : current);
 
-      if (reward.granted) {
+      const balanceIncreased =
+        typeof previousBalance === "number" && reward.balanceAfter > previousBalance;
+
+      if (reward.granted || balanceIncreased) {
         window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
           detail: {
             message: "진단권 1장이 추가되었습니다.",

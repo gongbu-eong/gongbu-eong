@@ -385,7 +385,7 @@ export function AppFooter({
           <Image src="/diagnosis/result-detail/footer-ai.svg" alt="" width={27} height={27} />
           <b className={styles.footerBest}>BEST</b>
         </span>
-        <span>Ai 도구</span>
+        <span>AI 도구</span>
       </Link>
       <Link href="/community" className={active === "community" ? styles.active : undefined}>
         <Image src="/diagnosis/result-detail/footer-community.svg" alt="" width={28} height={24} />

@@ -452,7 +452,7 @@ export function MyResumeForm({
       <AppHeader />
       <main className={`${styles.frame} ${styles.resumeFormFrame}`}>
         <h1 className={styles.title}>{isEditMode ? "이력서 수정" : "내 이력서 관리"}</h1>
-        {!isEditMode ? <p className={styles.subtitle}>이력서를 채워두면 Ai 도구 분석에 유용합니다.</p> : null}
+        {!isEditMode ? <p className={styles.subtitle}>이력서를 채워두면 AI 도구 분석에 유용합니다.</p> : null}
 
         {!isEditMode ? (
           <div className={styles.tabs} role="tablist">

@@ -18,6 +18,7 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
   const router = useRouter();
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   const [revisionMode, setRevisionMode] = useState<"original" | "compare">("original");
+  const [originalExpanded, setOriginalExpanded] = useState(false);
   const questionTabsRef = useRef<HTMLDivElement>(null);
   const questionTabsDragRef = useRef({ active: false, moved: false, scrollLeft: 0, startX: 0, suppressClick: false, targetIndex: null as number | null });
   const result = item.result;
@@ -27,6 +28,7 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
   const selectQuestion = (index: number) => {
     setSelectedQuestionIndex(index);
     setRevisionMode("original");
+    setOriginalExpanded(false);
   };
   const handleQuestionTabsPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     const tabs = questionTabsRef.current;
@@ -125,7 +127,14 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
               <button type="button" className={revisionMode === "original" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("original")}>원문</button>
               <button type="button" className={revisionMode === "compare" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("compare")}>비교</button>
             </div>
-            {revisionMode === "original" ? <div className={styles.originalTextPanel}>{selectedQuestion.answer}</div> : <ComparisonList question={selectedQuestion} />}
+            {revisionMode === "original" ? (
+              <OriginalTextPanel
+                text={selectedQuestion.answer}
+                compareOriginals={getComparisonItems(selectedQuestion).map((item) => item.original)}
+                expanded={originalExpanded}
+                onToggle={() => setOriginalExpanded((value) => !value)}
+              />
+            ) : <ComparisonList question={selectedQuestion} />}
             <MetaReview question={selectedQuestion} />
           </section>
         </div>
@@ -208,8 +217,92 @@ function StructureChecks({ question }: { question: CoachingQuestionReview }) {
 }
 
 function ComparisonList({ question }: { question: CoachingQuestionReview }) {
-  const items = question.comparisonEdits?.length ? question.comparisonEdits : question.edits.filter((item) => item.replacement).map((item) => ({ original: item.issue, improved: item.replacement!, reason: item.suggestion }));
+  const items = getComparisonItems(question);
   return <div className={styles.comparisonList}>{items.length ? items.slice(0, 3).map((item, index) => <article key={`${item.original}-${index}`}><strong>{item.reason}</strong><div><span>원문</span><p>{item.original}</p><span>첨삭</span><p>{item.improved}</p></div></article>) : <p className={styles.emptyEdit}>비교할 첨삭 문장이 없습니다.</p>}</div>;
+}
+
+function OriginalTextPanel({ text, compareOriginals, expanded, onToggle }: { text: string; compareOriginals: string[]; expanded: boolean; onToggle: () => void }) {
+  const shouldToggle = shouldCollapseOriginalText(text);
+  const parts = buildHighlightedOriginalParts(formatOriginalTextForReading(text), compareOriginals);
+  return <div>
+    <div className={`${styles.originalTextPanel} ${shouldToggle && !expanded ? styles.originalTextPanelCollapsed : ""}`}>
+      {parts.map((part, index) => part.highlighted ? <mark key={`${part.text}-${index}`} className={styles.originalCompareHighlight}>{part.text}</mark> : <span key={`${part.text}-${index}`}>{part.text}</span>)}
+    </div>
+    {shouldToggle ? <button type="button" className={styles.originalToggleButton} onClick={onToggle}>{expanded ? "접기" : "펼치기"}</button> : null}
+  </div>;
+}
+
+function getComparisonItems(question: CoachingQuestionReview) {
+  const items = question.comparisonEdits?.length ? question.comparisonEdits : question.edits.filter((item) => item.replacement).map((item) => ({ original: item.issue, improved: item.replacement!, reason: item.suggestion }));
+  return items.slice(0, 3);
+}
+
+function formatOriginalTextForReading(value: string) {
+  const normalized = value.replace(/\r\n/g, "\n").replace(/[ \t]+/g, " ").trim();
+  if (!normalized || normalized.includes("\n\n")) return normalized;
+  return normalized.replace(/([.!?。])\s+(?=\S)/g, "$1\n\n");
+}
+
+function shouldCollapseOriginalText(value: string) {
+  const formatted = formatOriginalTextForReading(value);
+  const estimatedLines = formatted.split("\n").reduce((total, line) => total + Math.max(1, Math.ceil(Array.from(line).length / 24)), 0);
+  return estimatedLines > 15;
+}
+
+function buildHighlightedOriginalParts(text: string, originals: string[]) {
+  const ranges: Array<{ start: number; end: number }> = [];
+  for (const original of originals) {
+    const range = findOriginalTextRange(text, original);
+    if (!range || ranges.some((item) => range.start < item.end && item.start < range.end)) continue;
+    ranges.push(range);
+  }
+  ranges.sort((a, b) => a.start - b.start);
+  if (!ranges.length) return [{ text, highlighted: false }];
+
+  const parts: Array<{ text: string; highlighted: boolean }> = [];
+  let cursor = 0;
+  for (const range of ranges) {
+    if (cursor < range.start) parts.push({ text: text.slice(cursor, range.start), highlighted: false });
+    parts.push({ text: text.slice(range.start, range.end), highlighted: true });
+    cursor = range.end;
+  }
+  if (cursor < text.length) parts.push({ text: text.slice(cursor), highlighted: false });
+  return parts;
+}
+
+function findOriginalTextRange(text: string, original: string) {
+  const phrase = original.trim();
+  if (!phrase) return null;
+  const exactIndex = text.indexOf(phrase);
+  if (exactIndex >= 0) return { start: exactIndex, end: exactIndex + phrase.length };
+
+  const source = makeWhitespaceSearchIndex(text);
+  const target = phrase.replace(/\s+/g, " ");
+  const fuzzyIndex = source.text.indexOf(target);
+  if (fuzzyIndex < 0) return null;
+  const lastIndex = fuzzyIndex + target.length - 1;
+  return { start: source.map[fuzzyIndex], end: source.map[lastIndex] + 1 };
+}
+
+function makeWhitespaceSearchIndex(value: string) {
+  let text = "";
+  const map: number[] = [];
+  let previousWasSpace = false;
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if (/\s/.test(char)) {
+      if (!previousWasSpace) {
+        text += " ";
+        map.push(index);
+        previousWasSpace = true;
+      }
+      continue;
+    }
+    text += char;
+    map.push(index);
+    previousWasSpace = false;
+  }
+  return { text, map };
 }
 
 function MetaReview({ question }: { question: CoachingQuestionReview }) {

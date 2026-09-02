@@ -10,6 +10,8 @@ export type SignupAgreementsPayloadDto = {
 export type SignupAgreementsResponseDto = {
   ok: boolean;
   welcomeCreditsGranted: boolean;
+  welcomeCreditsBalanceAfter?: number;
+  welcomeCreditsGrantReason?: string;
 };
 
 export function completeSignupAgreements(payload: SignupAgreementsPayloadDto) {

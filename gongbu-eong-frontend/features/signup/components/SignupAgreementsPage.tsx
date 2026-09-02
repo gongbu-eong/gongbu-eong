@@ -40,7 +40,7 @@ export function SignupAgreementsPage() {
 
   const nextPath = useMemo(() => {
     const rawNext = searchParams.get("next");
-    return rawNext && rawNext.startsWith("/") ? rawNext : "/";
+    return normalizeNextPath(rawNext);
   }, [searchParams]);
 
   useEffect(() => {
@@ -54,7 +54,7 @@ export function SignupAgreementsPage() {
           return;
         }
         if (response.user?.status === "active" && response.user.signupCompletedAt) {
-          router.replace(nextPath);
+          navigateToNext(nextPath, (href) => router.replace(href));
         }
       })
       .catch(() => {
@@ -109,7 +109,12 @@ export function SignupAgreementsPage() {
         redirectUrl.searchParams.set("ticketAmount", "5");
       }
 
-      router.replace(`${redirectUrl.pathname}${redirectUrl.search}`);
+      navigateToNext(
+        isExternalUrl(nextPath)
+          ? redirectUrl.toString()
+          : `${redirectUrl.pathname}${redirectUrl.search}`,
+        (href) => router.replace(href),
+      );
     } catch (error) {
       window.alert(
         error instanceof Error ? error.message : "약관 동의 저장에 실패했습니다.",
@@ -209,6 +214,67 @@ export function SignupAgreementsPage() {
       ) : null}
     </main>
   );
+}
+
+function normalizeNextPath(rawNext: string | null) {
+  if (!rawNext) {
+    return "/";
+  }
+
+  if (rawNext.startsWith("/")) {
+    return rawNext;
+  }
+
+  try {
+    const url = new URL(rawNext);
+    const isEventResultPath =
+      url.pathname === "/events/diagnosis" ||
+      url.pathname === "/events/diagnosis/result";
+
+    if (!isEventResultPath) {
+      return "/";
+    }
+
+    const configuredEventUrl =
+      process.env.NEXT_PUBLIC_EVENT_APP_URL ||
+      process.env.NEXT_PUBLIC_EVENT_URL;
+    const configuredEventOrigin = configuredEventUrl
+      ? new URL(configuredEventUrl).origin
+      : "";
+    const currentOrigin =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const isAllowedLocal =
+      process.env.NODE_ENV !== "production" &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+
+    if (
+      url.origin === configuredEventOrigin ||
+      url.origin === currentOrigin ||
+      isAllowedLocal
+    ) {
+      return url.toString();
+    }
+  } catch {
+    return "/";
+  }
+
+  return "/";
+}
+
+function isExternalUrl(value: string) {
+  return /^https?:\/\//i.test(value);
+}
+
+function navigateToNext(
+  value: string,
+  replace: (href: string) => void,
+) {
+  if (isExternalUrl(value)) {
+    window.location.href = value;
+    return;
+  }
+
+  replace(value);
 }
 
 function AgreementRow({

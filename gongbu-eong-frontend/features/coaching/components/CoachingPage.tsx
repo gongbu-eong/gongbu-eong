@@ -8,6 +8,7 @@ import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser, getJobPostings } from "@/features/home/home.api";
 import { getDiagnosisResultHistory, selectDiagnosisResult } from "@/features/diagnosis/diagnosis.api";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
+import { focusMobileInput, watchMobileKeyboardInset } from "@/shared/mobile-focus";
 import type { DiagnosisResultHistoryItemDto } from "@/features/diagnosis/diagnosis.dto";
 import { coachResume } from "../coaching.api";
 import type { CoachingJob } from "../coaching.dto";
@@ -60,6 +61,11 @@ export function CoachingPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   useBodyScrollLock(Boolean(termsOpen || jobPickerOpen || dutySheetJob || picker || confirmOpen || alertMessage));
+
+  useEffect(() => {
+    if (!termsOpen && !jobPickerOpen && !dutySheetJob && !picker && !confirmOpen && !alertMessage) return;
+    return watchMobileKeyboardInset();
+  }, [termsOpen, jobPickerOpen, dutySheetJob, picker, confirmOpen, alertMessage]);
 
   useEffect(() => {
     let active = true;
@@ -216,10 +222,10 @@ export function CoachingPage() {
   return <div className={styles.page}>
     <AppHeader />
     <main className={`${styles.frame} ${styles.newCoachingFrame}`}>
-      <h1>{connectedJob ? "Ai NCS 자소서 코칭 결과" : "Ai NCS 자소서 코칭"}</h1>
-      <section className={styles.intro}><strong>자소서를 Ai가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
+      <h1>{connectedJob ? "AI NCS 자소서 코칭 결과" : "AI NCS 자소서 코칭"}</h1>
+      <section className={styles.intro}><strong>자소서를 AI가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
       {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <><button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button><p className={styles.helper}>공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.<br />연결하지 않아도 일반 자소서 코칭을 받을 수 있어요.</p></>}
-      <div ref={diagnosisRef}><StatusCard title="강점·성향 진단 결과" ready={hasDiagnosis} empty="현재 강·약점 결과가 없습니다." action="진단 시작하기 →" href="/ai-tools/diagnosis" onChange={() => setPicker("diagnosis")} selected={selectedDiagnosis?.typeName} date={formatDate(selectedDiagnosis?.completedAt)} /></div>
+      <div ref={diagnosisRef}><StatusCard title="강점·성향 진단 결과" ready={hasDiagnosis} empty="현재 강·약점 결과가 없습니다." emptyDetail="강·약점 테스트를 진행하세요." action="진단 시작하기 →" href="/ai-tools/diagnosis" onChange={() => setPicker("diagnosis")} selected={selectedDiagnosis?.typeName} date={formatDate(selectedDiagnosis?.completedAt)} /></div>
 
       <section className={styles.questionSection}>
         <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={addQuestion} disabled={questions.length >= MAX_QUESTION_COUNT}>+ 추가</button></div>
@@ -301,7 +307,7 @@ export function CoachingPage() {
       {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
       <button ref={termsButtonRef} type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsOpen(true)}><span>{termsConfirmed ? "✓" : ""}</span>자소서 약관동의를 해주세요.</button>
       {error ? <p className={styles.error}>{error}</p> : null}
-      <button className={`${styles.primaryButton} ${styles.coachingSubmitButton}`} type="button" onClick={submit} disabled={!canRequestCoaching}><Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.coachingSubmitIcon} />Ai NCS 자소서 코칭 받기</button>
+      <button className={`${styles.primaryButton} ${styles.coachingSubmitButton}`} type="button" onClick={submit} disabled={!canRequestCoaching}><Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.coachingSubmitIcon} />AI NCS 자소서 코칭 받기</button>
     </main>
     <AppFooter active="ai" />
     {termsOpen ? <TermsSheet onConfirm={() => { setTermsConfirmed(true); setTermsOpen(false); }} onClose={() => setTermsOpen(false)} /> : null}
@@ -314,15 +320,15 @@ export function CoachingPage() {
 }
 
 function CoachingLoadingScreen() {
-  return <div className={`${styles.page} ${styles.coachingLoadingPage}`}><main className={styles.coachingLoadingFrame} aria-live="polite" aria-busy="true"><Image src="/coaching/coaching-loading-owl.png" alt="" width={114} height={140} priority className={styles.coachingLoadingImage} /><h1>데이터 분석중입니다...</h1><p>Ai 자소서 코칭을 진행중이에요.</p><div className={styles.coachingLoadingTrack} aria-hidden="true"><span /></div></main></div>;
+  return <div className={`${styles.page} ${styles.coachingLoadingPage}`}><main className={styles.coachingLoadingFrame} aria-live="polite" aria-busy="true"><Image src="/coaching/coaching-loading-owl.png" alt="" width={114} height={140} priority className={styles.coachingLoadingImage} /><h1>데이터 분석중입니다...</h1><p>AI 자소서 코칭을 진행중이에요.</p><div className={styles.coachingLoadingTrack} aria-hidden="true"><span /></div></main></div>;
 }
 
 function ConnectedJobCard({ job, onRemove }: { job: ConnectedJob; onRemove: () => void }) {
   return <><section className={styles.connectedJobCard}><button type="button" onClick={onRemove} aria-label="지원 공고 연결 해제"><Image src="/coaching/close-rounded.svg" alt="" width={24} height={24} /></button><span>지원 공고</span><strong>[{job.institutionName}] {job.title}</strong><em>직무</em><p>{job.duty}</p></section><small className={styles.jobFitNotice}>✓ 이 공고의 직무 적합성까지 함께 분석해요</small></>;
 }
 
-function StatusCard({ title, ready, empty, action, href, onChange, selected, date }: { title: string; ready: boolean; empty: string; action: string; href: string; onChange: () => void; selected?: string; date?: string }) {
-  return <section className={styles.statusSection}><div className={styles.sectionHeading}><h2>{title}</h2>{ready ? <button type="button" onClick={onChange}>변경</button> : null}</div>{ready ? <div className={styles.readyCard}><strong>{selected || "등록된 정보가 있어요."}</strong>{date ? <p>{date}</p> : null}</div> : <div className={styles.emptyCard}><p>{empty}</p><Link href={href}>{action}</Link></div>}</section>;
+function StatusCard({ title, ready, empty, emptyDetail, action, href, onChange, selected, date }: { title: string; ready: boolean; empty: string; emptyDetail?: string; action: string; href: string; onChange: () => void; selected?: string; date?: string }) {
+  return <section className={styles.statusSection}><div className={styles.sectionHeading}><h2>{title}</h2>{ready ? <button type="button" onClick={onChange}>변경</button> : null}</div>{ready ? <div className={styles.readyCard}><strong>{selected || "등록된 정보가 있어요."}</strong>{date ? <p>{date}</p> : null}</div> : <div className={styles.emptyCard}><p>{empty}{emptyDetail ? <><br />{emptyDetail}</> : null}</p><Link href={href}>{action}</Link></div>}</section>;
 }
 
 function JobPicker({ query, setQuery, jobs, searching, onSearch, onPick, onClose }: { query: string; setQuery: (value: string) => void; jobs: CoachingJob[]; searching: boolean; onSearch: () => void; onPick: (job: CoachingJob) => void; onClose: () => void }) {
@@ -400,10 +406,8 @@ function normalizeCharacterLimit(value: string) {
 
 function focusField(element?: HTMLElement | null) {
   if (!element) return;
-  window.setTimeout(() => {
-    element.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
-    if ("focus" in element) element.focus({ preventScroll: true });
-  }, 80);
+  if ("focus" in element) element.focus({ preventScroll: true });
+  focusMobileInput(element);
 }
 
 function formatDate(value?: string | null) {

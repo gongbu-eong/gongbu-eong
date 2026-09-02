@@ -232,6 +232,7 @@ submissionReview.priorityImprovement는 가장 먼저 보완할 사항 1개입�
 submissionReview.overallAssessment는 전체 평가 하단에 보여줄 종합 가이드입니다. { "strengths": "현재 강점", "firstFix": "가장 먼저 고칠 것", "principle": "첨삭 원칙" } 형식입니다.
 submissionReview.questions[].tabTitle은 질문 내용을 AI가 최대 8글자 한국어 제목으로 요약한 값입니다. "1.", "2." 같은 문항 번호는 포함하지 마세요.
 submissionReview.questions[].answer는 해당 문항에 대응되는 제출 원문을 원문 순서대로 담되 1200자를 넘기지 마세요. 문항별 구분이 불분명하면 제출 원문 전체에서 가장 관련 있는 문단을 사용하세요.
+submissionReview.questions[].answer는 긴 한 문단으로 뭉치지 말고 제출 원문의 문단 흐름을 유지하세요. 문단 구분이 가능한 곳은 빈 줄 하나("\\n\\n")로 나누어 모바일에서 읽기 쉽게 반환하세요.
 submissionReview.questions[].characterCount는 answer의 실제 글자 수, exceededBy는 characterLimit을 초과한 글자 수입니다. 제한이 없거나 초과하지 않으면 0입니다.
 submissionReview.questions[].ncsEvaluations는 선택된 문항의 NCS 기준 평가입니다. 최소 2개 이상, 최대 3개까지 반환하세요. 각 항목은 { "name": "NCS 역량명 또는 하위 역량명", "comment": "AI 코멘트", "score": 0~100 }입니다.
 submissionReview.questions[].coachingPoints는 { "strengths": ["잘한 점"], "improvements": ["보완할 점"], "ncsSuggestions": ["NCS 기준 제안"] }입니다. 각 배열은 1~3개입니다.
@@ -242,7 +243,7 @@ submissionReview.questions[].highlights는 화면에서 원문 answer 안에 밑
 각 질문마다 highlights에는 가능한 한 fix와 keep을 모두 포함하세요. 정말 유지할 표현이 없을 때만 keep을 생략하세요.
 submissionReview.questions[].edits는 하이라이트와 연결되는 첨삭 카드입니다. frameworkPart는 "P · 주장", "R · 이유", "E · 사례", "C · 배경", "A · 행동", "R · 결과", "S · 상황", "T · 과제"처럼 방법론 단계가 보이게 작성하세요.
 edits[].issue는 왜 문제인지 또는 왜 유지하면 좋은지 2문장 이상, suggestion은 어떻게 바꾸거나 유지하면 좋은지 2문장 이상 작성하세요. replacement는 대체 문장이 있을 때만 작성하세요.
-submissionReview.questions[].comparisonEdits는 비교 탭에서 보여줄 문장별 원문과 첨삭입니다. 각 항목은 { "original": "원문 문장", "improved": "첨삭 문장", "reason": "수정 이유" }입니다. 최대 4개만 반환하세요.
+submissionReview.questions[].comparisonEdits는 비교 탭에서 보여줄 문장별 원문과 첨삭입니다. 각 항목은 { "original": "원문 문장", "improved": "첨삭 문장", "reason": "수정 이유" }입니다. 최대 4개만 반환하세요. comparisonEdits[].original은 반드시 같은 question.answer 안에서 그대로 찾을 수 있는 정확한 연속 문자열이어야 합니다.
 submissionReview.questions[].majorRevisions는 주요 수정 3건입니다. 원문에 근거한 핵심 수정 포인트를 3개 반환하세요.
 submissionReview.questions[].factualChecks는 사실성 체크입니다. 자소서에 작성된 수치, 기관명, 경험 기간, 성과처럼 제출 전 확인해야 할 내용을 1~3개 반환하세요.`;
 }

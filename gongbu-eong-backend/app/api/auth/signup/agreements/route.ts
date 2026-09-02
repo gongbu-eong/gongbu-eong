@@ -25,6 +25,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.info("[Signup] agreements completed", {
+      userId: user.id,
+      welcomeCreditsGranted: result.welcomeCreditsGranted,
+      welcomeCreditsBalanceAfter: result.welcomeCreditsBalanceAfter,
+      welcomeCreditsGrantReason: result.welcomeCreditsGrantReason,
+    });
+
     return jsonWithCors(request, { ok: true, ...result });
   } catch (error) {
     const status =

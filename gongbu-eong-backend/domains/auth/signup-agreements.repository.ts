@@ -135,12 +135,20 @@ export async function completeSignupAgreements(
     );
 
     const shouldGrantWelcomeCredits = !userResult.rows[0].signup_completed_at;
-    const welcomeCreditsGranted = shouldGrantWelcomeCredits
+    const welcomeCredits = shouldGrantWelcomeCredits
       ? await grantWelcomeSignupCredits(client, userId)
-      : false;
+      : {
+          granted: false,
+          balanceAfter: 0,
+          reason: "already_completed" as const,
+        };
 
     await client.query("COMMIT");
-    return { welcomeCreditsGranted };
+    return {
+      welcomeCreditsGranted: welcomeCredits.granted,
+      welcomeCreditsBalanceAfter: welcomeCredits.balanceAfter,
+      welcomeCreditsGrantReason: welcomeCredits.reason,
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

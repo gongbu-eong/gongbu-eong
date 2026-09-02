@@ -767,11 +767,13 @@ function DiagnosisResult({
     process.env.NEXT_PUBLIC_KAKAO_LOGIN_URL,
     displayResult.runId,
     anonymousId,
+    displayResult.resultId,
   );
   const naverLoginUrl = buildLoginUrl(
     process.env.NEXT_PUBLIC_NAVER_LOGIN_URL,
     displayResult.runId,
     anonymousId,
+    displayResult.resultId,
   );
   const typeDetail = RESULT_TYPE_DETAILS[displayResult.typeCode];
   const pointCards = buildPointCards(displayResult);
@@ -990,17 +992,34 @@ function buildLoginUrl(
   baseUrl: string | undefined,
   diagnosisRunId: string,
   anonymousId: string,
+  resultId: string,
 ) {
   if (!baseUrl) {
     return "#";
   }
 
   const url = new URL(baseUrl);
+  const returnTo = new URL("/events/diagnosis/result", getEventReturnOrigin());
+  returnTo.searchParams.set("resultId", resultId);
+
   url.searchParams.set("entrySource", "diagnosis");
   url.searchParams.set("diagnosisRunId", diagnosisRunId);
   url.searchParams.set("anonymousId", anonymousId);
+  url.searchParams.set("returnTo", returnTo.toString());
 
   return url.toString();
+}
+
+function getEventReturnOrigin() {
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+
+  return (
+    process.env.NEXT_PUBLIC_EVENT_APP_URL ||
+    process.env.NEXT_PUBLIC_EVENT_URL ||
+    "http://localhost:3001"
+  );
 }
 
 function trackDiagnosisSignupClick(

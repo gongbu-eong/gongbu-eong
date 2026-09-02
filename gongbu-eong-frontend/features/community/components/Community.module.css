@@ -2213,6 +2213,7 @@
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.4;
+  scroll-margin-bottom: 180px;
 }
 
 .commentForm textarea::placeholder,
@@ -2442,6 +2443,7 @@
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.4;
+  scroll-margin-bottom: 180px;
 }
 
 .replyForm button {
@@ -2996,6 +2998,7 @@
   font: inherit;
   font-size: 0.875rem;
   line-height: 1.4;
+  scroll-margin-bottom: 180px;
 }
 
 .commentEditForm textarea::placeholder {

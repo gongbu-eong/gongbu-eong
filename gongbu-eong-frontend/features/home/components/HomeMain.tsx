@@ -39,19 +39,19 @@ const aiTools = [
     requiresAuth: true,
     tag: "첫 1회 무료",
     memberTag: "첫 5회 무료 쿠폰 증정",
-    title: "Ai NCS 자소서 코칭",
+    title: "AI NCS 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",
     image: "/home/home-tool-diagnosis.png",
-    imageAlt: "Ai 자소서 코칭",
+    imageAlt: "AI 자소서 코칭",
   },
   {
     href: "#",
     tag: "준비중",
     memberTag: "준비중",
-    title: "Ai 면접 코칭",
+    title: "AI 면접 코칭",
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
     image: "/home/home-tool-interview.png",
-    imageAlt: "Ai 면접 코칭",
+    imageAlt: "AI 면접 코칭",
     comingSoon: true,
   }
 ];
@@ -466,7 +466,7 @@ const ignoreClickAfterDrag = (
         ))}
         </div>
 
-        <SectionHeader title="Ai 취업 도구" />
+        <SectionHeader title="AI 취업 도구" />
         <div className={styles.toolList}>
           {aiTools.map((tool) => {
             const content = (

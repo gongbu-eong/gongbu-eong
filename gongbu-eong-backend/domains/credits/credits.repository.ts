@@ -34,6 +34,16 @@ type CreditRewardPolicy = {
   reason: string;
 };
 
+export type CreditRewardGrantResult = {
+  granted: boolean;
+  balanceAfter: number;
+  reason?:
+    | "policy_inactive"
+    | "already_granted"
+    | "max_balance"
+    | "insert_blocked";
+};
+
 export type CommunityActivityRewardProgress = {
   activityCount: number;
   milestoneCount: number;
@@ -57,7 +67,13 @@ export async function grantWelcomeSignupCredits(
     },
   );
 
-  if (!policy.isActive) return false;
+  if (!policy.isActive) {
+    return {
+      granted: false,
+      balanceAfter: await getCurrentCreditBalance(userId, client),
+      reason: "policy_inactive",
+    } satisfies CreditRewardGrantResult;
+  }
 
   const oauthIdentities = await getUserOAuthRewardIdentities(client, userId);
   const hasPreviousOAuthReward = await hasOAuthIdentityRewardGrant(
@@ -66,7 +82,22 @@ export async function grantWelcomeSignupCredits(
     CREDIT_REWARD_POLICY.welcomeSignup.sourceType,
   );
 
-  if (hasPreviousOAuthReward) return false;
+  if (hasPreviousOAuthReward) {
+    return {
+      granted: false,
+      balanceAfter: await getCurrentCreditBalance(userId, client),
+      reason: "already_granted",
+    } satisfies CreditRewardGrantResult;
+  }
+
+  const currentBalance = await getCurrentCreditBalance(userId, client);
+  if (currentBalance + policy.amount > MAX_CREDIT_BALANCE) {
+    return {
+      granted: false,
+      balanceAfter: currentBalance,
+      reason: "max_balance",
+    } satisfies CreditRewardGrantResult;
+  }
 
   const transaction = await insertCreditTransaction(client, {
     userId,
@@ -88,7 +119,12 @@ export async function grantWelcomeSignupCredits(
     });
   }
 
-  return transaction.granted;
+  return {
+    granted: transaction.granted,
+    balanceAfter:
+      transaction.balanceAfter ?? (await getCurrentCreditBalance(userId, client)),
+    reason: transaction.granted ? undefined : "insert_blocked",
+  } satisfies CreditRewardGrantResult;
 }
 
 export async function grantCommunityActivityMilestoneReward(

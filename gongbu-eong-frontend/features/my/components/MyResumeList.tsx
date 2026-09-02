@@ -58,7 +58,7 @@ export function MyResumeList() {
       <AppHeader />
       <main className={`${styles.frame} ${styles.resumeListFrame}`}>
         <h1 className={styles.title}>내 이력서 관리</h1>
-        <p className={styles.subtitle}>이력서를 채워두면 Ai 도구 분석에 유용합니다.</p>
+        <p className={styles.subtitle}>이력서를 채워두면 AI 도구 분석에 유용합니다.</p>
 
         {!loading && resumes.length === 0 ? (
           <div className={styles.emptyBox}>

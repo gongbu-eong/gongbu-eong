@@ -30,6 +30,8 @@ const entrySources = new Set<EntrySource>([
   "unknown",
 ]);
 
+const OAUTH_RETURN_TO_COOKIE = "oauth_return_to";
+
 const providerConfig = {
   kakao: {
     authorizeUrl: "https://kauth.kakao.com/oauth/authorize",
@@ -108,6 +110,18 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
     });
   }
 
+  const returnTo = normalizeOAuthReturnTo(
+    request.nextUrl.searchParams.get("returnTo"),
+  );
+  if (returnTo) {
+    response.cookies.set(OAUTH_RETURN_TO_COOKIE, returnTo, {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 10,
+    });
+  }
+
   return response;
 }
 
@@ -143,6 +157,15 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     const sessionToken = randomBytes(32).toString("hex");
     const forwardedFor = request.headers.get("x-forwarded-for");
     const ipAddress = forwardedFor?.split(",")[0]?.trim();
+    const storedReturnTo = normalizeOAuthReturnTo(
+      request.cookies.get(OAUTH_RETURN_TO_COOKIE)?.value,
+    );
+
+    console.info(`[OAuth:${provider}] profile fetched`, {
+      hasProviderUserId: Boolean(profile.providerUserId),
+      hasEmail: Boolean(profile.email),
+      emailDomain: getEmailDomain(profile.email),
+    });
 
     const authResult = await upsertOAuthUser({
       profile,
@@ -167,10 +190,21 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       userAgent: request.headers.get("user-agent") || undefined,
     });
 
+    console.info(`[OAuth:${provider}] user upserted`, {
+      userId: authResult.userId,
+      isNewUser: authResult.isNewUser,
+      requiresSignupAgreements: authResult.requiresSignupAgreements,
+      diagnosisResultId: authResult.diagnosisResultId,
+      welcomeCreditsGranted: authResult.welcomeCreditsGranted,
+      returnTo: storedReturnTo ? new URL(storedReturnTo).pathname : null,
+    });
+
     const redirectUrl = new URL(successRedirectUrl, request.url);
-    const nextUrl = new URL(successRedirectUrl, request.url);
+    const nextUrl = new URL(storedReturnTo || successRedirectUrl, request.url);
     if (authResult.diagnosisResultId) {
-      nextUrl.pathname = "/ai-tools/diagnosis/result";
+      nextUrl.pathname = nextUrl.pathname.startsWith("/events/")
+        ? "/events/diagnosis/result"
+        : "/ai-tools/diagnosis/result";
       nextUrl.search = "";
       nextUrl.searchParams.set("resultId", authResult.diagnosisResultId);
     }
@@ -181,12 +215,13 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       if (authResult.diagnosisResultId) {
         redirectUrl.searchParams.set(
           "next",
-          `${nextUrl.pathname}${nextUrl.search}`,
+          isSameOriginUrl(nextUrl, redirectUrl)
+            ? `${nextUrl.pathname}${nextUrl.search}`
+            : nextUrl.toString(),
         );
       }
     } else {
-      redirectUrl.pathname = nextUrl.pathname;
-      redirectUrl.search = nextUrl.search;
+      redirectUrl.href = nextUrl.toString();
       if (authResult.welcomeCreditsGranted) {
         redirectUrl.searchParams.set("ticketReward", "welcome");
         redirectUrl.searchParams.set("ticketAmount", "5");
@@ -198,6 +233,7 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     response.cookies.delete("oauth_entry_source");
     response.cookies.delete("oauth_diagnosis_run_id");
     response.cookies.delete("oauth_anonymous_id");
+    response.cookies.delete(OAUTH_RETURN_TO_COOKIE);
     response.cookies.set("gongbu_eong_session", sessionToken, {
       httpOnly: true,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -344,6 +380,75 @@ function validUuidOrUndefined(value?: string) {
   return value && isUuid(value) ? value : undefined;
 }
 
+function getEmailDomain(email?: string) {
+  if (!email || !email.includes("@")) {
+    return null;
+  }
+
+  return email.split("@").pop()?.toLowerCase() || null;
+}
+
+function normalizeOAuthReturnTo(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const fallbackUrl = process.env.OAUTH_SUCCESS_REDIRECT_URL || "http://localhost:3000";
+    const url = new URL(value, fallbackUrl);
+    const isAllowedPath =
+      url.pathname === "/events/diagnosis" ||
+      url.pathname === "/events/diagnosis/result" ||
+      url.pathname === "/ai-tools/diagnosis/result";
+
+    if (!isAllowedPath) {
+      return null;
+    }
+
+    if (isAllowedOAuthReturnOrigin(url)) {
+      return url.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function isAllowedOAuthReturnOrigin(url: URL) {
+  const allowedOrigins = [
+    process.env.OAUTH_SUCCESS_REDIRECT_URL,
+    process.env.GONGBUEONG_MAIN_URL,
+    process.env.FRONTEND_URL,
+    process.env.NEXT_PUBLIC_FRONTEND_URL,
+    process.env.GONGBUEONG_EVENT_URL,
+    process.env.NEXT_PUBLIC_EVENT_URL,
+    process.env.NEXT_PUBLIC_EVENT_APP_URL,
+  ]
+    .filter(Boolean)
+    .map((value) => {
+      try {
+        return new URL(value as string).origin;
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean);
+
+  if (allowedOrigins.includes(url.origin)) {
+    return true;
+  }
+
+  return (
+    process.env.NODE_ENV !== "production" &&
+    (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+  );
+}
+
+function isSameOriginUrl(left: URL, right: URL) {
+  return left.origin === right.origin;
+}
+
 function buildFailureRedirectUrl(
   redirectUrl: string,
   provider: OAuthProvider,
@@ -375,11 +480,16 @@ async function redirectExistingSession(
     return null;
   }
 
+  const storedReturnTo = normalizeOAuthReturnTo(
+    request.cookies.get(OAUTH_RETURN_TO_COOKIE)?.value,
+  );
   const redirectUrl = new URL(successRedirectUrl, request.url);
-  const nextUrl = new URL(successRedirectUrl, request.url);
+  const nextUrl = new URL(storedReturnTo || successRedirectUrl, request.url);
 
   if (user.diagnosisResultId) {
-    nextUrl.pathname = "/ai-tools/diagnosis/result";
+    nextUrl.pathname = nextUrl.pathname.startsWith("/events/")
+      ? "/events/diagnosis/result"
+      : "/ai-tools/diagnosis/result";
     nextUrl.search = "";
     nextUrl.searchParams.set("resultId", user.diagnosisResultId);
   }
@@ -390,12 +500,13 @@ async function redirectExistingSession(
     if (user.diagnosisResultId) {
       redirectUrl.searchParams.set(
         "next",
-        `${nextUrl.pathname}${nextUrl.search}`,
+        isSameOriginUrl(nextUrl, redirectUrl)
+          ? `${nextUrl.pathname}${nextUrl.search}`
+          : nextUrl.toString(),
       );
     }
   } else {
-    redirectUrl.pathname = nextUrl.pathname;
-    redirectUrl.search = nextUrl.search;
+    redirectUrl.href = nextUrl.toString();
   }
 
   const response = NextResponse.redirect(redirectUrl);
@@ -403,5 +514,6 @@ async function redirectExistingSession(
   response.cookies.delete("oauth_entry_source");
   response.cookies.delete("oauth_diagnosis_run_id");
   response.cookies.delete("oauth_anonymous_id");
+  response.cookies.delete(OAUTH_RETURN_TO_COOKIE);
   return response;
 }
