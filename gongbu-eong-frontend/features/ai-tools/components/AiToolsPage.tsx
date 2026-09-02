@@ -58,7 +58,7 @@ const representativeTools = [
 
 const jobTools = [
   { icon: "/ai-tools/icon-salary.png", title: "연봉 계산기", href: "/ai-tools/job-tools?tool=salary" },
-  { icon: "/ai-tools/icon-textcheck.png", title: "글자수세기/맞춤법", href: "/ai-tools/job-tools?tool=text" },
+  { icon: "/ai-tools/icon-textcheck.png", title: "글자수세기", href: "/ai-tools/job-tools?tool=text" },
   { icon: "/ai-tools/icon-severance.png", title: "퇴직금 계산기", href: "/ai-tools/job-tools?tool=severance" },
   { icon: "/ai-tools/icon-vacation.png", title: "연차/휴가 계산기", href: "/ai-tools/job-tools?tool=vacation" },
   { icon: "/ai-tools/icon-unemployment.png", title: "실업급여 계산기", href: "/ai-tools/job-tools?tool=unemployment" },

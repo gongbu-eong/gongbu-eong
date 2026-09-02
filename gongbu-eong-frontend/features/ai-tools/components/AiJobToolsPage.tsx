@@ -35,7 +35,7 @@ const SALARY_EMPLOYMENT_RATE = 0.009;
 
 const tools: Array<{ key: ToolKey; label: string }> = [
   { key: "salary", label: "연봉계산기" },
-  { key: "text", label: "글자수세기/맞춤법" },
+  { key: "text", label: "글자수세기" },
   { key: "severance", label: "퇴직금 계산기" },
   { key: "vacation", label: "연차/휴가 계산기" },
   { key: "unemployment", label: "실업급여 계산기" },
@@ -305,7 +305,7 @@ function TextTool() {
   const excludedByte = byteLength(excludedText);
 
   return (
-    <ToolPanel title="글자수세기/맞춤법">
+    <ToolPanel title="글자수세기">
       <textarea
         className={styles.textArea}
         value={text}

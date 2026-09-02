@@ -5,7 +5,7 @@ import { canonicalUrl, SITE_NAME } from "@/shared/seo";
 export const metadata: Metadata = {
   title: "취업 도구 | 공부엉이",
   description:
-    "연봉 계산기, 글자수세기/맞춤법, 퇴직금 계산기, 연차/휴가 계산기, 실업급여 계산기, 학점 계산기를 제공합니다.",
+    "연봉 계산기, 글자수세기, 퇴직금 계산기, 연차/휴가 계산기, 실업급여 계산기, 학점 계산기를 제공합니다.",
   alternates: {
     canonical: canonicalUrl("/ai-tools/job-tools"),
   },
