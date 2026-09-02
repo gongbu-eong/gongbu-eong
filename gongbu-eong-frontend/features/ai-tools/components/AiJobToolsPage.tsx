@@ -21,11 +21,24 @@ type SalaryCalculationResult = {
   totalDeduction: number;
   netPay: number;
 };
+type SeverancePayPeriod = {
+  key: string;
+  title: string;
+  days: number;
+  basePay: string;
+  extraPay: string;
+  active: boolean;
+};
+type SeveranceCalculationResult = {
+  averageDailyWage: number;
+  severancePay: number;
+};
 
 const MIN_PICKER_YEAR = 1900;
 const MAX_MONEY_AMOUNT = 9999999999;
 const MAX_DEPENDENTS = 11;
 const MAX_CHILDREN = 10;
+const SEVERANCE_PAY_PERIOD_COUNT = 4;
 const SALARY_PENSION_MONTHLY_CAP = 6590000;
 const SALARY_HEALTH_EMPLOYEE_MONTHLY_CAP = 4300520;
 const SALARY_PENSION_RATE = 0.0475;
@@ -325,26 +338,121 @@ function TextTool() {
 function SeveranceTool() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [basePay, setBasePay] = useState("");
-  const [extraPay, setExtraPay] = useState("");
+  const [monthPays, setMonthPays] = useState<Record<string, { basePay: string; extraPay: string }>>({});
+  const [sameBasePay, setSameBasePay] = useState(false);
   const [bonus, setBonus] = useState("");
   const [unusedVacationPay, setUnusedVacationPay] = useState("");
   const [calculated, setCalculated] = useState(false);
+  const [severanceResult, setSeveranceResult] = useState<SeveranceCalculationResult | null>(null);
+  const [alert, setAlert] = useState<{ title: string; description: string } | null>(null);
   const workDays = Math.max(0, diffDays(startDate, endDate) + (startDate && endDate ? 1 : 0));
-  const monthlyTotal = number(basePay) + number(extraPay);
-  const threeMonthWage = monthlyTotal * 3;
-  const additional = number(bonus) * 0.25 + number(unusedVacationPay) * 0.25;
-  const averageDailyWage = workDays > 0 ? Math.round((threeMonthWage + additional) / 90) : 0;
-  const severancePay = workDays > 0 ? Math.round(averageDailyWage * 30 * (workDays / 365)) : 0;
+  const severanceCalculationDays = startDate && endDate ? diffDays(startDate, endDate) : 0;
+  const payPeriods = getSeverancePayPeriods(endDate, monthPays);
+  const activePayPeriods = payPeriods.filter((period) => period.active);
+  const totalPeriodDays = activePayPeriods.reduce((sum, period) => sum + period.days, 0);
+  const totalBasePay = activePayPeriods.reduce((sum, period) => sum + number(period.basePay), 0);
+  const totalExtraPay = activePayPeriods.reduce((sum, period) => sum + number(period.extraPay), 0);
+  const bonusQuarter = number(bonus) * 0.25;
+  const unusedVacationQuarter = number(unusedVacationPay) * 0.25;
+  const averageWageTarget = totalBasePay + totalExtraPay + bonusQuarter + unusedVacationQuarter;
+  const averageDailyWageRaw = totalPeriodDays > 0 ? averageWageTarget / totalPeriodDays : 0;
+  const averageDailyWage = Math.floor(averageDailyWageRaw);
+  const severancePay = severanceCalculationDays > 0 ? Math.round(averageDailyWageRaw * 30 * (severanceCalculationDays / 365)) : 0;
 
   const reset = () => {
     setStartDate("");
     setEndDate("");
-    setBasePay("");
-    setExtraPay("");
+    setMonthPays({});
+    setSameBasePay(false);
     setBonus("");
     setUnusedVacationPay("");
     setCalculated(false);
+    setSeveranceResult(null);
+  };
+
+  const setPeriodPay = (key: string, field: "basePay" | "extraPay", value: string) => {
+    setMonthPays((current) => ({
+      ...current,
+      [key]: {
+        basePay: current[key]?.basePay || "",
+        extraPay: current[key]?.extraPay || "",
+        [field]: clampMoneyAmount(value),
+      },
+    }));
+  };
+
+  const applySamePay = () => {
+    if (sameBasePay) {
+      setSameBasePay(false);
+      return;
+    }
+
+    if (!payPeriods.length) return;
+    const first = payPeriods[0];
+    const basePay = first.basePay || "";
+
+    if (!number(basePay)) {
+      setAlert({
+        title: "퇴사 1개월 전 기본금을 입력해 주세요.",
+        description: "퇴사 1개월 전 기본금을 입력해 주세요.",
+      });
+      return;
+    }
+
+    setMonthPays((current) => {
+      const next = { ...current };
+      activePayPeriods.forEach((period) => {
+        next[period.key] = {
+          basePay,
+          extraPay: current[period.key]?.extraPay || "",
+        };
+      });
+      return next;
+    });
+    setSameBasePay(true);
+  };
+
+  const calculateSeverance = () => {
+    const start = parsePickerDate(startDate);
+    const end = parsePickerDate(endDate);
+
+    if (!start || !end) {
+      setAlert({
+        title: "입사일과 퇴사일을 확인해주세요.",
+        description: "입사일과 퇴사일(마지막 근무일)을 모두 선택해주세요.",
+      });
+      return;
+    }
+
+    if (start >= end) {
+      setAlert({
+        title: "입사일과 퇴사일을 확인해주세요.",
+        description: "입사일은 퇴사일보다 이전이어야 합니다.",
+      });
+      return;
+    }
+
+    if (workDays < 365) {
+      setAlert({
+        title: "근무기간을 확인해주세요.",
+        description: "근무기간이 365일 미만이므로 수급자격이 없습니다.",
+      });
+      return;
+    }
+
+    if (!number(payPeriods[0]?.basePay || "")) {
+      setAlert({
+        title: "퇴사 1개월 전 기본금을 입력해 주세요.",
+        description: "퇴사 1개월 전 기본금을 입력해 주세요.",
+      });
+      return;
+    }
+
+    setSeveranceResult({
+      averageDailyWage,
+      severancePay,
+    });
+    setCalculated(true);
   };
 
   return (
@@ -357,27 +465,35 @@ function SeveranceTool() {
         onEnd={setEndDate}
         required
       />
-      {calculated && workDays > 0 ? <p className={styles.inlineResult}>재직일수 {formatNumber(workDays)}일</p> : null}
+      {workDays > 0 ? <p className={styles.inlineResult}>재직일수 {formatNumber(workDays)}일</p> : null}
       <section className={styles.salaryMonths}>
         <div className={styles.sectionLabel}>
           <span><Required />퇴사 전 3개월 월급(세전 금액)</span>
-          <button type="button" onClick={() => setExtraPay(extraPay || basePay)}>✓ 모두동일</button>
+          <button
+            type="button"
+            className={sameBasePay ? styles.samePayActive : undefined}
+            onClick={applySamePay}
+          >
+            ✓ 모두동일
+          </button>
         </div>
         <div className={styles.monthCard}>
-          {[0, 1, 2, 3].map((index) => (
+          {payPeriods.map((period) => (
             <MonthPayRows
-              key={index}
-              title={calculated ? sampleSeveranceMonthTitle(index) : "월급[입사일과 퇴사일을 선택하세요.]"}
-              basePay={basePay}
-              extraPay={extraPay}
-              setBasePay={setBasePay}
-              setExtraPay={setExtraPay}
+              key={period.key}
+              title={period.title}
+              basePay={period.basePay}
+              extraPay={period.extraPay}
+              setBasePay={(value) => setPeriodPay(period.key, "basePay", value)}
+              setExtraPay={(value) => setPeriodPay(period.key, "extraPay", value)}
+              baseDisabled={sameBasePay || !period.active}
+              extraDisabled={!period.active}
             />
           ))}
           <div className={styles.monthSummary}>
-            <strong>합계{calculated ? "(총90일)" : "()"}</strong>
-            <ResultRow label="기본금" value={number(basePay) * 4} accent={calculated} />
-            <ResultRow label="기타수당" value={number(extraPay) * 4} accent={calculated} />
+            <strong>합계(총<span>{formatNumber(totalPeriodDays)}</span>일)</strong>
+            <SummaryRow label="기본금" value={totalBasePay} />
+            <SummaryRow label="기타수당" value={totalExtraPay} />
           </div>
         </div>
       </section>
@@ -386,13 +502,13 @@ function SeveranceTool() {
         <MoneyField label="연간상여금" value={bonus} onChange={setBonus} />
         <MoneyField label="연차수당" value={unusedVacationPay} onChange={setUnusedVacationPay} />
       </section>
-      {calculated ? (
-        <ResultBox compact>
-          <p><strong>1</strong>일 평균 임금은 <strong>{formatNumber(averageDailyWage)}</strong>원이며,</p>
-          <p>퇴직금은 총 <strong>{formatNumber(severancePay)}</strong>원입니다.</p>
-        </ResultBox>
+      {calculated && severanceResult ? (
+        <section className={styles.severanceResultBox}>
+          <p><strong>1</strong>일 평균 임금은 <strong>{formatNumber(severanceResult.averageDailyWage)}</strong>원이며,</p>
+          <p>퇴직금은 총 <strong>{formatNumber(severanceResult.severancePay)}</strong>원입니다.</p>
+        </section>
       ) : null}
-      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={() => calculated ? reset() : setCalculated(true)}>
+      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={calculateSeverance}>
         {calculated ? "다시 계산하기" : "계산하기"}
       </PrimaryButton>
       <Notice lines={[
@@ -405,6 +521,14 @@ function SeveranceTool() {
         "회사별 상이한 임금체계에 따라 실제 산정되는 금액과 차이가",
         "   발생할 수 있으니 참고용으로만 활용하세요.",
       ]} />
+      {alert ? (
+        <ComingSoonAlert
+          title={alert.title}
+          description={alert.description}
+          confirmLabel="확인"
+          onClose={() => setAlert(null)}
+        />
+      ) : null}
     </ToolPanel>
   );
 }
@@ -926,13 +1050,47 @@ function MonthPickerSheet({
   );
 }
 
-function MonthPayRows({ title, basePay, extraPay, setBasePay, setExtraPay }: { title: string; basePay: string; extraPay: string; setBasePay: (value: string) => void; setExtraPay: (value: string) => void }) {
+function MonthPayRows({
+  title,
+  basePay,
+  extraPay,
+  setBasePay,
+  setExtraPay,
+  baseDisabled,
+  extraDisabled,
+}: {
+  title: string;
+  basePay: string;
+  extraPay: string;
+  setBasePay: (value: string) => void;
+  setExtraPay: (value: string) => void;
+  baseDisabled?: boolean;
+  extraDisabled?: boolean;
+}) {
   return (
     <div className={styles.monthRows}>
-      <p>{title}</p>
-      <MoneyLine label="기본금" value={basePay} onChange={setBasePay} />
-      <MoneyLine label="기타수당" value={extraPay} onChange={setExtraPay} />
+      {title ? (
+        <p>
+          <span>월급[</span>
+          <span>{title}</span>
+          <span>]</span>
+        </p>
+      ) : (
+        <p aria-hidden="true" />
+      )}
+      <MoneyLine label="기본금" value={basePay} onChange={setBasePay} disabled={baseDisabled} />
+      <MoneyLine label="기타수당" value={extraPay} onChange={setExtraPay} disabled={extraDisabled} />
     </div>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: number }) {
+  return (
+    <p className={styles.summaryRow}>
+      <span>{label}</span>
+      <strong>{formatNumber(value)}</strong>
+      <em>원</em>
+    </p>
   );
 }
 
@@ -945,11 +1103,17 @@ function PayLine({ title, value, onChange }: { title: string; value: string; onC
   );
 }
 
-function MoneyLine({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function MoneyLine({ label, value, onChange, disabled }: { label: string; value: string; onChange: (value: string) => void; disabled?: boolean }) {
   return (
     <label className={styles.moneyLine}>
       {label ? <span>{label}</span> : null}
-      <input value={value ? formatNumber(number(value)) : ""} onChange={(event) => onChange(onlyNumber(event.target.value))} placeholder="0" inputMode="numeric" />
+      <input
+        value={value ? formatNumber(number(value)) : ""}
+        onChange={(event) => onChange(onlyNumber(event.target.value))}
+        placeholder="0"
+        inputMode="numeric"
+        disabled={disabled}
+      />
       <b>원</b>
     </label>
   );
@@ -1132,6 +1296,84 @@ function isSameDate(left: Date, right: Date) {
     left.getDate() === right.getDate();
 }
 
+function getSeverancePayPeriods(
+  endDate: string,
+  monthPays: Record<string, { basePay: string; extraPay: string }>,
+): SeverancePayPeriod[] {
+  const retirementDate = parsePickerDate(endDate);
+  if (!retirementDate) {
+    return Array.from({ length: SEVERANCE_PAY_PERIOD_COUNT }, (_, index) => {
+      const key = `period-${index}`;
+
+      return {
+        key,
+        title: "",
+        days: 0,
+        basePay: "",
+        extraPay: "",
+        active: false,
+      };
+    });
+  }
+
+  const rangeStart = addMonths(retirementDate, -3);
+  const rangeEnd = addDays(retirementDate, -1);
+  if (rangeStart > rangeEnd) return [];
+
+  const dateRanges: Array<{ title: string; days: number }> = [];
+  let cursor = new Date(rangeStart);
+
+  while (cursor <= rangeEnd) {
+    const monthEnd = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
+    const periodEnd = monthEnd < rangeEnd ? monthEnd : new Date(rangeEnd);
+    const days = diffDays(formatPickerDate(cursor), formatPickerDate(periodEnd)) + 1;
+
+    dateRanges.push({
+      title: `${formatDotDate(cursor)} ~ ${formatDotDate(periodEnd)}(총${days}일)`,
+      days,
+    });
+
+    cursor = addDays(periodEnd, 1);
+  }
+
+  const recentRanges = dateRanges.reverse().slice(0, SEVERANCE_PAY_PERIOD_COUNT);
+
+  return Array.from({ length: SEVERANCE_PAY_PERIOD_COUNT }, (_, index) => {
+    const key = `period-${index}`;
+    const savedPay = monthPays[key] || { basePay: "", extraPay: "" };
+    const dateRange = recentRanges[index];
+
+    return {
+      key,
+      title: dateRange?.title || "",
+      days: dateRange?.days || 0,
+      basePay: dateRange ? savedPay.basePay : "",
+      extraPay: dateRange ? savedPay.extraPay : "",
+      active: Boolean(dateRange),
+    };
+  });
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function addMonths(date: Date, months: number) {
+  const year = date.getFullYear();
+  const month = date.getMonth() + months;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(date.getDate(), lastDay));
+}
+
+function formatDotDate(date: Date) {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}.${month}.${day}`;
+}
+
 function byteLength(value: string) {
   return new Blob([value]).size;
 }
@@ -1225,14 +1467,4 @@ function getAge(value: string) {
   let age = now.getFullYear() - birth.getFullYear();
   if (now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) age -= 1;
   return Math.max(0, age);
-}
-
-function sampleSeveranceMonthTitle(index: number) {
-  const labels = [
-    "월급[2022. 04. 01 ~ 2022. 04. 10(총10일)]",
-    "월급[2022. 03. 01 ~ 2022. 03. 31(총31일)]",
-    "월급[2022. 02. 01 ~ 2022. 02. 28(총28일)]",
-    "월급[2022. 01. 11 ~ 2022. 01. 31(총21일)]",
-  ];
-  return labels[index] || labels[0];
 }
