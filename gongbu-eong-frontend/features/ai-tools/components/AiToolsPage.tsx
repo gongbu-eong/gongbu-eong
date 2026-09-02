@@ -65,10 +65,14 @@ const jobTools = [
   { icon: "/ai-tools/icon-grade.png", title: "학점 계산기", href: "/ai-tools/job-tools?tool=grade" },
 ] as const;
 
-export function AiToolsPage() {
+export function AiToolsPage({
+  initialEvents = [],
+}: {
+  initialEvents?: AiToolEventDto[];
+}) {
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
-  const [events, setEvents] = useState<AiToolEventDto[]>([]);
+  const [events, setEvents] = useState<AiToolEventDto[]>(initialEvents);
   const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
 
   useEffect(() => {

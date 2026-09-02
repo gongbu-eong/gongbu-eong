@@ -22,11 +22,19 @@ import styles from "./JobDetail.module.css";
 const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
-export function JobDetail({ jobId }: { jobId: string }) {
+export function JobDetail({
+  jobId,
+  initialJob = null,
+}: {
+  jobId: string;
+  initialJob?: JobPostingDetailDto | null;
+}) {
   const router = useRouter();
-  const [job, setJob] = useState<JobPostingDetailDto | null>(null);
-  const [authenticated, setAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [job, setJob] = useState<JobPostingDetailDto | null>(initialJob);
+  const [authenticated, setAuthenticated] = useState(
+    Boolean(initialJob?.isBookmarked),
+  );
+  const [loading, setLoading] = useState(!initialJob);
   const [bookmarkPending, setBookmarkPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [qualificationExpanded, setQualificationExpanded] = useState(false);
@@ -39,6 +47,21 @@ export function JobDetail({ jobId }: { jobId: string }) {
 
   useEffect(() => {
     let mounted = true;
+
+    if (initialJob) {
+      getCurrentUser()
+        .then((session) => {
+          if (mounted) setAuthenticated(session.authenticated);
+        })
+        .catch(() => {
+          if (mounted) setAuthenticated(false);
+        });
+
+      return () => {
+        mounted = false;
+      };
+    }
+
     Promise.all([getJobPosting(jobId), getCurrentUser()])
       .then(([posting, session]) => {
         if (!mounted) return;
@@ -58,7 +81,7 @@ export function JobDetail({ jobId }: { jobId: string }) {
     return () => {
       mounted = false;
     };
-  }, [jobId]);
+  }, [initialJob, jobId]);
 
   const toggleBookmark = async () => {
     if (!job) return;

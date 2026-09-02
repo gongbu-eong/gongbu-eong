@@ -6,6 +6,11 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SHARE_BASE_URL ||
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "http://localhost:3000",
+  ),
   title: "공부엉이",
   description: "공기업 취준생의 합격 메이트",
 };

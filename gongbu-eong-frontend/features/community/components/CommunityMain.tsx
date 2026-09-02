@@ -17,16 +17,23 @@ export function CommunityMain({
   initialQuery,
   initialSort,
   initialPage,
+  initialItems = [],
+  initialPopular = [],
+  initialTotal = 0,
 }: {
   initialCategory?: string;
   initialQuery?: string;
   initialSort?: "latest" | "popular";
   initialPage?: number;
+  initialItems?: CommunityPostSummaryDto[];
+  initialPopular?: CommunityPostSummaryDto[];
+  initialTotal?: number;
 }) {
   const router = useRouter();
-  const [items, setItems] = useState<CommunityPostSummaryDto[]>([]);
-  const [popular, setPopular] = useState<CommunityPostSummaryDto[]>([]);
-  const [total, setTotal] = useState(0);
+  const [items, setItems] = useState<CommunityPostSummaryDto[]>(initialItems);
+  const [popular, setPopular] =
+    useState<CommunityPostSummaryDto[]>(initialPopular);
+  const [total, setTotal] = useState(initialTotal);
   const [sort, setSort] = useState<"latest" | "popular">(initialSort || "latest");
   const [currentPage, setCurrentPage] = useState(Math.max(1, initialPage || 1));
   const [popularPeriod, setPopularPeriod] = useState<"today" | "week">("week");

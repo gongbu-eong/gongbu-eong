@@ -35,8 +35,7 @@ export function CoachingPage() {
   const alertFocusRef = useRef<HTMLElement | null>(null);
   const questionTextRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const questionLimitRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const loginRedirectedRef = useRef(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [coaching, setCoaching] = useState(false);
   const [error, setError] = useState("");
   const [hasDiagnosis, setHasDiagnosis] = useState(false);
@@ -70,13 +69,14 @@ export function CoachingPage() {
   useEffect(() => {
     let active = true;
     async function load() {
+      setLoading(true);
       const user = await getCurrentUser().catch(() => null);
       if (!active) return;
       if (!user?.authenticated || !user.user) {
-        if (!loginRedirectedRef.current) {
-          loginRedirectedRef.current = true;
-          router.replace("/login");
-        }
+        setHasDiagnosis(false);
+        setDiagnoses([]);
+        setSelectedDiagnosisId(null);
+        setLoading(false);
         return;
       }
       const [diagnosisResponse] = await Promise.all([
@@ -169,6 +169,12 @@ export function CoachingPage() {
   };
 
   const submit = async () => {
+    const user = await getCurrentUser().catch(() => null);
+    if (!user?.authenticated) {
+      router.push("/login");
+      return;
+    }
+
     const validation = validateBeforeSubmit();
     if (validation.message) {
       showAlert(validation.message, validation.target);
@@ -213,7 +219,6 @@ export function CoachingPage() {
     setQuestions((items) => [...items, makeQuestionRow()]);
   };
 
-  if (loading) return null;
   if (coaching) return <CoachingLoadingScreen />;
 
   const selectedDiagnosis = diagnoses.find((item) => item.resultId === selectedDiagnosisId);

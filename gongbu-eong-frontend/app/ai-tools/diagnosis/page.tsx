@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getDiagnosisShareImageUrl } from "@/features/diagnosis/diagnosis-share";
 import { buildSignedEventEntryUrl } from "@/shared/events/event-entry";
+import { canonicalUrl, SITE_NAME } from "@/shared/seo";
 
 type DiagnosisPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -9,10 +10,16 @@ type DiagnosisPageProps = {
 
 export const metadata: Metadata = {
   title: "강점·성향 진단 | 공부엉이",
-  description: "20문항으로 나의 강점과 취업 성향을 확인해 보세요.",
+  description: "16문항으로 나의 강점과 취업 성향을 확인해 보세요.",
+  alternates: {
+    canonical: canonicalUrl("/ai-tools/diagnosis"),
+  },
   openGraph: {
     title: "강점·성향 진단 | 공부엉이",
-    description: "20문항으로 나의 강점과 취업 성향을 확인해 보세요.",
+    description: "16문항으로 나의 강점과 취업 성향을 확인해 보세요.",
+    url: canonicalUrl("/ai-tools/diagnosis"),
+    siteName: SITE_NAME,
+    type: "website",
     images: [
       {
         url: getDiagnosisShareImageUrl(),

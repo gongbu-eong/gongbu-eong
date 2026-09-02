@@ -6,6 +6,11 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SHARE_BASE_URL ||
+      process.env.NEXT_PUBLIC_EVENT_APP_URL ||
+      "http://localhost:3001",
+  ),
   title: "공부엉이",
   description: "공부엉이 이벤트 전용 서비스",
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { getCurrentUser } from "@/features/home/home.api";
@@ -22,17 +22,15 @@ const tools: Array<{ key: ToolKey; label: string }> = [
   { key: "grade", label: "학점 변환기" },
 ];
 
-export function AiJobToolsPage() {
+export function AiJobToolsPage({
+  initialTool = "salary",
+}: {
+  initialTool?: string | null;
+}) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialTool = parseTool(searchParams.get("tool"));
-  const [activeTool, setActiveTool] = useState<ToolKey>(initialTool);
+  const [activeTool, setActiveTool] = useState<ToolKey>(parseTool(initialTool));
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
-
-  useEffect(() => {
-    setActiveTool(parseTool(searchParams.get("tool")));
-  }, [searchParams]);
 
   useEffect(() => {
     let mounted = true;
@@ -822,7 +820,7 @@ function Required() {
   return <b className={styles.required}>*</b>;
 }
 
-function parseTool(value: string | null): ToolKey {
+function parseTool(value: string | null | undefined): ToolKey {
   return tools.some((tool) => tool.key === value) ? (value as ToolKey) : "salary";
 }
 

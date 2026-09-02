@@ -92,13 +92,18 @@ const DEFAULT_FILTERS: CalendarFilters = {
 
 export function CalendarMain({
   initialScope = "all",
+  initialMonthKey,
+  initialMonthJobs = [],
 }: {
   initialScope?: CalendarScope;
+  initialMonthKey?: string;
+  initialMonthJobs?: JobPostingDto[];
 }) {
+  const initialMonth = parseMonthKey(initialMonthKey) || startOfMonth(new Date());
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [scope, setScope] = useState<CalendarScope>(initialScope);
   const [mode, setMode] = useState<CalendarMode>("list");
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [month, setMonth] = useState(() => initialMonth);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [selectedWeekStart, setSelectedWeekStart] = useState(() =>
     startOfWeek(new Date()),
@@ -106,9 +111,11 @@ export function CalendarMain({
   const [filters, setFilters] = useState<CalendarFilters>(DEFAULT_FILTERS);
   const [jobs, setJobs] = useState<JobPostingDto[]>([]);
   const [monthCache, setMonthCache] = useState<Record<string, JobPostingDto[]>>(
-    {},
+    () => (initialMonthKey ? { [initialMonthKey]: initialMonthJobs } : {}),
   );
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(
+    initialScope === "all" ? !initialMonthKey : true,
+  );
   const [bookmarkPendingId, setBookmarkPendingId] = useState<string | null>(null);
   const pendingMonthKeysRef = useRef(new Set<string>());
 
@@ -934,6 +941,12 @@ function isDateKeyInRange(
 
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function parseMonthKey(monthKey?: string) {
+  if (!monthKey || !/^\d{4}-\d{2}$/.test(monthKey)) return null;
+  const [year, month] = monthKey.split("-").map(Number);
+  return new Date(year, month - 1, 1);
 }
 
 function stripTime(date: Date) {

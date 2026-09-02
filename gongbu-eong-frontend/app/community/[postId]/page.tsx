@@ -29,6 +29,10 @@ export async function generateMetadata({
   return {
     title: COMMUNITY_SHARE_TITLE,
     description: COMMUNITY_SHARE_DESCRIPTION,
+    robots: {
+      index: false,
+      follow: true,
+    },
     openGraph: {
       title: COMMUNITY_SHARE_TITLE,
       description: COMMUNITY_SHARE_DESCRIPTION,

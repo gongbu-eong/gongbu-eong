@@ -22,7 +22,10 @@ import {
   getJobPostings,
   setJobBookmark,
 } from "@/features/home/home.api";
-import type { JobListView, JobPostingDto } from "@/features/home/home.dto";
+import type {
+  JobListView,
+  JobPostingDto,
+} from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import styles from "./JobList.module.css";
 
@@ -69,16 +72,28 @@ export function JobList({
   resultId,
   scope,
   initialNcs = [],
+  initialQuery = "",
+  initialSort = "closing",
+  initialJobs = [],
+  initialTotal = 0,
+  initialRecommendationTypeName = null,
+  hasInitialJobs = false,
 }: {
   view: JobListView;
   resultId?: string;
   scope?: "monthly-regular";
   initialNcs?: string[];
+  initialQuery?: string;
+  initialSort?: "closing" | "latest" | "views";
+  initialJobs?: JobPostingDto[];
+  initialTotal?: number;
+  initialRecommendationTypeName?: string | null;
+  hasInitialJobs?: boolean;
 }) {
   const router = useRouter();
   const view = initialView;
-  const [jobs, setJobs] = useState<JobPostingDto[]>([]);
-  const [total, setTotal] = useState(0);
+  const [jobs, setJobs] = useState<JobPostingDto[]>(initialJobs);
+  const [total, setTotal] = useState(initialTotal);
   const [authenticated, setAuthenticated] = useState(false);
   const [selectedResultId, setSelectedResultId] = useState(resultId || "");
   const [diagnosisResults, setDiagnosisResults] = useState<DiagnosisResultHistoryItemDto[]>([]);
@@ -86,12 +101,15 @@ export function JobList({
   const [recommendationCriteriaLoading, setRecommendationCriteriaLoading] = useState(view === "recommended" && Boolean(resultId));
   const [recommendationCriteriaReadyResultId, setRecommendationCriteriaReadyResultId] = useState("");
   const [recommendationScopeActive, setRecommendationScopeActive] = useState(view === "recommended");
-  const [recommendationTypeName, setRecommendationTypeName] = useState<string | null>(null);
+  const [recommendationTypeName, setRecommendationTypeName] =
+    useState<string | null>(initialRecommendationTypeName);
   const [recommendationSetupOpen, setRecommendationSetupOpen] = useState(false);
   const [resultPickerOpen, setResultPickerOpen] = useState(false);
-  const [queryInput, setQueryInput] = useState("");
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<"closing" | "latest" | "views">("closing");
+  const [queryInput, setQueryInput] = useState(initialQuery);
+  const [query, setQuery] = useState(initialQuery);
+  const [sort, setSort] = useState<"closing" | "latest" | "views">(
+    initialSort,
+  );
   const scopedFilters: Filters = {
     ...EMPTY_FILTERS,
     ncs: normalizeFilterOptions(initialNcs, NCS_OPTIONS),
@@ -102,11 +120,12 @@ export function JobList({
   const [monthlyRegularOnly, setMonthlyRegularOnly] = useState(scope === "monthly-regular");
   const [filterOpen, setFilterOpen] = useState(false);
   const [optionPicker, setOptionPicker] = useState<FilterOptionKey | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!hasInitialJobs);
   const [loadingMore, setLoadingMore] = useState(false);
   const [pendingJobId, setPendingJobId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const shouldSkipInitialLoadRef = useRef(hasInitialJobs);
   const requestView: JobListView =
     view === "recommended" && !recommendationScopeActive ? "all" : view;
 
@@ -186,6 +205,11 @@ export function JobList({
     if (requestView === "recommended") {
       if (diagnosisHistoryLoading) return;
       if (selectedResultId && recommendationCriteriaReadyResultId !== selectedResultId) return;
+    }
+
+    if (shouldSkipInitialLoadRef.current) {
+      shouldSkipInitialLoadRef.current = false;
+      return;
     }
 
     let mounted = true;
