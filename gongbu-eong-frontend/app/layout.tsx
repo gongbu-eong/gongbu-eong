@@ -6,6 +6,9 @@ import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 
 const verificationOther: Record<string, string> = {};
+const siteTitle = "공부엉이";
+const siteDescription = "공기업 취준생의 합격 메이트";
+const siteImage = "/diagnosis-share-banner.png";
 
 if (process.env.NAVER_SITE_VERIFICATION) {
   verificationOther["naver-site-verification"] =
@@ -22,8 +25,30 @@ export const metadata: Metadata = {
       process.env.NEXT_PUBLIC_FRONTEND_URL ||
       "http://localhost:3000",
   ),
-  title: "공부엉이",
-  description: "공기업 취준생의 합격 메이트",
+  title: siteTitle,
+  description: siteDescription,
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+    url: "/",
+    siteName: siteTitle,
+    type: "website",
+    locale: "ko_KR",
+    images: [
+      {
+        url: siteImage,
+        width: 1200,
+        height: 630,
+        alt: siteTitle,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: [siteImage],
+  },
   ...(Object.keys(verificationOther).length
     ? { verification: { other: verificationOther } }
     : {}),
