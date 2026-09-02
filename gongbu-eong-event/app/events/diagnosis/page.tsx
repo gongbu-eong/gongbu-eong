@@ -46,7 +46,7 @@ export default async function DiagnosisEventPage() {
 }
 
 function isSearchCrawler(userAgent: string | null) {
-  return /Googlebot|Bingbot|NaverBot|Yeti|DuckDuckBot|Daumoa|Twitterbot|facebookexternalhit/i.test(
+  return /Googlebot|Google-InspectionTool|GoogleOther|Bingbot|NaverBot|Yeti|DuckDuckBot|Daumoa|Twitterbot|facebookexternalhit/i.test(
     userAgent || "",
   );
 }

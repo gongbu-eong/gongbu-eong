@@ -17,9 +17,11 @@ export default function robots(): MetadataRoute.Robots {
         "/ai-tools/job-tools",
         "/calendar",
         "/community",
+        "/events/diagnosis",
       ],
       disallow: [
         "/api/",
+        "/events/diagnosis/result",
         "/my/",
         "/notifications",
         "/signup/",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDiagnosisShareImageUrl } from "@/features/diagnosis/diagnosis-share";
 import { buildSignedEventEntryUrl } from "@/shared/events/event-entry";
@@ -35,6 +36,11 @@ export default async function DiagnosisPage({ searchParams }: DiagnosisPageProps
   const params = await searchParams;
   const query = createQueryString(params);
   const nextPath = query ? `/events/diagnosis?${query}` : "/events/diagnosis";
+  const requestHeaders = await headers();
+
+  if (isSearchCrawler(requestHeaders.get("user-agent"))) {
+    redirect(nextPath);
+  }
 
   redirect(await buildSignedEventEntryUrl("1", nextPath));
 }
@@ -51,4 +57,10 @@ function createQueryString(params: Record<string, string | string[] | undefined>
   }
 
   return query.toString();
+}
+
+function isSearchCrawler(userAgent: string | null) {
+  return /Googlebot|Google-InspectionTool|GoogleOther|Bingbot|NaverBot|Yeti|DuckDuckBot|Daumoa|Twitterbot|facebookexternalhit/i.test(
+    userAgent || "",
+  );
 }
