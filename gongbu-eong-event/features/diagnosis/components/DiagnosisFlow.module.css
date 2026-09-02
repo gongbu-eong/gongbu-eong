@@ -674,6 +674,49 @@
     0 18px 46px rgba(44, 94, 143, 0.14);
 }
 
+.submittingScreen {
+  min-height: 100vh;
+  min-height: 100svh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.submittingSpinner {
+  width: 46px;
+  height: 46px;
+  border: 4px solid #dbeafe;
+  border-top-color: var(--gb-color-primary);
+  border-radius: 999px;
+  animation: diagnosisSpin 0.85s linear infinite;
+}
+
+.submittingTitle {
+  margin: 18px 0 0;
+  color: var(--gb-color-text);
+  font-size: 1.125rem;
+  line-height: 1.5;
+  font-weight: 800;
+}
+
+.submittingText {
+  margin: 8px 0 0;
+  color: var(--gb-color-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+@keyframes diagnosisSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .resultFrame {
   padding: 0;
   min-height: 0;

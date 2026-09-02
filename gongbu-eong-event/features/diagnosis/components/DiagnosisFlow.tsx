@@ -3,7 +3,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   getDiagnosisQuestions,
   getDiagnosisStats,
@@ -29,6 +28,8 @@ import {
 import { getAnonymousId } from "@/shared/session/anonymous-id";
 import { loadKakaoSdk } from "@/shared/kakao-share";
 import styles from "./DiagnosisFlow.module.css";
+
+const DIAGNOSIS_SUBMIT_TIMEOUT_MS = 25000;
 
 const mainAppUrl =
   process.env.NEXT_PUBLIC_MAIN_APP_URL ||
@@ -163,7 +164,6 @@ const POINT_CARD_TITLES: Record<
 };
 
 export function DiagnosisFlow() {
-  const router = useRouter();
   const [state, setState] = useState<FlowState>({ status: "intro" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [participantCount, setParticipantCount] = useState<number | null>(null);
@@ -245,40 +245,70 @@ export function DiagnosisFlow() {
       questionId: question.id,
       optionId: resolvedAnswers[question.id],
     }));
+    const hasMissingAnswer = payload.some((answer) => !answer.optionId);
+
+    if (hasMissingAnswer) {
+      isSubmittingRef.current = false;
+      setState({
+        status: "error",
+        message: "선택되지 않은 문항이 있어요. 처음부터 다시 진행해 주세요.",
+      });
+      return;
+    }
 
     setState({ status: "submitting", questions, index: questions.length - 1 });
 
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      controller.abort();
+    }, DIAGNOSIS_SUBMIT_TIMEOUT_MS);
+
     try {
-      const result = await submitDiagnosis(payload);
+      const result = await submitDiagnosis(payload, {
+        signal: controller.signal,
+      });
+
+      window.clearTimeout(timeoutId);
       trackDiagnosisComplete(result);
 
       if (isAuthenticated) {
-        router.push(
-          `/events/diagnosis/result?resultId=${encodeURIComponent(result.resultId)}`,
+        window.location.assign(
+          `/events/diagnosis/result?resultId=${encodeURIComponent(
+            result.resultId,
+          )}`,
         );
         return;
       }
 
       setState({ status: "result", result });
     } catch (error) {
+      window.clearTimeout(timeoutId);
       isSubmittingRef.current = false;
       setState({
         status: "error",
         message:
-          error instanceof Error ? error.message : "진단 결과를 저장하지 못했어요.",
+          error instanceof DOMException && error.name === "AbortError"
+            ? "모바일 네트워크가 불안정해 진단 결과 저장이 지연되고 있어요. 다시 시도해 주세요."
+            : error instanceof Error
+              ? error.message
+              : "진단 결과를 저장하지 못했어요.",
       });
-  }
+    }
   }
 
   function trackDiagnosisComplete(result: DiagnosisResultResponseDto) {
-    window.gtag?.("event", "diagnosis_complete", {
-      event_category: "diagnosis",
-      diagnosis_type: result.typeCode,
-      diagnosis_type_name: result.typeName,
-      diagnosis_run_id: result.runId,
-      diagnosis_result_id: result.resultId,
-      attempt_no: result.attemptNo ?? undefined,
-    });
+    try {
+      window.gtag?.("event", "diagnosis_complete", {
+        event_category: "diagnosis",
+        diagnosis_type: result.typeCode,
+        diagnosis_type_name: result.typeName,
+        diagnosis_run_id: result.runId,
+        diagnosis_result_id: result.resultId,
+        attempt_no: result.attemptNo ?? undefined,
+      });
+    } catch {
+      // Analytics must not block result navigation.
+    }
   }
 
   function selectOption(args: {
@@ -357,6 +387,10 @@ export function DiagnosisFlow() {
     return (
       <MobileFrame>문항을 불러오는 중입니다...</MobileFrame>
     );
+  }
+
+  if (state.status === "submitting") {
+    return <DiagnosisSubmittingScreen />;
   }
 
   if (state.status === "error") {
@@ -722,6 +756,20 @@ function DiagnosisSurvey({
         </p>
       </section>
     </div>
+  );
+}
+
+function DiagnosisSubmittingScreen() {
+  return (
+    <MobileFrame pageClassName={styles.questionPage}>
+      <section className={styles.submittingScreen} aria-live="polite">
+        <div className={styles.submittingSpinner} aria-hidden="true" />
+        <p className={styles.submittingTitle}>결과를 분석하고 있어요</p>
+        <p className={styles.submittingText}>
+          잠시만 기다려 주세요. 화면을 닫거나 뒤로 가지 않아도 됩니다.
+        </p>
+      </section>
+    </MobileFrame>
   );
 }
 

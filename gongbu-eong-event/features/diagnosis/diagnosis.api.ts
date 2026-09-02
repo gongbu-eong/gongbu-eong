@@ -59,9 +59,13 @@ export function grantDiagnosisShareReward(resultId: string) {
   );
 }
 
-export function submitDiagnosis(answers: DiagnosisAnswerRequestDto[]) {
+export function submitDiagnosis(
+  answers: DiagnosisAnswerRequestDto[],
+  options?: { signal?: AbortSignal },
+) {
   return apiClient<DiagnosisResultResponseDto>("/api/diagnosis/runs", {
     method: "POST",
+    signal: options?.signal,
     body: JSON.stringify({
       anonymousId: getAnonymousId(),
       entrySource: "diagnosis",
