@@ -5,6 +5,17 @@ import { AnalyticsTracker } from "@/features/analytics/AnalyticsTracker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 
+const verificationOther: Record<string, string> = {};
+
+if (process.env.NAVER_SITE_VERIFICATION) {
+  verificationOther["naver-site-verification"] =
+    process.env.NAVER_SITE_VERIFICATION;
+}
+
+if (process.env.BING_SITE_VERIFICATION) {
+  verificationOther["msvalidate.01"] = process.env.BING_SITE_VERIFICATION;
+}
+
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SHARE_BASE_URL ||
@@ -13,12 +24,9 @@ export const metadata: Metadata = {
   ),
   title: "공부엉이",
   description: "공기업 취준생의 합격 메이트",
-  verification: {
-    other: {
-      "naver-site-verification": "36afb9d57dc18fe3336504496ca1d156a553bad5",
-      "msvalidate.01": "980494DEA6041C2C6C9DF8DEEE31B95A",
-    },
-  },
+  ...(Object.keys(verificationOther).length
+    ? { verification: { other: verificationOther } }
+    : {}),
 };
 
 export const viewport: Viewport = {
