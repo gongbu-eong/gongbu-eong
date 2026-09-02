@@ -11,11 +11,27 @@ import styles from "./AiJobToolsPage.module.css";
 
 type ToolKey = "salary" | "text" | "severance" | "vacation" | "unemployment" | "grade";
 type PickerMode = "date" | "month";
+type SalaryCalculationResult = {
+  pension: number;
+  health: number;
+  longTermCare: number;
+  employment: number;
+  incomeTax: number;
+  localTax: number;
+  totalDeduction: number;
+  netPay: number;
+};
 
 const MIN_PICKER_YEAR = 1900;
 const MAX_MONEY_AMOUNT = 9999999999;
 const MAX_DEPENDENTS = 11;
 const MAX_CHILDREN = 10;
+const SALARY_PENSION_MONTHLY_CAP = 6590000;
+const SALARY_HEALTH_EMPLOYEE_MONTHLY_CAP = 4300520;
+const SALARY_PENSION_RATE = 0.0475;
+const SALARY_HEALTH_RATE = 0.03595;
+const SALARY_LONG_TERM_CARE_RATE = 0.1314;
+const SALARY_EMPLOYMENT_RATE = 0.009;
 
 const tools: Array<{ key: ToolKey; label: string }> = [
   { key: "salary", label: "연봉계산기" },
@@ -99,20 +115,22 @@ function SalaryTool() {
   const [taxFree, setTaxFree] = useState("200000");
   const [taxFreeCustom, setTaxFreeCustom] = useState(false);
   const [calculated, setCalculated] = useState(false);
+  const [salaryResult, setSalaryResult] = useState<SalaryCalculationResult | null>(null);
   const [limitAlert, setLimitAlert] = useState<{ title: string; description: string } | null>(null);
 
   const dependentCount = Math.max(1, number(dependents));
   const childCount = number(children);
-  const grossMonthly = payType === "year" ? number(income) / 12 : number(income);
+  const salaryMonths = retirement === "included" ? 13 : 12;
+  const grossMonthly = payType === "year" ? Math.floor(number(income) / salaryMonths) : number(income);
   const taxable = Math.max(0, grossMonthly - number(taxFree));
-  const pension = roundWon(Math.min(taxable, 6170000) * 0.045);
-  const health = roundWon(taxable * 0.03545);
-  const longTermCare = roundWon(health * 0.1295);
-  const employment = roundWon(taxable * 0.009);
-  const incomeTax = roundWon(taxable * estimateTaxRate(taxable, dependentCount, childCount));
-  const localTax = roundWon(incomeTax * 0.1);
+  const pension = floorTen(Math.min(taxable, SALARY_PENSION_MONTHLY_CAP) * SALARY_PENSION_RATE);
+  const health = Math.min(floorTen(taxable * SALARY_HEALTH_RATE), SALARY_HEALTH_EMPLOYEE_MONTHLY_CAP);
+  const longTermCare = floorTen(health * SALARY_LONG_TERM_CARE_RATE);
+  const employment = floorTen(taxable * SALARY_EMPLOYMENT_RATE);
+  const incomeTax = estimateIncomeTax(taxable, dependentCount, childCount);
+  const localTax = floorTen(incomeTax * 0.1);
   const totalDeduction = pension + health + longTermCare + employment + incomeTax + localTax;
-  const netPay = Math.max(0, Math.round(grossMonthly - totalDeduction));
+  const netPay = Math.max(0, grossMonthly - totalDeduction);
 
   const changePayType = (nextPayType: "year" | "month") => {
     setPayType(nextPayType);
@@ -130,6 +148,7 @@ function SalaryTool() {
     setTaxFree("200000");
     setTaxFreeCustom(false);
     setCalculated(false);
+    setSalaryResult(null);
   };
 
   const toggleTaxFreeCustom = () => {
@@ -183,6 +202,16 @@ function SalaryTool() {
       return;
     }
 
+    setSalaryResult({
+      pension,
+      health,
+      longTermCare,
+      employment,
+      incomeTax,
+      localTax,
+      totalDeduction,
+      netPay,
+    });
     setCalculated(true);
   };
 
@@ -235,20 +264,20 @@ function SalaryTool() {
         description={taxFree ? formatKoreanWon(number(taxFree)) : undefined}
         disabled={!taxFreeCustom}
       />
-      {calculated ? (
+      {calculated && salaryResult ? (
         <ResultBox title="한 달 기준 공제액">
-          <ResultRow label="국민연금" value={pension} />
-          <ResultRow label="건강보험" value={health} />
-          <ResultRow label="장기요양" value={longTermCare} />
-          <ResultRow label="고용보험" value={employment} />
-          <ResultRow label="소득세" value={incomeTax} />
-          <ResultRow label="지방소득세" value={localTax} />
-          <ResultRow label="공제액 합계" value={totalDeduction} />
+          <ResultRow label="국민연금" value={salaryResult.pension} />
+          <ResultRow label="건강보험" value={salaryResult.health} />
+          <ResultRow label="장기요양" value={salaryResult.longTermCare} />
+          <ResultRow label="고용보험" value={salaryResult.employment} />
+          <ResultRow label="소득세" value={salaryResult.incomeTax} />
+          <ResultRow label="지방소득세" value={salaryResult.localTax} />
+          <ResultRow label="공제액 합계" value={salaryResult.totalDeduction} />
           <hr />
-          <ResultRow label="월 예상 실수령액" value={netPay} accent />
+          <ResultRow label="월 예상 실수령액" value={salaryResult.netPay} accent />
         </ResultBox>
       ) : null}
-      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={() => calculated ? reset() : calculateSalary()}>
+      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={calculateSalary}>
         {calculated ? "다시 계산하기" : "계산하기"}
       </PrimaryButton>
       <Notice lines={[
@@ -1111,12 +1140,56 @@ function roundWon(value: number) {
   return Math.round(value / 10) * 10;
 }
 
-function estimateTaxRate(taxable: number, dependents: number, children: number) {
+function floorTen(value: number) {
+  return Math.floor(value / 10) * 10;
+}
+
+function estimateIncomeTax(taxable: number, dependents: number, children: number) {
+  if (taxable <= 0) return 0;
+
+  if (taxable > 10000000) {
+    return estimateHighIncomeTax(taxable, dependents, children);
+  }
+
   const familyDiscount = Math.max(0, dependents - 1) * 0.001 + children * 0.001;
   if (taxable <= 1400000) return 0;
-  if (taxable <= 3000000) return Math.max(0.004, 0.012 - familyDiscount);
-  if (taxable <= 5000000) return Math.max(0.01, 0.025 - familyDiscount);
-  return Math.max(0.02, 0.04 - familyDiscount);
+  if (taxable <= 3000000) return floorTen(taxable * Math.max(0, 0.012 - familyDiscount));
+  if (taxable <= 5000000) return floorTen(taxable * Math.max(0, 0.025 - familyDiscount));
+  return floorTen(taxable * Math.max(0, 0.04 - familyDiscount));
+}
+
+function estimateHighIncomeTax(taxable: number, dependents: number, children: number) {
+  const baseAtTenMillion = estimateTenMillionTax(dependents, children);
+
+  if (taxable <= 14000000) {
+    return floorTen(baseAtTenMillion + (taxable - 10000000) * 0.98 * 0.35);
+  }
+
+  if (taxable <= 28000000) {
+    return floorTen(baseAtTenMillion + 1372000 + (taxable - 14000000) * 0.98 * 0.38);
+  }
+
+  if (taxable <= 30000000) {
+    return floorTen(baseAtTenMillion + 6585600 + (taxable - 28000000) * 0.98 * 0.4);
+  }
+
+  if (taxable <= 45000000) {
+    return floorTen(baseAtTenMillion + 7369600 + (taxable - 30000000) * 0.4);
+  }
+
+  if (taxable <= 87000000) {
+    return floorTen(baseAtTenMillion + 13369600 + (taxable - 45000000) * 0.42);
+  }
+
+  return floorTen(baseAtTenMillion + 31009600 + (taxable - 87000000) * 0.45);
+}
+
+function estimateTenMillionTax(dependents: number, children: number) {
+  const effectiveDependents = Math.min(MAX_DEPENDENTS, Math.max(1, dependents + children));
+  const baseForElevenDependents = 756680;
+  const dependentStep = 50000;
+
+  return Math.max(0, baseForElevenDependents + (MAX_DEPENDENTS - effectiveDependents) * dependentStep);
 }
 
 function diffDays(start: string, end: string) {
