@@ -272,7 +272,7 @@ export async function notifyCommunityComment(
         message: alimtalkMessage,
         title,
         targetPath,
-        buttonName: "확인",
+        buttonName: isReply ? "답글 확인하기" : "댓글 확인하기",
       });
       alimtalkSent = result.sent;
       sentAt = result.sent ? new Date() : null;
