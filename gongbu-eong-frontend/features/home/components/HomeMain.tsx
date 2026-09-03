@@ -404,6 +404,7 @@ const ignoreClickAfterDrag = (
               className={`${styles.resultOwl} ${resultCard.className}`}
               priority
               sizes="(max-width: 599px) 52vw, 312px"
+              unoptimized
             />
           </Link>
         ) : (
@@ -429,6 +430,7 @@ const ignoreClickAfterDrag = (
               className={styles.loggedOutResultOwl}
               priority
               sizes="133px"
+              unoptimized
             />
           </Link>
         )}
@@ -481,6 +483,7 @@ const ignoreClickAfterDrag = (
                   width={94}
                   height={80}
                   sizes="94px"
+                  unoptimized
                 />
               </span>
               </>
@@ -538,7 +541,7 @@ const ignoreClickAfterDrag = (
                   </span>
                 </span>
                 <span className={styles.recommendStar} aria-hidden="true">
-                  <Image src="/calendar/star-outline.svg" alt="" width={25} height={25} />
+                  <Image src="/calendar/star-outline.svg" alt="" width={25} height={25} unoptimized />
                 </span>
               </Link>
             ))}

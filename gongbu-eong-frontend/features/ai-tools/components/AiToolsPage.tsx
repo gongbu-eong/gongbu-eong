@@ -17,7 +17,7 @@ const representativeTools = [
     badge: "완전 무료",
     badgeTone: "blue",
     title: "강점·성향 진단",
-    description: "10문항이면 끝, 내 강점 유형을 알려드려요.",
+    description: "16문항이면 끝, 내 강점 유형을 알려드려요.",
     image: "/ai-tools/tool-diagnosis.png",
     imageAlt: "강점·성향 진단",
     thumbClass: "toolThumbDiagnosis",
@@ -46,11 +46,11 @@ const representativeTools = [
     badgeTone: "red",
     title: "AI 면접 코칭",
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
-    image: "/ai-tools/tool-failure.png",
+    image: "/ai-tools/tool-interview.png",
     imageAlt: "AI 면접 코칭",
-    thumbClass: "toolThumbFailure",
+    thumbClass: "toolThumbInterview",
     imageWidth: 86,
-    imageHeight: 80,
+    imageHeight: 78,
     requiresAuth: false,
     comingSoon: true,
   },
@@ -140,6 +140,7 @@ export function AiToolsPage({
                 className={styles.heroOwlLoggedIn}
                 priority
                 sizes="130px"
+                unoptimized
               />
             </Link>
           ) : (
@@ -162,11 +163,12 @@ export function AiToolsPage({
                 className={styles.heroOwlLoggedOut}
                 priority
                 sizes="147px"
+                unoptimized
               />
             </section>
           )}
 
-          <SectionTitle title="대표 AI 도구" icon="/ai-tools/icon-pin.png" />
+          <SectionTitle title="AI 취업 도구" />
           <div className={styles.toolList}>
             {representativeTools.map((tool) => {
               const card = (
@@ -183,6 +185,7 @@ export function AiToolsPage({
                       width={tool.imageWidth}
                       height={tool.imageHeight}
                       sizes={`${tool.imageWidth}px`}
+                      unoptimized
                     />
                   </span>
                 </>
@@ -228,6 +231,7 @@ export function AiToolsPage({
                         alt={event.title}
                         fill
                         sizes="160px"
+                        unoptimized
                       />
                     </span>
                     <strong>{event.title}</strong>
