@@ -857,6 +857,16 @@
   opacity: 1;
 }
 
+.moneyLine p {
+  grid-column: 1 / -1;
+  margin: -1px 0 0;
+  color: #9aa4b8;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-align: right;
+}
+
 .monthSummary {
   display: grid;
   gap: 16px;
@@ -880,14 +890,22 @@
 
 .summaryRow {
   display: grid;
-  grid-template-columns: 1fr auto auto;
-  gap: 4px;
-  align-items: baseline;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: start;
   margin: 0;
   color: #5a6580;
   font-size: 14px;
   font-weight: 400;
   line-height: 1;
+}
+
+.summaryRow > span:last-child {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px;
+  justify-content: end;
+  text-align: right;
 }
 
 .summaryRow strong {
@@ -901,6 +919,14 @@
   font-size: 13px;
   font-style: normal;
   font-weight: 400;
+}
+
+.summaryRow b {
+  grid-column: 1 / -1;
+  color: #9aa4b8;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
 }
 
 .severanceResultBox {
@@ -942,12 +968,18 @@
   height: 40px;
   display: flex;
   align-items: center;
+  gap: 4px;
   padding: 0 16px;
   background: #f5f7fa;
 }
 
+.payLine > p em {
+  color: #5a6580;
+  font-style: normal;
+}
+
 .payLine .moneyLine {
-  height: 40px;
+  min-height: 54px;
   border-bottom: 1px solid #e4e8ef;
 }
 

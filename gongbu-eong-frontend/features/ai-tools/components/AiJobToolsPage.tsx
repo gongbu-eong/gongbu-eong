@@ -33,12 +33,24 @@ type SeveranceCalculationResult = {
   averageDailyWage: number;
   severancePay: number;
 };
+type UnemploymentCalculationResult = {
+  monthlyBenefit: number;
+  dailyPay: number;
+  benefitDays: number;
+  total: number;
+};
+type GradeConversionResult = Array<{
+  target: number;
+  value: number;
+}>;
 
 const MIN_PICKER_YEAR = 1900;
 const MAX_MONEY_AMOUNT = 9999999999;
 const MAX_DEPENDENTS = 11;
 const MAX_CHILDREN = 10;
 const SEVERANCE_PAY_PERIOD_COUNT = 4;
+const UNEMPLOYMENT_MIN_DAILY_PAY = 60120;
+const UNEMPLOYMENT_MAX_DAILY_PAY = 66000;
 const SALARY_PENSION_MONTHLY_CAP = 6590000;
 const SALARY_HEALTH_EMPLOYEE_MONTHLY_CAP = 4300520;
 const SALARY_PENSION_RATE = 0.0475;
@@ -499,8 +511,18 @@ function SeveranceTool() {
       </section>
       <section>
         <p className={styles.sectionLabelText}>그 외 조건 입력 (선택항목)</p>
-        <MoneyField label="연간상여금" value={bonus} onChange={setBonus} />
-        <MoneyField label="연차수당" value={unusedVacationPay} onChange={setUnusedVacationPay} />
+        <MoneyField
+          label="연간상여금"
+          value={bonus}
+          onChange={setBonus}
+          description={formatKoreanWon(number(bonus))}
+        />
+        <MoneyField
+          label="연차수당"
+          value={unusedVacationPay}
+          onChange={setUnusedVacationPay}
+          description={formatKoreanWon(number(unusedVacationPay))}
+        />
       </section>
       {calculated && severanceResult ? (
         <section className={styles.severanceResultBox}>
@@ -536,12 +558,36 @@ function SeveranceTool() {
 function VacationTool() {
   const [joinDate, setJoinDate] = useState("");
   const [calculated, setCalculated] = useState(false);
+  const [alert, setAlert] = useState<{ title: string; description: string } | null>(null);
   const tenure = getTenure(joinDate);
   const vacationDays = tenure.years < 1 ? Math.min(11, tenure.months) : Math.min(25, 15 + Math.floor((tenure.years - 1) / 2));
 
   const reset = () => {
     setJoinDate("");
     setCalculated(false);
+    setAlert(null);
+  };
+
+  const calculateVacation = () => {
+    const joinedAt = parsePickerDate(joinDate);
+
+    if (!joinedAt) {
+      setAlert({
+        title: "입사일을 선택해 주세요.",
+        description: "입사일을 선택해 주세요.",
+      });
+      return;
+    }
+
+    if (addMonths(joinedAt, 1) > startOfToday()) {
+      setAlert({
+        title: "입사 후 1개월이 경과하지 않았습니다.",
+        description: "입사 후 1개월이 경과하지 않았습니다.",
+      });
+      return;
+    }
+
+    setCalculated(true);
   };
 
   return (
@@ -555,7 +601,7 @@ function VacationTool() {
           <p>총 <strong>{vacationDays}</strong>일의 연차/휴가가 지급됩니다.</p>
         </ResultBox>
       ) : null}
-      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={() => calculated ? reset() : setCalculated(true)}>
+      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={calculateVacation}>
         {calculated ? "다시 계산하기" : "계산하기"}
       </PrimaryButton>
       <Notice lines={[
@@ -563,6 +609,14 @@ function VacationTool() {
         "   일수를 계산합니다.",
         "본 계산기는 모의계산 결과로 법적 효력이 없습니다.",
       ]} />
+      {alert ? (
+        <ComingSoonAlert
+          title={alert.title}
+          description={alert.description}
+          confirmLabel="확인"
+          onClose={() => setAlert(null)}
+        />
+      ) : null}
     </ToolPanel>
   );
 }
@@ -574,13 +628,21 @@ function UnemploymentTool() {
   const [pay1, setPay1] = useState("");
   const [pay2, setPay2] = useState("");
   const [pay3, setPay3] = useState("");
+  const [samePay, setSamePay] = useState(false);
   const [calculated, setCalculated] = useState(false);
+  const [unemploymentResult, setUnemploymentResult] = useState<UnemploymentCalculationResult | null>(null);
+  const [alert, setAlert] = useState<{ title: string; description: string } | null>(null);
   const averageMonthly = Math.round((number(pay1) + number(pay2) + number(pay3)) / 3);
-  const dailyPay = Math.min(66000, Math.max(63104, Math.round(averageMonthly / 30 * 0.6)));
+  const dailyPay = Math.min(
+    UNEMPLOYMENT_MAX_DAILY_PAY,
+    Math.max(UNEMPLOYMENT_MIN_DAILY_PAY, Math.round((averageMonthly / 30) * 0.6)),
+  );
+  const monthlyBenefit = dailyPay * 30;
   const insuredDays = Math.max(0, diffDays(startDate, endDate));
-  const age = getAge(birthDate);
-  const benefitDays = age >= 50 ? 210 : insuredDays >= 1080 ? 180 : 150;
+  const age = getAgeAtDate(birthDate, endDate);
+  const benefitDays = getUnemploymentBenefitDays(age, insuredDays);
   const total = dailyPay * benefitDays;
+  const payPeriods = getUnemploymentPayPeriods(endDate);
 
   const reset = () => {
     setBirthDate("");
@@ -589,13 +651,108 @@ function UnemploymentTool() {
     setPay1("");
     setPay2("");
     setPay3("");
+    setSamePay(false);
     setCalculated(false);
+    setUnemploymentResult(null);
+    setAlert(null);
+  };
+
+  const updateBirthDate = (value: string) => {
+    setBirthDate(onlyNumber(value).slice(0, 8));
+  };
+
+  const validateRequiredInputs = () => {
+    if (!birthDate) {
+      setAlert({
+        title: "생년월일을 입력해주세요",
+        description: "생년월일을 입력해주세요",
+      });
+      return false;
+    }
+
+    if (!isValidBirthDate(birthDate)) {
+      setAlert({
+        title: "생년월일이 잘못된 형식 입니다.",
+        description: "생년월일이 잘못된 형식 입니다.",
+      });
+      return false;
+    }
+
+    const start = parsePickerDate(startDate);
+    const end = parsePickerDate(endDate);
+
+    if (!start || !end) {
+      setAlert({
+        title: "입사일과 퇴사일을 선택해주세요.",
+        description: "입사일과 퇴사일(고용보험 가입일, 종료일)을 모두 선택해주세요.",
+      });
+      return false;
+    }
+
+    if (start >= end) {
+      setAlert({
+        title: "입사일과 퇴사일을 확인해주세요.",
+        description: "입사일은 퇴사일보다 이전이어야 합니다.",
+      });
+      return false;
+    }
+
+    if (insuredDays < 180) {
+      setAlert({
+        title: "근무기간은 180일 미만이므로 수급 자격이 없습니다.",
+        description: "근무기간은 180일 미만이므로 수급 자격이 없습니다.",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const applySamePay = () => {
+    if (samePay) {
+      setSamePay(false);
+      return;
+    }
+
+    if (!validateRequiredInputs()) return;
+
+    if (!number(pay1)) {
+      setAlert({
+        title: "퇴사 1개월 전 기본금을 입력해 주세요.",
+        description: "퇴사 1개월 전 기본금을 입력해 주세요.",
+      });
+      return;
+    }
+
+    setPay2(pay1);
+    setPay3(pay1);
+    setSamePay(true);
+  };
+
+  const calculateUnemployment = () => {
+    if (!validateRequiredInputs()) return;
+
+    if (!number(pay1)) {
+      setAlert({
+        title: "퇴사 1개월 전 기본금을 입력해 주세요.",
+        description: "퇴사 1개월 전 기본금을 입력해 주세요.",
+      });
+      return;
+    }
+
+    setUnemploymentResult({
+      monthlyBenefit,
+      dailyPay,
+      benefitDays,
+      total,
+    });
+    setCalculated(true);
   };
 
   return (
     <ToolPanel title="실업급여 계산기" onReset={reset}>
       <NoticeBody>퇴사 당시 나이와 고용보험 가입 기간에 따라 실업급여를 받을 수 있는 기간이 달라집니다.<br />퇴사 전 3개월간의 평균 월급을 기준으로 산정됩니다.</NoticeBody>
-      <TextField label="생년월일 (주민번호 앞자리 기준)" value={birthDate} onChange={setBirthDate} placeholder="ex) 1999.09.10" required />
+      <BirthDateField label="생년월일 (주민번호 앞자리 기준)" value={birthDate} onChange={updateBirthDate} placeholder="ex) 1999.09.10" required />
       <DateRangeField
         label="입사일과 퇴사일(고용보험 가입일, 종료일)"
         start={startDate}
@@ -607,20 +764,26 @@ function UnemploymentTool() {
       <section className={styles.stackedPay}>
         <div className={styles.sectionLabel}>
           <span><Required />퇴사 전 월급</span>
-          <button type="button" onClick={() => { setPay2(pay1); setPay3(pay1); }}>✓ 모두동일</button>
+          <button
+            type="button"
+            className={samePay ? styles.samePayActive : undefined}
+            onClick={applySamePay}
+          >
+            ✓ 모두동일
+          </button>
         </div>
-        <PayLine title="1개월 전" value={pay1} onChange={setPay1} />
-        <PayLine title="2개월 전" value={pay2} onChange={setPay2} />
-        <PayLine title="3개월 전" value={pay3} onChange={setPay3} />
+        <PayLine title="1개월 전" subtitle={payPeriods[0]} value={pay1} onChange={setPay1} disabled={samePay} />
+        <PayLine title="2개월 전" subtitle={payPeriods[1]} value={pay2} onChange={setPay2} disabled={samePay} />
+        <PayLine title="3개월 전" subtitle={payPeriods[2]} value={pay3} onChange={setPay3} disabled={samePay} />
       </section>
-      {calculated ? (
+      {calculated && unemploymentResult ? (
         <ResultBox compact>
-          <p><strong>1</strong>일 <strong>{formatNumber(dailyPay)}</strong>원씩 <strong>{benefitDays}</strong>일간 지급됩니다.</p>
-          <p>월 평균 <strong>{formatNumber(averageMonthly)}</strong>원이며,</p>
-          <p>총 <strong>{formatNumber(total)}</strong>원입니다.</p>
+          <p><strong>1</strong>일 <strong>{formatNumber(unemploymentResult.dailyPay)}</strong>원씩 <strong>{unemploymentResult.benefitDays}</strong>일간 지급됩니다.</p>
+          <p>월 평균 <strong>{formatNumber(unemploymentResult.monthlyBenefit)}</strong>원이며,</p>
+          <p>총 <strong>{formatNumber(unemploymentResult.total)}</strong>원입니다.</p>
         </ResultBox>
       ) : null}
-      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={() => calculated ? reset() : setCalculated(true)}>
+      <PrimaryButton tone={calculated ? "secondary" : "primary"} onClick={calculateUnemployment}>
         {calculated ? "다시 계산하기" : "계산하기"}
       </PrimaryButton>
       <Notice lines={[
@@ -628,6 +791,14 @@ function UnemploymentTool() {
         "수급 여부 및 정확한 금액은 반드시 관할 고용센터로",
         "   문의하시기 바랍니다.",
       ]} />
+      {alert ? (
+        <ComingSoonAlert
+          title={alert.title}
+          description={alert.description}
+          confirmLabel="확인"
+          onClose={() => setAlert(null)}
+        />
+      ) : null}
     </ToolPanel>
   );
 }
@@ -635,18 +806,46 @@ function UnemploymentTool() {
 function GradeTool() {
   const [score, setScore] = useState("");
   const [max, setMax] = useState("4.5");
+  const [converted, setConverted] = useState<GradeConversionResult | null>(null);
+  const [alert, setAlert] = useState<{ title: string; description: string } | null>(null);
   const base = Math.max(0, number(score));
   const maxScore = number(max) || 4.5;
-  const converted = [4.0, 4.3, 4.5, 5.0, 7.0, 100].map((target) => ({
-    target,
-    value: maxScore > 0 ? Math.min(target, base / maxScore * target) : 0,
-  }));
+
+  const reset = () => {
+    setScore("");
+    setMax("4.5");
+    setConverted(null);
+    setAlert(null);
+  };
+
+  const convertGrade = () => {
+    if (!score || !base) {
+      setAlert({
+        title: "학점을 입력해 주세요.",
+        description: "학점을 입력해 주세요.",
+      });
+      return;
+    }
+
+    if (base > maxScore) {
+      setAlert({
+        title: `${formatGrade(maxScore)}점 초과로는 변환 불가하오니 점수를 다시 한번 확인해 주세요.`,
+        description: `${formatGrade(maxScore)}점 초과로는 변환 불가하오니 점수를 다시 한번 확인해 주세요.`,
+      });
+      return;
+    }
+
+    setConverted([4.0, 4.3, 4.5, 5.0, 7.0, 100].map((target) => ({
+      target,
+      value: convertGradeValue(base, maxScore, target),
+    })));
+  };
 
   return (
-    <ToolPanel title="학점 변환기" onReset={() => setScore("")}>
+    <ToolPanel title="학점 변환기" onReset={reset}>
       <NoticeBody>나의 평균평점을 지원하려는 기업의 기준에 맞게 변환합니다.</NoticeBody>
       <div className={styles.gradeInputs}>
-        <input value={score} onChange={(event) => setScore(onlyDecimal(event.target.value))} placeholder="0" inputMode="decimal" />
+        <input value={score} onChange={(event) => setScore(normalizeGradeInput(event.target.value))} placeholder="0" inputMode="decimal" />
         <span>/</span>
         <select value={max} onChange={(event) => setMax(event.target.value)}>
           <option value="4.0">4.0</option>
@@ -657,15 +856,17 @@ function GradeTool() {
           <option value="100">100</option>
         </select>
       </div>
-      <PrimaryButton onClick={() => undefined}>변환하기</PrimaryButton>
-      <div className={styles.gradeResult}>
-        {converted.map((item) => (
-          <p key={item.target}>
-            <strong>{formatGrade(item.value)} / {item.target.toFixed(item.target === 100 ? 0 : 1)}</strong>
-            <span>만점</span>
-          </p>
-        ))}
-      </div>
+      <PrimaryButton onClick={convertGrade}>변환하기</PrimaryButton>
+      {converted ? (
+        <div className={styles.gradeResult}>
+          {converted.map((item) => (
+            <p key={item.target}>
+              <strong>{formatConvertedGrade(item.value, item.target)} / {item.target.toFixed(item.target === 100 ? 0 : 1)}</strong>
+              <span>만점</span>
+            </p>
+          ))}
+        </div>
+      ) : null}
       <Notice lines={[
         "사람인 학점변환기는 서울 및 수도권 4년제 대학에서",
         "   가장 많이 사용하는 환산식을 적용하였습니다.",
@@ -673,6 +874,14 @@ function GradeTool() {
         "학점변환 점수는 회원님의 성적증명서나 학교 학사과에서",
         "   확인하시는 것이 가장 정확한 점 참고 부탁드립니다.",
       ]} />
+      {alert ? (
+        <ComingSoonAlert
+          title={alert.title}
+          description={alert.description}
+          confirmLabel="확인"
+          onClose={() => setAlert(null)}
+        />
+      ) : null}
     </ToolPanel>
   );
 }
@@ -791,6 +1000,21 @@ function TextField({ label, value, onChange, placeholder, required }: { label: s
     <label className={styles.textField}>
       <span>{required ? <Required /> : null}{label}</span>
       <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+    </label>
+  );
+}
+
+function BirthDateField({ label, value, onChange, placeholder, required }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; required?: boolean }) {
+  return (
+    <label className={styles.textField}>
+      <span>{required ? <Required /> : null}{label}</span>
+      <input
+        value={formatBirthDateDisplay(value)}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        inputMode="numeric"
+        maxLength={10}
+      />
     </label>
   );
 }
@@ -1088,22 +1312,42 @@ function SummaryRow({ label, value }: { label: string; value: number }) {
   return (
     <p className={styles.summaryRow}>
       <span>{label}</span>
-      <strong>{formatNumber(value)}</strong>
-      <em>원</em>
+      <span>
+        <strong>{formatNumber(value)}</strong>
+        <em>원</em>
+        <b>{formatKoreanWon(value)}</b>
+      </span>
     </p>
   );
 }
 
-function PayLine({ title, value, onChange }: { title: string; value: string; onChange: (value: string) => void }) {
+function PayLine({
+  title,
+  subtitle,
+  value,
+  onChange,
+  disabled,
+}: {
+  title: string;
+  subtitle?: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}) {
   return (
     <div className={styles.payLine}>
-      <p>{title}</p>
-      <MoneyLine label="" value={value} onChange={onChange} />
+      <p>
+        <span>{title}</span>
+        {subtitle ? <em>{subtitle}</em> : null}
+      </p>
+      <MoneyLine label="" value={value} onChange={onChange} disabled={disabled} />
     </div>
   );
 }
 
 function MoneyLine({ label, value, onChange, disabled }: { label: string; value: string; onChange: (value: string) => void; disabled?: boolean }) {
+  const amount = number(value);
+
   return (
     <label className={styles.moneyLine}>
       {label ? <span>{label}</span> : null}
@@ -1115,6 +1359,7 @@ function MoneyLine({ label, value, onChange, disabled }: { label: string; value:
         disabled={disabled}
       />
       <b>원</b>
+      <p>{formatKoreanWon(amount)}</p>
     </label>
   );
 }
@@ -1176,6 +1421,33 @@ function onlyNumber(value: string) {
   return value.replace(/[^\d]/g, "");
 }
 
+function formatBirthDateDisplay(value: string) {
+  const numericValue = onlyNumber(value).slice(0, 8);
+  if (numericValue.length <= 4) return numericValue;
+  if (numericValue.length <= 6) return `${numericValue.slice(0, 4)}.${numericValue.slice(4)}`;
+  return `${numericValue.slice(0, 4)}.${numericValue.slice(4, 6)}.${numericValue.slice(6)}`;
+}
+
+function isValidBirthDate(value: string) {
+  const numericValue = onlyNumber(value);
+  if (numericValue.length !== 8) return false;
+
+  const year = Number(numericValue.slice(0, 4));
+  const month = Number(numericValue.slice(4, 6));
+  const day = Number(numericValue.slice(6, 8));
+  const birthDate = new Date(year, month - 1, day);
+
+  if (
+    birthDate.getFullYear() !== year ||
+    birthDate.getMonth() !== month - 1 ||
+    birthDate.getDate() !== day
+  ) {
+    return false;
+  }
+
+  return birthDate >= new Date(1900, 0, 1) && birthDate <= startOfToday();
+}
+
 function normalizeLimitedInteger(value: string, min: number, max: number, onLimit: () => void) {
   const numericValue = onlyNumber(value);
   if (!numericValue) return min > 0 ? String(min) : "";
@@ -1195,6 +1467,17 @@ function clampMoneyAmount(value: string) {
 
 function onlyDecimal(value: string) {
   return value.replace(/[^\d.]/g, "").replace(/(\..*)\./g, "$1");
+}
+
+function normalizeGradeInput(value: string) {
+  const decimalValue = onlyDecimal(value);
+  const [integerPart = "", decimalPart] = decimalValue.split(".");
+  const normalizedInteger = integerPart.replace(/^0+(?=\d)/, "").slice(0, 3);
+  const safeInteger = normalizedInteger || (decimalPart !== undefined ? "0" : "");
+  const remainingDigits = Math.max(0, 3 - safeInteger.length);
+
+  if (decimalPart === undefined || remainingDigits === 0) return safeInteger;
+  return `${safeInteger}.${decimalPart.slice(0, remainingDigits)}`;
 }
 
 function number(value: string) {
@@ -1244,6 +1527,61 @@ function formatKoreanChunk(value: number, digits: string[], smallUnits: string[]
 
 function formatGrade(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2).replace(/0$/, "");
+}
+
+function convertGradeValue(score: number, maxScore: number, target: number) {
+  if (maxScore <= 0) return 0;
+  if (target === 100) {
+    return convertGradeToHundred(score, maxScore);
+  }
+
+  if (maxScore === 100) {
+    return convertHundredToGrade(score, target);
+  }
+
+  return Math.min(target, roundGrade((score / maxScore) * target));
+}
+
+function convertGradeToHundred(score: number, maxScore: number) {
+  if (maxScore === 100) return Math.min(100, score);
+
+  const formulas: Record<string, number> = {
+    "4": ((score - 1) * 40) / 3 + 60,
+    "4.3": ((score - 1) * 34) / 3.3 + 66,
+    "4.5": ((score - 1) * 40) / 3.5 + 60,
+    "5": ((score - 1) * 44) / 4 + 56,
+    "7": ((score - 1) * 48) / 6 + 52,
+  };
+
+  return Math.min(100, Math.max(0, roundOneDecimal(formulas[String(maxScore)] ?? (score / maxScore) * 100)));
+}
+
+function convertHundredToGrade(score: number, target: number) {
+  const formulas: Record<string, number> = {
+    "4": ((score - 60) * 3) / 40 + 1,
+    "4.3": ((score - 66) * 3.3) / 34 + 1,
+    "4.5": ((score - 60) * 3.5) / 40 + 1,
+    "5": ((score - 56) * 4) / 44 + 1,
+    "7": ((score - 52) * 6) / 48 + 1,
+  };
+
+  return Math.min(target, Math.max(0, roundGrade(formulas[String(target)] ?? (score / 100) * target)));
+}
+
+function roundGrade(value: number) {
+  return Math.round(value * 100) / 100;
+}
+
+function roundOneDecimal(value: number) {
+  return Number(value.toFixed(1));
+}
+
+function formatConvertedGrade(value: number, target: number) {
+  if (target === 100) {
+    return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  }
+
+  return value.toFixed(2);
 }
 
 function normalizeDateInputValue(value?: string | null) {
@@ -1304,14 +1642,15 @@ function getSeverancePayPeriods(
   if (!retirementDate) {
     return Array.from({ length: SEVERANCE_PAY_PERIOD_COUNT }, (_, index) => {
       const key = `period-${index}`;
+      const savedPay = monthPays[key] || { basePay: "", extraPay: "" };
 
       return {
         key,
         title: "",
         days: 0,
-        basePay: "",
-        extraPay: "",
-        active: false,
+        basePay: savedPay.basePay,
+        extraPay: savedPay.extraPay,
+        active: true,
       };
     });
   }
@@ -1354,6 +1693,32 @@ function getSeverancePayPeriods(
   });
 }
 
+function getUnemploymentPayPeriods(endDate: string) {
+  const end = parsePickerDate(endDate);
+  if (!end) return ["", "", ""];
+
+  const periods: string[] = [];
+  let periodEnd = new Date(end);
+
+  for (let index = 0; index < 3; index += 1) {
+    const periodStart = addDays(addMonths(periodEnd, -1), 1);
+    periods.push(`(${formatShortDotDate(periodStart)}~${formatShortDotDate(periodEnd)})`);
+    periodEnd = addDays(periodStart, -1);
+  }
+
+  return periods;
+}
+
+function getUnemploymentBenefitDays(age: number, insuredDays: number) {
+  const olderOrDisabled = age >= 50;
+
+  if (insuredDays < 365) return 120;
+  if (insuredDays < 365 * 3) return olderOrDisabled ? 180 : 150;
+  if (insuredDays < 365 * 5) return olderOrDisabled ? 210 : 180;
+  if (insuredDays < 365 * 10) return olderOrDisabled ? 240 : 210;
+  return olderOrDisabled ? 270 : 240;
+}
+
 function addDays(date: Date, days: number) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
@@ -1367,11 +1732,22 @@ function addMonths(date: Date, months: number) {
   return new Date(year, month, Math.min(date.getDate(), lastDay));
 }
 
+function startOfToday() {
+  const today = new Date();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+}
+
 function formatDotDate(date: Date) {
   const year = String(date.getFullYear());
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}.${month}.${day}`;
+}
+
+function formatShortDotDate(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${month}.${day}`;
 }
 
 function byteLength(value: string) {
@@ -1466,5 +1842,20 @@ function getAge(value: string) {
   const now = new Date();
   let age = now.getFullYear() - birth.getFullYear();
   if (now.getMonth() < birth.getMonth() || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate())) age -= 1;
+  return Math.max(0, age);
+}
+
+function getAgeAtDate(value: string, referenceDate: string) {
+  const normalized = value.replace(/[^\d]/g, "");
+  const reference = parsePickerDate(referenceDate) || new Date();
+  if (normalized.length < 8) return 0;
+  const birth = new Date(`${normalized.slice(0, 4)}-${normalized.slice(4, 6)}-${normalized.slice(6, 8)}T00:00:00`);
+  let age = reference.getFullYear() - birth.getFullYear();
+  if (
+    reference.getMonth() < birth.getMonth() ||
+    (reference.getMonth() === birth.getMonth() && reference.getDate() < birth.getDate())
+  ) {
+    age -= 1;
+  }
   return Math.max(0, age);
 }
