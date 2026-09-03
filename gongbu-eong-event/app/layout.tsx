@@ -5,14 +5,58 @@ import { AnalyticsTracker } from "@/features/analytics/AnalyticsTracker";
 import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 
+const verificationOther: Record<string, string> = {};
+const siteTitle = "공부엉이";
+const siteDescription = "공기업 취준생의 합격 메이트";
+const siteImage = "/diagnosis-share-banner.png";
+
+if (process.env.NAVER_SITE_VERIFICATION) {
+  verificationOther["naver-site-verification"] =
+    process.env.NAVER_SITE_VERIFICATION;
+}
+
+if (process.env.BING_SITE_VERIFICATION) {
+  verificationOther["msvalidate.01"] = process.env.BING_SITE_VERIFICATION;
+}
+
 export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SHARE_BASE_URL ||
       process.env.NEXT_PUBLIC_EVENT_APP_URL ||
       "http://localhost:3001",
   ),
-  title: "공부엉이",
-  description: "공부엉이 이벤트 전용 서비스",
+  title: siteTitle,
+  description: siteDescription,
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
+  openGraph: {
+    title: siteTitle,
+    description: siteDescription,
+    url: "/",
+    siteName: siteTitle,
+    type: "website",
+    locale: "ko_KR",
+    images: [
+      {
+        url: siteImage,
+        width: 1200,
+        height: 630,
+        alt: siteTitle,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: [siteImage],
+  },
+  ...(Object.keys(verificationOther).length
+    ? { verification: { other: verificationOther } }
+    : {}),
 };
 
 export const viewport: Viewport = {

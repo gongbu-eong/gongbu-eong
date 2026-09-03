@@ -2,6 +2,7 @@ import { getSessionUser, requireSessionUser } from "@/domains/auth/session";
 import {
   grantCommunityActivityMilestoneReward,
 } from "@/domains/credits/credits.repository";
+import { notifyCommunityComment } from "@/domains/notifications/notifications.repository";
 import type { NextRequest } from "next/server";
 import {
   COMMUNITY_CATEGORIES,
@@ -225,6 +226,10 @@ export async function saveCommunityComment(request: NextRequest, postId: string)
   }).catch((error) => {
     console.error("[Community] comment credit reward failed", error);
     return null;
+  });
+
+  await notifyCommunityComment(commentId, { replyTargetCommentId: parentCommentId }).catch((error) => {
+    console.error("[Community] comment notification failed", error);
   });
 
   return { ok: true, post: await findCommunityPostById(postId, user.id), creditReward };

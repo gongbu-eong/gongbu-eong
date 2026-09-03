@@ -356,7 +356,6 @@ const ignoreClickAfterDrag = (
                 communityActivityRewardProgress={user.communityActivityRewardProgress}
               />
             ) : null}
-            {/*
             {user ? (
               <Link href="/notifications" aria-label="알림" className={styles.iconButton}>
                 <BellIcon />
@@ -367,7 +366,6 @@ const ignoreClickAfterDrag = (
                 ) : null}
               </Link>
             ) : null}
-            */}
             <button
               type="button"
               aria-label="메뉴 열기"
@@ -1001,6 +999,10 @@ export function BellIcon() {
       />
     </svg>
   );
+}
+
+function formatBadgeCount(count: number) {
+  return count > 99 ? "99+" : String(count);
 }
 
 function SectionHeader({

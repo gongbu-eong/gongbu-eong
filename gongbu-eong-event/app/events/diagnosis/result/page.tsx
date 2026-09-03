@@ -19,7 +19,7 @@ type DiagnosisResultPageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "공부엉이",
+  title: "강점·성향 진단 결과 | 공부엉이",
   description: DIAGNOSIS_SHARE_DESCRIPTION,
   openGraph: {
     title: DIAGNOSIS_SHARE_TITLE,

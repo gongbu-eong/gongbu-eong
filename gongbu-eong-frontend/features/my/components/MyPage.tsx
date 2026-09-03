@@ -177,8 +177,8 @@ export function MyPage() {
 
         <h2 className={styles.sectionTitle}>설정</h2>
         <nav className={styles.menuList} aria-label="설정">
-          {/*
           <MyMenuItem href="/my/notifications" iconSrc="/my/setting-notification.png" iconWidth={26} iconHeight={30} title="알림 설정" />
+          {/*
           <MyMenuItem href="#" iconSrc="/my/setting-ticket.png" iconWidth={30} iconHeight={21} title="진단권 결제" />
           <MyMenuItem
             href="#"

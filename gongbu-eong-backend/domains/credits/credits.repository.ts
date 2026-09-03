@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { db } from "@/lib/db";
 import { hashOAuthIdentity } from "@/domains/auth/oauth-token-crypto";
+import { createCreditNotification } from "@/domains/notifications/notifications.repository";
 
 type DbClient = Pick<PoolClient, "query">;
 type OAuthProvider = "kakao" | "naver";
@@ -678,5 +679,17 @@ async function insertCreditTransaction(
   );
 
   const row = result.rows[0];
+
+  if (row) {
+    await createCreditNotification(client, {
+      userId: args.userId,
+      transactionId: row.id,
+      amount: args.amount,
+      transactionType: args.transactionType,
+      reason: args.reason,
+      balanceAfter: row.balance_after,
+    });
+  }
+
   return { id: row?.id, granted: Boolean(row), balanceAfter: row?.balance_after };
 }
