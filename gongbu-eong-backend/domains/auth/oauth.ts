@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import {
+  AuthAccountStatusError,
   findUserBySessionTokenHash,
   OAuthProfile,
   upsertOAuthUser,
@@ -247,7 +248,14 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
   } catch (error) {
     console.error(`[OAuth:${provider}] callback failed`, error);
     return NextResponse.redirect(
-      buildFailureRedirectUrl(failureRedirectUrl, provider),
+      buildFailureRedirectUrl(
+        failureRedirectUrl,
+        provider,
+        error instanceof AuthAccountStatusError
+          ? error.code
+          : "callback_failed",
+        error instanceof AuthAccountStatusError ? error.until : undefined,
+      ),
     );
   }
 }
@@ -452,13 +460,18 @@ function isSameOriginUrl(left: URL, right: URL) {
 function buildFailureRedirectUrl(
   redirectUrl: string,
   provider: OAuthProvider,
+  oauthError = "callback_failed",
+  restrictedUntil?: string,
 ) {
   const url = new URL(redirectUrl);
   if (url.pathname === "/") {
     url.pathname = "/login";
   }
-  url.searchParams.set("oauthError", "callback_failed");
+  url.searchParams.set("oauthError", oauthError);
   url.searchParams.set("provider", provider);
+  if (restrictedUntil) {
+    url.searchParams.set("until", restrictedUntil);
+  }
   return url;
 }
 

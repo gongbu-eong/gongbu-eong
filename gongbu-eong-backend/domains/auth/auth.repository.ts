@@ -6,6 +6,25 @@ import { encryptOAuthToken } from "./oauth-token-crypto";
 type OAuthProvider = "kakao" | "naver";
 type UserStatus = "active" | "blocked" | "withdrawn" | "pending_signup";
 
+type LoginGuardUserRow = {
+  id: string;
+  status: UserStatus;
+  blocked_until: Date | string | null;
+  rejoin_blocked_until: Date | string | null;
+};
+
+export class AuthAccountStatusError extends Error {
+  code: "account_blocked" | "account_withdrawn";
+  until?: string;
+
+  constructor(code: "account_blocked" | "account_withdrawn", until?: string) {
+    super(code);
+    this.name = "AuthAccountStatusError";
+    this.code = code;
+    this.until = until;
+  }
+}
+
 export type OAuthProfile = {
   provider: OAuthProvider;
   providerUserId: string;
@@ -33,6 +52,25 @@ export async function upsertOAuthUser(args: {
   try {
     await client.query("BEGIN");
 
+    const linkedUser = await client.query<LoginGuardUserRow>(
+      `
+        SELECT
+          users.id,
+          users.status,
+          users.blocked_until,
+          users.rejoin_blocked_until
+        FROM public.user_oauth_accounts accounts
+        JOIN public.users users
+          ON users.id = accounts.user_id
+        WHERE accounts.provider = $1::public.oauth_provider
+          AND accounts.provider_user_id = $2
+        LIMIT 1
+        FOR UPDATE OF users
+      `,
+      [args.profile.provider, args.profile.providerUserId],
+    );
+    await ensureOAuthLoginAllowed(client, linkedUser.rows[0]);
+
     const existingAccount = await client.query<{
       user_id: string;
       user_status: UserStatus;
@@ -59,12 +97,27 @@ export async function upsertOAuthUser(args: {
     let userStatus: UserStatus | undefined = existingOAuthUser?.user_status;
     let signupCompletedAt = existingOAuthUser?.signup_completed_at ?? null;
     let isNewUser = false;
-    let welcomeCreditsGranted = false;
+    const welcomeCreditsGranted = false;
     let linkedDiagnosisResultId: string | null = null;
     const accessTokenEncrypted = encryptOAuthToken(args.accessToken);
     const refreshTokenEncrypted = encryptOAuthToken(args.refreshToken);
 
     if (!userId) {
+      if (args.profile.email) {
+        const sanctionedEmailUser = await client.query<LoginGuardUserRow>(
+          `
+            SELECT id, status, blocked_until, rejoin_blocked_until
+            FROM public.users
+            WHERE email = $1
+              AND status IN ('blocked', 'withdrawn')
+            LIMIT 1
+            FOR UPDATE
+          `,
+          [args.profile.email],
+        );
+        await ensureOAuthLoginAllowed(client, sanctionedEmailUser.rows[0]);
+      }
+
       const communityNickname = await generateUniqueCommunityNickname(client);
       const liveEmailUser = args.profile.email
         ? await client.query<{
@@ -385,6 +438,77 @@ export async function upsertOAuthUser(args: {
   } finally {
     client.release();
   }
+}
+
+async function ensureOAuthLoginAllowed(
+  client: Pick<typeof db, "query">,
+  user?: LoginGuardUserRow,
+) {
+  if (!user) {
+    return;
+  }
+
+  if (user.status === "blocked") {
+    const blockedUntil = toDate(user.blocked_until);
+    if (blockedUntil && blockedUntil.getTime() <= Date.now()) {
+      await client.query(
+        `
+          UPDATE public.users
+          SET
+            status = 'active'::public.user_status,
+            blocked_until = NULL,
+            sanction_reason = NULL,
+            sanction_updated_at = NOW(),
+            updated_at = NOW()
+          WHERE id = $1::uuid
+            AND status = 'blocked'
+        `,
+        [user.id],
+      );
+      return;
+    }
+
+    throw new AuthAccountStatusError(
+      "account_blocked",
+      blockedUntil?.toISOString(),
+    );
+  }
+
+  if (user.status === "withdrawn") {
+    const rejoinBlockedUntil = toDate(user.rejoin_blocked_until);
+    if (rejoinBlockedUntil && rejoinBlockedUntil.getTime() <= Date.now()) {
+      await client.query(
+        `
+          UPDATE public.users
+          SET
+            status = 'active'::public.user_status,
+            withdrawn_at = NULL,
+            rejoin_blocked_until = NULL,
+            sanction_reason = NULL,
+            sanction_updated_at = NOW(),
+            updated_at = NOW()
+          WHERE id = $1::uuid
+            AND status = 'withdrawn'
+        `,
+        [user.id],
+      );
+      return;
+    }
+
+    throw new AuthAccountStatusError(
+      "account_withdrawn",
+      rejoinBlockedUntil?.toISOString(),
+    );
+  }
+}
+
+function toDate(value: Date | string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 export async function findUserBySessionTokenHash(

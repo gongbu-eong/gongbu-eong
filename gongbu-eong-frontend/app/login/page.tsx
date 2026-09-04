@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { LoginOAuthAlert } from "./LoginOAuthAlert";
 import styles from "./LoginPage.module.css";
 
 function getOAuthUrl(provider: "kakao" | "naver") {
@@ -22,13 +23,92 @@ type LoginPageProps = {
   searchParams: Promise<{
     oauthError?: string;
     provider?: string;
+    until?: string;
   }>;
 };
 
+function formatRestrictedUntil(value?: string) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function getOAuthErrorMessages(params: {
+  oauthError?: string;
+  provider?: string;
+  until?: string;
+}) {
+  const providerName = params.provider === "naver" ? "네이버" : "카카오";
+  const untilLabel = formatRestrictedUntil(params.until);
+
+  if (params.oauthError === "account_blocked") {
+    const lines = untilLabel
+      ? [
+          "고객님은 계정정지 상태입니다.",
+          `${untilLabel}까지 로그인을 이용할 수 없습니다.`,
+          "자세한 내용은 고객센터로 문의해 주세요.",
+        ]
+      : [
+          "고객님은 계정정지 상태입니다.",
+          "현재 로그인을 이용할 수 없습니다.",
+          "자세한 내용은 고객센터로 문의해 주세요.",
+        ];
+    return {
+      alertMessage: lines.join("\n"),
+      displayMessage: lines.join(" "),
+    };
+  }
+
+  if (params.oauthError === "account_withdrawn") {
+    const lines = untilLabel
+      ? [
+          "고객님은 강제탈퇴 상태입니다.",
+          `${untilLabel}까지 재가입 및 로그인을 이용할 수 없습니다.`,
+          "자세한 내용은 고객센터로 문의해 주세요.",
+        ]
+      : [
+          "고객님은 강제탈퇴 상태입니다.",
+          "재가입 및 로그인을 이용할 수 없습니다.",
+          "자세한 내용은 고객센터로 문의해 주세요.",
+        ];
+    return {
+      alertMessage: lines.join("\n"),
+      displayMessage: lines.join(" "),
+    };
+  }
+
+  if (params.oauthError === "callback_failed") {
+    const lines = [
+      `${providerName} 로그인 정보를 저장하지 못했습니다.`,
+      "잠시 후 다시 시도해 주세요.",
+    ];
+    return {
+      alertMessage: lines.join("\n"),
+      displayMessage: lines.join(" "),
+    };
+  }
+
+  return null;
+}
+
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  const hasOAuthError = params.oauthError === "callback_failed";
-  const providerName = params.provider === "naver" ? "네이버" : "카카오";
+  const oauthErrorMessages = getOAuthErrorMessages(params);
 
   return (
     <main className={styles.page}>
@@ -58,12 +138,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
 
         <div className={styles.actions}>
-          {hasOAuthError ? (
+          {oauthErrorMessages ? (
+            <>
+              <LoginOAuthAlert alertMessage={oauthErrorMessages.alertMessage} />
             <p className={styles.oauthError} role="alert">
-              {providerName} 로그인 정보를 저장하지 못했습니다.
-              <br />
-              잠시 후 다시 시도해 주세요.
+                {oauthErrorMessages.displayMessage}
             </p>
+            </>
           ) : null}
           <a className={styles.kakaoButton} href={getOAuthUrl("kakao")}>
             <Image src="/login/kakao.png" alt="" width={42} height={42} />
