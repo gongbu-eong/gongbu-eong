@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AiToolsPage } from "@/features/ai-tools/components/AiToolsPage";
-import { getAiToolEventsForServer } from "@/features/ai-tools/ai-tools.server";
 import { canonicalUrl, SITE_NAME } from "@/shared/seo";
 
 export const metadata: Metadata = {
@@ -21,7 +20,6 @@ export const metadata: Metadata = {
 };
 
 export default async function Page() {
-  const events = await getAiToolEventsForServer();
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -50,7 +48,7 @@ export default async function Page() {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <AiToolsPage initialEvents={events.items} />
+      <AiToolsPage />
     </>
   );
 }

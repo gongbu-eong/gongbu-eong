@@ -7,8 +7,6 @@ import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
-import { getAiToolEvents } from "../ai-tools.api";
-import type { AiToolEventDto } from "../ai-tools.dto";
 import styles from "./AiToolsPage.module.css";
 
 const representativeTools = [
@@ -65,14 +63,9 @@ const jobTools = [
   { icon: "/ai-tools/icon-grade.png", title: "학점 계산기", href: "/ai-tools/job-tools?tool=grade" },
 ] as const;
 
-export function AiToolsPage({
-  initialEvents = [],
-}: {
-  initialEvents?: AiToolEventDto[];
-}) {
+export function AiToolsPage() {
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
-  const [events, setEvents] = useState<AiToolEventDto[]>(initialEvents);
   const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
 
   useEffect(() => {
@@ -87,14 +80,6 @@ export function AiToolsPage({
       })
       .finally(() => {
         if (mounted) setAuthResolved(true);
-      });
-
-    getAiToolEvents()
-      .then((response) => {
-        if (mounted) setEvents(response.items);
-      })
-      .catch(() => {
-        if (mounted) setEvents([]);
       });
 
     return () => {
@@ -216,32 +201,6 @@ export function AiToolsPage({
             })}
           </div>
 
-          {events.length > 0 ? (
-            <section className={styles.eventSection}>
-              <SectionTitle
-                title="재미로 보는 최신 심리테스트"
-                badge="NEW"
-              />
-              <div className={styles.eventScroller}>
-                {events.map((event) => (
-                  <Link href={event.href} key={event.eventNo} className={styles.eventCard}>
-                    <span className={styles.eventThumb}>
-                      <Image
-                        src={event.thumbnailUrl || "/diagnosis-share-banner.png"}
-                        alt={event.title}
-                        fill
-                        sizes="160px"
-                        unoptimized
-                      />
-                    </span>
-                    <strong>{event.title}</strong>
-                    <small>▶ {formatParticipantCount(event.participantCount)}명</small>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
           <section className={styles.jobToolSection}>
             <SectionTitle title="공부엉이의 취업 도구" />
             <div className={styles.jobToolList}>
@@ -287,18 +246,4 @@ function SectionTitle({
       {badge ? <span>{badge}</span> : null}
     </div>
   );
-}
-
-function formatParticipantCount(value: number) {
-  if (value >= 10000) {
-    const unit = value / 10000;
-    return `${Number.isInteger(unit) ? unit.toFixed(0) : unit.toFixed(1)}만`;
-  }
-
-  if (value >= 1000) {
-    const unit = value / 1000;
-    return `${Number.isInteger(unit) ? unit.toFixed(0) : unit.toFixed(1)}천`;
-  }
-
-  return value.toLocaleString("ko-KR");
 }
