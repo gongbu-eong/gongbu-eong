@@ -7,7 +7,8 @@ import "./globals.css";
 
 const verificationOther: Record<string, string> = {};
 const siteTitle = "공부엉이";
-const siteDescription = "공기업 취준생의 합격 메이트";
+const siteDescription =
+  "공기업 취업 성향 테스트, 강점·성향 진단, 직무 성향 분석, 추천 공고, NCS AI 자소서 코칭까지 공부엉이에서 확인하세요.";
 const siteImage = "/diagnosis-share-banner.png";
 
 if (process.env.NAVER_SITE_VERIFICATION) {

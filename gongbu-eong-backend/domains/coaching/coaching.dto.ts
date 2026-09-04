@@ -83,6 +83,22 @@ export type CoachingJobDto = {
   applicationEndAt: string | null;
 };
 
+export type CoachingDiagnosisDto = {
+  id: string;
+  typeCode: string;
+  typeName: string;
+  summary: string | null;
+  strengths: string[];
+  weaknesses: string[];
+  axisScores: {
+    stability: number;
+    teamwork: number;
+    execution: number;
+    principle: number;
+  };
+  completedAt: string;
+};
+
 export type CoachingHistoryDto = {
   id: string;
   requestId: string;

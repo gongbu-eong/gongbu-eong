@@ -87,7 +87,9 @@ export async function getCommunityPosts(request: NextRequest) {
 
 export async function getCommunityPost(request: NextRequest, postId: string) {
   const user = await getSessionUser(request);
-  await increaseCommunityPostView(postId);
+  if (request.nextUrl.searchParams.get("view") !== "false") {
+    await increaseCommunityPostView(postId);
+  }
   const post = await findCommunityPostById(postId, user?.id);
 
   if (!post) {

@@ -1,3 +1,5 @@
+import { request as httpsRequest } from "node:https";
+
 type OpenAiContentPart =
   | { type: "input_text"; text: string }
   | { type: "input_file"; filename: string; file_data: string; detail?: "low" | "high" | "auto" }
@@ -15,11 +17,12 @@ type CreateJsonResponseArgs = {
   content: OpenAiContentPart[];
   schemaName: string;
   schema?: Record<string, unknown>;
+  model?: string;
   maxOutputTokens?: number;
 };
 
-export function getOpenAiModel() {
-  return normalizeOpenAiModel(process.env.GPT_MODEL || process.env.OPENAI_MODEL);
+export function getOpenAiModel(model?: string) {
+  return normalizeOpenAiModel(model || process.env.GPT_MODEL || process.env.OPENAI_MODEL);
 }
 
 export function getOpenAiApiKey() {
@@ -30,27 +33,22 @@ export async function createOpenAiJsonResponse(args: CreateJsonResponseArgs) {
   const apiKey = getOpenAiApiKey();
   if (!apiKey) throw new Error("GPT_API_KEY가 설정되지 않아 AI 요청을 실행할 수 없습니다.");
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
+  const { status, bodyText } = await postJson("https://api.openai.com/v1/responses", {
+    model: getOpenAiModel(args.model),
+    input: [{ role: "user", content: args.content }],
+    max_output_tokens: args.maxOutputTokens || 12000,
+    text: {
+      format: args.schema
+        ? { type: "json_schema", name: args.schemaName, schema: args.schema, strict: false }
+        : { type: "json_object" },
     },
-    body: JSON.stringify({
-      model: getOpenAiModel(),
-      input: [{ role: "user", content: args.content }],
-      max_output_tokens: args.maxOutputTokens || 12000,
-      text: {
-        format: args.schema
-          ? { type: "json_schema", name: args.schemaName, schema: args.schema, strict: false }
-          : { type: "json_object" },
-      },
-    }),
+  }, {
+    "content-type": "application/json",
+    authorization: `Bearer ${apiKey}`,
   });
 
-  const bodyText = await response.text();
-  if (!response.ok) {
-    console.error("OpenAI request failed", response.status, bodyText.slice(0, 1000));
+  if (status < 200 || status >= 300) {
+    console.error("OpenAI request failed", status, bodyText.slice(0, 1000));
     throw new Error("AI 요청에 실패했습니다.");
   }
 
@@ -74,6 +72,38 @@ export async function createOpenAiJsonResponse(args: CreateJsonResponseArgs) {
   }
 
   return parseJsonFromText(text);
+}
+
+function postJson(url: string, payload: unknown, headers: Record<string, string>) {
+  const requestBody = JSON.stringify(payload);
+  const target = new URL(url);
+
+  return new Promise<{ status: number; bodyText: string }>((resolve, reject) => {
+    const request = httpsRequest({
+      protocol: target.protocol,
+      hostname: target.hostname,
+      port: target.port || undefined,
+      path: `${target.pathname}${target.search}`,
+      method: "POST",
+      headers: {
+        ...headers,
+        "content-length": Buffer.byteLength(requestBody).toString(),
+      },
+    }, (response) => {
+      let bodyText = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk) => {
+        bodyText += chunk;
+      });
+      response.on("end", () => {
+        resolve({ status: response.statusCode || 0, bodyText });
+      });
+    });
+
+    request.on("error", reject);
+    request.write(requestBody);
+    request.end();
+  });
 }
 
 export function makeOpenAiFileDataUrl(mediaType: string, buffer: Buffer) {

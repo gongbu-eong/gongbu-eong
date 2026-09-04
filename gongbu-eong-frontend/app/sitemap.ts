@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import type { CommunityListResponseDto } from "@/features/community/community.dto";
 import type { JobPostingListResponseDto } from "@/features/home/home.dto";
 import { fetchBackendJson } from "@/shared/server-data";
 import { canonicalUrl } from "@/shared/seo";
@@ -36,6 +37,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const jobs = await fetchBackendJson<JobPostingListResponseDto>(
     "/api/jobs?limit=200&sort=latest",
   ).catch(() => null);
+  const communityPosts = await fetchBackendJson<CommunityListResponseDto>(
+    "/api/community?limit=200&sort=latest",
+  ).catch(() => null);
 
   const jobRoutes: MetadataRoute.Sitemap =
     jobs?.items.map((job) => ({
@@ -43,6 +47,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: job.applicationEndAt ? new Date(job.applicationEndAt) : now,
       priority: 0.8,
     })) ?? [];
+  const communityRoutes: MetadataRoute.Sitemap =
+    communityPosts?.items.map((post) => ({
+      url: canonicalUrl(`/community/${post.id}`),
+      lastModified: new Date(post.createdAt),
+      priority: 0.7,
+    })) ?? [];
 
-  return [...staticRoutes, ...jobRoutes];
+  return [...staticRoutes, ...jobRoutes, ...communityRoutes];
 }

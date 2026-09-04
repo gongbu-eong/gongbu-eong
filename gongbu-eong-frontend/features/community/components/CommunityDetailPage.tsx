@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { getCurrentUser } from "@/features/home/home.api";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { loadKakaoSdk } from "@/shared/kakao-share";
 import { focusMobileInput } from "@/shared/mobile-focus";
@@ -59,9 +60,17 @@ type ReplyTarget = {
   hostCommentId: string;
 };
 
-export function CommunityDetailPage({ postId }: { postId: string }) {
+export function CommunityDetailPage({
+  postId,
+  initialPost = null,
+  initialBoardPage = 1,
+}: {
+  postId: string;
+  initialPost?: CommunityPostDetailDto | null;
+  initialBoardPage?: number;
+}) {
   const router = useRouter();
-  const [post, setPost] = useState<CommunityPostDetailDto | null>(null);
+  const [post, setPost] = useState<CommunityPostDetailDto | null>(initialPost);
   const [comment, setComment] = useState("");
   const [replyText, setReplyText] = useState("");
   const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
@@ -73,13 +82,14 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   const [commentPage, setCommentPage] = useState(1);
   const [boardItems, setBoardItems] = useState<CommunityPostSummaryDto[]>([]);
   const [boardTotal, setBoardTotal] = useState(0);
-  const [boardPage, setBoardPage] = useState(1);
+  const [boardPage, setBoardPage] = useState(initialBoardPage);
   const [boardSort, setBoardSort] = useState<"latest" | "popular">("latest");
   const [toast, setToast] = useState("");
   const [toastTone, setToastTone] = useState<"default" | "scrap">("default");
   const [modal, setModal] = useState<ModalState>(null);
   const [selectedReason, setSelectedReason] = useState(REPORT_REASONS[0]);
   const [saving, setSaving] = useState(false);
+  const initialPostIdRef = useRef(initialPost?.id || null);
   const requestedPostIdsRef = useRef<Set<string>>(new Set());
   const loadedPostId = post?.id;
   useBodyScrollLock(Boolean(modal));
@@ -89,10 +99,17 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     setToast(message);
   };
 
+  const requireLoginForAction = async () => {
+    const user = await getCurrentUser().catch(() => null);
+    if (user?.authenticated) return true;
+    router.push("/login");
+    return false;
+  };
+
   useEffect(() => {
     if (requestedPostIdsRef.current.has(postId)) return;
     requestedPostIdsRef.current.add(postId);
-    getCommunityPost(postId)
+    getCommunityPost(postId, { incrementView: initialPostIdRef.current !== postId })
       .then((response) => {
         setPost(response.post);
         setBoardPage(response.boardPage || 1);
@@ -132,6 +149,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
 
   const toggleRecommend = async () => {
     if (!post) return;
+    if (!(await requireLoginForAction())) return;
     const previous = post;
     const enabled = !post.isRecommended;
     setPost({
@@ -150,6 +168,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
 
   const toggleScrap = async () => {
     if (!post) return;
+    if (!(await requireLoginForAction())) return;
     const previous = post;
     const enabled = !post.isScrapped;
     setPost({
@@ -170,6 +189,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   const submitComment = async (event: FormEvent) => {
     event.preventDefault();
     if (!post || !comment.trim() || saving) return;
+    if (!(await requireLoginForAction())) return;
     setSaving(true);
     try {
       const response = await createCommunityComment(post.id, comment);
@@ -199,7 +219,8 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     }
   };
 
-  const startReply = (comment: CommunityCommentDto) => {
+  const startReply = async (comment: CommunityCommentDto) => {
+    if (!(await requireLoginForAction())) return;
     setEditingCommentId(null);
     setEditingCommentText("");
     setOpenCommentMenuId(null);
@@ -234,6 +255,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   const submitReply = async (event: FormEvent) => {
     event.preventDefault();
     if (!post || !replyTarget || !replyText.trim() || saving) return;
+    if (!(await requireLoginForAction())) return;
     setSaving(true);
     try {
       const response = await createCommunityComment(post.id, replyText, replyTarget.commentId);
@@ -309,6 +331,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
 
   const reactComment = async (commentId: string, reactionType: "like" | "dislike") => {
     if (!post) return;
+    if (!(await requireLoginForAction())) return;
     try {
       const response = await setCommunityCommentReaction(commentId, reactionType);
       setPost((current) => current
@@ -319,8 +342,24 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
     }
   };
 
+  const openShareModal = async () => {
+    if (!(await requireLoginForAction())) return;
+    setModal({ type: "share" });
+  };
+
+  const openReportPostModal = async () => {
+    if (!(await requireLoginForAction())) return;
+    setModal({ type: "report-post" });
+  };
+
+  const openReportCommentModal = async (commentId: string) => {
+    if (!(await requireLoginForAction())) return;
+    setModal({ type: "report-comment", commentId });
+  };
+
   const shareWithKakao = async () => {
     if (!post) return;
+    if (!(await requireLoginForAction())) return;
     const url = getCommunityPostShareUrl(post.id, window.location.origin);
     const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY;
 
@@ -356,6 +395,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
   };
 
   const copyShareLink = async () => {
+    if (!(await requireLoginForAction())) return;
     await navigator.clipboard?.writeText(window.location.href);
     showToast("게시글 링크를 복사했습니다.");
     setModal(null);
@@ -363,6 +403,7 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
 
   const confirmReport = async () => {
     if (!post || !modal) return;
+    if (!(await requireLoginForAction())) return;
     try {
       if (modal.type === "report-post") {
         await reportCommunityPost(post.id, selectedReason);
@@ -429,11 +470,11 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                     <Image src={post.isScrapped ? "/community/bookmark-filled.svg" : "/community/bookmark-outline.svg"} alt="" width={24} height={24} />
                     스크랩
                   </button>
-                  <button type="button" onClick={() => setModal({ type: "share" })}>
+                  <button type="button" onClick={() => void openShareModal()}>
                     <Image src="/community/share.svg" alt="" width={24} height={24} />
                     공유
                   </button>
-                  <button type="button" onClick={() => setModal({ type: "report-post" })}>
+                  <button type="button" onClick={() => void openReportPostModal()}>
                     <Image src="/community/report.svg" alt="" width={24} height={24} />
                     신고
                   </button>
@@ -477,9 +518,9 @@ export function CommunityDetailPage({ postId }: { postId: string }) {
                       onToggleReplies={toggleReplies}
                       onReplyPageChange={setReplyPage}
                       onSubmitReply={submitReply}
-                      onReport={() => setModal({ type: "report-comment", commentId: item.id })}
+                      onReport={() => void openReportCommentModal(item.id)}
                       onDelete={() => setModal({ type: "delete-comment", commentId: item.id })}
-                      onReportReply={(commentId) => setModal({ type: "report-comment", commentId })}
+                      onReportReply={(commentId) => void openReportCommentModal(commentId)}
                       onDeleteReply={(commentId) => setModal({ type: "delete-comment", commentId })}
                       onReact={reactComment}
                     />

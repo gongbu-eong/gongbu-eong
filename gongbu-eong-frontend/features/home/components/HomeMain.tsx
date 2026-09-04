@@ -37,7 +37,7 @@ const aiTools = [
   {
     href: "/ai-tools/coaching",
     requiresAuth: true,
-    tag: "첫 1회 무료",
+    tag: "첫 5회 무료",
     memberTag: "첫 5회 무료 쿠폰 증정",
     title: "AI NCS 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",

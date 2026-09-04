@@ -51,12 +51,12 @@ export function getPublicSiteOrigin() {
 export function buildJobSeoDescription(job: JobPostingDetailDto) {
   return compactText(
     [
-      job.institutionName,
-      job.title,
+      `${job.institutionName} ${job.title} 공기업 채용공고`,
       job.region ? `근무지 ${job.region}` : "",
       job.employmentType ? `고용형태 ${job.employmentType}` : "",
       job.hiringCount != null ? `채용인원 ${job.hiringCount}명` : "",
       job.qualification,
+      "접수 기간, 지원 자격, 전형 절차 확인",
     ]
       .filter(Boolean)
       .join(". "),

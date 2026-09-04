@@ -27,7 +27,6 @@ export default function robots(): MetadataRoute.Robots {
         "/signup/",
         "/community/write",
         "/community/activity",
-        "/community/search",
         "/community/*/edit",
         "/test",
       ],

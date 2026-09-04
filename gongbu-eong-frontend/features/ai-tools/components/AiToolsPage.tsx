@@ -28,7 +28,7 @@ const representativeTools = [
   },
   {
     href: "/ai-tools/coaching",
-    badge: "첫 1회 무료",
+    badge: "첫 5회 무료",
     badgeTone: "green",
     title: "NCS AI 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",

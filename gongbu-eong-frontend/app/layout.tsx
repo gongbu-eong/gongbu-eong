@@ -7,7 +7,8 @@ import "./globals.css";
 
 const verificationOther: Record<string, string> = {};
 const siteTitle = "공부엉이";
-const siteDescription = "공기업 취준생의 합격 메이트";
+const siteDescription =
+  "공기업 채용공고, 채용 캘린더, 강점·성향 진단, NCS AI 자소서 코칭, 연봉·퇴직금·실업급여 계산기까지 공기업 취업 준비를 한 곳에서 확인하세요.";
 const siteImage = "/diagnosis-share-banner.png";
 
 if (process.env.NAVER_SITE_VERIFICATION) {

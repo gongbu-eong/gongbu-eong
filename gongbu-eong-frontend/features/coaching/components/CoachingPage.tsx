@@ -198,6 +198,7 @@ export function CoachingPage() {
         file,
         jobPostingId: connectedJob?.id,
         jobDuty: connectedJob?.duty,
+        diagnosisResultId: selectedDiagnosisId,
         questions: normalizedQuestions,
       });
       if (typeof result.creditBalance === "number") {

@@ -29,8 +29,9 @@ export function getCommunityPosts(args?: {
   return apiClient<CommunityListResponseDto>(`/api/community${query}`);
 }
 
-export function getCommunityPost(postId: string) {
-  return apiClient<CommunityDetailResponseDto>(`/api/community/${postId}`);
+export function getCommunityPost(postId: string, options?: { incrementView?: boolean }) {
+  const query = options?.incrementView === false ? "?view=false" : "";
+  return apiClient<CommunityDetailResponseDto>(`/api/community/${postId}${query}`);
 }
 
 export function createCommunityPost(input: {

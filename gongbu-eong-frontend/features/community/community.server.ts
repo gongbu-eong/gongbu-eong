@@ -1,4 +1,4 @@
-import type { CommunityListResponseDto } from "./community.dto";
+import type { CommunityDetailResponseDto, CommunityListResponseDto } from "./community.dto";
 import { fetchBackendJson } from "@/shared/server-data";
 
 export async function getCommunityPostsForServer(args?: {
@@ -34,4 +34,14 @@ export async function getCommunityPostsForServer(args?: {
         offset: args?.offset ?? 0,
       }) satisfies CommunityListResponseDto,
   );
+}
+
+export async function getCommunityPostForServer(
+  postId: string,
+  options?: { incrementView?: boolean },
+) {
+  const query = options?.incrementView ? "" : "?view=false";
+  return fetchBackendJson<CommunityDetailResponseDto>(
+    `/api/community/${encodeURIComponent(postId)}${query}`,
+  ).catch(() => null);
 }

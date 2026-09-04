@@ -23,7 +23,8 @@ export async function generateMetadata({
   if (!job) {
     return {
       title: "공고정보 | 공부엉이",
-      description: "공부엉이에서 공기업 채용공고 정보를 확인해 보세요.",
+      description:
+        "공기업 채용공고, 공공기관 채용 정보, 접수 기간, 지원 자격, 채용인원, 전형 절차를 공부엉이에서 확인하세요.",
       robots: {
         index: false,
         follow: false,

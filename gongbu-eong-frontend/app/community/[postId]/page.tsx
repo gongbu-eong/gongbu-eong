@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { CommunityDetailPage } from "@/features/community/components/CommunityDetailPage";
+import { getCommunityPostForServer } from "@/features/community/community.server";
 import {
   COMMUNITY_SHARE_DESCRIPTION,
   COMMUNITY_SHARE_IMAGE_HEIGHT,
@@ -9,7 +10,6 @@ import {
   getCommunityPostShareUrl,
   getCommunityShareImageUrl,
 } from "@/features/community/community-share";
-import { requireCommunityAuth } from "../requireCommunityAuth";
 
 export async function generateMetadata({
   params,
@@ -25,17 +25,24 @@ export async function generateMetadata({
   const requestOrigin = host ? `${protocol}://${host}` : undefined;
   const url = getCommunityPostShareUrl(postId, requestOrigin);
   const imageUrl = getCommunityShareImageUrl(requestOrigin);
+  const response = await getCommunityPostForServer(postId);
+  const post = response?.post;
+  const title = post?.title ? `${post.title} | 공부엉이` : COMMUNITY_SHARE_TITLE;
+  const description = post?.contentPreview || COMMUNITY_SHARE_DESCRIPTION;
 
   return {
-    title: COMMUNITY_SHARE_TITLE,
-    description: COMMUNITY_SHARE_DESCRIPTION,
+    title,
+    description,
     robots: {
-      index: false,
+      index: true,
       follow: true,
     },
+    alternates: {
+      canonical: url,
+    },
     openGraph: {
-      title: COMMUNITY_SHARE_TITLE,
-      description: COMMUNITY_SHARE_DESCRIPTION,
+      title,
+      description,
       url,
       siteName: "공부엉이",
       type: "article",
@@ -44,14 +51,14 @@ export async function generateMetadata({
           url: imageUrl,
           width: COMMUNITY_SHARE_IMAGE_WIDTH,
           height: COMMUNITY_SHARE_IMAGE_HEIGHT,
-          alt: COMMUNITY_SHARE_TITLE,
+          alt: post?.title || COMMUNITY_SHARE_TITLE,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: COMMUNITY_SHARE_TITLE,
-      description: COMMUNITY_SHARE_DESCRIPTION,
+      title,
+      description,
       images: [imageUrl],
     },
   };
@@ -62,7 +69,7 @@ export default async function CommunityDetailRoute({
 }: {
   params: Promise<{ postId: string }>;
 }) {
-  await requireCommunityAuth();
   const { postId } = await params;
-  return <CommunityDetailPage postId={postId} />;
+  const response = await getCommunityPostForServer(postId, { incrementView: true });
+  return <CommunityDetailPage postId={postId} initialPost={response?.post || null} initialBoardPage={response?.boardPage || 1} />;
 }

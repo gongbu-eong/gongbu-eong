@@ -6,14 +6,14 @@ import { canonicalUrl, SITE_NAME } from "@/shared/seo";
 export const metadata: Metadata = {
   title: "커뮤니티 | 공부엉이",
   description:
-    "공기업 취준생들의 자유글, 공시 정보, 공부·스터디, 질문·답변, 합격·면접 후기를 확인해 보세요.",
+    "공기업 취준생 커뮤니티, 공시 정보, 공부·스터디, 질문·답변, 합격 후기, 면접 후기, 채용 정보를 공부엉이에서 확인하세요.",
   alternates: {
     canonical: canonicalUrl("/community"),
   },
   openGraph: {
     title: "커뮤니티 | 공부엉이",
     description:
-      "공기업 취준생들이 나누는 정보와 질문, 합격·면접 후기 커뮤니티입니다.",
+      "공기업 취준생들이 나누는 공시 정보, 질문·답변, 합격 후기, 면접 후기 커뮤니티입니다.",
     url: canonicalUrl("/community"),
     siteName: SITE_NAME,
     type: "website",

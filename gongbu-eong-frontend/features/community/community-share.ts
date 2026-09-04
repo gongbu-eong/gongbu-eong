@@ -5,7 +5,7 @@ import {
 
 export const COMMUNITY_SHARE_TITLE = "공기업 합격의 시작, 공부엉이";
 export const COMMUNITY_SHARE_DESCRIPTION =
-  "강점·성향 진단부터 AI 자소서 코칭까지 공부엉이에서 준비해 보세요.";
+  "공기업 취준생 커뮤니티, 공시 정보, 공부·스터디, 질문·답변, 합격 후기, 면접 후기, 채용 정보를 공부엉이에서 확인하세요.";
 export const COMMUNITY_SHARE_IMAGE_WIDTH = 800;
 export const COMMUNITY_SHARE_IMAGE_HEIGHT = 400;
 

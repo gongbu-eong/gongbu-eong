@@ -1,8 +1,8 @@
 import { createCoachingRequest, createCoachingResult, findCoachingResult, listCoachingHistory } from "./coaching.repository";
-import type { CoachingFeedback, CoachingFramework, CoachingInputType, CoachingJobDto, CoachingQuestionInput, CoachingQuestionReview, CoachingReviewSeverity, CoachingSection, CoachingSubmissionReview } from "./coaching.dto";
+import type { CoachingDiagnosisDto, CoachingFeedback, CoachingFramework, CoachingInputType, CoachingJobDto, CoachingQuestionInput, CoachingQuestionReview, CoachingReviewSeverity, CoachingSection, CoachingSubmissionReview } from "./coaching.dto";
 import { extractResumeDocumentText } from "@/domains/resumes/resumes.ai";
 import { createOpenAiJsonResponse, getOpenAiModel, makeOpenAiFileDataUrl } from "@/lib/openai";
-export type CoachResumeArgs = { userId: string; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; job?: CoachingJobDto | null; jobDuty?: string | null; questions?: CoachingQuestionInput[]; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null };
+export type CoachResumeArgs = { userId: string; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; job?: CoachingJobDto | null; jobDuty?: string | null; diagnosis?: CoachingDiagnosisDto | null; questions?: CoachingQuestionInput[]; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null };
 
 export async function coachResume(args: CoachResumeArgs) {
   const prepared = await prepareCoachingSource(args);
@@ -15,7 +15,7 @@ export async function coachPreparedResume(
 ) {
   const requestId = await createCoachingRequest({ ...args, inputText: prepared.storageText, jobPostingId: args.job?.id, jobSnapshot: args.job ? { ...args.job, jobDuty: args.jobDuty || null, questions: args.questions || [] } as CoachingJobDto : null, sourceFilename: args.file?.name });
   const feedback = await requestAiFeedback(args, prepared);
-  const resultId = await createCoachingResult(requestId, feedback, getOpenAiModel());
+  const resultId = await createCoachingResult(requestId, feedback, getCoachingOpenAiModel());
   return { resultId, requestId, feedback };
 }
 
@@ -24,7 +24,7 @@ export { listCoachingHistory, findCoachingResult };
 export type PreparedCoachingSource = { content: Array<Record<string, unknown>>; storageText: string; originalText: string };
 
 export async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoachingSource> {
-  const prompt = buildPrompt(args.job, args.questions || [], args.jobDuty);
+  const prompt = buildPrompt(args.job, args.questions || [], args.jobDuty, args.diagnosis);
   if (args.inputType === "file" && args.file) {
     if (args.file.name.toLowerCase().endsWith(".pdf")) {
       return {
@@ -49,15 +49,25 @@ async function requestAiFeedback(args: CoachResumeArgs, prepared: PreparedCoachi
       content: prepared.content as Array<{ type: "input_text"; text: string } | { type: "input_file"; filename: string; file_data: string; detail?: "low" | "high" | "auto" }>,
       schemaName: "coaching_feedback",
       schema: coachingFeedbackTool.input_schema,
-      maxOutputTokens: 24000,
+      model: getCoachingOpenAiModel(),
+      maxOutputTokens: getCoachingMaxOutputTokens(),
     });
     const feedback = normalizeFeedback(payload, prepared.originalText, args.questions || []);
-    assertCompleteAiFeedback(feedback);
-    return feedback;
+    return ensureRenderableFeedback(feedback, prepared.originalText, args.questions || []);
   } catch (error) {
     console.error("Invalid coaching response payload", error);
     throw new Error("AI 자소서 코칭 결과를 해석하지 못했습니다. 다시 시도해 주세요.");
   }
+}
+
+function getCoachingOpenAiModel() {
+  return getOpenAiModel(process.env.OPENAI_COACHING_MODEL || process.env.GPT_COACHING_MODEL);
+}
+
+function getCoachingMaxOutputTokens() {
+  const configured = Number(process.env.OPENAI_COACHING_MAX_OUTPUT_TOKENS);
+  if (Number.isFinite(configured) && configured > 0) return Math.round(configured);
+  return 24000;
 }
 
 const coachingFeedbackTool = {
@@ -163,12 +173,24 @@ const coachingFeedbackTool = {
   },
 } as const;
 
-function buildPrompt(job?: CoachingJobDto | null, questions: CoachingQuestionInput[] = [], jobDuty?: string | null) {
+function buildPrompt(job?: CoachingJobDto | null, questions: CoachingQuestionInput[] = [], jobDuty?: string | null, diagnosis?: CoachingDiagnosisDto | null) {
   const duty = jobDuty?.trim() ? `\n사용자가 이 공고에서 지원하려는 직무: ${jobDuty.trim()}` : "";
+  const diagnosisGuide = diagnosis ? `
+
+사용자가 선택한 강점·성향 진단 결과입니다. 이 정보는 코칭 판단에 반드시 반영하세요.
+- 진단 결과 ID: ${diagnosis.id}
+- 유형: ${diagnosis.typeName} (${diagnosis.typeCode})
+- 완료일: ${diagnosis.completedAt}
+- 요약: ${diagnosis.summary || "요약 없음"}
+- 강점: ${diagnosis.strengths.length ? diagnosis.strengths.join(", ") : "강점 정보 없음"}
+- 보완점: ${diagnosis.weaknesses.length ? diagnosis.weaknesses.join(", ") : "보완점 정보 없음"}
+- 성향 축 점수: 안정 ${diagnosis.axisScores.stability}, 협업 ${diagnosis.axisScores.teamwork}, 실행 ${diagnosis.axisScores.execution}, 원칙 ${diagnosis.axisScores.principle}
+진단 결과와 자소서 원문이 서로 맞는지, 강점이 문항 안에서 설득력 있게 드러나는지, 약점이 불필요하게 노출되는 표현이 있는지 함께 평가하세요.` : "";
   const questionGuide = questions.length
     ? `\n\n사용자가 입력한 자소서 문항과 글자 수 제한입니다. submissionReview.questions는 반드시 이 순서와 개수 그대로 반환하세요.\n${questions.map((item, index) => `${index + 1}. 문항: ${item.question || "문항 미입력"} / 글자 수 제한: ${item.characterLimit || "없음"}`).join("\n")}`
     : "\n\n사용자가 별도 문항을 입력하지 않았습니다. submissionReview.questions에는 제출 원문 전체를 하나의 일반 문항으로 분석한 항목 1개를 반환하세요.";
   return `한국어 NCS 자기소개서 코치입니다. ${job ? `지원 공고: ${job.institutionName} / ${job.title}` : "지원 공고가 없는 일반 코칭"} 기준으로 제출 자소서를 분석하세요.${duty}
+${diagnosisGuide}
 
 반드시 지정된 JSON 스키마에 맞는 JSON 객체 하나로만 결과를 제출하세요. markdown, 코드블록, 설명 문장은 금지합니다.
 JSON이 길어져 중간에 끊기지 않도록 모든 문장은 간결하게 작성하세요. 같은 원문 문단을 여러 필드에 반복해서 길게 복사하지 마세요.
@@ -270,7 +292,7 @@ function normalizeFeedback(value: Partial<CoachingFeedback>, sourceText = "", qu
     const edits = ensureBalancedSentenceEdits(title, takeUniqueEdits(normalizeSentenceEdits(item?.sentenceEdits), usedEditTexts, 5), originalTextExcerpt, usedEditTexts);
     return { title, status: normalizeStatus(item?.status), feedback, suggestion, sentenceEdits: edits.length ? edits : makeSectionFallbackEdits(title, originalTextExcerpt, feedback, suggestion, usedEditTexts), example: readString(item?.example) };
   });
-  const rewrittenText = readString(value.rewrittenText) || sections.map((item) => item.example).filter(Boolean).join("\n\n");
+  const rewrittenText = readString(value.rewrittenText) || makeFallbackRewrittenText(originalTextExcerpt, sections);
   const evaluationScores = normalizeEvaluationScores(value.evaluationScores, score);
   const submissionReview = normalizeSubmissionReview(value.submissionReview, sourceText || originalTextExcerpt, questions, [...jobConnection.sentenceEdits || [], ...sections.flatMap((item) => item.sentenceEdits || [])]);
   return { score, summary: readString(value.summary) || "자소서의 흐름과 직무 연결을 중심으로 코칭했어요.", originalTextExcerpt, evaluationScores, detailEvaluation: normalizeStringList(value.detailEvaluation), jobConnection, questionFeedback, improvementSuggestions: normalizeStringList(value.improvementSuggestions), sentenceEdits: globalEdits, sections, rewrittenText, submissionReview };
@@ -347,7 +369,7 @@ function normalizeQuestionHighlights(value: unknown, answer: string, fallbackEdi
   if (picked.length) {
     return picked.map((edit) => ({ original: edit.original, severity: edit.good ? "keep" as const : "fix" as const, label: edit.good ? "그대로 두세요" : "고치면 좋은 곳", note: edit.reason }));
   }
-  const sentences = answer.split(/\n|(?<=[.!?。])\s+/).map((item) => item.trim()).filter((item) => item.length >= 10);
+  const sentences = answer.split(/\n|(?<=[.!?。])\s+/).map((item) => item.trim()).filter(Boolean);
   return sentences.slice(0, 2).map((sentence, idx) => ({ original: sentence.slice(0, 120), severity: idx === 0 ? "fix" as const : "keep" as const, label: idx === 0 ? "고치면 좋은 곳" : "그대로 두세요", note: idx === 0 ? "더 구체적인 근거를 붙이면 좋아요." : "지원자의 태도가 드러나는 표현입니다." }));
 }
 
@@ -684,10 +706,11 @@ function makeSectionFallbackEdits(title: string, originalTextExcerpt: string, fe
 }
 
 function makeFallbackEdit(title: string, originalTextExcerpt: string, used: Set<string>, good: boolean, reason = "") {
+  const excerpt = originalTextExcerpt.trim();
   const sentences = originalTextExcerpt
     .split(/\n|(?<=[.!?。])\s+/)
     .map((item) => item.replace(/^[-•\d.\s]+/, "").trim())
-    .filter((item) => item.length >= 12);
+    .filter(Boolean);
   const patterns: Record<string, RegExp> = {
     "직무 연결성": /자격|직무|업무|공고|경력|전기|소방|기계|시설|관리|점검|분석|수행/,
     "지원동기": /지원|동기|관심|기관|회사|직무|선택|기여|공공|안전/,
@@ -698,16 +721,26 @@ function makeFallbackEdit(title: string, originalTextExcerpt: string, used: Set<
     ...sentences.filter((item) => patterns[title]?.test(item)),
     ...sentences,
   ];
-  const picked = candidates.find((item) => !used.has(item.replace(/\s+/g, " ").trim()));
+  const picked = candidates.find((item) => !used.has(item.replace(/\s+/g, " ").trim())) || candidates[0] || excerpt;
   if (!picked) return null;
   const original = picked.slice(0, 180);
   used.add(picked.replace(/\s+/g, " ").trim());
   return {
     original,
-    improved: good ? "이 표현은 지원자의 태도나 경험을 보여주므로 유지하되, 직무와의 연결을 한 문장 더 보강하면 좋습니다." : "",
+    improved: good
+      ? "이 표현은 유지하되, 지원 직무와 연결되는 경험과 결과를 한 문장 더 보강하면 좋습니다."
+      : "지원 직무와 연결되는 구체적인 경험, 맡은 역할, 행동, 결과를 추가해 주세요.",
     reason: reason || (good ? "지원자의 강점이 드러나는 표현입니다." : "공고와 연결되는 근거를 더 구체화할 수 있는 표현입니다."),
     good,
   };
+}
+
+function makeFallbackRewrittenText(originalTextExcerpt: string, sections: CoachingSection[]) {
+  const exampleText = sections.map((item) => item.example).filter(Boolean).join("\n\n").trim();
+  if (exampleText) return exampleText;
+  const excerpt = originalTextExcerpt.trim();
+  if (!excerpt) return "제출한 자소서 원문을 확인하지 못해 개선 문장을 생성하지 못했습니다.";
+  return "입력하신 내용만으로는 지원동기, 경험, 성과를 충분히 판단하기 어렵습니다. 지원 직무와 연결되는 경험, 맡은 역할, 구체적인 행동, 결과를 중심으로 자소서를 다시 구성해 보세요.";
 }
 
 function normalizeStatus(value: unknown): "good" | "needs_work" {
@@ -730,13 +763,40 @@ function limitStoredInput(value: string) {
   return value.trim().slice(0, 10000);
 }
 
-function assertCompleteAiFeedback(feedback: CoachingFeedback) {
+function ensureRenderableFeedback(feedback: CoachingFeedback, sourceText: string, questions: CoachingQuestionInput[]) {
+  const originalTextExcerpt =
+    feedback.originalTextExcerpt?.trim() ||
+    makeOriginalExcerpt(sourceText) ||
+    "입력한 자소서 내용이 충분하지 않아 구체적인 경험과 성과를 확인하기 어렵습니다.";
+  const usedEditTexts = new Set<string>();
+  const ensureSection = (section: CoachingSection | undefined, title: string) => {
+    const base: CoachingSection = {
+      title,
+      status: section?.status || "needs_work",
+      feedback: section?.feedback || defaultSectionFeedback(title),
+      suggestion: section?.suggestion || defaultSectionSuggestion(title),
+      sentenceEdits: section?.sentenceEdits || [],
+      example: section?.example,
+    };
+    if (!base.sentenceEdits?.length) {
+      base.sentenceEdits = makeSectionFallbackEdits(title, originalTextExcerpt, base.feedback, base.suggestion || "", usedEditTexts);
+    }
+    return base;
+  };
   const requiredSections = ["지원동기", "경험 서술", "입사 후 포부"];
-  const missingSectionEdit = requiredSections.some((title) => {
-    const section = feedback.sections.find((item) => item.title === title);
-    return !section?.sentenceEdits?.length;
-  });
-  if (!feedback.originalTextExcerpt?.trim() || !feedback.rewrittenText?.trim() || !feedback.jobConnection?.sentenceEdits?.length || missingSectionEdit) {
-    throw new Error("Incomplete coaching feedback");
-  }
+  const jobConnection = ensureSection(feedback.jobConnection, "직무 연결성");
+  const sections = requiredSections.map((title) => ensureSection(feedback.sections.find((item) => item.title === title), title));
+  const fallbackEdits = [...jobConnection.sentenceEdits || [], ...sections.flatMap((item) => item.sentenceEdits || [])];
+  const submissionReview = feedback.submissionReview?.questions?.length
+    ? feedback.submissionReview
+    : normalizeSubmissionReview(null, sourceText || originalTextExcerpt, questions, fallbackEdits);
+
+  return {
+    ...feedback,
+    originalTextExcerpt,
+    jobConnection,
+    sections,
+    rewrittenText: feedback.rewrittenText?.trim() || makeFallbackRewrittenText(originalTextExcerpt, sections),
+    submissionReview,
+  };
 }

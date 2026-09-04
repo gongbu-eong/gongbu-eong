@@ -1,6 +1,6 @@
 export const DIAGNOSIS_SHARE_TITLE = "공기업 합격의 시작, 공부엉이";
 export const DIAGNOSIS_SHARE_DESCRIPTION =
-  "강점·성향 진단부터 AI 자소서 코칭까지 공부엉이에서 준비해 보세요.";
+  "공기업 취업 성향 테스트, 강점·성향 진단, 직무 성향 분석, 추천 공고, NCS AI 자소서 코칭까지 공부엉이에서 확인하세요.";
 export const DIAGNOSIS_SHARE_IMAGE_WIDTH = 800;
 export const DIAGNOSIS_SHARE_IMAGE_HEIGHT = 400;
 
