@@ -564,13 +564,13 @@ const ignoreClickAfterDrag = (
         </div>
 
         <div className={styles.communityBand}>
-          <SectionHeader title="커뮤니티" href={user ? "/community" : "/login"} />
+          <SectionHeader title="커뮤니티" href="/community" />
           <div className={styles.listGroup}>
             {communityPreview.map((post) => (
               <HomeCommunityCard
                 key={post.id}
                 post={post}
-                href={user ? `/community/${post.id}` : "/login"}
+                href={`/community/${post.id}`}
               />
             ))}
             {!communityPreview.length ? (
