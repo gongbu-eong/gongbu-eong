@@ -52,6 +52,38 @@ export async function upsertOAuthUser(args: {
   try {
     await client.query("BEGIN");
 
+    const restrictedIdentity = await client.query<LoginGuardUserRow>(
+      `
+        SELECT
+          COALESCE(restrictions.user_id, users.id) AS id,
+          restrictions.status,
+          CASE
+            WHEN restrictions.status = 'blocked' THEN restrictions.restricted_until
+            ELSE users.blocked_until
+          END AS blocked_until,
+          CASE
+            WHEN restrictions.status = 'withdrawn' THEN restrictions.restricted_until
+            ELSE users.rejoin_blocked_until
+          END AS rejoin_blocked_until
+        FROM public.oauth_login_restrictions restrictions
+        LEFT JOIN public.users users
+          ON users.id = restrictions.user_id
+        WHERE restrictions.provider = $1::public.oauth_provider
+          AND (
+            restrictions.provider_user_id = $2
+            OR ($3::citext IS NOT NULL AND restrictions.provider_email = $3::citext)
+          )
+        ORDER BY restrictions.updated_at DESC
+        LIMIT 1
+      `,
+      [
+        args.profile.provider,
+        args.profile.providerUserId,
+        args.profile.email || null,
+      ],
+    );
+    await ensureOAuthLoginAllowed(client, restrictedIdentity.rows[0]);
+
     const linkedUser = await client.query<LoginGuardUserRow>(
       `
         SELECT
@@ -288,6 +320,32 @@ export async function upsertOAuthUser(args: {
       );
     }
 
+    if (!userId) {
+      const conflictingAccount = await client.query<{
+        user_id: string;
+        user_status: UserStatus;
+      }>(
+        `
+          SELECT
+            accounts.user_id,
+            users.status AS user_status
+          FROM public.user_oauth_accounts accounts
+          JOIN public.users users
+            ON users.id = accounts.user_id
+          WHERE accounts.provider = $1::public.oauth_provider
+            AND accounts.provider_user_id = $2
+          LIMIT 1
+        `,
+        [args.profile.provider, args.profile.providerUserId],
+      );
+
+      if (conflictingAccount.rows[0]) {
+        throw new Error(
+          "OAuth 계정이 이미 다른 회원에게 연결되어 있어 신규 가입을 진행할 수 없습니다.",
+        );
+      }
+    }
+
     await client.query(
       `
         INSERT INTO public.user_sessions (
@@ -465,6 +523,14 @@ async function ensureOAuthLoginAllowed(
         `,
         [user.id],
       );
+      await client.query(
+        `
+          DELETE FROM public.oauth_login_restrictions
+          WHERE user_id = $1::uuid
+            AND status = 'blocked'
+        `,
+        [user.id],
+      );
       return;
     }
 
@@ -488,6 +554,14 @@ async function ensureOAuthLoginAllowed(
             sanction_updated_at = NOW(),
             updated_at = NOW()
           WHERE id = $1::uuid
+            AND status = 'withdrawn'
+        `,
+        [user.id],
+      );
+      await client.query(
+        `
+          DELETE FROM public.oauth_login_restrictions
+          WHERE user_id = $1::uuid
             AND status = 'withdrawn'
         `,
         [user.id],
