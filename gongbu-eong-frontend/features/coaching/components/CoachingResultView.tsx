@@ -7,11 +7,14 @@ import type { CoachingFeedback, CoachingFramework, CoachingHistoryItem, Coaching
 import styles from "./CoachingPage.module.css";
 
 type ResultSource = {
+  id?: string;
   inputType: "text" | "file";
   inputText: string;
   sourceFilename: string | null;
   job: CoachingHistoryItem["job"];
   result: CoachingFeedback;
+  isLocked?: boolean;
+  anonymousId?: string | null;
 };
 
 export function CoachingResultView({ item }: { item: ResultSource }) {
@@ -23,7 +26,9 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
   const questionTabsDragRef = useRef({ active: false, moved: false, scrollLeft: 0, startX: 0, suppressClick: false, targetIndex: null as number | null });
   const result = item.result;
   const review = makeSubmissionReview(result, item);
-  const selectedQuestion = review.questions[selectedQuestionIndex] || review.questions[0];
+  const isLocked = Boolean(item.isLocked);
+  const effectiveQuestionIndex = isLocked ? 0 : selectedQuestionIndex;
+  const selectedQuestion = review.questions[effectiveQuestionIndex] || review.questions[0];
   const subtitle = item.job?.institutionName ? `${item.job.institutionName} · NCS 분석 + AI 첨삭` : "NCS 분석 + AI 첨삭";
   const selectQuestion = (index: number) => {
     setSelectedQuestionIndex(index);
@@ -107,46 +112,50 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
       </section>
 
       {selectedQuestion ? <section className={styles.figmaQuestionArea}>
-        <h2>{selectedQuestionIndex + 1}. {selectedQuestion.tabTitle || makeTabTitle(selectedQuestion.question)}</h2>
+        <h2>{effectiveQuestionIndex + 1}. {selectedQuestion.tabTitle || makeTabTitle(selectedQuestion.question)}</h2>
         <article className={styles.figmaQuestionCard}>
-          <div className={styles.figmaQuestionMark}>Q{selectedQuestionIndex + 1}</div>
+          <div className={styles.figmaQuestionMark}>Q{effectiveQuestionIndex + 1}</div>
           <strong>{selectedQuestion.question}</strong>
           <div>
             {getNcsBadges(selectedQuestion).map((badge) => <span key={badge}>{badge}</span>)}
           </div>
         </article>
         <div className={styles.figmaDetailCard}>
-          <NcsEvaluation question={selectedQuestion} />
-          <CoachingPoints question={selectedQuestion} />
-          <StructureChecks question={selectedQuestion} />
-          <section className={styles.revisionSection}>
-            <h2>AI 첨삭 제안</h2>
-            <p>핵심 메시지는 유지하고, 문항 의도와 NCS 기준에 맞춰 표현을 정리했어요.</p>
-            <p className={styles.figmaRevisionNote}>새로운 경험·수치·성과는 임의로 추가하지 않았습니다.</p>
-            <div className={styles.revisionTabs}>
-              <button type="button" className={revisionMode === "original" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("original")}>원문</button>
-              <button type="button" className={revisionMode === "compare" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("compare")}>비교</button>
-            </div>
-            {revisionMode === "original" ? (
-              <OriginalTextPanel
-                text={selectedQuestion.answer}
-                compareOriginals={getComparisonItems(selectedQuestion).map((item) => item.original)}
-                expanded={originalExpanded}
-                onToggle={() => setOriginalExpanded((value) => !value)}
-              />
-            ) : <ComparisonList question={selectedQuestion} />}
-            <MetaReview question={selectedQuestion} />
-          </section>
+          <NcsEvaluation question={selectedQuestion} locked={isLocked} />
+          {isLocked ? <LockedResultGate resultId={item.id} anonymousId={item.anonymousId} /> : <>
+            <CoachingPoints question={selectedQuestion} />
+            <StructureChecks question={selectedQuestion} />
+            <section className={styles.revisionSection}>
+              <h2>AI 첨삭 제안</h2>
+              <p>핵심 메시지는 유지하고, 문항 의도와 NCS 기준에 맞춰 표현을 정리했어요.</p>
+              <p className={styles.figmaRevisionNote}>새로운 경험·수치·성과는 임의로 추가하지 않았습니다.</p>
+              <div className={styles.revisionTabs}>
+                <button type="button" className={revisionMode === "original" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("original")}>원문</button>
+                <button type="button" className={revisionMode === "compare" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("compare")}>비교</button>
+              </div>
+              {revisionMode === "original" ? (
+                <OriginalTextPanel
+                  text={selectedQuestion.answer}
+                  compareOriginals={getComparisonItems(selectedQuestion).map((entry) => entry.original)}
+                  expanded={originalExpanded}
+                  onToggle={() => setOriginalExpanded((value) => !value)}
+                />
+              ) : <ComparisonList question={selectedQuestion} />}
+              <MetaReview question={selectedQuestion} />
+            </section>
+          </>}
         </div>
-        <OverallAssessment assessment={review.overallAssessment} />
-        <section className={styles.figmaScoreNotice}>
-          ※ 점수는 공식 NCS 채점 점수가 아니라, 2026 NCS 직업공통능력을 참고해 자기소개서 표현 수준을 분석한 서비스용 AI 참고 점수입니다.
-        </section>
+        {!isLocked ? <>
+          <OverallAssessment assessment={review.overallAssessment} />
+          <section className={styles.figmaScoreNotice}>
+            ※ 점수는 공식 NCS 채점 점수가 아니라, 2026 NCS 직업공통능력을 참고해 자기소개서 표현 수준을 분석한 서비스용 AI 참고 점수입니다.
+          </section>
+        </> : null}
       </section> : null}
 
-      <div className={styles.resultActions}>
+      {!isLocked ? <div className={styles.resultActions}>
         <button type="button" onClick={() => router.push("/ai-tools/coaching")}>다시 코칭받기</button>
-      </div>
+      </div> : null}
     </main>
     <AppFooter active="ai" />
   </div>;
@@ -177,12 +186,52 @@ function EvaluationBars({ scores }: { scores: CoachingFeedback["evaluationScores
   </section>;
 }
 
-function NcsEvaluation({ question }: { question: CoachingQuestionReview }) {
+function NcsEvaluation({ question, locked = false }: { question: CoachingQuestionReview; locked?: boolean }) {
   const items = question.ncsEvaluations?.length ? question.ncsEvaluations : [{ name: "NCS 역량", comment: "문항 내용을 기준으로 AI가 판단한 역량입니다.", score: 70 }];
   return <section className={styles.ncsEvaluationBlock}>
     <h2>NCS 기준 평가</h2>
-    {items.slice(0, 2).map((item) => <article key={item.name}><div><strong>{item.name}</strong><span>{Math.round(item.score)}</span></div><p>{item.comment}</p></article>)}
+    {items.slice(0, locked ? 1 : 2).map((item) => {
+      const sentence = splitFirstSentence(item.comment);
+      return <article key={item.name}>
+        <div><strong>{item.name}</strong><span>{Math.round(item.score)}</span></div>
+        {locked ? <p className={styles.lockedNcsComment}><span>{sentence.visible}</span>{sentence.blurred ? <span aria-hidden="true">{sentence.blurred}</span> : null}</p> : <p>{item.comment}</p>}
+      </article>;
+    })}
   </section>;
+}
+
+function LockedResultGate({ resultId, anonymousId }: { resultId?: string; anonymousId?: string | null }) {
+  return <section className={styles.lockedResultGate}>
+    <strong>회원가입하고<br />AI NCS 자소서 코칭 결과를<br />끝까지 확인하세요.</strong>
+    <a href={makeSignupGateUrl(resultId, anonymousId)}>10초 만에 회원가입하기</a>
+  </section>;
+}
+
+function splitFirstSentence(value: string) {
+  const text = value.trim();
+  if (!text) return { visible: "", blurred: "" };
+  const match = text.match(/^(.+?[.!?。]|.+?[다요죠니다][.!?]?)\s*(.*)$/);
+  if (!match) {
+    const characters = Array.from(text);
+    return {
+      visible: characters.slice(0, 35).join(""),
+      blurred: characters.slice(35).join(""),
+    };
+  }
+  return {
+    visible: match[1],
+    blurred: match[2] || "",
+  };
+}
+
+function makeSignupGateUrl(resultId?: string, anonymousId?: string | null) {
+  const returnTo = resultId ? `/ai-tools/coaching/result/${resultId}` : "/ai-tools/coaching";
+  const params = new URLSearchParams({
+    returnTo,
+    entrySource: "ai_tools",
+  });
+  if (anonymousId) params.set("anonymousId", anonymousId);
+  return `/login?${params.toString()}`;
 }
 
 function CoachingPoints({ question }: { question: CoachingQuestionReview }) {

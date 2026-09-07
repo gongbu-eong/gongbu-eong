@@ -97,7 +97,8 @@ export function AiJobToolsPage({
   return (
     <main className={styles.page}>
       <section className={styles.mobileFrame} aria-label="공부엉이의 취업 도구">
-        <AppHeader user={authResolved ? user : undefined} ticketCount={user?.creditBalance} />
+        <AppHeader user={authResolved ? user : undefined} />
+        {/* <AppHeader user={authResolved ? user : undefined} ticketCount={user?.creditBalance} /> */}
         <div className={styles.content}>
           <h1 className={styles.pageTitle}>공부엉이의 취업 도구</h1>
           <nav className={styles.tabs} aria-label="취업 도구 선택">

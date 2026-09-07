@@ -108,4 +108,6 @@ export type CoachingHistoryDto = {
   inputText: string;
   job: CoachingJobDto | null;
   result: CoachingFeedback | null;
+  isAnonymous?: boolean;
+  isLocked?: boolean;
 };

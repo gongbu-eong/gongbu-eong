@@ -1,7 +1,7 @@
 import { getSessionUser, requireSessionUser } from "@/domains/auth/session";
-import {
-  grantCommunityActivityMilestoneReward,
-} from "@/domains/credits/credits.repository";
+// import {
+//   grantCommunityActivityMilestoneReward,
+// } from "@/domains/credits/credits.repository";
 import { notifyCommunityComment } from "@/domains/notifications/notifications.repository";
 import type { NextRequest } from "next/server";
 import {
@@ -122,15 +122,17 @@ export async function saveCommunityPost(
     throw error;
   }
 
-  const creditReward = !postId
-    ? await grantCommunityActivityMilestoneReward(user.id, {
-        type: "post",
-        id: savedPostId,
-      }).catch((error) => {
-        console.error("[Community] post credit reward failed", error);
-        return null;
-      })
-    : null;
+  // 진단권 지급 로직 비활성화: 커뮤니티 글 작성 보상을 지급하지 않습니다.
+  // const creditReward = !postId
+  //   ? await grantCommunityActivityMilestoneReward(user.id, {
+  //       type: "post",
+  //       id: savedPostId,
+  //     }).catch((error) => {
+  //       console.error("[Community] post credit reward failed", error);
+  //       return null;
+  //     })
+  //   : null;
+  const creditReward = null;
 
   return {
     ok: true,
@@ -222,13 +224,15 @@ export async function saveCommunityComment(request: NextRequest, postId: string)
     throw error;
   }
 
-  const creditReward = await grantCommunityActivityMilestoneReward(user.id, {
-    type: "comment",
-    id: commentId,
-  }).catch((error) => {
-    console.error("[Community] comment credit reward failed", error);
-    return null;
-  });
+  // 진단권 지급 로직 비활성화: 커뮤니티 댓글/답글 작성 보상을 지급하지 않습니다.
+  // const creditReward = await grantCommunityActivityMilestoneReward(user.id, {
+  //   type: "comment",
+  //   id: commentId,
+  // }).catch((error) => {
+  //   console.error("[Community] comment credit reward failed", error);
+  //   return null;
+  // });
+  const creditReward = null;
 
   await notifyCommunityComment(commentId, { replyTargetCommentId: parentCommentId }).catch((error) => {
     console.error("[Community] comment notification failed", error);

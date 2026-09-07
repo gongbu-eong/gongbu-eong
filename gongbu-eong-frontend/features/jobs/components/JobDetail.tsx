@@ -44,6 +44,7 @@ export function JobDetail({
     useState(false);
   const [preferenceExpanded, setPreferenceExpanded] = useState(false);
   const [processExpanded, setProcessExpanded] = useState(false);
+  const [coachingBannerExpanded, setCoachingBannerExpanded] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -82,6 +83,17 @@ export function JobDetail({
       mounted = false;
     };
   }, [initialJob, jobId]);
+
+  const toggleCoachingBanner = () => {
+    const willExpand = !coachingBannerExpanded;
+    setCoachingBannerExpanded(willExpand);
+
+    if (willExpand) {
+      window.requestAnimationFrame(() => {
+        window.scrollBy({ top: 114, behavior: "smooth" });
+      });
+    }
+  };
 
   const toggleBookmark = async () => {
     if (!job) return;
@@ -249,6 +261,55 @@ export function JobDetail({
 
               {job.additionalNotice ? <RichText value={job.additionalNotice} /> : null}
             </article>
+            <div
+              className={`${styles.coachingBannerSpacer} ${
+                coachingBannerExpanded
+                  ? styles.coachingBannerSpacerExpanded
+                  : ""
+              }`}
+              aria-hidden="true"
+            />
+
+            <div
+              className={`${styles.coachingBannerDock} ${
+                coachingBannerExpanded ? styles.coachingBannerDockExpanded : ""
+              }`}
+            >
+              <button
+                type="button"
+                className={styles.coachingBannerToggle}
+                aria-label={
+                  coachingBannerExpanded
+                    ? "AI 자소서 코칭 배너 접기"
+                    : "AI 자소서 코칭 배너 펼치기"
+                }
+                aria-expanded={coachingBannerExpanded}
+                onClick={toggleCoachingBanner}
+              >
+                {coachingBannerExpanded ? "▼" : "▲"}
+              </button>
+              <div className={styles.coachingBannerViewport}>
+                <Link
+                  href="/ai-tools/coaching"
+                  className={styles.coachingBanner}
+                >
+                  <span className={styles.coachingBannerText}>
+                    <strong>
+                      자소서 첨삭비 <b>10만 원?</b> 지금은 <em>0원</em>
+                    </strong>
+                    <small>AI NCS 코칭으로 무료로 합격 문장 받기.</small>
+                  </span>
+                  <Image
+                    src="/jobs/detail/coaching-banner-owl.png"
+                    alt=""
+                    width={91}
+                    height={86}
+                    className={styles.coachingBannerOwl}
+                    unoptimized
+                  />
+                </Link>
+              </div>
+            </div>
 
             <div className={styles.actionBar}>
               <button

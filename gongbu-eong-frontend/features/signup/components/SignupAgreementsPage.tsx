@@ -104,10 +104,12 @@ export function SignupAgreementsPage() {
       });
       const redirectUrl = new URL(nextPath, window.location.origin);
 
-      if (response.welcomeCreditsGranted) {
-        redirectUrl.searchParams.set("ticketReward", "welcome");
-        redirectUrl.searchParams.set("ticketAmount", "5");
-      }
+      // 진단권 첫 가입 지급 alert 로직 비활성화.
+      void response;
+      // if (response.welcomeCreditsGranted) {
+      //   redirectUrl.searchParams.set("ticketReward", "welcome");
+      //   redirectUrl.searchParams.set("ticketAmount", "5");
+      // }
 
       navigateToNext(
         isExternalUrl(nextPath)

@@ -6,6 +6,7 @@ import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCoachingResult } from "@/features/coaching/coaching.api";
 import type { CoachingHistoryItem } from "@/features/coaching/coaching.dto";
 import { CoachingResultView } from "@/features/coaching/components/CoachingResultView";
+import { getAnonymousId } from "@/shared/session/anonymous-id";
 import styles from "@/features/coaching/components/CoachingPage.module.css";
 
 export default function CoachingResultPage() {
@@ -15,12 +16,13 @@ export default function CoachingResultPage() {
 
   useEffect(() => {
     if (!params.resultId) return;
-    getCoachingResult(params.resultId)
+    const anonymousId = getAnonymousId();
+    getCoachingResult(params.resultId, anonymousId)
       .then((response) => setItem(response.item))
       .catch((caught) => setError(caught instanceof Error ? caught.message : "결과를 불러오지 못했습니다."));
   }, [params.resultId]);
 
-  if (item?.result) return <CoachingResultView item={{ inputType: item.inputType, inputText: item.inputText, sourceFilename: item.sourceFilename, job: item.job, result: item.result }} />;
+  if (item?.result) return <CoachingResultView item={{ id: item.id, inputType: item.inputType, inputText: item.inputText, sourceFilename: item.sourceFilename, job: item.job, result: item.result, isLocked: item.isLocked, anonymousId: getAnonymousId() }} />;
 
   return <div className={styles.page}>
     <AppHeader />

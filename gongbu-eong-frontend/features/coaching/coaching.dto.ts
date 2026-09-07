@@ -47,5 +47,11 @@ export type CoachingFeedback = {
 };
 export type CoachingSentenceEdit = { original: string; improved: string; reason: string; good?: boolean };
 export type CoachingSection = { title: string; status?: "good" | "needs_work"; feedback: string; suggestion?: string; sentenceEdits?: CoachingSentenceEdit[]; example?: string };
-export type CoachingJob = { id: string; institutionName: string; title: string; applicationEndAt: string | null };
-export type CoachingHistoryItem = { id: string; requestId: string; createdAt: string; inputType: "text" | "file"; sourceFilename: string | null; inputText: string; job: CoachingJob | null; result: CoachingFeedback | null };
+export type CoachingJob = {
+  id: string;
+  institutionName: string;
+  title: string;
+  applicationEndAt: string | null;
+  isManual?: boolean;
+};
+export type CoachingHistoryItem = { id: string; requestId: string; createdAt: string; inputType: "text" | "file"; sourceFilename: string | null; inputText: string; job: CoachingJob | null; result: CoachingFeedback | null; isAnonymous?: boolean; isLocked?: boolean };

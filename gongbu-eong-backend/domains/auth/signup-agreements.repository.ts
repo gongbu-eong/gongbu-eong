@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { grantWelcomeSignupCredits } from "@/domains/credits/credits.repository";
+// import { grantWelcomeSignupCredits } from "@/domains/credits/credits.repository";
 import {
   SIGNUP_AGREEMENT_VERSION,
   SIGNUP_CONSENT_KEYS,
@@ -134,14 +134,20 @@ export async function completeSignupAgreements(
       [userId, input.marketingAgreed],
     );
 
-    const shouldGrantWelcomeCredits = !userResult.rows[0].signup_completed_at;
-    const welcomeCredits = shouldGrantWelcomeCredits
-      ? await grantWelcomeSignupCredits(client, userId)
-      : {
-          granted: false,
-          balanceAfter: 0,
-          reason: "already_completed" as const,
-        };
+    // 진단권 지급 로직 비활성화: 첫 가입 시 무료 진단권을 지급하지 않습니다.
+    // const shouldGrantWelcomeCredits = !userResult.rows[0].signup_completed_at;
+    // const welcomeCredits = shouldGrantWelcomeCredits
+    //   ? await grantWelcomeSignupCredits(client, userId)
+    //   : {
+    //       granted: false,
+    //       balanceAfter: 0,
+    //       reason: "already_completed" as const,
+    //     };
+    const welcomeCredits = {
+      granted: false,
+      balanceAfter: 0,
+      reason: userResult.rows[0].signup_completed_at ? "already_completed" : "disabled",
+    };
 
     await client.query("COMMIT");
     return {

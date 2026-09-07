@@ -1,22 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { getCurrentUser, getJobPostings } from "@/features/home/home.api";
-import { getDiagnosisResultHistory, selectDiagnosisResult } from "@/features/diagnosis/diagnosis.api";
+import { getJobPostings } from "@/features/home/home.api";
+import { getAnonymousId } from "@/shared/session/anonymous-id";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { focusMobileInput, watchMobileKeyboardInset } from "@/shared/mobile-focus";
-import type { DiagnosisResultHistoryItemDto } from "@/features/diagnosis/diagnosis.dto";
 import { coachResume } from "../coaching.api";
 import type { CoachingJob } from "../coaching.dto";
 import styles from "./CoachingPage.module.css";
 
 type QuestionRow = { id: string; question: string; characterLimit: string };
 type ConnectedJob = CoachingJob & { duty: string };
-const MAX_QUESTION_COUNT = 7;
+const MAX_QUESTION_COUNT = 10;
 const MAX_QUESTION_TEXT_LENGTH = 200;
 const MIN_CHARACTER_LIMIT = 100;
 const MAX_CHARACTER_LIMIT = 2000;
@@ -29,18 +27,14 @@ export function CoachingPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileDropRef = useRef<HTMLButtonElement | null>(null);
-  const diagnosisRef = useRef<HTMLDivElement | null>(null);
   const coverLetterTextRef = useRef<HTMLTextAreaElement | null>(null);
   const termsButtonRef = useRef<HTMLButtonElement | null>(null);
   const alertFocusRef = useRef<HTMLElement | null>(null);
+  const jobSearchSeqRef = useRef(0);
   const questionTextRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const questionLimitRefs = useRef<Record<string, HTMLInputElement | null>>({});
-  const [loading, setLoading] = useState(false);
   const [coaching, setCoaching] = useState(false);
   const [error, setError] = useState("");
-  const [hasDiagnosis, setHasDiagnosis] = useState(false);
-  const [diagnoses, setDiagnoses] = useState<DiagnosisResultHistoryItemDto[]>([]);
-  const [selectedDiagnosisId, setSelectedDiagnosisId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<QuestionRow[]>(() => [
     makeQuestionRow("question-initial"),
   ]);
@@ -56,55 +50,51 @@ export function CoachingPage() {
   const [query, setQuery] = useState("");
   const [jobs, setJobs] = useState<CoachingJob[]>([]);
   const [searching, setSearching] = useState(false);
-  const [picker, setPicker] = useState<"diagnosis" | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [manualJobKeyword, setManualJobKeyword] = useState("");
+  // const [confirmOpen, setConfirmOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
-  useBodyScrollLock(Boolean(termsOpen || jobPickerOpen || dutySheetJob || picker || confirmOpen || alertMessage));
+  useBodyScrollLock(Boolean(termsOpen || jobPickerOpen || dutySheetJob || alertMessage));
+  // useBodyScrollLock(Boolean(termsOpen || jobPickerOpen || dutySheetJob || confirmOpen || alertMessage));
 
   useEffect(() => {
-    if (!termsOpen && !jobPickerOpen && !dutySheetJob && !picker && !confirmOpen && !alertMessage) return;
+    if (!termsOpen && !jobPickerOpen && !dutySheetJob && !alertMessage) return;
     return watchMobileKeyboardInset();
-  }, [termsOpen, jobPickerOpen, dutySheetJob, picker, confirmOpen, alertMessage]);
+  }, [termsOpen, jobPickerOpen, dutySheetJob, alertMessage]);
+  // useEffect(() => {
+  //   if (!termsOpen && !jobPickerOpen && !dutySheetJob && !confirmOpen && !alertMessage) return;
+  //   return watchMobileKeyboardInset();
+  // }, [termsOpen, jobPickerOpen, dutySheetJob, confirmOpen, alertMessage]);
 
-  useEffect(() => {
-    let active = true;
-    async function load() {
-      setLoading(true);
-      const user = await getCurrentUser().catch(() => null);
-      if (!active) return;
-      if (!user?.authenticated || !user.user) {
-        setHasDiagnosis(false);
-        setDiagnoses([]);
-        setSelectedDiagnosisId(null);
-        setLoading(false);
-        return;
-      }
-      const [diagnosisResponse] = await Promise.all([
-        getDiagnosisResultHistory(undefined, 20).catch(() => null),
-      ]);
-      if (!active) return;
-      setDiagnoses(diagnosisResponse?.items || []);
-      setSelectedDiagnosisId(diagnosisResponse?.selectedResultId || user.user.diagnosisResultId || null);
-      setHasDiagnosis(Boolean(user.user.diagnosisResultId || diagnosisResponse?.selectedResultId));
-      setLoading(false);
-    }
-    void load();
-    return () => { active = false; };
-  }, [router]);
-
-  const searchJobs = async () => {
+  const searchJobs = async (nextQuery = query) => {
+    const searchId = ++jobSearchSeqRef.current;
+    const searchTerm = nextQuery.trim();
     setSearching(true);
     try {
-      const result = await getJobPostings({ query, limit: 20, sort: "closing", employmentType: "정규직" });
-      setJobs(result.items.filter((item) => !item.isClosed).map((item) => ({ id: item.id, institutionName: item.institutionName, title: item.title, applicationEndAt: item.applicationEndAt })));
+      const result = await getJobPostings({ query: searchTerm, limit: 20, sort: "closing", employmentType: "정규직" });
+      if (searchId !== jobSearchSeqRef.current) return;
+      const activeJobs = result.items.filter((item) => !item.isClosed).map((item) => ({ id: item.id, institutionName: item.institutionName, title: item.title, applicationEndAt: item.applicationEndAt }));
+      setJobs(activeJobs);
+      if (!activeJobs.length) setManualJobKeyword(searchTerm);
     } finally {
-      setSearching(false);
+      if (searchId === jobSearchSeqRef.current) setSearching(false);
     }
   };
 
   const openJobPicker = () => {
+    setQuery("");
+    setJobs([]);
+    setManualJobKeyword("");
     setJobPickerOpen(true);
-    if (!jobs.length) void searchJobs();
+    void searchJobs("");
+  };
+
+  const closeJobPicker = () => {
+    jobSearchSeqRef.current += 1;
+    setSearching(false);
+    setQuery("");
+    setJobs([]);
+    setManualJobKeyword("");
+    setJobPickerOpen(false);
   };
 
   const handleFile = (nextFile: File | null) => {
@@ -141,9 +131,6 @@ export function CoachingPage() {
       question: item.question.trim(),
       characterLimit: parseCharacterLimit(item.characterLimit),
     }));
-    if (!hasDiagnosis || !selectedDiagnosisId) {
-      return { message: "강점·성향 진단을 먼저 완료해 주세요.", target: diagnosisRef.current, questions: normalizedQuestions };
-    }
     for (const [index, item] of normalizedQuestions.entries()) {
       const rowId = questions[index]?.id;
       if (!item.question) {
@@ -172,23 +159,26 @@ export function CoachingPage() {
   };
 
   const submit = async () => {
-    const user = await getCurrentUser().catch(() => null);
-    if (!user?.authenticated) {
-      router.push("/login");
-      return;
-    }
+    // 비로그인 사용자도 AI NCS 자소서 코칭을 실행할 수 있도록 로그인 선확인을 비활성화합니다.
+    // const user = await getCurrentUser().catch(() => null);
+    // if (!user?.authenticated) {
+    //   router.push("/login");
+    //   return;
+    // }
 
     const validation = validateBeforeSubmit();
     if (validation.message) {
       showAlert(validation.message, validation.target);
       return;
     }
-    setConfirmOpen(true);
+    // 진단권 소모 확인 alert 비활성화.
+    // setConfirmOpen(true);
+    void runCoaching();
   };
 
   const runCoaching = async () => {
     const normalizedQuestions = validateBeforeSubmit().questions;
-    setConfirmOpen(false);
+    // setConfirmOpen(false);
     setError("");
     setCoaching(true);
     try {
@@ -196,16 +186,18 @@ export function CoachingPage() {
         inputType,
         inputText: inputType === "file" ? file?.name || "" : text,
         file,
-        jobPostingId: connectedJob?.id,
+        anonymousId: getAnonymousId(),
+        jobPostingId: connectedJob?.isManual ? null : connectedJob?.id,
+        manualJobTitle: connectedJob?.isManual ? connectedJob.title : null,
         jobDuty: connectedJob?.duty,
-        diagnosisResultId: selectedDiagnosisId,
         questions: normalizedQuestions,
       });
-      if (typeof result.creditBalance === "number") {
-        window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
-          detail: { balance: result.creditBalance },
-        }));
-      }
+      // 진단권 소모 및 잔액 동기화 로직 비활성화.
+      // if (typeof result.creditBalance === "number") {
+      //   window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+      //     detail: { balance: result.creditBalance },
+      //   }));
+      // }
       router.push(`/ai-tools/coaching/result/${result.resultId}`);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "코칭에 실패했습니다.";
@@ -225,16 +217,14 @@ export function CoachingPage() {
 
   if (coaching) return <CoachingLoadingScreen />;
 
-  const selectedDiagnosis = diagnoses.find((item) => item.resultId === selectedDiagnosisId);
-  const canRequestCoaching = termsConfirmed && !coaching && !loading;
+  const canRequestCoaching = termsConfirmed && !coaching;
 
   return <div className={styles.page}>
     <AppHeader />
     <main className={`${styles.frame} ${styles.newCoachingFrame}`}>
-      <h1>{connectedJob ? "AI NCS 자소서 코칭 결과" : "AI NCS 자소서 코칭"}</h1>
+      <h1>AI NCS 자소서 코칭</h1>
       <section className={styles.intro}><strong>자소서를 AI가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
       {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <><button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button><p className={styles.helper}>공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.<br />연결하지 않아도 일반 자소서 코칭을 받을 수 있어요.</p></>}
-      <div ref={diagnosisRef}><StatusCard title="강점·성향 진단 결과" ready={hasDiagnosis} empty="현재 강·약점 결과가 없습니다." emptyDetail="강·약점 테스트를 진행하세요." action="진단 시작하기 →" href="/ai-tools/diagnosis" onChange={() => setPicker("diagnosis")} selected={selectedDiagnosis?.typeName} date={formatDate(selectedDiagnosis?.completedAt)} /></div>
 
       <section className={styles.questionSection}>
         <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={addQuestion} disabled={questions.length >= MAX_QUESTION_COUNT}>+ 추가</button></div>
@@ -316,14 +306,13 @@ export function CoachingPage() {
       {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
       <button ref={termsButtonRef} type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsOpen(true)}><span>{termsConfirmed ? "✓" : ""}</span>자소서 약관동의를 해주세요.</button>
       {error ? <p className={styles.error}>{error}</p> : null}
-      <button className={`${styles.primaryButton} ${styles.coachingSubmitButton}`} type="button" onClick={submit} disabled={!canRequestCoaching}><Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.coachingSubmitIcon} />AI NCS 자소서 코칭 받기</button>
+      <button className={`${styles.primaryButton} ${styles.coachingSubmitButton}`} type="button" onClick={submit} disabled={!canRequestCoaching}>{/* <Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.coachingSubmitIcon} /> */}AI NCS 자소서 코칭 받기</button>
     </main>
     <AppFooter active="ai" />
     {termsOpen ? <TermsSheet onConfirm={() => { setTermsConfirmed(true); setTermsOpen(false); }} onClose={() => setTermsOpen(false)} /> : null}
-    {jobPickerOpen ? <JobPicker query={query} setQuery={setQuery} jobs={jobs} searching={searching} onSearch={searchJobs} onPick={(item) => { setJobPickerOpen(false); setDutySheetJob(item); }} onClose={() => setJobPickerOpen(false)} /> : null}
-    {dutySheetJob ? <JobDutySheet job={dutySheetJob} onBack={() => { setDutySheetJob(null); setJobPickerOpen(true); }} onClose={() => setDutySheetJob(null)} onConfirm={(duty) => { setConnectedJob({ ...dutySheetJob, duty }); setDutySheetJob(null); }} /> : null}
-    {picker === "diagnosis" ? <DiagnosisPicker items={diagnoses} selectedId={selectedDiagnosisId} onPick={async (item) => { await selectDiagnosisResult(item.resultId); setSelectedDiagnosisId(item.resultId); setHasDiagnosis(true); setPicker(null); }} onClose={() => setPicker(null)} /> : null}
-    {confirmOpen ? <CoachingConfirmDialog onCancel={() => setConfirmOpen(false)} onConfirm={runCoaching} /> : null}
+    {jobPickerOpen ? <JobPicker query={query} setQuery={setQuery} jobs={jobs} searching={searching} manualJobKeyword={manualJobKeyword} setManualJobKeyword={setManualJobKeyword} onSearch={() => searchJobs()} onPick={(item) => { setJobPickerOpen(false); setDutySheetJob(item); }} onManualConfirm={(title) => { setJobPickerOpen(false); setDutySheetJob({ id: `manual:${title}`, institutionName: "직접 입력", title, applicationEndAt: null, isManual: true }); }} onClose={closeJobPicker} /> : null}
+    {dutySheetJob ? <JobDutySheet job={dutySheetJob} onBack={() => { setDutySheetJob(null); setJobPickerOpen(true); }} onClose={() => { setDutySheetJob(null); closeJobPicker(); }} onConfirm={(duty) => { setConnectedJob({ ...dutySheetJob, duty }); setDutySheetJob(null); closeJobPicker(); }} /> : null}
+    {/* {confirmOpen ? <CoachingConfirmDialog onCancel={() => setConfirmOpen(false)} onConfirm={runCoaching} /> : null} */}
     {alertMessage ? <CoachingAlertDialog message={alertMessage} onClose={() => { setAlertMessage(""); window.setTimeout(() => focusField(alertFocusRef.current), 0); }} /> : null}
   </div>;
 }
@@ -333,25 +322,47 @@ function CoachingLoadingScreen() {
 }
 
 function ConnectedJobCard({ job, onRemove }: { job: ConnectedJob; onRemove: () => void }) {
-  return <><section className={styles.connectedJobCard}><button type="button" onClick={onRemove} aria-label="지원 공고 연결 해제"><Image src="/coaching/close-rounded.svg" alt="" width={24} height={24} /></button><span>지원 공고</span><strong>[{job.institutionName}] {job.title}</strong><em>직무</em><p>{job.duty}</p></section><small className={styles.jobFitNotice}>✓ 이 공고의 직무 적합성까지 함께 분석해요</small></>;
+  return <><section className={styles.connectedJobCard}><button type="button" onClick={onRemove} aria-label="지원 공고 연결 해제"><Image src="/coaching/close-rounded.svg" alt="" width={24} height={24} /></button><span>지원 공고</span><strong>{formatConnectedJobTitle(job)}</strong><em>직무</em><p>{job.duty}</p></section><small className={styles.jobFitNotice}>이 공고의 직무 적합성까지 함께 분석해요</small></>;
 }
 
-function StatusCard({ title, ready, empty, emptyDetail, action, href, onChange, selected, date }: { title: string; ready: boolean; empty: string; emptyDetail?: string; action: string; href: string; onChange: () => void; selected?: string; date?: string }) {
-  return <section className={styles.statusSection}><div className={styles.sectionHeading}><h2>{title}</h2>{ready ? <button type="button" onClick={onChange}>변경</button> : null}</div>{ready ? <div className={styles.readyCard}><strong>{selected || "등록된 정보가 있어요."}</strong>{date ? <p>{date}</p> : null}</div> : <div className={styles.emptyCard}><p>{empty}{emptyDetail ? <><br />{emptyDetail}</> : null}</p><Link href={href}>{action}</Link></div>}</section>;
-}
+function JobPicker({
+  query,
+  setQuery,
+  jobs,
+  searching,
+  manualJobKeyword,
+  setManualJobKeyword,
+  onSearch,
+  onPick,
+  onManualConfirm,
+  onClose,
+}: {
+  query: string;
+  setQuery: (value: string) => void;
+  jobs: CoachingJob[];
+  searching: boolean;
+  manualJobKeyword: string;
+  setManualJobKeyword: (value: string) => void;
+  onSearch: () => void;
+  onPick: (job: CoachingJob) => void;
+  onManualConfirm: (title: string) => void;
+  onClose: () => void;
+}) {
+  const manualTitle = manualJobKeyword.trim();
 
-function JobPicker({ query, setQuery, jobs, searching, onSearch, onPick, onClose }: { query: string; setQuery: (value: string) => void; jobs: CoachingJob[]; searching: boolean; onSearch: () => void; onPick: (job: CoachingJob) => void; onClose: () => void }) {
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet} ${styles.jobPickerSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => event.key === "Enter" && onSearch()} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div><div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : <p>검색 결과가 없습니다.</p>}</div></section></div>;
+  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet} ${styles.jobPickerSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => { setQuery(event.target.value); if (!jobs.length) setManualJobKeyword(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter") onSearch(); }} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div>{!searching && !jobs.length ? <p className={styles.jobResultCount}>검색결과 0</p> : null}<div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : <div className={styles.noJobResult}><strong>검색결과가 없습니다.</strong><p>공고가 나오지 않는다면 직접 입력하거나,<br />재검색하세요.</p><input value={manualJobKeyword} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setManualJobKeyword(event.target.value)} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" disabled={!manualTitle} onClick={() => onManualConfirm(manualTitle)}>공고 입력 완료</button></div>}</div></section></div>;
 }
 
 function JobDutySheet({ job, onBack, onClose, onConfirm }: { job: CoachingJob; onBack: () => void; onClose: () => void; onConfirm: (duty: string) => void }) {
   const [duty, setDuty] = useState("");
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet} ${styles.jobDutySheet}`}><div className={styles.sheetHandle} /><header><button type="button" onClick={onBack} aria-label="이전">‹</button><h2>직무</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.jobDutySelected}><span>{job.institutionName}</span><strong>{job.title}</strong></div><label className={styles.jobDutyLabel}>직무</label><input className={styles.jobDutyInput} value={duty} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setDuty(event.target.value)} placeholder="직무를 입력하세요." /><button className={styles.primaryButton} type="button" disabled={!duty.trim()} onClick={() => onConfirm(duty.trim())}>공고 연결하기</button></section></div>;
+  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet} ${styles.jobDutySheet}`}><div className={styles.sheetHandle} /><header><button type="button" onClick={onBack} aria-label="이전">‹</button><h2>직무</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.jobDutySelected}><span>{job.isManual ? "직접 입력한 공고" : job.institutionName}</span><strong>{formatConnectedJobTitle(job)}</strong></div><label className={styles.jobDutyLabel}>직무</label><input className={styles.jobDutyInput} value={duty} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setDuty(event.target.value)} placeholder="직무를 입력하세요." /><button className={styles.primaryButton} type="button" disabled={!duty.trim()} onClick={() => onConfirm(duty.trim())}>공고 연결하기</button></section></div>;
 }
 
+/*
 function CoachingConfirmDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
   return <div className={styles.dialogOverlay} role="dialog" aria-modal="true" aria-labelledby="coaching-confirm-title"><section className={styles.figmaDialog}><div className={styles.dialogVisual}><Image src="/coaching/coaching-confirm-bg.svg" alt="" width={207} height={125} className={styles.dialogBg} /><Image src="/coaching/coaching-confirm-owl.png" alt="" width={163} height={168} className={styles.confirmOwl} priority /></div><h2 id="coaching-confirm-title">진단권을 1장을 소모하시겠습니까?</h2><div className={styles.confirmActions}><button type="button" onClick={onCancel}>취소</button><button type="button" onClick={onConfirm}>확인</button></div></section></div>;
 }
+*/
 
 function CoachingAlertDialog({ message, onClose }: { message: string; onClose: () => void }) {
   return <div className={styles.dialogOverlay} role="alertdialog" aria-modal="true" aria-labelledby="coaching-alert-title"><section className={styles.figmaDialog}><div className={styles.dialogVisual}><Image src="/coaching/coaching-alert-bg.svg" alt="" width={207} height={125} className={styles.dialogBg} /><Image src="/coaching/coaching-alert-owl.png" alt="" width={172} height={167} className={styles.alertOwl} priority /></div><h2 id="coaching-alert-title">{message}</h2><button className={styles.alertConfirmButton} type="button" onClick={onClose}>확인</button></section></div>;
@@ -381,10 +392,6 @@ function MethodText({ method, title, children }: { method: string; title: string
 
 function TermsReference({ title, children }: { title: string; children: string }) {
   return <article className={styles.termsReferenceItem}><strong>{title}</strong><p>{children}</p></article>;
-}
-
-function DiagnosisPicker({ items, selectedId, onPick, onClose }: { items: DiagnosisResultHistoryItemDto[]; selectedId: string | null; onPick: (item: DiagnosisResultHistoryItemDto) => void; onClose: () => void }) {
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet}`}><div className={styles.sheetHandle} /><header><h2>강점·성향 진단 결과</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.pickerList}>{items.map((item) => <button type="button" key={item.resultId} className={styles.pickerCard} onClick={() => onPick(item)}><span><strong>{item.typeName}</strong><small>{formatDate(item.completedAt)}</small></span>{item.resultId === selectedId ? <b className={styles.selectedLabel}>선택됨 ✓</b> : <em>선택하기</em>}</button>)}</div></section></div>;
 }
 
 function makeQuestionRow(id = createQuestionRowId()): QuestionRow {
@@ -429,6 +436,6 @@ function focusField(element?: HTMLElement | null) {
   focusMobileInput(element);
 }
 
-function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleDateString("ko-KR", { year: "numeric", month: "2-digit", day: "2-digit" }) : "";
+function formatConnectedJobTitle(job: CoachingJob) {
+  return job.isManual ? job.title : `[${job.institutionName}] ${job.title}`;
 }

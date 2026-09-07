@@ -661,6 +661,7 @@ export function DiagnosisResultDetail() {
             </div>
           </section>
 
+          {/*}
           {isPublicView ? null : <section
             className={styles.shareTicket}
             role="button"
@@ -675,7 +676,7 @@ export function DiagnosisResultDetail() {
             <Image src="/diagnosis/result-detail/gift.png" alt="" width={84} height={89} />
             <div><strong>결과를 공유하고 <em>AI 자소서 코칭</em><br />무료 티켓을 받으세요.</strong><span className={styles.shareTicketCta}>{shareMessage}</span></div>
           </section>}
-
+          */}
           <section className={styles.section}>
             <h2><FigmaSectionIcon kind="tips" />{result.typeName} 취업 팁</h2>
             <p className={styles.sectionCaption}>{subjectLabel} 유형의 강점은 살리고, 약점은 보완하는 법이에요.</p>
@@ -730,7 +731,7 @@ export function DiagnosisResultDetail() {
             {detail.previousResultCount > 0 ? (
               <button type="button" className={styles.historyButton} onClick={openHistory}>이전 결과로 맞춤 공고 받기 →</button>
             ) : null}
-            <button type="button" className={styles.shareButton} onClick={shareResult}>공유하고 자소서 코칭 티켓 받기!</button>
+            <button type="button" className={styles.shareButton} onClick={shareResult}>카카오톡 공유하기</button>
           </div>}
 
           <ShareRewardNotice />

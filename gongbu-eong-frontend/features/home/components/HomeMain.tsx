@@ -5,10 +5,11 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties, MouseEvent, PointerEvent } from "react";
-import { AppFooter, AppTicketStatus } from "@/features/layout/components/AppChrome";
+import { AppFooter } from "@/features/layout/components/AppChrome";
+// import { AppFooter, AppTicketStatus } from "@/features/layout/components/AppChrome";
 import { BusinessInfo } from "@/features/layout/components/BusinessInfo";
 import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
-import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAlert";
+// import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAlert";
 import { getCommunityPosts } from "@/features/community/community.api";
 import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
 import { formatClockTime, formatNumber } from "@/features/community/components/CommunityShared";
@@ -36,9 +37,11 @@ const aiTools = [
   },
   {
     href: "/ai-tools/coaching",
-    requiresAuth: true,
-    tag: "첫 5회 무료",
-    memberTag: "첫 5회 무료 쿠폰 증정",
+    requiresAuth: false,
+    tag: "AI 코칭",
+    memberTag: "AI 코칭",
+    // tag: "첫 5회 무료",
+    // memberTag: "첫 5회 무료 쿠폰 증정",
     title: "AI NCS 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",
     image: "/home/home-tool-diagnosis.png",
@@ -107,6 +110,7 @@ const resultCards = {
   },
 } as const;
 
+/*
 function getWelcomeTicketRewardMessage() {
   if (typeof window === "undefined") return "";
   const params = new URLSearchParams(window.location.search);
@@ -129,6 +133,7 @@ function clearWelcomeTicketRewardQuery() {
     `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`,
   );
 }
+*/
 
 function getRecommendedJobsHref(user: CurrentUserDto | null | undefined) {
   if (!user) return "/login";
@@ -152,7 +157,7 @@ export function HomeMain({
   const [isLoading, setIsLoading] = useState(!initialUser && !authResolved);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
-  const [ticketRewardMessage, setTicketRewardMessage] = useState(getWelcomeTicketRewardMessage);
+  // const [ticketRewardMessage, setTicketRewardMessage] = useState(getWelcomeTicketRewardMessage);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [jobs, setJobs] = useState<HomeJobsResponseDto>({
     hotJobs: [],
@@ -165,9 +170,10 @@ export function HomeMain({
   const dragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
   const draggedRef = useRef(false);
 
-  useEffect(() => {
-    clearWelcomeTicketRewardQuery();
-  }, []);
+  // 진단권 첫 가입 지급 alert 로직 비활성화.
+  // useEffect(() => {
+  //   clearWelcomeTicketRewardQuery();
+  // }, []);
 
   useEffect(() => {
     if (initialUser || authResolved) {
@@ -382,12 +388,15 @@ const ignoreClickAfterDrag = (
             <Image src="/home/home-header-logo.png" alt="공부엉이" width={59} height={26} priority unoptimized />
           </Link>
           <div className={styles.headerActions}>
+            {/* 진단권 게이지, 진단권 이미지/건수, 안내 툴팁 비활성화 */}
+            {/*
             {user ? (
               <AppTicketStatus
                 ticketCount={user.creditBalance ?? 0}
                 communityActivityRewardProgress={user.communityActivityRewardProgress}
               />
             ) : null}
+            */}
             {user ? (
               <Link href="/notifications" aria-label="알림" className={styles.iconButton}>
                 <BellIcon />
@@ -628,12 +637,14 @@ const ignoreClickAfterDrag = (
         {isComingSoonOpen ? (
           <ComingSoonAlert onClose={() => setIsComingSoonOpen(false)} />
         ) : null}
+        {/*
         {ticketRewardMessage ? (
           <TicketRewardAlert
             message={ticketRewardMessage}
             onClose={() => setTicketRewardMessage("")}
           />
         ) : null}
+        */}
       </section>
     </main>
   );
@@ -792,7 +803,7 @@ export function HomeMenuDrawer({
             ] : [
               // "/login",
               "/ai-tools/diagnosis",
-              "/login",
+              "/ai-tools/coaching",
               // "/login",
               // "/login",
             ]}

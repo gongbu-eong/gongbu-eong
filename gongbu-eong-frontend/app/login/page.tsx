@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LoginOAuthAlert } from "./LoginOAuthAlert";
 import styles from "./LoginPage.module.css";
 
-function getOAuthUrl(provider: "kakao" | "naver") {
+function getOAuthUrl(provider: "kakao" | "naver", params: LoginPageSearchParams) {
   const configuredUrl =
     provider === "kakao"
       ? process.env.NEXT_PUBLIC_KAKAO_LOGIN_URL
@@ -15,16 +15,23 @@ function getOAuthUrl(provider: "kakao" | "naver") {
       `${backendUrl}/api/auth/oauth/${provider}/start`,
   );
 
-  url.searchParams.set("entrySource", "main_home");
+  url.searchParams.set("entrySource", params.entrySource || "main_home");
+  if (params.returnTo) url.searchParams.set("returnTo", params.returnTo);
+  if (params.anonymousId) url.searchParams.set("anonymousId", params.anonymousId);
   return url.toString();
 }
 
+type LoginPageSearchParams = {
+  oauthError?: string;
+  provider?: string;
+  until?: string;
+  returnTo?: string;
+  anonymousId?: string;
+  entrySource?: string;
+};
+
 type LoginPageProps = {
-  searchParams: Promise<{
-    oauthError?: string;
-    provider?: string;
-    until?: string;
-  }>;
+  searchParams: Promise<LoginPageSearchParams>;
 };
 
 function formatRestrictedUntil(value?: string) {
@@ -146,11 +153,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
             </>
           ) : null}
-          <a className={styles.kakaoButton} href={getOAuthUrl("kakao")}>
+          <a className={styles.kakaoButton} href={getOAuthUrl("kakao", params)}>
             <Image src="/login/kakao.png" alt="" width={42} height={42} />
             <span>카카오로 시작하기</span>
           </a>
-          <a className={styles.naverButton} href={getOAuthUrl("naver")}>
+          <a className={styles.naverButton} href={getOAuthUrl("naver", params)}>
             <Image src="/login/naver.png" alt="" width={42} height={42} />
             <span>네이버로 시작하기</span>
           </a>

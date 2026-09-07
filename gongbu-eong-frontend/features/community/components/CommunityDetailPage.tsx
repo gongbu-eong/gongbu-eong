@@ -196,22 +196,23 @@ export function CommunityDetailPage({
       setPost(response.post);
       setComment("");
       setCommentPage(getLastPage(response.post.comments.length, COMMENT_PAGE_SIZE));
-      if (response.creditReward?.granted) {
-        window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
-          detail: {
-            message: "진단권 1장이 추가되었습니다.",
-            balanceAfter: response.creditReward.balanceAfter,
-            progress: response.creditReward.progress,
-          },
-        }));
-      } else if (response.creditReward?.progress) {
-        window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
-          detail: {
-            balanceAfter: response.creditReward.balanceAfter,
-            progress: response.creditReward.progress,
-          },
-        }));
-      }
+      // 진단권 보상 alert 및 잔액 동기화 로직 비활성화.
+      // if (response.creditReward?.granted) {
+      //   window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
+      //     detail: {
+      //       message: "진단권 1장이 추가되었습니다.",
+      //       balanceAfter: response.creditReward.balanceAfter,
+      //       progress: response.creditReward.progress,
+      //     },
+      //   }));
+      // } else if (response.creditReward?.progress) {
+      //   window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+      //     detail: {
+      //       balanceAfter: response.creditReward.balanceAfter,
+      //       progress: response.creditReward.progress,
+      //     },
+      //   }));
+      // }
     } catch (error) {
       showToast(error instanceof Error ? error.message : "댓글 등록에 실패했습니다.");
     } finally {
@@ -267,22 +268,23 @@ export function CommunityDetailPage({
       setReplyPage(replyTarget.hostCommentId, getLastPage(hostComment?.replies.length || 0, REPLY_PAGE_SIZE));
       setReplyTarget(null);
       setReplyText("");
-      if (response.creditReward?.granted) {
-        window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
-          detail: {
-            message: "진단권 1장이 추가되었습니다.",
-            balanceAfter: response.creditReward.balanceAfter,
-            progress: response.creditReward.progress,
-          },
-        }));
-      } else if (response.creditReward?.progress) {
-        window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
-          detail: {
-            balanceAfter: response.creditReward.balanceAfter,
-            progress: response.creditReward.progress,
-          },
-        }));
-      }
+      // 진단권 보상 alert 및 잔액 동기화 로직 비활성화.
+      // if (response.creditReward?.granted) {
+      //   window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
+      //     detail: {
+      //       message: "진단권 1장이 추가되었습니다.",
+      //       balanceAfter: response.creditReward.balanceAfter,
+      //       progress: response.creditReward.progress,
+      //     },
+      //   }));
+      // } else if (response.creditReward?.progress) {
+      //   window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+      //     detail: {
+      //       balanceAfter: response.creditReward.balanceAfter,
+      //       progress: response.creditReward.progress,
+      //     },
+      //   }));
+      // }
     } catch (error) {
       showToast(error instanceof Error ? error.message : "답글 등록에 실패했습니다.");
     } finally {

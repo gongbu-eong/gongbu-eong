@@ -1,23 +1,22 @@
 import { NextRequest } from "next/server";
-import { requireSessionUser } from "@/domains/auth/session";
+import { getSessionUser } from "@/domains/auth/session";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
-import { findDiagnosisResultForUser } from "@/domains/diagnosis/diagnosis.repository";
 import { createPendingResumeFile, validateResumeFile } from "@/domains/resumes/resume-file-storage";
 import {
   coachPreparedResume,
   prepareCoachingSource,
   type CoachResumeArgs,
 } from "@/domains/coaching/coaching.service";
-import {
-  consumeCoachingCredit,
-  getCurrentCreditBalance,
-  refundCoachingCredit,
-} from "@/domains/credits/credits.repository";
+// import {
+//   consumeCoachingCredit,
+//   getCurrentCreditBalance,
+//   refundCoachingCredit,
+// } from "@/domains/credits/credits.repository";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
-import type { CoachingDiagnosisDto, CoachingQuestionInput } from "@/domains/coaching/coaching.dto";
+import type { CoachingJobDto, CoachingQuestionInput } from "@/domains/coaching/coaching.dto";
 
 export const runtime = "nodejs";
-const MAX_QUESTION_COUNT = 7;
+const MAX_QUESTION_COUNT = 10;
 const MAX_QUESTION_TEXT_LENGTH = 200;
 
 export async function OPTIONS(request: NextRequest) {
@@ -29,19 +28,21 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireSessionUser(request);
+    const user = await getSessionUser(request);
     const form = await request.formData();
     const inputType: CoachResumeArgs["inputType"] =
       form.get("inputType") === "file" ? "file" : "text";
     const text = String(form.get("inputText") || "").trim();
+    const anonymousId = readAnonymousId(form.get("anonymousId"));
     const jobId = String(form.get("jobPostingId") || "").trim() || null;
+    const manualJobTitle = String(form.get("manualJobTitle") || "").trim();
     const jobDuty = String(form.get("jobDuty") || "").trim() || null;
-    const diagnosisResultId = String(form.get("diagnosisResultId") || "").trim() || null;
     const questions = parseQuestionInputs(form.get("questions"));
     const fileEntry = form.get("file");
     const file = fileEntry instanceof File ? fileEntry : null;
     const extension = file?.name.split(".").pop()?.toLowerCase() || "";
     const allowedCoachingExtensions = new Set(["hwp", "hwpx", "pdf", "docx"]);
+    if (!user && !anonymousId) return jsonWithCors(request, { ok: false, message: "익명 사용자 정보를 확인하지 못했습니다. 새로고침 후 다시 시도해 주세요." }, { status: 400 });
     if (inputType === "text" && !text) return jsonWithCors(request, { ok: false, message: "자소서를 입력해 주세요." }, { status: 400 });
     if (inputType === "text" && text.length > 10000) return jsonWithCors(request, { ok: false, message: "자소서는 10,000자까지 입력할 수 있습니다." }, { status: 400 });
     if (inputType === "file" && !file) return jsonWithCors(request, { ok: false, message: "자소서 파일을 첨부해 주세요." }, { status: 400 });
@@ -54,103 +55,100 @@ export async function POST(request: NextRequest) {
     if (file && !allowedCoachingExtensions.has(extension)) return jsonWithCors(request, { ok: false, message: "HWP, HWPX, PDF, DOCX 파일만 첨부할 수 있습니다." }, { status: 400 });
     const fileValidationMessage = file ? validateResumeFile(file) : null;
     if (fileValidationMessage) return jsonWithCors(request, { ok: false, message: fileValidationMessage }, { status: 400 });
-    const posting = jobId ? await findJobPostingById(jobId, user.id) : null;
+    const posting = jobId ? await findJobPostingById(jobId, user?.id) : null;
     if (jobId && (!posting || (posting.application_end_at && new Date(posting.application_end_at).getTime() < Date.now()))) return jsonWithCors(request, { ok: false, message: "마감된 공고는 연결할 수 없습니다." }, { status: 400 });
-    const diagnosisResult = diagnosisResultId ? await findDiagnosisResultForUser(user.id, diagnosisResultId) : null;
-    if (diagnosisResultId && !diagnosisResult) return jsonWithCors(request, { ok: false, message: "강점·성향 진단 결과를 찾지 못했습니다." }, { status: 400 });
+    const manualJob: CoachingJobDto | null = !posting && manualJobTitle ? {
+      id: `manual:${manualJobTitle.slice(0, 80)}`,
+      institutionName: "직접 입력",
+      title: manualJobTitle.slice(0, 200),
+      applicationEndAt: null,
+    } : null;
     const filePayload = file ? { name: file.name, type: file.type, buffer: Buffer.from(await file.arrayBuffer()) } : undefined;
     const coachingArgs: CoachResumeArgs = {
-      userId: user.id,
+      userId: user?.id || null,
+      anonymousId: user ? null : anonymousId,
       inputType,
       inputText: inputType === "file" ? file?.name || "" : text,
       file: filePayload,
+      jobPostingId: posting?.id || null,
       job: posting ? {
         id: posting.id,
         institutionName: posting.institution_name,
         title: posting.title,
         applicationEndAt: posting.application_end_at ? new Date(posting.application_end_at).toISOString() : null,
-      } : null,
+      } : manualJob,
       jobDuty,
-      diagnosis: diagnosisResult ? mapDiagnosisForCoaching(diagnosisResult) : null,
+      // 강점·성향 진단 결과는 코칭 입력에서 제외합니다.
       questions,
       resumeId: null,
       resumeAdditionalNotes: null,
       sourceFileId: null,
     };
     const preparedSource = await prepareCoachingSource(coachingArgs);
-    const savedFile = file ? await createPendingResumeFile(user.id, file) : null;
-    const currentCreditBalance = await getCurrentCreditBalance(user.id);
-    if (currentCreditBalance < 1) {
-      return jsonWithCors(
-        request,
-        {
-          ok: false,
-          message: "진단권이 부족합니다. 커뮤니티에서 글 또는 댓글을 작성하거나, 충전을 해주세요.",
-          creditBalance: currentCreditBalance,
-        },
-        { status: 402 },
-      );
-    }
+    const savedFile = file && user ? await createPendingResumeFile(user.id, file) : null;
+    // 진단권 소모 로직 비활성화: 잔액 확인, 차감, 실패 시 환불을 수행하지 않습니다.
+    // const currentCreditBalance = await getCurrentCreditBalance(user.id);
+    // if (currentCreditBalance < 1) {
+    //   return jsonWithCors(
+    //     request,
+    //     {
+    //       ok: false,
+    //       message: "진단권이 부족합니다. 커뮤니티에서 글 또는 댓글을 작성하거나, 충전을 해주세요.",
+    //       creditBalance: currentCreditBalance,
+    //     },
+    //     { status: 402 },
+    //   );
+    // }
 
     const result = await coachPreparedResume(
       { ...coachingArgs, sourceFileId: savedFile?.id || null },
       preparedSource,
     );
-    let creditUsage: Awaited<ReturnType<typeof consumeCoachingCredit>> | null = null;
-    try {
-      creditUsage = await consumeCoachingCredit(user.id, result.resultId);
-      if (!creditUsage.consumed) {
-        return jsonWithCors(
-          request,
-          {
-            ok: false,
-            message: "진단권이 부족합니다. 커뮤니티에서 글 또는 댓글을 작성하거나, 충전을 해주세요.",
-            creditBalance: creditUsage.balanceAfter,
-          },
-          { status: 402 },
-        );
-      }
-      return jsonWithCors(request, { ok: true, ...result, sourceFile: savedFile, creditBalance: creditUsage.balanceAfter });
-    } catch (error) {
-      const refund = creditUsage?.consumed
-        ? await refundCoachingCredit(user.id, result.resultId).catch((refundError) => {
-            console.error("[Coaching] credit refund failed", refundError);
-            return null;
-          })
-        : null;
-      return jsonWithCors(
-        request,
-        {
-          ok: false,
-          message: error instanceof Error ? error.message : "코칭에 실패했습니다.",
-          creditBalance: refund?.balanceAfter ?? creditUsage?.balanceAfter ?? await getCurrentCreditBalance(user.id).catch(() => undefined),
-        },
-        { status: 500 },
-      );
-    }
+    // let creditUsage: Awaited<ReturnType<typeof consumeCoachingCredit>> | null = null;
+    // try {
+    //   creditUsage = await consumeCoachingCredit(user.id, result.resultId);
+    //   if (!creditUsage.consumed) {
+    //     return jsonWithCors(
+    //       request,
+    //       {
+    //         ok: false,
+    //         message: "진단권이 부족합니다. 커뮤니티에서 글 또는 댓글을 작성하거나, 충전을 해주세요.",
+    //         creditBalance: creditUsage.balanceAfter,
+    //       },
+    //       { status: 402 },
+    //     );
+    //   }
+    //   return jsonWithCors(request, { ok: true, ...result, sourceFile: savedFile, creditBalance: creditUsage.balanceAfter });
+    // } catch (error) {
+    //   const refund = creditUsage?.consumed
+    //     ? await refundCoachingCredit(user.id, result.resultId).catch((refundError) => {
+    //         console.error("[Coaching] credit refund failed", refundError);
+    //         return null;
+    //       })
+    //     : null;
+    //   return jsonWithCors(
+    //     request,
+    //     {
+    //       ok: false,
+    //       message: error instanceof Error ? error.message : "코칭에 실패했습니다.",
+    //       creditBalance: refund?.balanceAfter ?? creditUsage?.balanceAfter ?? await getCurrentCreditBalance(user.id).catch(() => undefined),
+    //     },
+    //     { status: 500 },
+    //   );
+    // }
+    return jsonWithCors(request, { ok: true, ...result, sourceFile: savedFile });
   } catch (error) {
-    const status = error instanceof Error && error.name === "UnauthorizedError" ? 401 : 500;
-    return jsonWithCors(request, { ok: false, message: error instanceof Error ? error.message : "코칭에 실패했습니다." }, { status });
+    return jsonWithCors(request, { ok: false, message: error instanceof Error ? error.message : "코칭에 실패했습니다." }, { status: 500 });
   }
 }
 
-function mapDiagnosisForCoaching(row: Awaited<ReturnType<typeof findDiagnosisResultForUser>>): CoachingDiagnosisDto | null {
-  if (!row) return null;
-  return {
-    id: row.result_id,
-    typeCode: row.type_code,
-    typeName: row.type_name,
-    summary: row.summary,
-    strengths: row.strengths || [],
-    weaknesses: row.weaknesses || [],
-    axisScores: {
-      stability: Number(row.stability_axis_percent || 0),
-      teamwork: Number(row.teamwork_axis_percent || 0),
-      execution: Number(row.execution_axis_percent || 0),
-      principle: Number(row.principle_axis_percent || 0),
-    },
-    completedAt: new Date(row.completed_at).toISOString(),
-  };
+function readAnonymousId(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !isUuid(value.trim())) return null;
+  return value.trim();
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
 function parseQuestionInputs(value: FormDataEntryValue | null): CoachingQuestionInput[] {

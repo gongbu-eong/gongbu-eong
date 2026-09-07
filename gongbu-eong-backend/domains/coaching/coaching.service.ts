@@ -1,8 +1,8 @@
-import { createCoachingRequest, createCoachingResult, findCoachingResult, listCoachingHistory } from "./coaching.repository";
-import type { CoachingDiagnosisDto, CoachingFeedback, CoachingFramework, CoachingInputType, CoachingJobDto, CoachingQuestionInput, CoachingQuestionReview, CoachingReviewSeverity, CoachingSection, CoachingSubmissionReview } from "./coaching.dto";
+import { claimAnonymousCoachingResults, createCoachingRequest, createCoachingResult, findCoachingResult, findCoachingResultForViewer, listCoachingHistory } from "./coaching.repository";
+import type { CoachingFeedback, CoachingFramework, CoachingInputType, CoachingJobDto, CoachingQuestionInput, CoachingQuestionReview, CoachingReviewSeverity, CoachingSection, CoachingSubmissionReview } from "./coaching.dto";
 import { extractResumeDocumentText } from "@/domains/resumes/resumes.ai";
 import { createOpenAiJsonResponse, getOpenAiModel, makeOpenAiFileDataUrl } from "@/lib/openai";
-export type CoachResumeArgs = { userId: string; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; job?: CoachingJobDto | null; jobDuty?: string | null; diagnosis?: CoachingDiagnosisDto | null; questions?: CoachingQuestionInput[]; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null };
+export type CoachResumeArgs = { userId?: string | null; anonymousId?: string | null; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; jobPostingId?: string | null; job?: CoachingJobDto | null; jobDuty?: string | null; questions?: CoachingQuestionInput[]; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null };
 
 export async function coachResume(args: CoachResumeArgs) {
   const prepared = await prepareCoachingSource(args);
@@ -13,18 +13,18 @@ export async function coachPreparedResume(
   args: CoachResumeArgs,
   prepared: PreparedCoachingSource,
 ) {
-  const requestId = await createCoachingRequest({ ...args, inputText: prepared.storageText, jobPostingId: args.job?.id, jobSnapshot: args.job ? { ...args.job, jobDuty: args.jobDuty || null, questions: args.questions || [] } as CoachingJobDto : null, sourceFilename: args.file?.name });
+  const requestId = await createCoachingRequest({ ...args, inputText: prepared.storageText, jobPostingId: args.jobPostingId || null, jobSnapshot: args.job ? { ...args.job, jobDuty: args.jobDuty || null, questions: args.questions || [] } as CoachingJobDto : null, sourceFilename: args.file?.name });
   const feedback = await requestAiFeedback(args, prepared);
   const resultId = await createCoachingResult(requestId, feedback, getCoachingOpenAiModel());
   return { resultId, requestId, feedback };
 }
 
-export { listCoachingHistory, findCoachingResult };
+export { claimAnonymousCoachingResults, listCoachingHistory, findCoachingResult, findCoachingResultForViewer };
 
 export type PreparedCoachingSource = { content: Array<Record<string, unknown>>; storageText: string; originalText: string };
 
 export async function prepareCoachingSource(args: CoachResumeArgs): Promise<PreparedCoachingSource> {
-  const prompt = buildPrompt(args.job, args.questions || [], args.jobDuty, args.diagnosis);
+  const prompt = buildPrompt(args.job, args.questions || [], args.jobDuty);
   if (args.inputType === "file" && args.file) {
     if (args.file.name.toLowerCase().endsWith(".pdf")) {
       return {
@@ -173,24 +173,13 @@ const coachingFeedbackTool = {
   },
 } as const;
 
-function buildPrompt(job?: CoachingJobDto | null, questions: CoachingQuestionInput[] = [], jobDuty?: string | null, diagnosis?: CoachingDiagnosisDto | null) {
+function buildPrompt(job?: CoachingJobDto | null, questions: CoachingQuestionInput[] = [], jobDuty?: string | null) {
   const duty = jobDuty?.trim() ? `\n사용자가 이 공고에서 지원하려는 직무: ${jobDuty.trim()}` : "";
-  const diagnosisGuide = diagnosis ? `
-
-사용자가 선택한 강점·성향 진단 결과입니다. 이 정보는 코칭 판단에 반드시 반영하세요.
-- 진단 결과 ID: ${diagnosis.id}
-- 유형: ${diagnosis.typeName} (${diagnosis.typeCode})
-- 완료일: ${diagnosis.completedAt}
-- 요약: ${diagnosis.summary || "요약 없음"}
-- 강점: ${diagnosis.strengths.length ? diagnosis.strengths.join(", ") : "강점 정보 없음"}
-- 보완점: ${diagnosis.weaknesses.length ? diagnosis.weaknesses.join(", ") : "보완점 정보 없음"}
-- 성향 축 점수: 안정 ${diagnosis.axisScores.stability}, 협업 ${diagnosis.axisScores.teamwork}, 실행 ${diagnosis.axisScores.execution}, 원칙 ${diagnosis.axisScores.principle}
-진단 결과와 자소서 원문이 서로 맞는지, 강점이 문항 안에서 설득력 있게 드러나는지, 약점이 불필요하게 노출되는 표현이 있는지 함께 평가하세요.` : "";
+  // 강점·성향 진단 결과는 코칭 입력에서 제외합니다.
   const questionGuide = questions.length
     ? `\n\n사용자가 입력한 자소서 문항과 글자 수 제한입니다. submissionReview.questions는 반드시 이 순서와 개수 그대로 반환하세요.\n${questions.map((item, index) => `${index + 1}. 문항: ${item.question || "문항 미입력"} / 글자 수 제한: ${item.characterLimit || "없음"}`).join("\n")}`
     : "\n\n사용자가 별도 문항을 입력하지 않았습니다. submissionReview.questions에는 제출 원문 전체를 하나의 일반 문항으로 분석한 항목 1개를 반환하세요.";
   return `한국어 NCS 자기소개서 코치입니다. ${job ? `지원 공고: ${job.institutionName} / ${job.title}` : "지원 공고가 없는 일반 코칭"} 기준으로 제출 자소서를 분석하세요.${duty}
-${diagnosisGuide}
 
 반드시 지정된 JSON 스키마에 맞는 JSON 객체 하나로만 결과를 제출하세요. markdown, 코드블록, 설명 문장은 금지합니다.
 JSON이 길어져 중간에 끊기지 않도록 모든 문장은 간결하게 작성하세요. 같은 원문 문단을 여러 필드에 반복해서 길게 복사하지 마세요.

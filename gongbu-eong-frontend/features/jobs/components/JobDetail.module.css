@@ -349,6 +349,120 @@
   transform: translateX(-50%);
 }
 
+.coachingBannerSpacer {
+  height: 1.5rem;
+  transition: height 260ms ease;
+}
+
+.coachingBannerSpacerExpanded {
+  height: 8.625rem;
+}
+
+.coachingBannerDock {
+  position: fixed;
+  bottom: calc(5rem + env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 44;
+  display: flex;
+  width: 100%;
+  max-width: 37.5rem;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.coachingBannerToggle {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 2.5rem;
+  height: 1.5rem;
+  margin: 0 0 -0.0625rem;
+  place-items: center;
+  border: 1px solid #e4e8ef;
+  border-bottom: 0;
+  border-radius: 1.25rem 1.25rem 0 0;
+  background: #f5f7fa;
+  color: #9aa4b8;
+  font-size: 0.8125rem;
+  line-height: 1;
+  pointer-events: auto;
+}
+
+.coachingBannerViewport {
+  width: 100%;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(1.25rem);
+  transition:
+    max-height 260ms ease,
+    opacity 220ms ease,
+    transform 260ms ease;
+}
+
+.coachingBannerDockExpanded .coachingBannerViewport {
+  max-height: 7.125rem;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.coachingBanner {
+  position: relative;
+  display: flex;
+  height: 7.125rem;
+  align-items: center;
+  padding: 1.3125rem 7.5rem 1.25rem 1.5rem;
+  border: 1px solid #e4e8ef;
+  border-bottom: 0;
+  border-radius: 0.625rem 0.625rem 0 0;
+  background: #f5f7fa;
+  color: #1a2233;
+  overflow: hidden;
+  text-decoration: none;
+  pointer-events: auto;
+}
+
+.coachingBannerText {
+  display: grid;
+  min-width: 0;
+  gap: 0.625rem;
+}
+
+.coachingBannerText strong {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  line-height: 1.25rem;
+  word-break: keep-all;
+}
+
+.coachingBannerText b {
+  color: #e8544d;
+  font: inherit;
+}
+
+.coachingBannerText em {
+  color: #2f7ff0;
+  font-style: normal;
+}
+
+.coachingBannerText small {
+  color: #9aa4b8;
+  font-size: 0.8125rem;
+  line-height: 1rem;
+  word-break: keep-all;
+}
+
+.coachingBannerOwl {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 0.875rem;
+  width: 5.6875rem;
+  height: 5.375rem;
+  object-fit: contain;
+}
+
 .actionStar {
   display: inline-flex;
   min-width: 0;
@@ -423,4 +537,15 @@
   .actionStar,
   .apply,
   .disabledApply { font-size: 0.8125rem; }
+  .coachingBanner {
+    padding-left: 1rem;
+    padding-right: 6.375rem;
+  }
+  .coachingBannerText strong {
+    font-size: 0.9375rem;
+    line-height: 1.1875rem;
+  }
+  .coachingBannerOwl {
+    right: 0.75rem;
+  }
 }

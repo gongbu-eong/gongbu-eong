@@ -7,6 +7,9 @@ type DbClient = Pick<PoolClient, "query">;
 type OAuthProvider = "kakao" | "naver";
 
 export const MAX_CREDIT_BALANCE = 20;
+// 진단권 관련 지급/소모 로직 비활성화. 복구 시 true로 되돌리면 아래 원본 로직이 다시 실행됩니다.
+const CREDIT_LOGIC_ENABLED = false;
+// const CREDIT_LOGIC_ENABLED = process.env.GONGBUEONG_CREDIT_LOGIC_ENABLED === "true";
 
 export const CREDIT_REWARD_POLICY = {
   welcomeSignup: {
@@ -42,7 +45,8 @@ export type CreditRewardGrantResult = {
     | "policy_inactive"
     | "already_granted"
     | "max_balance"
-    | "insert_blocked";
+    | "insert_blocked"
+    | "disabled";
 };
 
 export type CommunityActivityRewardProgress = {
@@ -58,6 +62,15 @@ export async function grantWelcomeSignupCredits(
   client: DbClient,
   userId: string,
 ) {
+  if (!CREDIT_LOGIC_ENABLED) {
+    // 진단권 지급 로직 비활성화: 첫 가입 무료 진단권을 지급하지 않습니다.
+    return {
+      granted: false,
+      balanceAfter: await getCurrentCreditBalance(userId, client),
+      reason: "disabled",
+    } satisfies CreditRewardGrantResult;
+  }
+
   const policy = await getCreditRewardPolicy(
     client,
     CREDIT_REWARD_POLICY.welcomeSignup.sourceType,
@@ -132,6 +145,17 @@ export async function grantCommunityActivityMilestoneReward(
   userId: string,
   source: { type: "post" | "comment"; id: string },
 ) {
+  if (!CREDIT_LOGIC_ENABLED) {
+    // 진단권 지급 로직 비활성화: 커뮤니티 활동 보상을 지급하지 않습니다.
+    void source;
+    const currentBalance = await getCurrentCreditBalance(userId);
+    return {
+      granted: false,
+      balanceAfter: currentBalance,
+      progress: buildCommunityActivityRewardProgress(0, CREDIT_REWARD_POLICY.communityActivityMilestone.milestoneCount, true),
+    };
+  }
+
   const client = await db.connect();
 
   try {
@@ -210,6 +234,12 @@ export async function grantDiagnosisResultShareReward(
   userId: string,
   resultId: string,
 ) {
+  if (!CREDIT_LOGIC_ENABLED) {
+    // 진단권 지급 로직 비활성화: 진단 결과 공유 보상을 지급하지 않습니다.
+    void resultId;
+    return { granted: false, balanceAfter: await getCurrentCreditBalance(userId) };
+  }
+
   const client = await db.connect();
 
   try {
@@ -288,6 +318,12 @@ export async function grantDiagnosisResultShareReward(
 }
 
 export async function consumeCoachingCredit(userId: string, sourceId: string) {
+  if (!CREDIT_LOGIC_ENABLED) {
+    // 진단권 소모 로직 비활성화: AI 코칭 시 진단권을 차감하지 않습니다.
+    void sourceId;
+    return { consumed: false, balanceAfter: await getCurrentCreditBalance(userId) };
+  }
+
   const client = await db.connect();
 
   try {
@@ -316,6 +352,12 @@ export async function consumeCoachingCredit(userId: string, sourceId: string) {
 }
 
 export async function refundCoachingCredit(userId: string, sourceId: string) {
+  if (!CREDIT_LOGIC_ENABLED) {
+    // 진단권 환불 로직 비활성화: 차감이 없으므로 환불 트랜잭션도 생성하지 않습니다.
+    void sourceId;
+    return { refunded: false, balanceAfter: await getCurrentCreditBalance(userId) };
+  }
+
   const client = await db.connect();
 
   try {

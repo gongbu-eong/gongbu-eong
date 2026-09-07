@@ -7,24 +7,24 @@ import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { HomeMenuDrawer } from "@/features/home/components/HomeMain";
-import { TicketRewardAlert } from "./TicketRewardAlert";
+// import { TicketRewardAlert } from "./TicketRewardAlert";
 import styles from "./AppChrome.module.css";
 
 type AppHeaderProps = {
   user?: CurrentUserDto | null;
   nickname?: string;
   bookmarkCount?: number;
-  showTicketStatus?: boolean;
-  ticketCount?: number;
-  hasTicketAlert?: boolean;
+  // showTicketStatus?: boolean;
+  // ticketCount?: number;
+  // hasTicketAlert?: boolean;
 };
 
 export function AppHeader({
   user: userProp,
   bookmarkCount: bookmarkCountProp,
-  showTicketStatus = true,
-  ticketCount,
-  hasTicketAlert = true,
+  // showTicketStatus = true,
+  // ticketCount,
+  // hasTicketAlert = true,
 }: AppHeaderProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,15 +32,16 @@ export function AppHeader({
   const [fetchedBookmarkCount, setFetchedBookmarkCount] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [ticketRewardMessage, setTicketRewardMessage] = useState("");
+  // const [ticketRewardMessage, setTicketRewardMessage] = useState("");
 
   useEffect(() => {
-    const shouldFetchUser =
-      userProp === undefined ||
-      (showTicketStatus &&
-        ticketCount === undefined &&
-        userProp !== null &&
-        userProp.creditBalance === undefined);
+    const shouldFetchUser = userProp === undefined;
+    // const shouldFetchUser =
+    //   userProp === undefined ||
+    //   (showTicketStatus &&
+    //     ticketCount === undefined &&
+    //     userProp !== null &&
+    //     userProp.creditBalance === undefined);
     const shouldFetchHome = bookmarkCountProp === undefined;
 
     if (!shouldFetchUser && !shouldFetchHome) return;
@@ -64,16 +65,16 @@ export function AppHeader({
     return () => {
       active = false;
     };
-  }, [bookmarkCountProp, showTicketStatus, ticketCount, userProp]);
+  }, [bookmarkCountProp, userProp]);
 
   const user = userProp !== undefined ? userProp : fetchedUser;
   const bookmarkCount =
     bookmarkCountProp !== undefined ? bookmarkCountProp : fetchedBookmarkCount;
   const isAuthenticated = Boolean(user);
-  const effectiveTicketCount =
-    ticketCount ?? user?.creditBalance ?? fetchedUser?.creditBalance ?? 0;
-  const effectiveCommunityActivityRewardProgress =
-    user?.communityActivityRewardProgress ?? fetchedUser?.communityActivityRewardProgress;
+  // const effectiveTicketCount =
+  //   ticketCount ?? user?.creditBalance ?? fetchedUser?.creditBalance ?? 0;
+  // const effectiveCommunityActivityRewardProgress =
+  //   user?.communityActivityRewardProgress ?? fetchedUser?.communityActivityRewardProgress;
 
   useEffect(() => {
     const handleUnreadNotificationChange = (event: Event) => {
@@ -117,84 +118,85 @@ export function AppHeader({
     }
   }, [pathname, router, user]);
 
-  useEffect(() => {
-    let active = true;
-    const showPendingReward = (
-      message: string,
-      balanceAfter?: number,
-      progress?: CurrentUserDto["communityActivityRewardProgress"],
-    ) => {
-      window.setTimeout(() => {
-        if (!active) return;
-        if (typeof balanceAfter === "number" || progress) {
-          setFetchedUser((current) =>
-            current
-              ? {
-                  ...current,
-                  creditBalance:
-                    typeof balanceAfter === "number" ? balanceAfter : current.creditBalance,
-                  communityActivityRewardProgress:
-                    progress ?? current.communityActivityRewardProgress,
-                }
-              : current,
-          );
-          window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
-            detail: { balance: balanceAfter, progress },
-          }));
-        }
-        setTicketRewardMessage(message);
-      }, 0);
-    };
-
-    const pendingReward = window.sessionStorage.getItem("gongbu_pending_ticket_reward");
-    if (pendingReward) {
-      window.sessionStorage.removeItem("gongbu_pending_ticket_reward");
-      try {
-        const parsed = JSON.parse(pendingReward) as {
-          message?: string;
-          balanceAfter?: number;
-          progress?: CurrentUserDto["communityActivityRewardProgress"];
-        };
-        showPendingReward(
-          parsed.message || "진단권 한장이 추가되었습니다.",
-          parsed.balanceAfter,
-          parsed.progress,
-        );
-      } catch {
-        showPendingReward("진단권 한장이 추가되었습니다.");
-      }
-    }
-
-    const handleReward = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        message?: string;
-        balanceAfter?: number;
-        progress?: CurrentUserDto["communityActivityRewardProgress"];
-      }>).detail;
-      if (typeof detail?.balanceAfter === "number" || detail?.progress) {
-        setFetchedUser((current) =>
-          current
-            ? {
-                ...current,
-                creditBalance:
-                  typeof detail.balanceAfter === "number"
-                    ? detail.balanceAfter
-                    : current.creditBalance,
-                communityActivityRewardProgress:
-                  detail.progress ?? current.communityActivityRewardProgress,
-              }
-            : current,
-        );
-      }
-      setTicketRewardMessage(detail?.message || "진단권 한장이 추가되었습니다.");
-    };
-
-    window.addEventListener("gongbu-ticket-rewarded", handleReward);
-    return () => {
-      active = false;
-      window.removeEventListener("gongbu-ticket-rewarded", handleReward);
-    };
-  }, []);
+  // 진단권 보상 alert 및 헤더 잔액 동기화 로직 비활성화.
+  // useEffect(() => {
+  //   let active = true;
+  //   const showPendingReward = (
+  //     message: string,
+  //     balanceAfter?: number,
+  //     progress?: CurrentUserDto["communityActivityRewardProgress"],
+  //   ) => {
+  //     window.setTimeout(() => {
+  //       if (!active) return;
+  //       if (typeof balanceAfter === "number" || progress) {
+  //         setFetchedUser((current) =>
+  //           current
+  //             ? {
+  //                 ...current,
+  //                 creditBalance:
+  //                   typeof balanceAfter === "number" ? balanceAfter : current.creditBalance,
+  //                 communityActivityRewardProgress:
+  //                   progress ?? current.communityActivityRewardProgress,
+  //               }
+  //             : current,
+  //         );
+  //         window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
+  //           detail: { balance: balanceAfter, progress },
+  //         }));
+  //       }
+  //       setTicketRewardMessage(message);
+  //     }, 0);
+  //   };
+  //
+  //   const pendingReward = window.sessionStorage.getItem("gongbu_pending_ticket_reward");
+  //   if (pendingReward) {
+  //     window.sessionStorage.removeItem("gongbu_pending_ticket_reward");
+  //     try {
+  //       const parsed = JSON.parse(pendingReward) as {
+  //         message?: string;
+  //         balanceAfter?: number;
+  //         progress?: CurrentUserDto["communityActivityRewardProgress"];
+  //       };
+  //       showPendingReward(
+  //         parsed.message || "진단권 한장이 추가되었습니다.",
+  //         parsed.balanceAfter,
+  //         parsed.progress,
+  //       );
+  //     } catch {
+  //       showPendingReward("진단권 한장이 추가되었습니다.");
+  //     }
+  //   }
+  //
+  //   const handleReward = (event: Event) => {
+  //     const detail = (event as CustomEvent<{
+  //       message?: string;
+  //       balanceAfter?: number;
+  //       progress?: CurrentUserDto["communityActivityRewardProgress"];
+  //     }>).detail;
+  //     if (typeof detail?.balanceAfter === "number" || detail?.progress) {
+  //       setFetchedUser((current) =>
+  //         current
+  //           ? {
+  //               ...current,
+  //               creditBalance:
+  //                 typeof detail.balanceAfter === "number"
+  //                   ? detail.balanceAfter
+  //                   : current.creditBalance,
+  //               communityActivityRewardProgress:
+  //                 detail.progress ?? current.communityActivityRewardProgress,
+  //             }
+  //           : current,
+  //       );
+  //     }
+  //     setTicketRewardMessage(detail?.message || "진단권 한장이 추가되었습니다.");
+  //   };
+  //
+  //   window.addEventListener("gongbu-ticket-rewarded", handleReward);
+  //   return () => {
+  //     active = false;
+  //     window.removeEventListener("gongbu-ticket-rewarded", handleReward);
+  //   };
+  // }, []);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -231,6 +233,8 @@ export function AppHeader({
         </Link>
       </div>
       <div className={styles.headerActions}>
+        {/* 진단권 게이지, 진단권 이미지/건수, 안내 툴팁 비활성화 */}
+        {/*
         {showTicketStatus && isAuthenticated ? (
           <AppTicketStatus
             ticketCount={effectiveTicketCount}
@@ -238,6 +242,7 @@ export function AppHeader({
             communityActivityRewardProgress={effectiveCommunityActivityRewardProgress}
           />
         ) : null}
+        */}
         {isAuthenticated ? (
           <Link href="/notifications" aria-label="알림" className={styles.headerButton}>
             <BellIcon />
@@ -268,16 +273,20 @@ export function AppHeader({
           onLogout={handleLogout}
         />
       ) : null}
+      {/*
       {ticketRewardMessage ? (
         <TicketRewardAlert
           message={ticketRewardMessage}
           onClose={() => setTicketRewardMessage("")}
         />
       ) : null}
+      */}
     </header>
   );
 }
 
+// 진단권 게이지, 진단권 이미지/건수, 안내 툴팁 로직 비활성화.
+/*
 export function AppTicketStatus({
   ticketCount = 10,
   hasTicketAlert = true,
@@ -364,6 +373,7 @@ export function AppTicketStatus({
     </div>
   );
 }
+*/
 
 export function AppFooter({
   active,

@@ -26,7 +26,7 @@ const representativeTools = [
   },
   {
     href: "/ai-tools/coaching",
-    badge: "첫 5회 무료",
+    badge: "AI 코칭",
     badgeTone: "green",
     title: "NCS AI 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",
@@ -92,10 +92,8 @@ export function AiToolsPage() {
   return (
     <main className={styles.page}>
       <section className={styles.mobileFrame} aria-label="AI 도구">
-        <AppHeader
-          user={authResolved ? user : undefined}
-          ticketCount={user?.creditBalance}
-        />
+        <AppHeader user={authResolved ? user : undefined} />
+        {/* <AppHeader user={authResolved ? user : undefined} ticketCount={user?.creditBalance} /> */}
 
         <div className={styles.content}>
           <header className={styles.titleBlock}>

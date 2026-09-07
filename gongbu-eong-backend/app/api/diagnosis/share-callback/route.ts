@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { grantDiagnosisResultShareReward } from "@/domains/credits/credits.repository";
+// import { grantDiagnosisResultShareReward } from "@/domains/credits/credits.repository";
 import { getDiagnosisResultDetail } from "@/domains/diagnosis/diagnosis.service";
 import { jsonWithCors } from "@/lib/cors";
 
@@ -35,8 +35,10 @@ async function handleKakaoShareCallback(request: NextRequest) {
       return jsonWithCors(request, { ok: false, message: "진단 결과를 찾을 수 없습니다." }, { status: 404 });
     }
 
-    const reward = await grantDiagnosisResultShareReward(userId, resultId);
-    return jsonWithCors(request, { ok: true, ...reward });
+    // 진단권 지급 로직 비활성화: 진단 결과 공유 보상을 지급하지 않습니다.
+    // const reward = await grantDiagnosisResultShareReward(userId, resultId);
+    // return jsonWithCors(request, { ok: true, ...reward });
+    return jsonWithCors(request, { ok: true, granted: false, balanceAfter: 0 });
   } catch (error) {
     console.error("[Diagnosis] Kakao share callback failed", error);
     return jsonWithCors(request, { ok: false, message: "공유 보상 지급에 실패했습니다." }, { status: 500 });
