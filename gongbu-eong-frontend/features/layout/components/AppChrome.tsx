@@ -76,6 +76,38 @@ export function AppHeader({
     user?.communityActivityRewardProgress ?? fetchedUser?.communityActivityRewardProgress;
 
   useEffect(() => {
+    const handleUnreadNotificationChange = (event: Event) => {
+      const unreadCount = (event as CustomEvent<{ unreadCount?: number }>).detail
+        ?.unreadCount;
+
+      if (typeof unreadCount !== "number") {
+        return;
+      }
+
+      setFetchedUser((current) =>
+        current
+          ? {
+              ...current,
+              unreadNotificationCount: unreadCount,
+            }
+          : current,
+      );
+    };
+
+    window.addEventListener(
+      "gongbu-notifications-unread-changed",
+      handleUnreadNotificationChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "gongbu-notifications-unread-changed",
+        handleUnreadNotificationChange,
+      );
+    };
+  }, []);
+
+  useEffect(() => {
     const requiresSignupAgreements =
       user?.status === "pending_signup" || user?.signupCompletedAt === null;
 

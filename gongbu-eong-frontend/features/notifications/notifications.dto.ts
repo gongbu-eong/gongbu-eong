@@ -23,4 +23,5 @@ export type NotificationsResponseDto = {
 export type NotificationReadResponseDto = {
   ok: boolean;
   notification: UserNotificationDto;
+  unreadCount: number;
 };

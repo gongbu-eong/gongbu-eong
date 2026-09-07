@@ -234,6 +234,38 @@ export function HomeMain({
     };
   }, []);
 
+  useEffect(() => {
+    const handleUnreadNotificationChange = (event: Event) => {
+      const unreadCount = (event as CustomEvent<{ unreadCount?: number }>).detail
+        ?.unreadCount;
+
+      if (typeof unreadCount !== "number") {
+        return;
+      }
+
+      setUser((current) =>
+        current
+          ? {
+              ...current,
+              unreadNotificationCount: unreadCount,
+            }
+          : current,
+      );
+    };
+
+    window.addEventListener(
+      "gongbu-notifications-unread-changed",
+      handleUnreadNotificationChange,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "gongbu-notifications-unread-changed",
+        handleUnreadNotificationChange,
+      );
+    };
+  }, []);
+
   const nickname = useMemo(() => {
     if (isLoading) return "";
     return user?.nickname || user?.displayName || "회원";

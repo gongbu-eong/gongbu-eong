@@ -72,6 +72,9 @@ export function NotificationsPage() {
             item.id === notification.id ? response.notification : item,
           ),
         );
+        window.dispatchEvent(new CustomEvent("gongbu-notifications-unread-changed", {
+          detail: { unreadCount: response.unreadCount },
+        }));
       }
 
       if (nextNotification.targetPath) {

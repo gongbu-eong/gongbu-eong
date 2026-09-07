@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
 import { requireSessionUser } from "@/domains/auth/session";
-import { markNotificationRead } from "@/domains/notifications/notifications.repository";
+import {
+  countUnreadNotifications,
+  markNotificationRead,
+} from "@/domains/notifications/notifications.repository";
 import { jsonWithCors } from "@/lib/cors";
 
 export const runtime = "nodejs";
@@ -22,7 +25,9 @@ export async function POST(
       );
     }
 
-    return jsonWithCors(request, { ok: true, notification });
+    const unreadCount = await countUnreadNotifications(user.id);
+
+    return jsonWithCors(request, { ok: true, notification, unreadCount });
   } catch (error) {
     return handleError(request, error);
   }
