@@ -227,7 +227,7 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       requiresSignupAgreements: authResult.requiresSignupAgreements,
       diagnosisResultId: authResult.diagnosisResultId,
       welcomeCreditsGranted: authResult.welcomeCreditsGranted,
-      returnTo: storedReturnTo ? new URL(storedReturnTo).pathname : null,
+      returnTo: storedReturnTo ? new URL(storedReturnTo, successRedirectUrl).pathname : null,
     });
 
     const redirectUrl = new URL(successRedirectUrl, request.url);
@@ -591,7 +591,7 @@ async function redirectExistingSession(
     request.cookies.get(OAUTH_RETURN_TO_COOKIE)?.value,
   );
   const redirectUrl = new URL(successRedirectUrl, request.url);
-  const nextUrl = new URL(storedReturnTo || successRedirectUrl, request.url);
+  const nextUrl = new URL(storedReturnTo || successRedirectUrl, successRedirectUrl);
 
   if (user.diagnosisResultId && shouldRedirectToDiagnosisResult(nextUrl.pathname)) {
     nextUrl.pathname = nextUrl.pathname.startsWith("/events/")
