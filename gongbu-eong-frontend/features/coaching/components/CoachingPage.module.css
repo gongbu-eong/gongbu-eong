@@ -176,12 +176,13 @@
 .jobPickerSheet .search button{width:57px;height:36px;border-radius:8px;font-size:14px;font-weight:700}
 .jobPickerSheet .jobResults{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .jobResultCount{margin:0 0 8px;color:#5a6580;font-size:14px;font-weight:600;line-height:1}
-.noJobResult{display:flex;min-height:0;height:100%;box-sizing:border-box;flex-direction:column;align-items:center;text-align:center;padding-top:110px}
+.noJobResult{display:flex;min-height:100%;height:auto;box-sizing:border-box;flex-direction:column;align-items:center;text-align:center;padding:clamp(32px,14dvh,110px) 0 24px}
 .noJobResult strong{color:#1a2233;font-size:15px;font-weight:700;line-height:24px}
 .noJobResult p{margin:8px 0 24px;color:#5a6580;font-size:15px;font-weight:400;line-height:24px}
-.noJobResult input{width:100%;height:36px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:5px;background:#fff;padding:0 8px;color:#1a2233;font:inherit;font-size:14px;text-align:left}
+.noJobResult strong,.noJobResult p,.noJobResult input,.noJobResult button{flex-shrink:0}
+.noJobResult input{width:100%;height:36px;min-height:36px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:5px;background:#fff;padding:0 8px;color:#1a2233;font:inherit;font-size:14px;text-align:left}
 .noJobResult input::placeholder{color:#9aa4b8}
-.noJobResult button{display:grid;width:100%;height:36px;margin-top:8px;padding:0;place-items:center;border:0;border-bottom:0;border-radius:8px;background:#2f7ff0;color:#fff;font-size:14px;font-weight:700;line-height:1;text-align:center}
+.noJobResult button{display:grid;width:100%;height:52px;min-height:52px;margin-top:8px;padding:0;place-items:center;border:0;border-bottom:0;border-radius:12px;background:#2f7ff0;color:#fff;font-size:16px;font-weight:800;line-height:1;text-align:center}
 .noJobResult button:disabled{background:#9aa4b8}
 .jobDutySheet{height:min(700px,calc(100dvh - 24px));max-height:min(700px,calc(100dvh - 24px));border-radius:15px 15px 0 0;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 .jobDutySheet header{position:relative;height:56px;border-bottom:0}
@@ -466,6 +467,8 @@
   .overlay{align-items:flex-end}
   .coachingSheet{max-height:calc(100dvh - 24px);padding-bottom:calc(24px + env(safe-area-inset-bottom))}
   .jobPickerSheet{height:min(700px,calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px));max-height:calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px)}
+  .jobPickerSheet .jobResults{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  .noJobResult{padding-top:clamp(24px,10dvh,88px)}
   .jobPickerSheet .search input,.noJobResult input{scroll-margin-bottom:calc(120px + var(--mobile-keyboard-inset,0px))}
   .jobDutySheet{height:min(700px,calc(100dvh - 24px));max-height:min(700px,calc(100dvh - 24px));padding-bottom:calc(24px + env(safe-area-inset-bottom))}
   .jobDutyInput{scroll-margin-bottom:calc(180px + var(--mobile-keyboard-inset,0px))}

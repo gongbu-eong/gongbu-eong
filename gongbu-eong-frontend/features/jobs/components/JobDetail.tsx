@@ -15,6 +15,7 @@ import {
   getJobPosting,
   setJobBookmark,
 } from "@/features/home/home.api";
+import { trackProductEvent } from "@/features/analytics/analytics.api";
 import type { JobPostingDetailDto } from "@/features/home/home.dto";
 import { AppHeader } from "@/features/layout/components/AppChrome";
 import { makeLoginHref } from "@/shared/navigation/login";
@@ -94,6 +95,23 @@ export function JobDetail({
         window.scrollBy({ top: 114, behavior: "smooth" });
       });
     }
+  };
+
+  const trackCoachingBannerClick = () => {
+    if (!job) return;
+
+    trackProductEvent({
+      eventType: "banner_click",
+      properties: {
+        banner_key: "job_detail_resume_coaching",
+        banner_name: "공고 상세 AI NCS 자소서 코칭 배너",
+        placement: "job_detail_bottom",
+        target_path: "/ai-tools/coaching",
+        job_id: job.id,
+        institution_name: job.institutionName,
+        job_title: job.title,
+      },
+    });
   };
 
   const toggleBookmark = async () => {
@@ -293,6 +311,7 @@ export function JobDetail({
                 <Link
                   href="/ai-tools/coaching"
                   className={styles.coachingBanner}
+                  onClick={trackCoachingBannerClick}
                 >
                   <span className={styles.coachingBannerText}>
                     <strong>
