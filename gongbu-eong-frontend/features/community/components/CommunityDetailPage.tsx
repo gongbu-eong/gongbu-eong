@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/features/home/home.api";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { loadKakaoSdk } from "@/shared/kakao-share";
 import { focusMobileInput } from "@/shared/mobile-focus";
+import { makeLoginHref } from "@/shared/navigation/login";
 import {
   createCommunityComment,
   deleteCommunityComment,
@@ -102,7 +103,7 @@ export function CommunityDetailPage({
   const requireLoginForAction = async () => {
     const user = await getCurrentUser().catch(() => null);
     if (user?.authenticated) return true;
-    router.push("/login");
+    router.push(makeLoginHref(`/community/${postId}`));
     return false;
   };
 

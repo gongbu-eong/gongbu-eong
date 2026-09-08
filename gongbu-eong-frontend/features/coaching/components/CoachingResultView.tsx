@@ -27,7 +27,7 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
   const result = item.result;
   const review = makeSubmissionReview(result, item);
   const isLocked = Boolean(item.isLocked);
-  const effectiveQuestionIndex = isLocked ? 0 : selectedQuestionIndex;
+  const effectiveQuestionIndex = selectedQuestionIndex;
   const selectedQuestion = review.questions[effectiveQuestionIndex] || review.questions[0];
   const subtitle = item.job?.institutionName ? `${item.job.institutionName} · NCS 분석 + AI 첨삭` : "NCS 분석 + AI 첨삭";
   const selectQuestion = (index: number) => {

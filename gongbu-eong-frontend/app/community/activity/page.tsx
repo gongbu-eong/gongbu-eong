@@ -3,7 +3,7 @@ import { CommunityActivityPage } from "@/features/community/components/Community
 import { requireCommunityAuth } from "../requireCommunityAuth";
 
 export default async function CommunityActivityRoute() {
-  await requireCommunityAuth();
+  await requireCommunityAuth("/community/activity");
   return (
     <Suspense fallback={null}>
       <CommunityActivityPage />

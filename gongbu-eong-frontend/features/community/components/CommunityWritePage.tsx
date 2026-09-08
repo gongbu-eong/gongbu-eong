@@ -7,6 +7,7 @@ import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useRef, useState
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
+import { makeLoginHref } from "@/shared/navigation/login";
 import { createCommunityPost, getCommunityPost, updateCommunityPost } from "../community.api";
 import { COMMUNITY_CATEGORIES, type CommunityAttachmentDto, type CommunityCategory } from "../community.dto";
 import { AuthorProfile } from "./CommunityShared";
@@ -45,15 +46,15 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
     getCurrentUser()
       .then((response) => {
         if (!response.authenticated || !response.user) {
-          router.replace("/login");
+          router.replace(makeLoginHref(postId ? `/community/${postId}/edit` : "/community/write"));
           return;
         }
         setUser(response.user);
       })
       .catch(() => {
-        router.replace("/login");
+        router.replace(makeLoginHref(postId ? `/community/${postId}/edit` : "/community/write"));
       });
-  }, [router]);
+  }, [postId, router]);
 
   useEffect(() => {
     if (!postId) return;

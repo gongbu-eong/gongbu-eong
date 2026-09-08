@@ -17,6 +17,7 @@ import {
 } from "@/features/home/home.api";
 import type { JobPostingDetailDto } from "@/features/home/home.dto";
 import { AppHeader } from "@/features/layout/components/AppChrome";
+import { makeLoginHref } from "@/shared/navigation/login";
 import styles from "./JobDetail.module.css";
 
 const backendUrl =
@@ -98,7 +99,7 @@ export function JobDetail({
   const toggleBookmark = async () => {
     if (!job) return;
     if (!authenticated) {
-      router.push("/login");
+      router.push(makeLoginHref(`/jobs/${job.id}`));
       return;
     }
     setBookmarkPending(true);

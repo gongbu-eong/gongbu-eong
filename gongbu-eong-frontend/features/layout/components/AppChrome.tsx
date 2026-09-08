@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { HomeMenuDrawer } from "@/features/home/components/HomeMain";
+import { makeLoginHref } from "@/shared/navigation/login";
 // import { TicketRewardAlert } from "./TicketRewardAlert";
 import styles from "./AppChrome.module.css";
 
@@ -419,7 +420,7 @@ export function AppFooter({
       setIsAuthenticated(false);
     }
 
-    router.push("/login");
+    router.push(makeLoginHref(href));
   };
 
   return (

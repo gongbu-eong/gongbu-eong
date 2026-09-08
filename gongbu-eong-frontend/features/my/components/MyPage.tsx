@@ -9,6 +9,7 @@ import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { listCoachingHistory } from "@/features/coaching/coaching.api";
+import { makeLoginHref } from "@/shared/navigation/login";
 import styles from "./My.module.css";
 
 export function MyPage() {
@@ -31,7 +32,7 @@ export function MyPage() {
       if (!alive) return;
 
       if (!userResponse?.authenticated || !userResponse.user) {
-        router.replace("/login");
+        router.replace(makeLoginHref("/my"));
         return;
       }
 

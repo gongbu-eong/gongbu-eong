@@ -2,6 +2,6 @@ import { CommunityWritePage } from "@/features/community/components/CommunityWri
 import { requireCommunityAuth } from "../requireCommunityAuth";
 
 export default async function CommunityWriteRoute() {
-  await requireCommunityAuth();
+  await requireCommunityAuth("/community/write");
   return <CommunityWritePage />;
 }

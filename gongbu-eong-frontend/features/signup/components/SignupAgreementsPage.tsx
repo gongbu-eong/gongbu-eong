@@ -12,6 +12,7 @@ import {
   type PolicyTable,
   type PolicyTextBlock,
 } from "@/features/my/components/MyPolicyDocumentPage";
+import { makeLoginHref } from "@/shared/navigation/login";
 import { completeSignupAgreements } from "../signup.api";
 import styles from "./SignupAgreementsPage.module.css";
 
@@ -50,7 +51,7 @@ export function SignupAgreementsPage() {
       .then((response) => {
         if (!alive) return;
         if (!response.authenticated) {
-          router.replace("/login");
+          router.replace(makeLoginHref(`/signup/agreements?next=${encodeURIComponent(nextPath)}`));
           return;
         }
         if (response.user?.status === "active" && response.user.signupCompletedAt) {
@@ -58,7 +59,7 @@ export function SignupAgreementsPage() {
         }
       })
       .catch(() => {
-        if (alive) router.replace("/login");
+        if (alive) router.replace(makeLoginHref(`/signup/agreements?next=${encodeURIComponent(nextPath)}`));
       });
 
     return () => {

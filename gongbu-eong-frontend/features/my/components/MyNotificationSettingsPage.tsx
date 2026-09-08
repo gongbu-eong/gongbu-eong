@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { makeLoginHref } from "@/shared/navigation/login";
 import {
   getMyNotificationSettings,
   updateMyNotificationSettings,
@@ -47,7 +48,7 @@ export function MyNotificationSettingsPage() {
       if (!alive) return;
 
       if (!userResponse?.authenticated || !userResponse.user) {
-        router.replace("/login");
+        router.replace(makeLoginHref("/my/notifications"));
         return;
       }
 

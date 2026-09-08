@@ -6,7 +6,7 @@ export default async function CommunityEditRoute({
 }: {
   params: Promise<{ postId: string }>;
 }) {
-  await requireCommunityAuth();
   const { postId } = await params;
+  await requireCommunityAuth(`/community/${postId}/edit`);
   return <CommunityWritePage postId={postId} />;
 }

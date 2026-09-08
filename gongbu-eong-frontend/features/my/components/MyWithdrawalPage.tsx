@@ -8,6 +8,7 @@ import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { withdrawCurrentUser } from "@/features/my/my.api";
 import type { WithdrawalReasonCode } from "@/features/my/my.dto";
+import { makeLoginHref } from "@/shared/navigation/login";
 import styles from "./My.module.css";
 
 const withdrawalReasons: Array<{
@@ -41,7 +42,7 @@ export function MyWithdrawalPage() {
       if (!alive) return;
 
       if (!response?.authenticated || !response.user) {
-        router.replace("/login");
+        router.replace(makeLoginHref("/my/withdrawal"));
         return;
       }
 

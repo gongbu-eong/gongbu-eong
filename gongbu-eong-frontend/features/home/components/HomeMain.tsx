@@ -13,6 +13,7 @@ import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
 import { getCommunityPosts } from "@/features/community/community.api";
 import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
 import { formatClockTime, formatNumber } from "@/features/community/components/CommunityShared";
+import { makeLoginHref } from "@/shared/navigation/login";
 import {
   formatJobEmploymentLabel,
   formatJobRegionLabel,
@@ -136,7 +137,7 @@ function clearWelcomeTicketRewardQuery() {
 */
 
 function getRecommendedJobsHref(user: CurrentUserDto | null | undefined) {
-  if (!user) return "/login";
+  if (!user) return makeLoginHref("/jobs?view=recommended");
   if (!user.diagnosisResultId) return "/jobs?view=recommended";
 
   const params = new URLSearchParams({
@@ -365,7 +366,7 @@ const endHotDrag = (event: PointerEvent<HTMLDivElement>) => {
 
   const alertLoginRequired = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    window.location.href = "/login";
+    window.location.href = event.currentTarget.href;
   };
 
 const ignoreClickAfterDrag = (
@@ -545,7 +546,7 @@ const ignoreClickAfterDrag = (
 
             return (
               <Link
-                href={!tool.requiresAuth || user ? tool.href : "/login"}
+                href={!tool.requiresAuth || user ? tool.href : makeLoginHref(tool.href)}
                 key={tool.title}
                 className={styles.toolCard}
                 onClick={!tool.requiresAuth || user ? undefined : alertLoginRequired}
@@ -752,7 +753,7 @@ export function HomeMenuDrawer({
             {user ? (
               <p>{profileStatusMessage}</p>
             ) : (
-              <Link href="/login" className={styles.drawerLoginLink} onClick={onClose}>
+              <Link href={makeLoginHref()} className={styles.drawerLoginLink} onClick={onClose}>
                 로그인 하기 →
               </Link>
             )}
@@ -771,7 +772,7 @@ export function HomeMenuDrawer({
             hrefs={[
               "/jobs",
               getRecommendedJobsHref(user),
-              user ? "/jobs?view=bookmarked" : "/login",
+              user ? "/jobs?view=bookmarked" : makeLoginHref("/jobs?view=bookmarked"),
             ]}
             badge={String(bookmarkCount)}
             onNavigate={onClose}
@@ -780,7 +781,7 @@ export function HomeMenuDrawer({
             icon="calendar"
             title="캘린더"
             items={["전체 채용 캘린더", "나만의 캘린더"]}
-            hrefs={["/calendar", user ? "/calendar" : "/login"]}
+            hrefs={["/calendar", user ? "/calendar" : makeLoginHref("/calendar")]}
             onNavigate={onClose}
           />
           <DrawerSection
@@ -824,11 +825,11 @@ export function HomeMenuDrawer({
             ] : [
               // "/login",
               // "/login",
-              "/login",
+              makeLoginHref("/community/activity"),
             ]}
             onNavigate={onClose}
           />
-          <DrawerSection icon="my" title="마이페이지" titleHref={user ? "/my" : "/login"} onNavigate={onClose} />
+          <DrawerSection icon="my" title="마이페이지" titleHref={user ? "/my" : makeLoginHref("/my")} onNavigate={onClose} />
         </nav>
 
         {user ? (

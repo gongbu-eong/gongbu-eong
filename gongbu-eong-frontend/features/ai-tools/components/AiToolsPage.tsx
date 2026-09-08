@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
+import { makeLoginHref } from "@/shared/navigation/login";
 import styles from "./AiToolsPage.module.css";
 
 const representativeTools = [
@@ -35,7 +36,7 @@ const representativeTools = [
     thumbClass: "toolThumbResume",
     imageWidth: 94,
     imageHeight: 78,
-    requiresAuth: true,
+    requiresAuth: false,
     comingSoon: false,
   },
   {
@@ -136,7 +137,7 @@ export function AiToolsPage() {
                   <br />
                   사용하세요.
                 </strong>
-                <Link href="/login" className={styles.heroButton}>로그인하고 검사하기</Link>
+                <Link href={makeLoginHref("/ai-tools/diagnosis")} className={styles.heroButton}>로그인하고 검사하기</Link>
               </div>
               <Image
                 src="/ai-tools/hero-logged-out.png"
@@ -189,7 +190,7 @@ export function AiToolsPage() {
 
               return (
                 <Link
-                  href={tool.requiresAuth && !user ? "/login" : tool.href}
+                  href={tool.requiresAuth && !user ? makeLoginHref(tool.href) : tool.href}
                   key={tool.title}
                   className={styles.toolCard}
                 >

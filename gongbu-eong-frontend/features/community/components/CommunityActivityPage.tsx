@@ -7,6 +7,7 @@ import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
+import { makeLoginHref } from "@/shared/navigation/login";
 import { deleteCommunityComment, deleteCommunityPost, getCommunityActivity, setCommunityScrap } from "../community.api";
 import type { CommunityActivityResponseDto } from "../community.dto";
 import { AuthorProfile, DeleteConfirmDialog, EmptyState, PostItem } from "./CommunityShared";
@@ -33,12 +34,12 @@ export function CommunityActivityPage() {
     getCurrentUser()
       .then((response) => {
         if (!response.authenticated || !response.user) {
-          router.replace("/login");
+          router.replace(makeLoginHref("/community/activity"));
           return;
         }
         setUser(response.user);
       })
-      .catch(() => router.replace("/login"));
+      .catch(() => router.replace(makeLoginHref("/community/activity")));
     getCommunityActivity()
       .then(setActivity)
       .catch((error) => setMessage(error instanceof Error ? error.message : "내 활동을 불러오지 못했습니다."));

@@ -17,6 +17,7 @@ import {
   formatJobRegionLabel,
 } from "@/features/jobs/job-display";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { makeLoginHref } from "@/shared/navigation/login";
 import styles from "./CalendarMain.module.css";
 
 type CalendarScope = "all" | "mine";
@@ -383,7 +384,7 @@ export function CalendarMain({
                 <EmptyState
                   title="로그인이 필요합니다."
                   description="찜한 공고는 로그인 후 나만의 캘린더에서 확인할 수 있어요."
-                  href="/login"
+                  href={makeLoginHref("/calendar")}
                   action="로그인하러 가기"
                 />
               ) : isLoading ? (

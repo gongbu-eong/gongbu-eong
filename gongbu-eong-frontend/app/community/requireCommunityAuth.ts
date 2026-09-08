@@ -1,12 +1,12 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
-export async function requireCommunityAuth() {
+export async function requireCommunityAuth(returnTo = "/community") {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("gongbu_eong_session")?.value;
 
   if (!sessionCookie) {
-    redirect("/login");
+    redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
   }
 
   const backendUrl =
@@ -27,6 +27,6 @@ export async function requireCommunityAuth() {
     .catch(() => false);
 
   if (!authenticated) {
-    redirect("/login");
+    redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
   }
 }
