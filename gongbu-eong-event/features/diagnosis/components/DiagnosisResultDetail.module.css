@@ -364,51 +364,6 @@
 .growthCard .pointCardHeader strong { color: #1d1708; }
 .growthCard p { color: #60480b; }
 
-.shareTicket {
-  display: grid;
-  grid-template-columns: 5.25rem minmax(0, 1fr);
-  min-height: 7.5rem;
-  align-items: center;
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-  padding: 1rem 2.5rem 1rem 1.5rem;
-  border-radius: .625rem;
-  background: #ffe6e5;
-  cursor: pointer;
-}
-
-.shareTicket img {
-  width: 5.25rem;
-  height: 5.5625rem;
-  object-fit: contain;
-}
-
-.shareTicket strong {
-  display: block;
-  color: #331c1b;
-  font-size: 1.0625rem;
-  line-height: 1.2;
-}
-
-.shareTicket strong em {
-  color: #e8544d;
-  font-style: normal;
-}
-
-.shareTicketCta {
-  display: inline-flex;
-  min-height: 1.75rem;
-  margin-top: .5rem;
-  padding: .35rem .75rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: .4375rem;
-  background: #e8544d;
-  color: #fff;
-  font-size: .9375rem;
-  font-weight: 700;
-}
-
 .tipList {
   display: grid;
   gap: 1.5rem;
@@ -750,40 +705,6 @@
   transform: translateY(1px);
 }
 
-.shareRewardNotice {
-  display: grid;
-  gap: 0.1875rem;
-  min-height: 8rem;
-  margin-top: 1.5rem;
-  padding: 1.5rem 1rem;
-  background: #f5f7fa;
-  color: #5a6580;
-  font-size: 0.8125rem;
-  font-weight: 400;
-  line-height: normal;
-}
-
-.shareRewardNotice strong {
-  color: #5a6580;
-  font-size: 0.8125rem;
-  font-weight: 400;
-}
-
-.shareRewardNoticeList {
-  display: grid;
-  gap: 0;
-  padding-left: 1.25rem;
-}
-
-.shareRewardNotice p {
-  margin: 0;
-}
-
-.shareRewardNoticeIndent {
-  display: inline-block;
-  padding-left: 1rem;
-}
-
 .footer {
   position: fixed;
   bottom: 0;
@@ -965,6 +886,4 @@
   .tipNotice p,
   .postingCard > small,
   .postingMeta time { font-size: .8125rem; }
-  .shareTicket { grid-template-columns: 4.5rem minmax(0, 1fr); gap: .75rem; padding-right: 1rem; padding-left: 1rem; }
-  .shareTicket img { width: 4.5rem; height: 4.75rem; }
 }

@@ -8,6 +8,7 @@ import {
   getStoredAttributionContext,
   saveStoredAttribution,
   syncAttribution,
+  trackProductEvent,
   type AttributionSnapshot,
 } from "./analytics.api";
 
@@ -71,7 +72,70 @@ export function AnalyticsTracker() {
     });
   }, [pathname, searchParams]);
 
+  useEffect(() => {
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const clickable = target.closest(
+        "a,button,input,select,textarea,label,[role='button'],[data-track-click]",
+      );
+      if (!clickable) return;
+
+      const screen = getScreenClickBucket(window.location.pathname);
+      trackProductEvent({
+        eventType: "screen_click",
+        properties: {
+          screen_key: screen.key,
+          screen_name: screen.name,
+          element_tag: clickable.tagName.toLowerCase(),
+          element_text: getElementText(clickable),
+          href:
+            clickable instanceof HTMLAnchorElement
+              ? clickable.getAttribute("href")
+              : null,
+        },
+      });
+    };
+
+    document.addEventListener("click", handleClick, { capture: true });
+    return () => document.removeEventListener("click", handleClick, true);
+  }, []);
+
   return null;
+}
+
+function getScreenClickBucket(pathname: string) {
+  if (pathname === "/") return { key: "home", name: "홈" };
+  if (/^\/jobs\/[^/]+/.test(pathname)) {
+    return { key: "job_detail", name: "공고상세" };
+  }
+  if (pathname.startsWith("/ai-tools/diagnosis")) {
+    return { key: "diagnosis", name: "강약점" };
+  }
+  if (pathname.startsWith("/community")) {
+    return { key: "community", name: "커뮤니티" };
+  }
+  if (pathname.startsWith("/my")) {
+    return { key: "my", name: "마이페이지" };
+  }
+  if (pathname.startsWith("/calendar")) {
+    return { key: "calendar", name: "캘린더" };
+  }
+  if (pathname.startsWith("/login")) {
+    return { key: "login", name: "로그인" };
+  }
+
+  return { key: "other", name: "기타" };
+}
+
+function getElementText(element: Element) {
+  const label =
+    element.getAttribute("aria-label") ||
+    element.getAttribute("title") ||
+    element.textContent;
+
+  return label?.replace(/\s+/g, " ").trim().slice(0, 120) || null;
 }
 
 function captureAttribution(

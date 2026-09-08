@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DiagnosisResultViewEvent } from "@/features/diagnosis/components/DiagnosisAnalyticsEvents";
 import { DiagnosisResultDetail } from "@/features/diagnosis/components/DiagnosisResultDetail";
-import { TicketRewardQueryAlert } from "@/features/layout/components/TicketRewardQueryAlert";
 import {
   DIAGNOSIS_SHARE_DESCRIPTION,
   DIAGNOSIS_SHARE_TITLE,
@@ -13,8 +12,6 @@ import { requireEventSession } from "@/shared/event-session";
 type DiagnosisResultPageProps = {
   searchParams: Promise<{
     resultId?: string;
-    ticketReward?: string;
-    ticketAmount?: string;
   }>;
 };
 
@@ -41,8 +38,6 @@ export default async function DiagnosisEventResultPage({
   const params = await searchParams;
   const nextParams = new URLSearchParams();
   if (params.resultId) nextParams.set("resultId", params.resultId);
-  if (params.ticketReward) nextParams.set("ticketReward", params.ticketReward);
-  if (params.ticketAmount) nextParams.set("ticketAmount", params.ticketAmount);
   const nextQuery = nextParams.toString();
   const nextPath = `/events/diagnosis/result${nextQuery ? `?${nextQuery}` : ""}`;
 
@@ -50,7 +45,6 @@ export default async function DiagnosisEventResultPage({
 
   return (
     <Suspense fallback={null}>
-      <TicketRewardQueryAlert />
       <DiagnosisResultViewEvent />
       <DiagnosisResultDetail />
     </Suspense>

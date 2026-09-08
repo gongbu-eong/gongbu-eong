@@ -16,7 +16,6 @@ import { loadKakaoSdk } from "@/shared/kakao-share";
 import {
   getDiagnosisResultDetail,
   getDiagnosisResultHistory,
-  grantDiagnosisShareReward,
   selectDiagnosisResult,
 } from "../diagnosis.api";
 import {
@@ -252,11 +251,8 @@ export function DiagnosisResultDetail() {
   const [history, setHistory] = useState<DiagnosisResultHistoryItemDto[]>([]);
   const [historyCursor, setHistoryCursor] = useState<string | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [shareMessage, setShareMessage] = useState("공유하고 코칭 받기 →");
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const shareRewardPollingRef = useRef<number | null>(null);
-  const shareRewardCleanupRef = useRef<(() => void) | null>(null);
   useBodyScrollLock(historyOpen);
 
   useEffect(() => {
@@ -277,13 +273,6 @@ export function DiagnosisResultDetail() {
       .finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [selectedResultId]);
-
-  useEffect(() => () => {
-    if (shareRewardPollingRef.current) {
-      window.clearTimeout(shareRewardPollingRef.current);
-    }
-    shareRewardCleanupRef.current?.();
-  }, []);
 
   const loadHistory = useCallback(async (cursor?: string) => {
     setHistoryLoading(true);
@@ -334,129 +323,6 @@ export function DiagnosisResultDetail() {
     ];
   }, [detail]);
 
-  const waitForShareReward = useCallback((previousBalance?: number) => {
-    if (shareRewardPollingRef.current) {
-      window.clearTimeout(shareRewardPollingRef.current);
-    }
-    shareRewardCleanupRef.current?.();
-
-    let attempts = 0;
-    let observedBalance = previousBalance;
-    let running = false;
-    let resolved = false;
-
-    const cleanup = () => {
-      resolved = true;
-      if (shareRewardPollingRef.current) {
-        window.clearTimeout(shareRewardPollingRef.current);
-        shareRewardPollingRef.current = null;
-      }
-      window.removeEventListener("focus", pollWhenVisible);
-      document.removeEventListener("visibilitychange", pollWhenVisible);
-      if (shareRewardCleanupRef.current === cleanup) {
-        shareRewardCleanupRef.current = null;
-      }
-    };
-
-    const scheduleNextPoll = () => {
-      if (resolved) return;
-      if (attempts < 60) {
-        shareRewardPollingRef.current = window.setTimeout(poll, attempts < 20 ? 1000 : 2000);
-      } else {
-        cleanup();
-        setShareMessage("공유하고 코칭 받기 →");
-      }
-    };
-
-    const poll = async () => {
-      if (running || resolved) return;
-      running = true;
-      attempts += 1;
-      try {
-        const response = await getCurrentUser();
-        const nextBalance = response.authenticated ? response.user?.creditBalance : undefined;
-        if (response.authenticated && response.user) {
-          setUser(response.user);
-        }
-
-        if (typeof nextBalance === "number") {
-          if (typeof observedBalance === "number" && nextBalance > observedBalance) {
-            window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
-              detail: {
-                message: "진단권 1장이 추가되었습니다.",
-                balanceAfter: nextBalance,
-              },
-            }));
-            setShareMessage("티켓 지급 완료!");
-            window.setTimeout(() => setShareMessage("공유하고 코칭 받기 →"), 1600);
-            cleanup();
-            return;
-          }
-          observedBalance = nextBalance;
-        }
-      } catch {
-        // Keep polling briefly; the webhook can arrive a little after the user returns.
-      } finally {
-        running = false;
-      }
-
-      scheduleNextPoll();
-    };
-
-    function pollWhenVisible() {
-      if (document.visibilityState === "hidden") return;
-      if (shareRewardPollingRef.current) {
-        window.clearTimeout(shareRewardPollingRef.current);
-        shareRewardPollingRef.current = null;
-      }
-      void poll();
-    };
-
-    window.addEventListener("focus", pollWhenVisible);
-    document.addEventListener("visibilitychange", pollWhenVisible);
-    shareRewardCleanupRef.current = cleanup;
-    shareRewardPollingRef.current = window.setTimeout(poll, 700);
-  }, []);
-
-  const resetShareMessage = useCallback((message = "공유하고 코칭 받기 →") => {
-    window.setTimeout(() => setShareMessage(message), 1600);
-  }, []);
-
-  const grantShareRewardAfterShare = useCallback(async (resultId: string, previousBalance?: number) => {
-    if (!user) return;
-
-    try {
-      const reward = await grantDiagnosisShareReward(resultId);
-      setUser((current) => current ? { ...current, creditBalance: reward.balanceAfter } : current);
-
-      const balanceIncreased =
-        typeof previousBalance === "number" && reward.balanceAfter > previousBalance;
-
-      if (reward.granted || balanceIncreased) {
-        window.dispatchEvent(new CustomEvent("gongbu-ticket-rewarded", {
-          detail: {
-            message: "진단권 1장이 추가되었습니다.",
-            balanceAfter: reward.balanceAfter,
-          },
-        }));
-        setShareMessage("티켓 지급 완료!");
-        resetShareMessage();
-        return;
-      }
-
-      setShareMessage("공유 완료!");
-      resetShareMessage();
-    } catch {
-      if (typeof previousBalance === "number") {
-        waitForShareReward(previousBalance);
-        return;
-      }
-
-      setShareMessage("공유 완료!");
-      resetShareMessage();
-    }
-  }, [resetShareMessage, user, waitForShareReward]);
-
   if (loading) return <ResultState message="진단 결과를 불러오고 있어요." />;
   if (!detail || error) return <ResultState message={error || "진단 결과가 없습니다."} />;
 
@@ -490,7 +356,6 @@ export function DiagnosisResultDetail() {
     const shareUrl = getDiagnosisResultShareUrl(result.resultId, publicOrigin);
     const shareImageUrl = getDiagnosisShareImageUrl(publicOrigin);
     const kakaoKey = process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY?.trim();
-    const previousBalance = user?.creditBalance;
     try {
       if (!kakaoKey) {
         if (navigator.share) {
@@ -499,14 +364,9 @@ export function DiagnosisResultDetail() {
             text: DIAGNOSIS_SHARE_DESCRIPTION,
             url: shareUrl,
           });
-          setShareMessage("공유 완료!");
         } else {
           await navigator.clipboard.writeText(shareUrl);
-          setShareMessage("링크 복사 완료!");
         }
-
-        if (user) void grantShareRewardAfterShare(result.resultId, previousBalance);
-        else resetShareMessage();
         return;
       }
 
@@ -515,12 +375,6 @@ export function DiagnosisResultDetail() {
       if (!kakao.Share?.sendDefault && !kakao.Share?.sendScrap) {
         throw new Error("Kakao Share SDK is unavailable");
       }
-
-      const serverCallbackArgs = user ? {
-        gb_action: "diagnosis_result_share",
-        gb_user_id: user.id,
-        gb_result_id: result.resultId,
-      } : undefined;
 
       if (kakao.Share?.sendDefault) {
         kakao.Share.sendDefault({
@@ -546,39 +400,22 @@ export function DiagnosisResultDetail() {
               },
             },
           ],
-          ...(serverCallbackArgs ? { serverCallbackArgs } : {}),
         });
       } else if (kakao.Share?.sendScrap) {
         kakao.Share.sendScrap({
           requestUrl: shareUrl,
-          ...(serverCallbackArgs ? { serverCallbackArgs } : {}),
         });
       } else {
         throw new Error("Kakao Share SDK is unavailable");
       }
-
-      if (user) {
-        setShareMessage("공유 완료 후 지급됩니다.");
-        waitForShareReward(user.creditBalance);
-      } else {
-        setShareMessage("공유 완료!");
-        resetShareMessage();
-      }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        setShareMessage("공유가 취소되었습니다.");
+        return;
       } else {
         try {
           await navigator.clipboard.writeText(shareUrl);
-          setShareMessage("링크 복사 완료!");
-          if (user) {
-            void grantShareRewardAfterShare(result.resultId, previousBalance);
-          } else {
-            resetShareMessage();
-          }
         } catch {
-          setShareMessage("다시 시도해 주세요");
-          resetShareMessage();
+          window.alert("공유 링크를 복사하지 못했습니다. 잠시 후 다시 시도해 주세요.");
         }
       }
     }
@@ -661,22 +498,6 @@ export function DiagnosisResultDetail() {
             </div>
           </section>
 
-          {/*}
-          {isPublicView ? null : <section
-            className={styles.shareTicket}
-            role="button"
-            tabIndex={0}
-            onClick={() => void shareResult()}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter" && event.key !== " ") return;
-              event.preventDefault();
-              void shareResult();
-            }}
-          >
-            <Image src="/diagnosis/result-detail/gift.png" alt="" width={84} height={89} />
-            <div><strong>결과를 공유하고 <em>AI 자소서 코칭</em><br />무료 티켓을 받으세요.</strong><span className={styles.shareTicketCta}>{shareMessage}</span></div>
-          </section>}
-          */}
           <section className={styles.section}>
             <h2><FigmaSectionIcon kind="tips" />{result.typeName} 취업 팁</h2>
             <p className={styles.sectionCaption}>{subjectLabel} 유형의 강점은 살리고, 약점은 보완하는 법이에요.</p>
@@ -734,7 +555,6 @@ export function DiagnosisResultDetail() {
             <button type="button" className={styles.shareButton} onClick={shareResult}>카카오톡 공유하기</button>
           </div>}
 
-          <ShareRewardNotice />
         </div>
 
         {isPublicView ? null : <AppFooter active="ai" />}
@@ -761,23 +581,6 @@ export function DiagnosisResultDetail() {
         </div>
       ) : null}
     </main>
-  );
-}
-
-function ShareRewardNotice() {
-  return (
-    <section className={styles.shareRewardNotice} aria-label="공유 혜택 안내">
-      <strong>꼭 확인해 주세요!</strong>
-      <div className={styles.shareRewardNoticeList}>
-        <span>· 공유 가능 횟수: 무제한</span>
-        <span>· 진단권 지급: ID당 최초 1회 제한</span>
-      </div>
-      <p>
-        ※ 링크 공유는 제한 없이 자유롭게 하실 수 있으나, 진단권 혜택은
-        <br />
-        <span className={styles.shareRewardNoticeIndent}>계정당 1회만 적용됩니다.</span>
-      </p>
-    </section>
   );
 }
 

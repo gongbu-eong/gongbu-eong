@@ -48,17 +48,6 @@ export function selectDiagnosisResult(resultId: string) {
   );
 }
 
-export function grantDiagnosisShareReward(resultId: string) {
-  return apiClient<{
-    ok: boolean;
-    granted: boolean;
-    balanceAfter: number;
-  }>(
-    `/api/diagnosis/results/${encodeURIComponent(resultId)}/share-reward`,
-    { method: "POST" },
-  );
-}
-
 export function submitDiagnosis(
   answers: DiagnosisAnswerRequestDto[],
   options?: { signal?: AbortSignal },

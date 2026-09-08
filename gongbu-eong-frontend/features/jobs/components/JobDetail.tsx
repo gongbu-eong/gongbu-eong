@@ -19,10 +19,64 @@ import { trackProductEvent } from "@/features/analytics/analytics.api";
 import type { JobPostingDetailDto } from "@/features/home/home.dto";
 import { AppHeader } from "@/features/layout/components/AppChrome";
 import { makeLoginHref } from "@/shared/navigation/login";
+import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import styles from "./JobDetail.module.css";
 
 const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+
+type JobDetailBannerVariant = {
+  key: string;
+  name: string;
+  kind: "resume" | "strength";
+  targetPath: string;
+  image?: { src: string; width: number; height: number; className: string };
+};
+
+const jobDetailBannerVariants: JobDetailBannerVariant[] = [
+  {
+    key: "job_detail_resume_a",
+    name: "자소서 배너 A",
+    kind: "resume",
+    targetPath: "/ai-tools/coaching",
+    image: {
+      src: "/jobs/detail/banner-resume-a-owl.png",
+      width: 91,
+      height: 86,
+      className: "resumeA",
+    },
+  },
+  {
+    key: "job_detail_resume_b",
+    name: "자소서 배너 B",
+    kind: "resume",
+    targetPath: "/ai-tools/coaching",
+    image: {
+      src: "/jobs/detail/banner-resume-b-owl.png",
+      width: 91,
+      height: 86,
+      className: "resumeB",
+    },
+  },
+  {
+    key: "job_detail_strength_a",
+    name: "강약점 배너 A",
+    kind: "strength",
+    targetPath: "/ai-tools/diagnosis",
+    image: {
+      src: "/jobs/detail/banner-strength-a-owl.png",
+      width: 114,
+      height: 94,
+      className: "strengthA",
+    },
+  },
+  {
+    key: "job_detail_strength_b",
+    name: "강약점 배너 B",
+    kind: "strength",
+    targetPath: "/ai-tools/diagnosis",
+  },
+];
 
 export function JobDetail({
   jobId,
@@ -47,6 +101,23 @@ export function JobDetail({
   const [preferenceExpanded, setPreferenceExpanded] = useState(false);
   const [processExpanded, setProcessExpanded] = useState(false);
   const [coachingBannerExpanded, setCoachingBannerExpanded] = useState(true);
+  const [bookmarkReadyOpen, setBookmarkReadyOpen] = useState(false);
+  const [selectedBanner, setSelectedBanner] =
+    useState<JobDetailBannerVariant | null>(null);
+  const bannerImpressionKeyRef = useRef<string | null>(null);
+  useBodyScrollLock(bookmarkReadyOpen);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSelectedBanner(
+        jobDetailBannerVariants[
+          Math.floor(Math.random() * jobDetailBannerVariants.length)
+        ] || jobDetailBannerVariants[0],
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [jobId]);
 
   useEffect(() => {
     let mounted = true;
@@ -97,16 +168,37 @@ export function JobDetail({
     }
   };
 
-  const trackCoachingBannerClick = () => {
-    if (!job) return;
+  useEffect(() => {
+    if (!job || !selectedBanner) return;
+    const impressionKey = `${job.id}:${selectedBanner.key}`;
+    if (bannerImpressionKeyRef.current === impressionKey) return;
+    bannerImpressionKeyRef.current = impressionKey;
+
+    trackProductEvent({
+      eventType: "banner_impression",
+      properties: {
+        banner_key: selectedBanner.key,
+        banner_name: selectedBanner.name,
+        placement: "job_detail_bottom",
+        target_path: selectedBanner.targetPath,
+        job_id: job.id,
+        institution_name: job.institutionName,
+        job_title: job.title,
+      },
+    });
+  }, [job, selectedBanner]);
+
+  const trackSelectedBannerClick = () => {
+    if (!job || !selectedBanner) return;
 
     trackProductEvent({
       eventType: "banner_click",
       properties: {
-        banner_key: "job_detail_resume_coaching",
-        banner_name: "공고 상세 AI NCS 자소서 코칭 배너",
+        banner_key: selectedBanner.key,
+        banner_name: selectedBanner.name,
+        banner_kind: selectedBanner.kind,
         placement: "job_detail_bottom",
-        target_path: "/ai-tools/coaching",
+        target_path: selectedBanner.targetPath,
         job_id: job.id,
         institution_name: job.institutionName,
         job_title: job.title,
@@ -114,23 +206,86 @@ export function JobDetail({
     });
   };
 
-  const toggleBookmark = async () => {
+  const trackJobButtonClick = (
+    eventType:
+      | "job_detail_bookmark_click"
+      | "job_detail_bookmark_ready_action"
+      | "job_detail_apply_click",
+    properties: Record<string, unknown>,
+  ) => {
     if (!job) return;
-    if (!authenticated) {
-      router.push(makeLoginHref(`/jobs/${job.id}`));
-      return;
-    }
+
+    trackProductEvent({
+      eventType,
+      properties: {
+        job_id: job.id,
+        institution_name: job.institutionName,
+        job_title: job.title,
+        is_closed: job.isClosed,
+        ...properties,
+      },
+    });
+  };
+
+  const setBookmarkState = async (nextBookmarked: boolean) => {
+    if (!job) return false;
+
     setBookmarkPending(true);
     try {
-      const result = await setJobBookmark(job.id, !job.isBookmarked);
+      const result = await setJobBookmark(job.id, nextBookmarked);
       setJob({ ...job, isBookmarked: result.isBookmarked });
+      return true;
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "찜 상태를 바꾸지 못했습니다.",
       );
+      return false;
     } finally {
       setBookmarkPending(false);
     }
+  };
+
+  const toggleBookmark = () => {
+    if (!job || bookmarkPending) return;
+    if (!authenticated) {
+      router.push(makeLoginHref(`/jobs/${job.id}`));
+      return;
+    }
+
+    trackJobButtonClick("job_detail_bookmark_click", {
+      action: job.isBookmarked ? "remove" : "prepare",
+      next_bookmarked: !job.isBookmarked,
+    });
+
+    if (!job.isBookmarked) {
+      setBookmarkReadyOpen(true);
+      return;
+    }
+
+    void setBookmarkState(false);
+  };
+
+  const completeBookmarkReady = async (targetPath?: string) => {
+    if (!job || bookmarkPending) return;
+
+    trackJobButtonClick("job_detail_bookmark_ready_action", {
+      action: targetPath ? "confirm_and_coach" : "confirm_and_close",
+      next_bookmarked: true,
+      target_path: targetPath || null,
+    });
+
+    const saved = await setBookmarkState(true);
+    if (!saved) return;
+
+    setBookmarkReadyOpen(false);
+    if (targetPath) router.push(targetPath);
+  };
+
+  const trackApplyClick = (applyMethod: "email" | "external", target: string) => {
+    trackJobButtonClick("job_detail_apply_click", {
+      apply_method: applyMethod,
+      target_path: target,
+    });
   };
   const emailAddress = job ? getEmailAddress(job) : null;
   const preferenceConditionText = job?.preferenceCondition?.trim() ?? "";
@@ -280,56 +435,47 @@ export function JobDetail({
 
               {job.additionalNotice ? <RichText value={job.additionalNotice} /> : null}
             </article>
-            <div
-              className={`${styles.coachingBannerSpacer} ${
-                coachingBannerExpanded
-                  ? styles.coachingBannerSpacerExpanded
-                  : ""
-              }`}
-              aria-hidden="true"
-            />
+            {selectedBanner ? (
+              <>
+                <div
+                  className={`${styles.coachingBannerSpacer} ${
+                    coachingBannerExpanded
+                      ? styles.coachingBannerSpacerExpanded
+                      : ""
+                  }`}
+                  aria-hidden="true"
+                />
 
-            <div
-              className={`${styles.coachingBannerDock} ${
-                coachingBannerExpanded ? styles.coachingBannerDockExpanded : ""
-              }`}
-            >
-              <button
-                type="button"
-                className={styles.coachingBannerToggle}
-                aria-label={
-                  coachingBannerExpanded
-                    ? "AI 자소서 코칭 배너 접기"
-                    : "AI 자소서 코칭 배너 펼치기"
-                }
-                aria-expanded={coachingBannerExpanded}
-                onClick={toggleCoachingBanner}
-              >
-                {coachingBannerExpanded ? "▼" : "▲"}
-              </button>
-              <div className={styles.coachingBannerViewport}>
-                <Link
-                  href="/ai-tools/coaching"
-                  className={styles.coachingBanner}
-                  onClick={trackCoachingBannerClick}
+                <div
+                  className={`${styles.coachingBannerDock} ${
+                    coachingBannerExpanded
+                      ? styles.coachingBannerDockExpanded
+                      : ""
+                  }`}
                 >
-                  <span className={styles.coachingBannerText}>
-                    <strong>
-                      자소서 첨삭비 <b>10만 원?</b> 지금은 <em>0원</em>
-                    </strong>
-                    <small>AI NCS 코칭으로 무료로 합격 문장 받기.</small>
-                  </span>
-                  <Image
-                    src="/jobs/detail/coaching-banner-owl.png"
-                    alt=""
-                    width={91}
-                    height={86}
-                    className={styles.coachingBannerOwl}
-                    unoptimized
-                  />
-                </Link>
-              </div>
-            </div>
+                  <button
+                    type="button"
+                    className={styles.coachingBannerToggle}
+                    aria-label={
+                      coachingBannerExpanded
+                        ? "공고 상세 배너 접기"
+                        : "공고 상세 배너 펼치기"
+                    }
+                    aria-expanded={coachingBannerExpanded}
+                    onClick={toggleCoachingBanner}
+                  >
+                    {coachingBannerExpanded ? "▼" : "▲"}
+                  </button>
+                  <div className={styles.coachingBannerViewport}>
+                    <JobDetailPromoBanner
+                      banner={selectedBanner}
+                      jobTitle={job.title}
+                      onClick={trackSelectedBannerClick}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : null}
 
             <div className={styles.actionBar}>
               <button
@@ -337,29 +483,176 @@ export function JobDetail({
                 className={`${styles.actionStar} ${job.isBookmarked ? styles.bookmarked : ""}`}
                 aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
                 disabled={bookmarkPending}
-                onClick={() => void toggleBookmark()}
+                onClick={toggleBookmark}
               >
                 <StarIcon filled={job.isBookmarked} />
-                <span>공고 찜하기</span>
+                <span>공고 찜하고 준비하기</span>
               </button>
               {job.isClosed || (!job.applyUrl && !emailAddress) ? (
                 <button type="button" className={styles.disabledApply} disabled>
                   {job.isClosed ? "접수 마감" : "지원 링크 없음"}
                 </button>
               ) : emailAddress ? (
-                <a href={`mailto:${emailAddress}`} className={styles.apply}>
+                <a
+                  href={`mailto:${emailAddress}`}
+                  className={styles.apply}
+                  onClick={() =>
+                    trackApplyClick("email", `mailto:${emailAddress}`)
+                  }
+                >
                   이메일로 지원하기
                 </a>
               ) : (
-                <a href={job.applyUrl!} target="_blank" rel="noreferrer" className={styles.apply}>
+                <a
+                  href={job.applyUrl!}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.apply}
+                  onClick={() => trackApplyClick("external", job.applyUrl!)}
+                >
                   지원하기
                 </a>
               )}
             </div>
+            {bookmarkReadyOpen ? (
+              <BookmarkReadyDialog
+                pending={bookmarkPending}
+                onCoach={() => void completeBookmarkReady("/ai-tools/coaching")}
+                onClose={() => void completeBookmarkReady()}
+              />
+            ) : null}
           </>
         ) : null}
       </section>
     </main>
+  );
+}
+
+function JobDetailPromoBanner({
+  banner,
+  jobTitle,
+  onClick,
+}: {
+  banner: JobDetailBannerVariant;
+  jobTitle: string;
+  onClick: () => void;
+}) {
+  const promoClass = styles[`promo_${banner.key}`] || "";
+  const imageClass = banner.image ? styles[banner.image.className] || "" : "";
+
+  return (
+    <Link
+      href={banner.targetPath}
+      className={`${styles.coachingBanner} ${promoClass}`}
+      onClick={onClick}
+    >
+      <span className={styles.coachingBannerText}>
+        {banner.key === "job_detail_resume_a" ? (
+          <>
+            <strong>
+              자소서 첨삭비 <b>10만원?</b> 지금은 <em>0원</em>
+            </strong>
+            <small>AI NCS 코칭으로 무료로 합격 문장 받기.</small>
+          </>
+        ) : null}
+        {banner.key === "job_detail_resume_b" ? (
+          <>
+            <strong>
+              <em>{jobTitle}</em>
+              <span>자소서 준비 중이세요?</span>
+            </strong>
+            <small>AI NCS 코칭으로 무료로 합격 문장 받으세요!</small>
+          </>
+        ) : null}
+        {banner.key === "job_detail_strength_a" ? (
+          <>
+            <strong>
+              내 자소서 소재가 <b>안 떠오른다면?</b>
+            </strong>
+            <small>
+              강점에서 시작하면 쓸 만한 경험이<br />
+              더 쉽게 보입니다
+            </small>
+          </>
+        ) : null}
+        {banner.key === "job_detail_strength_b" ? (
+          <>
+            <strong>
+              자소서 쓰기 전에, 내 <em>강점</em>부터
+            </strong>
+            <small>
+              어떤 경험을 써야 할지 모르겠다면<br />
+              내 강점에서 시작해보세요
+            </small>
+          </>
+        ) : null}
+      </span>
+      {banner.image ? (
+        <Image
+          src={banner.image.src}
+          alt=""
+          width={banner.image.width}
+          height={banner.image.height}
+          className={`${styles.coachingBannerOwl} ${imageClass}`}
+          unoptimized
+        />
+      ) : null}
+    </Link>
+  );
+}
+
+function BookmarkReadyDialog({
+  pending,
+  onCoach,
+  onClose,
+}: {
+  pending: boolean;
+  onCoach: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className={styles.bookmarkDialogOverlay} role="presentation">
+      <section
+        className={styles.bookmarkDialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bookmark-ready-title"
+      >
+        <Image
+          src="/jobs/detail/bookmark-ready-owl.png"
+          alt=""
+          width={114}
+          height={104}
+          className={styles.bookmarkReadyOwl}
+          priority
+          unoptimized
+        />
+        <h2 id="bookmark-ready-title">공고를 찜했어요!</h2>
+        <p>
+          이 공고에 지원할 예정이라면,
+          <br />
+          작성한 자소서도 NCS 기준으로
+          <br />
+          한번 점검해볼까요?
+        </p>
+        <button
+          type="button"
+          className={styles.bookmarkCoachButton}
+          disabled={pending}
+          onClick={onCoach}
+        >
+          AI NCS 자소서 코칭하러 가기
+        </button>
+        <button
+          type="button"
+          className={styles.bookmarkCloseButton}
+          disabled={pending}
+          onClick={onClose}
+        >
+          찜하고 닫기
+        </button>
+      </section>
+    </div>
   );
 }
 

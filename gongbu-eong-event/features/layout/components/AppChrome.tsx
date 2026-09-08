@@ -7,7 +7,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { EventMenuDrawer } from "./EventMenuDrawer";
-import { TicketRewardAlert } from "./TicketRewardAlert";
 import styles from "./AppChrome.module.css";
 
 const mainAppUrl =
@@ -23,17 +22,11 @@ type AppHeaderProps = {
   user?: CurrentUserDto | null;
   nickname?: string;
   bookmarkCount?: number;
-  showTicketStatus?: boolean;
-  ticketCount?: number;
-  hasTicketAlert?: boolean;
 };
 
 export function AppHeader({
   user: userProp,
   bookmarkCount: bookmarkCountProp,
-  showTicketStatus = true,
-  ticketCount,
-  hasTicketAlert = true,
 }: AppHeaderProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
@@ -41,15 +34,9 @@ export function AppHeader({
   const [fetchedBookmarkCount, setFetchedBookmarkCount] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [ticketRewardMessage, setTicketRewardMessage] = useState("");
 
   useEffect(() => {
-    const shouldFetchUser =
-      userProp === undefined ||
-      (showTicketStatus &&
-        ticketCount === undefined &&
-        userProp !== null &&
-        userProp.creditBalance === undefined);
+    const shouldFetchUser = userProp === undefined;
     const shouldFetchHome = bookmarkCountProp === undefined;
 
     if (!shouldFetchUser && !shouldFetchHome) return;
@@ -73,16 +60,12 @@ export function AppHeader({
     return () => {
       active = false;
     };
-  }, [bookmarkCountProp, showTicketStatus, ticketCount, userProp]);
+  }, [bookmarkCountProp, userProp]);
 
   const user = userProp !== undefined ? userProp : fetchedUser;
   const bookmarkCount =
     bookmarkCountProp !== undefined ? bookmarkCountProp : fetchedBookmarkCount;
   const isAuthenticated = Boolean(user);
-  const effectiveTicketCount =
-    ticketCount ?? user?.creditBalance ?? fetchedUser?.creditBalance ?? 0;
-  const effectiveCommunityActivityRewardProgress =
-    user?.communityActivityRewardProgress ?? fetchedUser?.communityActivityRewardProgress;
 
   useEffect(() => {
     const requiresSignupAgreements =
@@ -93,85 +76,6 @@ export function AppHeader({
       window.location.href = mainHref(`/signup/agreements?next=${encodeURIComponent(next)}`);
     }
   }, [pathname, router, user]);
-
-  useEffect(() => {
-    let active = true;
-    const showPendingReward = (
-      message: string,
-      balanceAfter?: number,
-      progress?: CurrentUserDto["communityActivityRewardProgress"],
-    ) => {
-      window.setTimeout(() => {
-        if (!active) return;
-        if (typeof balanceAfter === "number" || progress) {
-          setFetchedUser((current) =>
-            current
-              ? {
-                  ...current,
-                  creditBalance:
-                    typeof balanceAfter === "number" ? balanceAfter : current.creditBalance,
-                  communityActivityRewardProgress:
-                    progress ?? current.communityActivityRewardProgress,
-                }
-              : current,
-          );
-          window.dispatchEvent(new CustomEvent("gongbu-ticket-balance-changed", {
-            detail: { balance: balanceAfter, progress },
-          }));
-        }
-        setTicketRewardMessage(message);
-      }, 0);
-    };
-
-    const pendingReward = window.sessionStorage.getItem("gongbu_pending_ticket_reward");
-    if (pendingReward) {
-      window.sessionStorage.removeItem("gongbu_pending_ticket_reward");
-      try {
-        const parsed = JSON.parse(pendingReward) as {
-          message?: string;
-          balanceAfter?: number;
-          progress?: CurrentUserDto["communityActivityRewardProgress"];
-        };
-        showPendingReward(
-          parsed.message || "진단권 한장이 추가되었습니다.",
-          parsed.balanceAfter,
-          parsed.progress,
-        );
-      } catch {
-        showPendingReward("진단권 한장이 추가되었습니다.");
-      }
-    }
-
-    const handleReward = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        message?: string;
-        balanceAfter?: number;
-        progress?: CurrentUserDto["communityActivityRewardProgress"];
-      }>).detail;
-      if (typeof detail?.balanceAfter === "number" || detail?.progress) {
-        setFetchedUser((current) =>
-          current
-            ? {
-                ...current,
-                creditBalance:
-                  typeof detail.balanceAfter === "number"
-                    ? detail.balanceAfter
-                    : current.creditBalance,
-                communityActivityRewardProgress:
-                  detail.progress ?? current.communityActivityRewardProgress,
-              }
-            : current,
-        );
-      }
-      setTicketRewardMessage(detail?.message || "진단권 한장이 추가되었습니다.");
-    };
-
-    window.addEventListener("gongbu-ticket-rewarded", handleReward);
-    return () => {
-      active = false;
-      window.removeEventListener("gongbu-ticket-rewarded", handleReward);
-    };
-  }, []);
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -207,13 +111,6 @@ export function AppHeader({
         </Link>
       </div>
       <div className={styles.headerActions}>
-        {showTicketStatus && isAuthenticated ? (
-          <AppTicketStatus
-            ticketCount={effectiveTicketCount}
-            hasTicketAlert={hasTicketAlert}
-            communityActivityRewardProgress={effectiveCommunityActivityRewardProgress}
-          />
-        ) : null}
         {isAuthenticated ? (
           <Link href={mainHref("/notifications")} aria-label="알림" className={styles.headerButton}>
             <BellIcon />
@@ -244,100 +141,7 @@ export function AppHeader({
           onLogout={handleLogout}
         />
       ) : null}
-      {ticketRewardMessage ? (
-        <TicketRewardAlert
-          message={ticketRewardMessage}
-          onClose={() => setTicketRewardMessage("")}
-        />
-      ) : null}
     </header>
-  );
-}
-
-export function AppTicketStatus({
-  ticketCount = 10,
-  hasTicketAlert = true,
-  communityActivityRewardProgress,
-}: {
-  ticketCount?: number;
-  hasTicketAlert?: boolean;
-  communityActivityRewardProgress?: CurrentUserDto["communityActivityRewardProgress"];
-}) {
-  const [eventTicketCount, setEventTicketCount] = useState<number | null>(null);
-  const [eventProgress, setEventProgress] = useState<CurrentUserDto["communityActivityRewardProgress"] | null>(null);
-  const [isTooltipOpen, setIsTooltipOpen] = useState(false);
-  const displayTicketCount = eventTicketCount ?? ticketCount;
-  const progress = eventProgress ?? communityActivityRewardProgress;
-  const currentProgressCount = progress?.currentCount ?? 0;
-  const milestoneCount = progress?.milestoneCount ?? 5;
-  const isMaxed = Boolean(progress?.isMaxed || displayTicketCount >= 20);
-  const progressPercent = isMaxed
-    ? 0
-    : Math.max(0, Math.min(100, progress?.percent ?? 0));
-
-  useEffect(() => {
-    const handleBalanceChange = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        balance?: number;
-        balanceAfter?: number;
-        progress?: CurrentUserDto["communityActivityRewardProgress"];
-      }>).detail;
-      const balance = detail?.balance;
-      const balanceAfter = detail?.balanceAfter;
-      const nextBalance = typeof balanceAfter === "number" ? balanceAfter : balance;
-      if (typeof nextBalance === "number") {
-        setEventTicketCount(nextBalance);
-      }
-      if (detail?.progress) {
-        setEventProgress(detail.progress);
-      }
-    };
-
-    window.addEventListener("gongbu-ticket-balance-changed", handleBalanceChange);
-    window.addEventListener("gongbu-ticket-rewarded", handleBalanceChange);
-    return () => {
-      window.removeEventListener("gongbu-ticket-balance-changed", handleBalanceChange);
-      window.removeEventListener("gongbu-ticket-rewarded", handleBalanceChange);
-    };
-  }, []);
-
-  return (
-    <div
-      className={styles.headerTicketStatus}
-      aria-label={
-        isMaxed
-          ? `보유 진단권 ${displayTicketCount}개, 최대 보유 수량 도달`
-          : `보유 진단권 ${displayTicketCount}개, 커뮤니티 활동 보상 ${currentProgressCount}/${milestoneCount}`
-      }
-    >
-      <span className={styles.headerTicketProgress} aria-hidden="true">
-        <span style={{ width: `${progressPercent}%` }} />
-      </span>
-      <Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.headerTicketIcon} />
-      <span className={styles.headerTicketCount}>{displayTicketCount}</span>
-      {hasTicketAlert ? (
-        <button
-          type="button"
-          className={styles.headerTicketAlert}
-          aria-label="진단권 안내"
-          aria-expanded={isTooltipOpen}
-          onBlur={() => setIsTooltipOpen(false)}
-          onClick={() => setIsTooltipOpen((value) => !value)}
-          onMouseEnter={() => setIsTooltipOpen(true)}
-          onMouseLeave={() => setIsTooltipOpen(false)}
-        >
-          <Image src="/layout/header-alert-bg.svg" alt="" width={16} height={16} />
-          <b>!</b>
-          {isTooltipOpen ? (
-            <span className={styles.headerTicketTooltip} role="tooltip">
-              {isMaxed
-                ? "진단권은 최대 20장까지 보유할 수 있습니다."
-                : "커뮤니티에서 댓글과 글을 작성하면, 진단권이 추가됩니다."}
-            </span>
-          ) : null}
-        </button>
-      ) : null}
-    </div>
   );
 }
 
