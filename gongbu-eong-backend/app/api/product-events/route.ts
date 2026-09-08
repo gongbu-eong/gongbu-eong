@@ -6,12 +6,20 @@ import { jsonWithCors } from "@/lib/cors";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const ipAddress =
+    forwardedFor?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    undefined;
+
   try {
     const body = await request.json();
     const user = await getSessionUser(request);
     const result = await recordProductEvent({
       body,
       userId: user?.id,
+      ipAddress,
+      userAgent: request.headers.get("user-agent") || undefined,
     });
 
     return jsonWithCors(request, { ok: true, ...result }, { status: 201 });

@@ -242,6 +242,8 @@ export async function recordDiagnosisCompleteEvent(args: {
 export async function recordProductEvent(args: {
   body: RecordProductEventRequestDto;
   userId?: string;
+  ipAddress?: string;
+  userAgent?: string;
 }) {
   const eventType = clean(args.body.eventType, { maxLength: 100 });
 
@@ -257,6 +259,11 @@ export async function recordProductEvent(args: {
   const current =
     normalizeSnapshot(args.body.attribution?.current) ||
     normalizeSnapshot(args.body.attribution?.last);
+  const properties = {
+    ...(args.body.properties || {}),
+    ip_address: args.ipAddress || null,
+    user_agent: args.userAgent || null,
+  };
 
   await query(
     `
@@ -389,7 +396,7 @@ export async function recordProductEvent(args: {
       current?.referrer || null,
       current?.seenAt || null,
       current ? JSON.stringify(current.raw) : null,
-      JSON.stringify(args.body.properties || {}),
+      JSON.stringify(properties),
     ],
   );
 
