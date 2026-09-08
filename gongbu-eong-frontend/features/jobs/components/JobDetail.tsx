@@ -75,6 +75,12 @@ const jobDetailBannerVariants: JobDetailBannerVariant[] = [
     name: "강약점 배너 B",
     kind: "strength",
     targetPath: "/ai-tools/diagnosis",
+    image: {
+      src: "/jobs/detail/banner-strength-b-owl-v2.png",
+      width: 164,
+      height: 172,
+      className: "strengthB",
+    },
   },
 ];
 
@@ -469,7 +475,7 @@ export function JobDetail({
                   <div className={styles.coachingBannerViewport}>
                     <JobDetailPromoBanner
                       banner={selectedBanner}
-                      jobTitle={job.title}
+                      institutionName={job.institutionName}
                       onClick={trackSelectedBannerClick}
                     />
                   </div>
@@ -530,11 +536,11 @@ export function JobDetail({
 
 function JobDetailPromoBanner({
   banner,
-  jobTitle,
+  institutionName,
   onClick,
 }: {
   banner: JobDetailBannerVariant;
-  jobTitle: string;
+  institutionName: string;
   onClick: () => void;
 }) {
   const promoClass = styles[`promo_${banner.key}`] || "";
@@ -558,7 +564,7 @@ function JobDetailPromoBanner({
         {banner.key === "job_detail_resume_b" ? (
           <>
             <strong>
-              <em>{jobTitle}</em>
+              <em>{institutionName}</em>
               <span>자소서 준비 중이세요?</span>
             </strong>
             <small>AI NCS 코칭으로 무료로 합격 문장 받으세요!</small>
