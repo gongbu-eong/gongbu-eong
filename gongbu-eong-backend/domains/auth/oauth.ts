@@ -6,6 +6,7 @@ import {
   OAuthProfile,
   upsertOAuthUser,
 } from "./auth.repository";
+import { claimAnonymousCoachingResults } from "@/domains/coaching/coaching.service";
 
 type OAuthProvider = "kakao" | "naver";
 type EntrySource =
@@ -32,6 +33,14 @@ const entrySources = new Set<EntrySource>([
 ]);
 
 const OAUTH_RETURN_TO_COOKIE = "oauth_return_to";
+
+type OAuthStatePayload = {
+  nonce: string;
+  returnTo?: string;
+  anonymousId?: string;
+  diagnosisRunId?: string;
+  entrySource?: EntrySource;
+};
 
 const providerConfig = {
   kakao: {
@@ -61,7 +70,26 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
     );
   }
 
-  const state = crypto.randomUUID();
+  const entrySource = normalizeEntrySource(
+    request.nextUrl.searchParams.get("entrySource"),
+  );
+  const diagnosisRunId = validUuidOrUndefined(
+    request.nextUrl.searchParams.get("diagnosisRunId") || undefined,
+  );
+  const anonymousId = validUuidOrUndefined(
+    request.nextUrl.searchParams.get("anonymousId") || undefined,
+  );
+  const returnTo = normalizeOAuthReturnTo(
+    request.nextUrl.searchParams.get("returnTo"),
+  );
+  const stateNonce = crypto.randomUUID();
+  const state = encodeOAuthState({
+    nonce: stateNonce,
+    entrySource,
+    ...(diagnosisRunId ? { diagnosisRunId } : {}),
+    ...(anonymousId ? { anonymousId } : {}),
+    ...(returnTo ? { returnTo } : {}),
+  });
   const authorizeUrl = new URL(config.authorizeUrl);
 
   authorizeUrl.searchParams.set("response_type", "code");
@@ -74,16 +102,13 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
   }
 
   const response = NextResponse.redirect(authorizeUrl);
-  response.cookies.set(`${provider}_oauth_state`, state, {
+  response.cookies.set(`${provider}_oauth_state`, stateNonce, {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
     maxAge: 60 * 10,
   });
 
-  const entrySource = normalizeEntrySource(
-    request.nextUrl.searchParams.get("entrySource"),
-  );
   response.cookies.set("oauth_entry_source", entrySource, {
     httpOnly: true,
     sameSite: "lax",
@@ -91,8 +116,7 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
     maxAge: 60 * 10,
   });
 
-  const diagnosisRunId = request.nextUrl.searchParams.get("diagnosisRunId");
-  if (diagnosisRunId && isUuid(diagnosisRunId)) {
+  if (diagnosisRunId) {
     response.cookies.set("oauth_diagnosis_run_id", diagnosisRunId, {
       httpOnly: true,
       sameSite: "lax",
@@ -101,8 +125,7 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
     });
   }
 
-  const anonymousId = request.nextUrl.searchParams.get("anonymousId");
-  if (anonymousId && isUuid(anonymousId)) {
+  if (anonymousId) {
     response.cookies.set("oauth_anonymous_id", anonymousId, {
       httpOnly: true,
       sameSite: "lax",
@@ -111,9 +134,6 @@ export function startOAuth(provider: OAuthProvider, request: NextRequest) {
     });
   }
 
-  const returnTo = normalizeOAuthReturnTo(
-    request.nextUrl.searchParams.get("returnTo"),
-  );
   if (returnTo) {
     response.cookies.set(OAUTH_RETURN_TO_COOKIE, returnTo, {
       httpOnly: true,
@@ -136,8 +156,10 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
   const code = request.nextUrl.searchParams.get("code");
   const state = request.nextUrl.searchParams.get("state");
   const storedState = request.cookies.get(`${provider}_oauth_state`)?.value;
+  const statePayload = decodeOAuthState(state);
+  const stateNonce = statePayload?.nonce || state;
 
-  if (!code || !state || !storedState || state !== storedState) {
+  if (!code || !state || !storedState || stateNonce !== storedState) {
     const existingSessionRedirect = await redirectExistingSession(
       provider,
       request,
@@ -158,8 +180,12 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     const sessionToken = randomBytes(32).toString("hex");
     const forwardedFor = request.headers.get("x-forwarded-for");
     const ipAddress = forwardedFor?.split(",")[0]?.trim();
-    const storedReturnTo = normalizeOAuthReturnTo(
-      request.cookies.get(OAUTH_RETURN_TO_COOKIE)?.value,
+    const storedReturnTo =
+      normalizeOAuthReturnTo(request.cookies.get(OAUTH_RETURN_TO_COOKIE)?.value) ||
+      normalizeOAuthReturnTo(statePayload?.returnTo);
+    const oauthAnonymousId = validUuidOrUndefined(
+      request.cookies.get("oauth_anonymous_id")?.value ||
+        statePayload?.anonymousId,
     );
 
     console.info(`[OAuth:${provider}] profile fetched`, {
@@ -179,17 +205,21 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
         : undefined,
       sessionTokenHash: hashValue(sessionToken),
       entrySource: normalizeEntrySource(
-        request.cookies.get("oauth_entry_source")?.value,
+        request.cookies.get("oauth_entry_source")?.value ||
+          statePayload?.entrySource,
       ),
       diagnosisRunId: validUuidOrUndefined(
-        request.cookies.get("oauth_diagnosis_run_id")?.value,
+        request.cookies.get("oauth_diagnosis_run_id")?.value ||
+          statePayload?.diagnosisRunId,
       ),
       anonymousId: validUuidOrUndefined(
-        request.cookies.get("oauth_anonymous_id")?.value,
+        request.cookies.get("oauth_anonymous_id")?.value ||
+          statePayload?.anonymousId,
       ),
       ipAddress,
       userAgent: request.headers.get("user-agent") || undefined,
     });
+    await claimCoachingResultsAfterLogin(authResult.userId, oauthAnonymousId);
 
     console.info(`[OAuth:${provider}] user upserted`, {
       userId: authResult.userId,
@@ -201,8 +231,8 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     });
 
     const redirectUrl = new URL(successRedirectUrl, request.url);
-    const nextUrl = new URL(storedReturnTo || successRedirectUrl, request.url);
-    if (authResult.diagnosisResultId) {
+    const nextUrl = new URL(storedReturnTo || successRedirectUrl, successRedirectUrl);
+    if (authResult.diagnosisResultId && shouldRedirectToDiagnosisResult(nextUrl.pathname)) {
       nextUrl.pathname = nextUrl.pathname.startsWith("/events/")
         ? "/events/diagnosis/result"
         : "/ai-tools/diagnosis/result";
@@ -213,20 +243,19 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
     if (authResult.requiresSignupAgreements) {
       redirectUrl.pathname = "/signup/agreements";
       redirectUrl.search = "";
-      if (authResult.diagnosisResultId) {
-        redirectUrl.searchParams.set(
-          "next",
-          isSameOriginUrl(nextUrl, redirectUrl)
-            ? `${nextUrl.pathname}${nextUrl.search}`
-            : nextUrl.toString(),
-        );
-      }
+      redirectUrl.searchParams.set(
+        "next",
+        isSameOriginUrl(nextUrl, redirectUrl)
+          ? `${nextUrl.pathname}${nextUrl.search}`
+          : nextUrl.toString(),
+      );
     } else {
       redirectUrl.href = nextUrl.toString();
-      if (authResult.welcomeCreditsGranted) {
-        redirectUrl.searchParams.set("ticketReward", "welcome");
-        redirectUrl.searchParams.set("ticketAmount", "5");
-      }
+      // 진단권 지급 로직 비활성화: 로그인 완료 후 신규 가입 보상 alert 쿼리를 붙이지 않습니다.
+      // if (authResult.welcomeCreditsGranted) {
+      //   redirectUrl.searchParams.set("ticketReward", "welcome");
+      //   redirectUrl.searchParams.set("ticketAmount", "5");
+      // }
     }
 
     const response = NextResponse.redirect(redirectUrl);
@@ -401,15 +430,24 @@ function normalizeOAuthReturnTo(value: string | null | undefined) {
     return null;
   }
 
-  try {
-    const fallbackUrl = process.env.OAUTH_SUCCESS_REDIRECT_URL || "http://localhost:3000";
-    const url = new URL(value, fallbackUrl);
-    const isAllowedPath =
-      url.pathname === "/events/diagnosis" ||
-      url.pathname === "/events/diagnosis/result" ||
-      url.pathname === "/ai-tools/diagnosis/result";
+  const fallbackUrl = process.env.OAUTH_SUCCESS_REDIRECT_URL || "http://localhost:3000";
 
-    if (!isAllowedPath) {
+  if (value.startsWith("/") && !value.startsWith("//")) {
+    try {
+      const url = new URL(value, fallbackUrl);
+      if (!isSafeReturnPath(url.pathname)) {
+        return null;
+      }
+      return `${url.pathname}${url.search}${url.hash}`;
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    const url = new URL(value, fallbackUrl);
+
+    if (!isSafeReturnPath(url.pathname)) {
       return null;
     }
 
@@ -421,6 +459,62 @@ function normalizeOAuthReturnTo(value: string | null | undefined) {
   }
 
   return null;
+}
+
+function encodeOAuthState(payload: OAuthStatePayload) {
+  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+}
+
+function decodeOAuthState(value: string | null | undefined): OAuthStatePayload | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    ) as Partial<OAuthStatePayload>;
+
+    if (!parsed || typeof parsed.nonce !== "string") {
+      return null;
+    }
+
+    return {
+      nonce: parsed.nonce,
+      returnTo: typeof parsed.returnTo === "string" ? parsed.returnTo : undefined,
+      anonymousId: validUuidOrUndefined(parsed.anonymousId),
+      diagnosisRunId: validUuidOrUndefined(parsed.diagnosisRunId),
+      entrySource: normalizeEntrySource(parsed.entrySource),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function isSafeReturnPath(pathname: string) {
+  if (!pathname.startsWith("/") || pathname.startsWith("//")) return false;
+  if (pathname === "/login" || pathname === "/signup/agreements") return false;
+  if (pathname.startsWith("/api/")) return false;
+  return true;
+}
+
+function shouldRedirectToDiagnosisResult(pathname: string) {
+  return (
+    pathname === "/" ||
+    pathname === "/events/diagnosis" ||
+    pathname === "/events/diagnosis/result" ||
+    pathname === "/ai-tools/diagnosis" ||
+    pathname === "/ai-tools/diagnosis/result"
+  );
+}
+
+async function claimCoachingResultsAfterLogin(userId: string, anonymousId?: string) {
+  if (!anonymousId) return;
+  try {
+    await claimAnonymousCoachingResults(userId, anonymousId);
+  } catch (error) {
+    console.error("[OAuth] anonymous coaching result claim failed", error);
+  }
 }
 
 function isAllowedOAuthReturnOrigin(url: URL) {
@@ -499,7 +593,7 @@ async function redirectExistingSession(
   const redirectUrl = new URL(successRedirectUrl, request.url);
   const nextUrl = new URL(storedReturnTo || successRedirectUrl, request.url);
 
-  if (user.diagnosisResultId) {
+  if (user.diagnosisResultId && shouldRedirectToDiagnosisResult(nextUrl.pathname)) {
     nextUrl.pathname = nextUrl.pathname.startsWith("/events/")
       ? "/events/diagnosis/result"
       : "/ai-tools/diagnosis/result";
@@ -510,14 +604,12 @@ async function redirectExistingSession(
   if (user.status === "pending_signup" || !user.signupCompletedAt) {
     redirectUrl.pathname = "/signup/agreements";
     redirectUrl.search = "";
-    if (user.diagnosisResultId) {
-      redirectUrl.searchParams.set(
-        "next",
-        isSameOriginUrl(nextUrl, redirectUrl)
-          ? `${nextUrl.pathname}${nextUrl.search}`
-          : nextUrl.toString(),
-      );
-    }
+    redirectUrl.searchParams.set(
+      "next",
+      isSameOriginUrl(nextUrl, redirectUrl)
+        ? `${nextUrl.pathname}${nextUrl.search}`
+        : nextUrl.toString(),
+    );
   } else {
     redirectUrl.href = nextUrl.toString();
   }

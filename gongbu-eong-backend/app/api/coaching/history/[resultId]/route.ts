@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { getSessionUser } from "@/domains/auth/session";
-import { findCoachingResultForViewer } from "@/domains/coaching/coaching.service";
+import { claimAnonymousCoachingResults, findCoachingResultForViewer } from "@/domains/coaching/coaching.service";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
 
 export async function OPTIONS(request: NextRequest) {
@@ -14,6 +14,9 @@ export async function GET(request: NextRequest, context: { params: Promise<{ res
   try {
     const user = await getSessionUser(request);
     const anonymousId = readAnonymousId(request.nextUrl.searchParams.get("anonymousId"));
+    if (user && anonymousId) {
+      await claimAnonymousCoachingResults(user.id, anonymousId);
+    }
     const item = await findCoachingResultForViewer({
       resultId: (await context.params).resultId,
       userId: user?.id || null,
