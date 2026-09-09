@@ -253,15 +253,17 @@ export function JobDetail({
 
   const toggleBookmark = () => {
     if (!job || bookmarkPending) return;
-    if (!authenticated) {
-      router.push(makeLoginHref(`/jobs/${job.id}`));
-      return;
-    }
 
     trackJobButtonClick("job_detail_bookmark_click", {
       action: job.isBookmarked ? "remove" : "prepare",
       next_bookmarked: !job.isBookmarked,
+      requires_login: !authenticated,
     });
+
+    if (!authenticated) {
+      router.push(makeLoginHref(`/jobs/${job.id}`));
+      return;
+    }
 
     if (!job.isBookmarked) {
       setBookmarkReadyOpen(true);

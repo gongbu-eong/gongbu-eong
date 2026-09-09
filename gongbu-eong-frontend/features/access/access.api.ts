@@ -31,6 +31,10 @@ export function logPageView(args: {
 }
 
 function resolveEntrySource(path: string) {
+  if (path.startsWith("/ai-tools/coaching")) {
+    return "coaching";
+  }
+
   if (path.startsWith("/ai-tools/diagnosis")) {
     return "diagnosis";
   }

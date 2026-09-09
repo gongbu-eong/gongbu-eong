@@ -110,6 +110,9 @@ function getScreenClickBucket(pathname: string) {
   if (/^\/jobs\/[^/]+/.test(pathname)) {
     return { key: "job_detail", name: "공고상세" };
   }
+  if (pathname.startsWith("/ai-tools/coaching")) {
+    return { key: "coaching", name: "AI NCS 자소서 코칭" };
+  }
   if (pathname.startsWith("/ai-tools/diagnosis")) {
     return { key: "diagnosis", name: "강약점" };
   }
