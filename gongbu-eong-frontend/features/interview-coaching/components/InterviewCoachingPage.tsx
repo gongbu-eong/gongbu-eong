@@ -18,6 +18,7 @@ import type {
   InterviewCoachingJob,
   InterviewCoachingSession,
   InterviewMessage,
+  InterviewNcsMapping,
   InterviewQuestion,
 } from "../interview-coaching.dto";
 import styles from "./InterviewCoachingPage.module.css";
@@ -417,6 +418,7 @@ export function InterviewCoachingPage({
 
 function InterviewAnalysisView({ session }: { session: InterviewCoachingSession }) {
   const profile = session.analysis.profile;
+  const visibleMappings = getVisibleNcsMappings(session.analysis.ncsMappings);
   return (
     <>
       <section className={styles.profileCard}>
@@ -437,10 +439,10 @@ function InterviewAnalysisView({ session }: { session: InterviewCoachingSession 
       </section>
       <section className={styles.sectionTitle}>
         <h2>NCS 직무/관련 영역 매핑</h2>
-        <small>7개 영역</small>
+        <small>{visibleMappings.length}개 매칭</small>
       </section>
       <section className={styles.ncsPanel}>
-        {session.analysis.ncsMappings.map((item) => (
+        {visibleMappings.map((item) => (
           <article className={styles.ncsItem} key={item.name}>
             <strong>{item.name}<b>{item.relevance}%</b></strong>
             <div className={styles.track} aria-hidden="true"><span style={{ width: `${item.relevance}%` }} /></div>
@@ -452,6 +454,12 @@ function InterviewAnalysisView({ session }: { session: InterviewCoachingSession 
   );
 }
 
+function getVisibleNcsMappings(mappings: InterviewNcsMapping[]) {
+  const sorted = [...mappings].sort((left, right) => right.relevance - left.relevance);
+  const matched = sorted.filter((item) => item.relevance >= 50);
+  return (matched.length >= 3 ? matched : sorted.slice(0, 5)).slice(0, 5);
+}
+
 function ProfileList({ title, items }: { title: string; items: string[] }) {
   return (
     <article>
@@ -459,7 +467,7 @@ function ProfileList({ title, items }: { title: string; items: string[] }) {
       {items.length ? (
         <ul>{items.slice(0, 5).map((item) => <li key={item}>{item}</li>)}</ul>
       ) : (
-        <ul><li>AI가 면접 질문 생성에 필요한 핵심 정보를 정리합니다.</li></ul>
+        <ul><li>연결한 공고 기준으로 직무 정보를 분석 중입니다.</li></ul>
       )}
     </article>
   );
@@ -490,6 +498,7 @@ function InterviewQuestionPanel({
 }) {
   const latestFollowUp = [...messages].reverse().find((item) => item.role === "follow_up");
   const prompt = latestFollowUp?.content || question.question;
+  const visibleMessages = messages.filter((item) => item.role === "answer");
   return (
     <section className={styles.interviewPanel}>
       <article className={styles.questionCard}>
@@ -503,9 +512,9 @@ function InterviewQuestionPanel({
           {question.ncsAreas.map((area) => <span key={area}>{area}</span>)}
         </div>
       </article>
-      {messages.length ? (
+      {visibleMessages.length ? (
         <div className={styles.chatList}>
-          {messages.map((message) => <ChatMessage key={message.id} message={message} />)}
+          {visibleMessages.map((message) => <ChatMessage key={message.id} message={message} />)}
         </div>
       ) : null}
       <div className={styles.answerBox}>
