@@ -40,10 +40,10 @@ const representativeTools = [
     comingSoon: false,
   },
   {
-    href: "#",
-    badge: "준비중",
-    badgeTone: "red",
-    title: "AI 면접 코칭",
+    href: "/ai-tools/interview-coaching",
+    badge: "AI 면접",
+    badgeTone: "green",
+    title: "NCS 직무 기반 AI 면접 코칭",
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
     image: "/ai-tools/tool-interview.png",
     imageAlt: "AI 면접 코칭",
@@ -51,7 +51,7 @@ const representativeTools = [
     imageWidth: 86,
     imageHeight: 78,
     requiresAuth: false,
-    comingSoon: true,
+    comingSoon: false,
   },
 ] as const;
 

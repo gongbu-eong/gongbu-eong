@@ -26,6 +26,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.75,
     },
     {
+      url: canonicalUrl("/ai-tools/interview-coaching"),
+      lastModified: now,
+      priority: 0.75,
+    },
+    {
       url: canonicalUrl("/ai-tools/job-tools"),
       lastModified: now,
       priority: 0.75,

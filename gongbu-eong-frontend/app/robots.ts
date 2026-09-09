@@ -14,6 +14,7 @@ export default function robots(): MetadataRoute.Robots {
         "/ai-tools",
         "/ai-tools/diagnosis",
         "/ai-tools/coaching",
+        "/ai-tools/interview-coaching",
         "/ai-tools/job-tools",
         "/calendar",
         "/community",

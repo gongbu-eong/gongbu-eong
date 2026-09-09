@@ -792,20 +792,20 @@ export function HomeMenuDrawer({
               // "AI 도구 모음",
               "직무 성향 진단",
               "AI 자소서 코칭",
-              // "AI 면접 코칭",
+              "AI 면접 코칭",
               // "심리·직무 테스트 모음",
             ]}
             hrefs={user ? [
               // "#",
               "/ai-tools/diagnosis",
               "/ai-tools/coaching",
-              // "#",
+              "/ai-tools/interview-coaching",
               // "#",
             ] : [
               // "/login",
               "/ai-tools/diagnosis",
               "/ai-tools/coaching",
-              // "/login",
+              "/ai-tools/interview-coaching",
               // "/login",
             ]}
             onNavigate={onClose}
