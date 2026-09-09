@@ -1,6 +1,27 @@
 import { query } from "@/lib/db";
 import { CreateAccessLogRequestDto } from "./access.dto";
 
+const entrySourceAliases: Record<string, string> = {
+  coaching: "ai_tools",
+};
+
+const validEntrySources = new Set([
+  "main_home",
+  "diagnosis",
+  "ai_tools",
+  "calendar",
+  "community",
+  "my_page",
+  "unknown",
+]);
+
+function normalizeEntrySource(value?: string) {
+  const normalized = (value || "").trim();
+  const mapped = entrySourceAliases[normalized] || normalized;
+
+  return validEntrySources.has(mapped) ? mapped : "unknown";
+}
+
 export function createAccessLog(args: {
   body: CreateAccessLogRequestDto;
   userId?: string;
@@ -30,7 +51,7 @@ export function createAccessLog(args: {
       args.body.path,
       args.body.title || null,
       args.body.referrer || null,
-      args.body.entrySource || "unknown",
+      normalizeEntrySource(args.body.entrySource),
       args.ipAddress || null,
       args.userAgent || null,
       JSON.stringify(args.body.metadata || {}),
