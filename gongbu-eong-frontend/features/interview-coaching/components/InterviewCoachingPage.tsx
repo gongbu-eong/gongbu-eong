@@ -24,14 +24,6 @@ import styles from "./InterviewCoachingPage.module.css";
 
 type ConnectedJob = InterviewCoachingJob & { duty: string };
 
-const FLOW_STEPS = [
-  "채용공고 선택",
-  "직무 내용 분석",
-  "NCS 직무/관련 영역 매핑",
-  "AI 면접",
-  "꼬리질문",
-  "답변 코칭",
-] as const;
 const MAX_ANSWER_LENGTH = 4000;
 
 export function InterviewCoachingPage() {
@@ -218,7 +210,6 @@ export function InterviewCoachingPage() {
         <p className={styles.lead}>
           지원 직무를 NCS 역량과 연결한 뒤, AI 면접 질문과 꼬리질문으로 답변을 연습해요.
         </p>
-        <Flow current={session ? 3 : 0} />
 
         {!session ? (
           <>
@@ -392,18 +383,6 @@ export function InterviewCoachingPage() {
           }}
         />
       ) : null}
-    </div>
-  );
-}
-
-function Flow({ current }: { current: number }) {
-  return (
-    <div className={styles.flow} aria-label="면접 코칭 순서">
-      {FLOW_STEPS.map((step, index) => (
-        <span key={step} className={index <= current ? styles.flowActive : undefined}>
-          {index + 1}. {step}
-        </span>
-      ))}
     </div>
   );
 }

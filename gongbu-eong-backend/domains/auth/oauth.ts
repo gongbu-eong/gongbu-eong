@@ -7,6 +7,7 @@ import {
   upsertOAuthUser,
 } from "./auth.repository";
 import { claimAnonymousCoachingResults } from "@/domains/coaching/coaching.service";
+import { claimAnonymousInterviewSessions } from "@/domains/interview-coaching/interview-coaching.service";
 
 type OAuthProvider = "kakao" | "naver";
 type EntrySource =
@@ -512,6 +513,7 @@ async function claimCoachingResultsAfterLogin(userId: string, anonymousId?: stri
   if (!anonymousId) return;
   try {
     await claimAnonymousCoachingResults(userId, anonymousId);
+    await claimAnonymousInterviewSessions(userId, anonymousId);
   } catch (error) {
     console.error("[OAuth] anonymous coaching result claim failed", error);
   }

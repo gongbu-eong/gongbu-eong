@@ -249,6 +249,18 @@
   line-height: 1;
 }
 
+.cardSubtitle {
+  display: block;
+  max-width: 100%;
+  margin-top: 0.25rem;
+  overflow: hidden;
+  color: #9aa4b8;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .chevron {
   position: absolute;
   top: 50%;

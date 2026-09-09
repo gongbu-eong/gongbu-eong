@@ -59,6 +59,8 @@ export type InterviewMessage = {
   createdAt: string;
 };
 
+export type InterviewCoachingStatus = "draft" | "ready" | "completed" | "failed";
+
 export type InterviewCoachingResult = {
   score: number;
   summary: string;
@@ -78,6 +80,8 @@ export type InterviewCoachingResult = {
 
 export type InterviewCoachingSession = {
   id: string;
+  status: InterviewCoachingStatus;
+  lastErrorMessage: string | null;
   createdAt: string;
   completedAt: string | null;
   companyName: string;

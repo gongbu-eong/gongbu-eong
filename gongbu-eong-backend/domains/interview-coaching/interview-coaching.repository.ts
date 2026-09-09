@@ -5,6 +5,7 @@ import type {
   InterviewCoachingJobDto,
   InterviewCoachingResult,
   InterviewCoachingSessionDto,
+  InterviewCoachingStatus,
   InterviewMessage,
   InterviewMessageRole,
   InterviewQuestion,
@@ -15,6 +16,8 @@ type SessionRow = {
   user_id: string | null;
   anonymous_id: string | null;
   job_posting_id: string | null;
+  status: InterviewCoachingStatus | null;
+  last_error_message: string | null;
   company_name: string | null;
   position_name: string | null;
   duty_text: string | null;
@@ -44,8 +47,8 @@ export async function createInterviewSession(args: {
   companyName: string;
   positionName: string;
   dutyText: string;
-  analysis: InterviewAnalysis;
-  questions: InterviewQuestion[];
+  analysis?: InterviewAnalysis | null;
+  questions?: InterviewQuestion[] | null;
   ipAddress?: string | null;
   userAgent?: string | null;
 }) {
@@ -58,6 +61,7 @@ export async function createInterviewSession(args: {
         entry_source,
         ip_address,
         user_agent,
+        status,
         company_name,
         position_name,
         duty_text,
@@ -65,7 +69,7 @@ export async function createInterviewSession(args: {
         analysis,
         questions
       )
-      VALUES ($1, $2, $3, 'ai_tools', $4, $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb)
+      VALUES ($1, $2, $3, 'ai_tools', $4, $5, 'draft', $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb)
       RETURNING id
     `,
     [
@@ -78,12 +82,60 @@ export async function createInterviewSession(args: {
       args.positionName,
       args.dutyText,
       JSON.stringify(args.jobSnapshot || {}),
-      JSON.stringify(args.analysis),
-      JSON.stringify(args.questions),
+      JSON.stringify(args.analysis || {}),
+      JSON.stringify(args.questions || []),
     ],
   );
 
   return result.rows[0].id;
+}
+
+export async function updateInterviewSessionAnalysis(args: {
+  sessionId: string;
+  companyName: string;
+  positionName: string;
+  dutyText: string;
+  analysis: InterviewAnalysis;
+  questions: InterviewQuestion[];
+}) {
+  await db.query(
+    `
+      UPDATE public.interview_coaching_sessions
+      SET status = 'ready',
+          last_error_message = NULL,
+          company_name = $2,
+          position_name = $3,
+          duty_text = $4,
+          analysis = $5::jsonb,
+          questions = $6::jsonb,
+          updated_at = NOW()
+      WHERE id = $1::uuid
+    `,
+    [
+      args.sessionId,
+      args.companyName,
+      args.positionName,
+      args.dutyText,
+      JSON.stringify(args.analysis),
+      JSON.stringify(args.questions),
+    ],
+  );
+}
+
+export async function markInterviewSessionFailed(
+  sessionId: string,
+  message: string,
+) {
+  await db.query(
+    `
+      UPDATE public.interview_coaching_sessions
+      SET status = 'failed',
+          last_error_message = $2,
+          updated_at = NOW()
+      WHERE id = $1::uuid
+    `,
+    [sessionId, message.slice(0, 500)],
+  );
 }
 
 export async function findInterviewSessionForViewer(args: {
@@ -98,6 +150,8 @@ export async function findInterviewSessionForViewer(args: {
         user_id,
         anonymous_id,
         job_posting_id,
+        status,
+        last_error_message,
         company_name,
         position_name,
         duty_text,
@@ -126,6 +180,54 @@ export async function findInterviewSessionForViewer(args: {
 
   const messages = await listInterviewMessages(row.id);
   return mapSession(row, messages);
+}
+
+export async function listInterviewHistory(userId: string) {
+  const result = await db.query<SessionRow>(
+    `
+      SELECT
+        id,
+        user_id,
+        anonymous_id,
+        job_posting_id,
+        status,
+        last_error_message,
+        company_name,
+        position_name,
+        duty_text,
+        job_snapshot,
+        analysis,
+        questions,
+        result,
+        started_at,
+        completed_at
+      FROM public.interview_coaching_sessions
+      WHERE user_id = $1::uuid
+      ORDER BY started_at DESC
+    `,
+    [userId],
+  );
+
+  return result.rows.map((row) => mapSession(row, []));
+}
+
+export async function claimAnonymousInterviewSessions(
+  userId: string,
+  anonymousId?: string | null,
+) {
+  if (!anonymousId) return 0;
+  const result = await db.query<{ id: string }>(
+    `
+      UPDATE public.interview_coaching_sessions
+      SET user_id = $1::uuid,
+          updated_at = NOW()
+      WHERE user_id IS NULL
+        AND anonymous_id = $2::uuid
+      RETURNING id
+    `,
+    [userId, anonymousId],
+  );
+  return result.rowCount || 0;
 }
 
 export async function addInterviewMessage(args: {
@@ -172,6 +274,20 @@ export async function addInterviewMessage(args: {
   return mapMessage(result.rows[0]);
 }
 
+export async function updateInterviewMessageFeedback(
+  messageId: string,
+  feedback: InterviewAnswerFeedback,
+) {
+  await db.query(
+    `
+      UPDATE public.interview_coaching_messages
+      SET feedback = $2::jsonb
+      WHERE id = $1::uuid
+    `,
+    [messageId, JSON.stringify(feedback)],
+  );
+}
+
 export async function updateInterviewResult(
   sessionId: string,
   result: InterviewCoachingResult,
@@ -179,7 +295,8 @@ export async function updateInterviewResult(
   await db.query(
     `
       UPDATE public.interview_coaching_sessions
-      SET result = $2::jsonb,
+      SET status = 'completed',
+          result = $2::jsonb,
           completed_at = NOW(),
           updated_at = NOW()
       WHERE id = $1::uuid
@@ -215,29 +332,41 @@ function mapSession(
 ): InterviewCoachingSessionDto {
   return {
     id: row.id,
+    status: row.status || (row.completed_at ? "completed" : "ready"),
+    lastErrorMessage: row.last_error_message || null,
     createdAt: row.started_at,
     completedAt: row.completed_at,
     companyName: row.company_name || "",
     positionName: row.position_name || "",
     dutyText: row.duty_text || "",
     job: row.job_snapshot?.id ? row.job_snapshot : null,
-    analysis: row.analysis || {
-      profile: {
-        companyName: row.company_name || "",
-        positionName: row.position_name || "",
-        dutyText: row.duty_text || "",
-        mainTasks: [],
-        requiredKnowledge: [],
-        preferredExperience: [],
-        keywords: [],
-      },
-      ncsMappings: [],
-      questionPlan: [],
-    },
+    analysis: normalizeAnalysis(row),
     questions: Array.isArray(row.questions) ? row.questions : [],
     messages,
     result: row.result || null,
     isAnonymous: !row.user_id && Boolean(row.anonymous_id),
+  };
+}
+
+function normalizeAnalysis(row: SessionRow): InterviewAnalysis {
+  const analysis = row.analysis;
+  const profile = analysis?.profile;
+  return {
+    profile: {
+      companyName: profile?.companyName || row.company_name || "",
+      positionName: profile?.positionName || row.position_name || "",
+      dutyText: profile?.dutyText || row.duty_text || "",
+      mainTasks: Array.isArray(profile?.mainTasks) ? profile.mainTasks : [],
+      requiredKnowledge: Array.isArray(profile?.requiredKnowledge)
+        ? profile.requiredKnowledge
+        : [],
+      preferredExperience: Array.isArray(profile?.preferredExperience)
+        ? profile.preferredExperience
+        : [],
+      keywords: Array.isArray(profile?.keywords) ? profile.keywords : [],
+    },
+    ncsMappings: Array.isArray(analysis?.ncsMappings) ? analysis.ncsMappings : [],
+    questionPlan: Array.isArray(analysis?.questionPlan) ? analysis.questionPlan : [],
   };
 }
 

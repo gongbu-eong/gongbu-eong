@@ -49,6 +49,8 @@ export type InterviewAnalysis = {
 
 export type InterviewMessageRole = "question" | "answer" | "follow_up";
 
+export type InterviewCoachingStatus = "draft" | "ready" | "completed" | "failed";
+
 export type InterviewMessage = {
   id: string;
   questionId: string | null;
@@ -88,6 +90,8 @@ export type InterviewCoachingResult = {
 
 export type InterviewCoachingSessionDto = {
   id: string;
+  status: InterviewCoachingStatus;
+  lastErrorMessage: string | null;
   createdAt: string;
   completedAt: string | null;
   companyName: string;

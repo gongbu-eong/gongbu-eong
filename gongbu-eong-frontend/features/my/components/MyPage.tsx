@@ -9,7 +9,9 @@ import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { listCoachingHistory } from "@/features/coaching/coaching.api";
+import { listInterviewCoachingHistory } from "@/features/interview-coaching/interview-coaching.api";
 import { makeLoginHref } from "@/shared/navigation/login";
+import { getAnonymousId } from "@/shared/session/anonymous-id";
 import styles from "./My.module.css";
 
 export function MyPage() {
@@ -21,7 +23,7 @@ export function MyPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [coverLetterCoachingCount, setCoverLetterCoachingCount] = useState(0);
-  // const interviewCoachingCount = 0;
+  const [interviewCoachingCount, setInterviewCoachingCount] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -38,10 +40,11 @@ export function MyPage() {
 
       setUser(userResponse.user);
 
-      const [jobsResponse, diagnosisResponse, coachingResponse] = await Promise.all([
+      const [jobsResponse, diagnosisResponse, coachingResponse, interviewResponse] = await Promise.all([
         getHomeJobs().catch(() => null),
         getDiagnosisResultHistory(undefined, 1).catch(() => null),
         listCoachingHistory().catch(() => null),
+        listInterviewCoachingHistory(getAnonymousId()).catch(() => null),
       ]);
 
       if (!alive) return;
@@ -50,6 +53,7 @@ export function MyPage() {
       // setResumeCount(resumesResponse?.resumes.length ?? 0);
       setDiagnosisCount(diagnosisResponse?.totalCount ?? 0);
       setCoverLetterCoachingCount(coachingResponse?.items.length ?? 0);
+      setInterviewCoachingCount(interviewResponse?.items.length ?? 0);
       setIsCheckingAuth(false);
     }
 
@@ -120,12 +124,12 @@ export function MyPage() {
             </Link>
             <span>자소서 코칭</span>
           </div>
-          {/*
           <div className={styles.stat}>
-            <strong>{interviewCoachingCount}</strong>
+            <Link href="/my/coaching" className={styles.statCountLink} aria-label={`면접 코칭 ${interviewCoachingCount}개 보기`}>
+              {interviewCoachingCount}
+            </Link>
             <span>면접 코칭</span>
           </div>
-          */}
         </section>
 
         <h2 className={styles.sectionTitle}>내 활동</h2>
@@ -154,16 +158,14 @@ export function MyPage() {
             title="내 자소서 코칭 기록"
             count={coverLetterCoachingCount}
           />
-          {/*
           <MyMenuItem
-            href="#"
+            href="/my/coaching"
             iconSrc="/my/activity-interview.png"
             iconWidth={17}
             iconHeight={30}
             title="내 면접 코칭 기록"
             count={interviewCoachingCount}
           />
-          */}
           {/*
           <MyMenuItem
             href="/my/resumes"

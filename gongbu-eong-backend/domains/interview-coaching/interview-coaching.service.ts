@@ -2,9 +2,14 @@ import { createOpenAiJsonResponse, getOpenAiModel } from "@/lib/openai";
 import type { JobPostingDetailRow } from "@/domains/jobs/jobs.repository";
 import {
   addInterviewMessage,
+  claimAnonymousInterviewSessions,
   createInterviewSession,
   findInterviewSessionForViewer,
+  listInterviewHistory,
+  markInterviewSessionFailed,
+  updateInterviewMessageFeedback,
   updateInterviewResult,
+  updateInterviewSessionAnalysis,
 } from "./interview-coaching.repository";
 import type {
   InterviewAnalysis,
@@ -60,42 +65,61 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     throw new Error("지원 공고를 연결하거나 직무명을 입력해 주세요.");
   }
 
-  const jobContext = args.posting ? buildPostingContext(args.posting) : "";
-  const { analysis, questions } = normalizeStartPayload(
-    await requestStartPayload({
-      companyName: companyName || "기업 미정",
-      positionName: positionName || "직무 미정",
-      dutyText: dutyText || positionName || "직무 미정",
-      jobContext,
-    }),
-    {
-      companyName: companyName || "기업 미정",
-      positionName: positionName || "직무 미정",
-      dutyText: dutyText || positionName || "직무 미정",
-    },
-  );
-
   const sessionId = await createInterviewSession({
     userId: args.userId,
     anonymousId: args.anonymousId,
     jobPostingId: args.posting?.id || null,
     jobSnapshot: job,
-    companyName: analysis.profile.companyName,
-    positionName: analysis.profile.positionName,
-    dutyText: analysis.profile.dutyText,
-    analysis,
-    questions,
+    companyName: companyName || "기업 미정",
+    positionName: positionName || "직무 미정",
+    dutyText: dutyText || positionName || "직무 미정",
     ipAddress: args.ipAddress,
     userAgent: args.userAgent,
   });
 
-  for (const question of questions) {
-    await addInterviewMessage({
+  const jobContext = args.posting ? buildPostingContext(args.posting) : "";
+  const fallbackProfile = {
+    companyName: companyName || "기업 미정",
+    positionName: positionName || "직무 미정",
+    dutyText: dutyText || positionName || "직무 미정",
+  };
+
+  try {
+    const { analysis, questions } = normalizeStartPayload(
+      await requestStartPayload({
+        ...fallbackProfile,
+        jobContext,
+      }),
+      fallbackProfile,
+    );
+
+    await updateInterviewSessionAnalysis({
       sessionId,
-      questionId: question.id,
-      role: "question",
-      content: question.question,
+      companyName: analysis.profile.companyName,
+      positionName: analysis.profile.positionName,
+      dutyText: analysis.profile.dutyText,
+      analysis,
+      questions,
     });
+
+    for (const question of questions) {
+      await addInterviewMessage({
+        sessionId,
+        questionId: question.id,
+        role: "question",
+        content: question.question,
+      });
+    }
+  } catch (error) {
+    await markInterviewSessionFailed(
+      sessionId,
+      error instanceof Error && error.message
+        ? error.message
+        : "AI 면접 코칭 질문 생성에 실패했습니다.",
+    ).catch((markError) => {
+      console.error("[InterviewCoaching] failed to mark session failed", markError);
+    });
+    throw error;
   }
 
   const session = await findInterviewSessionForViewer({
@@ -104,6 +128,107 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     anonymousId: args.userId ? null : args.anonymousId,
   });
   if (!session) throw new Error("면접 코칭 세션을 생성하지 못했습니다.");
+  return session;
+}
+
+export async function createInterviewCoachingDraft(args: StartInterviewCoachingArgs) {
+  const job = args.posting ? makeJobSnapshot(args.posting) : null;
+  const companyName =
+    job?.institutionName || cleanText(args.manualCompanyName).slice(0, 100);
+  const positionName =
+    cleanText(args.jobDuty) ||
+    args.posting?.job_category ||
+    args.posting?.ncs_category ||
+    cleanText(args.manualPositionName).slice(0, 100);
+  const dutyText =
+    cleanText(args.jobDuty) ||
+    args.posting?.job_category ||
+    args.posting?.ncs_category ||
+    cleanText(args.manualPositionName).slice(0, 400);
+
+  if (!companyName && !positionName && !dutyText) {
+    throw new Error("지원 공고를 연결하거나 직무명을 입력해 주세요.");
+  }
+
+  const sessionId = await createInterviewSession({
+    userId: args.userId,
+    anonymousId: args.anonymousId,
+    jobPostingId: args.posting?.id || null,
+    jobSnapshot: job,
+    companyName: companyName || "기업 미정",
+    positionName: positionName || "직무 미정",
+    dutyText: dutyText || positionName || "직무 미정",
+    ipAddress: args.ipAddress,
+    userAgent: args.userAgent,
+  });
+
+  const session = await findInterviewSessionForViewer({
+    sessionId,
+    userId: args.userId,
+    anonymousId: args.userId ? null : args.anonymousId,
+  });
+  if (!session) throw new Error("면접 코칭 세션을 생성하지 못했습니다.");
+  return session;
+}
+
+export async function generateInterviewCoachingQuestions(args: {
+  sessionId: string;
+  userId?: string | null;
+  anonymousId?: string | null;
+}) {
+  const draft = await findInterviewSessionForViewer(args);
+  if (!draft) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
+  if (draft.status === "ready" && draft.questions.length) return draft;
+
+  try {
+    const { analysis, questions } = normalizeStartPayload(
+      await requestStartPayload({
+        companyName: draft.companyName || "기업 미정",
+        positionName: draft.positionName || "직무 미정",
+        dutyText: draft.dutyText || draft.positionName || "직무 미정",
+        jobContext: "",
+      }),
+      {
+        companyName: draft.companyName || "기업 미정",
+        positionName: draft.positionName || "직무 미정",
+        dutyText: draft.dutyText || draft.positionName || "직무 미정",
+      },
+    );
+
+    await updateInterviewSessionAnalysis({
+      sessionId: draft.id,
+      companyName: analysis.profile.companyName,
+      positionName: analysis.profile.positionName,
+      dutyText: analysis.profile.dutyText,
+      analysis,
+      questions,
+    });
+
+    for (const question of questions) {
+      await addInterviewMessage({
+        sessionId: draft.id,
+        questionId: question.id,
+        role: "question",
+        content: question.question,
+      });
+    }
+  } catch (error) {
+    await markInterviewSessionFailed(
+      draft.id,
+      error instanceof Error && error.message
+        ? error.message
+        : "AI 면접 코칭 질문 생성에 실패했습니다.",
+    ).catch((markError) => {
+      console.error("[InterviewCoaching] failed to mark session failed", markError);
+    });
+    throw error;
+  }
+
+  const session = await findInterviewSessionForViewer({
+    ...args,
+    sessionId: draft.id,
+  });
+  if (!session) throw new Error("면접 질문 생성 후 세션을 찾지 못했습니다.");
   return session;
 }
 
@@ -127,27 +252,41 @@ export async function answerInterviewQuestion(args: {
   const followUpCount = session.messages.filter(
     (item) => item.questionId === question.id && item.role === "follow_up",
   ).length;
-  const feedback = normalizeAnswerFeedback(
-    await requestAnswerFeedback(session, question, answer, followUpCount),
-    followUpCount,
-  );
-
-  await addInterviewMessage({
+  const answerMessage = await addInterviewMessage({
     sessionId: session.id,
     questionId: question.id,
     role: "answer",
     content: answer,
-    feedback,
   });
 
-  if (feedback.followUpQuestion && followUpCount < MAX_FOLLOW_UPS_PER_QUESTION) {
-    await addInterviewMessage({
-      sessionId: session.id,
-      questionId: question.id,
-      role: "follow_up",
-      content: feedback.followUpQuestion,
-      followUpIndex: followUpCount + 1,
+  let feedback: InterviewAnswerFeedback;
+  try {
+    feedback = normalizeAnswerFeedback(
+      await requestAnswerFeedback(session, question, answer, followUpCount),
+      followUpCount,
+    );
+
+    await updateInterviewMessageFeedback(answerMessage.id, feedback);
+
+    if (feedback.followUpQuestion && followUpCount < MAX_FOLLOW_UPS_PER_QUESTION) {
+      await addInterviewMessage({
+        sessionId: session.id,
+        questionId: question.id,
+        role: "follow_up",
+        content: feedback.followUpQuestion,
+        followUpIndex: followUpCount + 1,
+      });
+    }
+  } catch (error) {
+    await markInterviewSessionFailed(
+      session.id,
+      error instanceof Error && error.message
+        ? error.message
+        : "AI 면접 답변 코칭에 실패했습니다.",
+    ).catch((markError) => {
+      console.error("[InterviewCoaching] failed to mark session failed", markError);
     });
+    throw error;
   }
 
   const updated = await findInterviewSessionForViewer(args);
@@ -178,6 +317,8 @@ export async function completeInterviewCoaching(args: {
 }
 
 export { findInterviewSessionForViewer };
+
+export { listInterviewHistory, claimAnonymousInterviewSessions };
 
 async function requestStartPayload(input: {
   companyName: string;

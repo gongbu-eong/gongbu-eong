@@ -106,6 +106,23 @@ export async function getInterviewCoachingSession(
   return body;
 }
 
+export async function listInterviewCoachingHistory(anonymousId?: string | null) {
+  const searchParams = new URLSearchParams();
+  if (anonymousId) searchParams.set("anonymousId", anonymousId);
+  const query = searchParams.size ? `?${searchParams.toString()}` : "";
+  const response = await fetch(
+    `${backendUrl}/api/interview-coaching/history${query}`,
+    { credentials: "include", cache: "no-store" },
+  );
+  const body = await readJsonResponse(response) as {
+    ok: boolean;
+    items: InterviewCoachingSession[];
+    message?: string;
+  };
+  if (!response.ok || !body.ok) throw new Error(body.message || "AI 면접 코칭 기록을 불러오지 못했습니다.");
+  return body;
+}
+
 async function readJsonResponse(response: Response) {
   const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
