@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getJobPostings } from "@/features/home/home.api";
@@ -12,6 +11,7 @@ import { focusMobileInput, watchMobileKeyboardInset } from "@/shared/mobile-focu
 import {
   answerInterviewQuestion,
   completeInterviewCoaching,
+  getInterviewCoachingSession,
   startInterviewCoaching,
 } from "../interview-coaching.api";
 import type {
@@ -26,10 +26,16 @@ type ConnectedJob = InterviewCoachingJob & { duty: string };
 
 const MAX_ANSWER_LENGTH = 4000;
 
-export function InterviewCoachingPage() {
+export function InterviewCoachingPage({
+  initialSessionId,
+  initialAnonymousId,
+}: {
+  initialSessionId?: string;
+  initialAnonymousId?: string | null;
+} = {}) {
   const router = useRouter();
   const jobSearchSeqRef = useRef(0);
-  const answerRef = useRef<HTMLTextAreaElement | null>(null);
+  const answerRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const alertFocusRef = useRef<HTMLElement | null>(null);
   const [connectedJob, setConnectedJob] = useState<ConnectedJob | null>(null);
   const [jobPickerOpen, setJobPickerOpen] = useState(false);
@@ -42,9 +48,11 @@ export function InterviewCoachingPage() {
   const [manualPositionName, setManualPositionName] = useState("");
   const [manualDuty, setManualDuty] = useState("");
   const [session, setSession] = useState<InterviewCoachingSession | null>(null);
-  const [selectedQuestionId, setSelectedQuestionId] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [busy, setBusy] = useState<"start" | "answer" | "complete" | null>(null);
+  const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<"load" | "start" | "complete" | null>(
+    initialSessionId ? "load" : null,
+  );
+  const [busyQuestionId, setBusyQuestionId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
 
@@ -54,6 +62,26 @@ export function InterviewCoachingPage() {
     if (!jobPickerOpen && !dutySheetJob && !alertMessage) return;
     return watchMobileKeyboardInset();
   }, [jobPickerOpen, dutySheetJob, alertMessage]);
+
+  useEffect(() => {
+    if (!initialSessionId) return;
+    let active = true;
+    getInterviewCoachingSession(initialSessionId, initialAnonymousId || getAnonymousId())
+      .then((response) => {
+        if (active) setSession(response.session);
+      })
+      .catch((caught) => {
+        if (!active) return;
+        const message = caught instanceof Error ? caught.message : "면접 코칭 기록을 불러오지 못했습니다.";
+        setError(message);
+      })
+      .finally(() => {
+        if (active) setBusy(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [initialAnonymousId, initialSessionId]);
 
   const searchJobs = async (nextQuery = query) => {
     const searchId = ++jobSearchSeqRef.current;
@@ -130,7 +158,6 @@ export function InterviewCoachingPage() {
         jobDuty: dutyText || null,
       });
       setSession(result.session);
-      setSelectedQuestionId(result.session.questions[0]?.id || "");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "면접 코칭을 시작하지 못했습니다.";
@@ -141,36 +168,43 @@ export function InterviewCoachingPage() {
     }
   };
 
-  const submitAnswer = async () => {
-    if (!session || !selectedQuestionId) return;
-    const value = answer.trim();
+  const submitAnswer = async (questionId: string) => {
+    if (!session) return;
+    const value = (answerDrafts[questionId] || "").trim();
     if (!value) {
-      showAlert("답변을 입력해 주세요.", answerRef.current);
+      showAlert("답변을 입력해 주세요.", answerRefs.current[questionId]);
       return;
     }
 
-    setBusy("answer");
+    setBusyQuestionId(questionId);
     setError("");
     try {
       const result = await answerInterviewQuestion({
         sessionId: session.id,
-        questionId: selectedQuestionId,
+        questionId,
         answer: value,
       });
       setSession(result.session);
-      setAnswer("");
-      window.setTimeout(() => answerRef.current?.focus({ preventScroll: true }), 0);
+      setAnswerDrafts((drafts) => ({ ...drafts, [questionId]: "" }));
+      window.setTimeout(() => answerRefs.current[questionId]?.focus({ preventScroll: true }), 0);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "답변 코칭에 실패했습니다.";
       setError(message);
-      showAlert(message, answerRef.current);
+      showAlert(message, answerRefs.current[questionId]);
     } finally {
-      setBusy(null);
+      setBusyQuestionId(null);
     }
   };
 
   const complete = async () => {
     if (!session) return;
+    const anonymousId = getAnonymousId();
+    if (session.result) {
+      router.push(
+        `/ai-tools/interview-coaching/result/${session.id}?anonymousId=${encodeURIComponent(anonymousId)}`,
+      );
+      return;
+    }
     if (!hasAnsweredEveryQuestion(session)) {
       showAlert("생성된 면접 질문에 한 번씩 답변한 뒤 결과를 확인할 수 있어요.");
       return;
@@ -180,7 +214,6 @@ export function InterviewCoachingPage() {
     setError("");
     try {
       const result = await completeInterviewCoaching({ sessionId: session.id });
-      const anonymousId = getAnonymousId();
       router.push(
         `/ai-tools/interview-coaching/result/${result.session.id}?anonymousId=${encodeURIComponent(anonymousId)}`,
       );
@@ -195,13 +228,6 @@ export function InterviewCoachingPage() {
 
   if (busy === "start") return <InterviewLoadingScreen />;
 
-  const selectedQuestion = session?.questions.find((item) => item.id === selectedQuestionId) || null;
-  const selectedMessages = session && selectedQuestion
-    ? session.messages.filter((item) => item.questionId === selectedQuestion.id)
-    : [];
-  const followUpCount = selectedMessages.filter((item) => item.role === "follow_up").length;
-  const canSubmitAnswer = Boolean(session && selectedQuestion && answer.trim()) && busy !== "answer";
-
   return (
     <div className={styles.page}>
       <AppHeader />
@@ -210,8 +236,9 @@ export function InterviewCoachingPage() {
         <p className={styles.lead}>
           지원 직무를 NCS 역량과 연결한 뒤, AI 면접 질문과 꼬리질문으로 답변을 연습해요.
         </p>
+        {busy === "load" ? <p className={styles.lead}>저장된 면접 코칭 기록을 불러오고 있어요.</p> : null}
 
-        {!session ? (
+        {busy === "load" ? null : !session ? (
           <>
             {connectedJob ? (
               <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} />
@@ -273,47 +300,48 @@ export function InterviewCoachingPage() {
         ) : (
           <>
             <InterviewAnalysisView session={session} />
-            {selectedQuestion ? (
-              <section className={styles.sectionTitle}>
-                <h2>AI 면접</h2>
-                <small>꼬리질문 {followUpCount}/3</small>
-              </section>
-            ) : null}
-            <QuestionTabs
-              questions={session.questions}
-              selectedQuestionId={selectedQuestionId}
-              answeredQuestionIds={new Set(session.messages.filter((item) => item.role === "answer").map((item) => item.questionId || ""))}
-              onSelect={(questionId) => {
-                setSelectedQuestionId(questionId);
-                setAnswer("");
-              }}
-            />
-            {selectedQuestion ? (
-              <InterviewQuestionPanel
-                question={selectedQuestion}
-                messages={selectedMessages}
-                answer={answer}
-                busy={busy}
-                canSubmitAnswer={canSubmitAnswer}
-                answerRef={answerRef}
-                onAnswerChange={setAnswer}
-                onSubmitAnswer={submitAnswer}
-              />
-            ) : null}
-            {error ? <p className={styles.error}>{error}</p> : null}
-            <div className={styles.bottomActions}>
-              <button
-                className={styles.secondaryButton}
-                type="button"
-                onClick={() => selectNextQuestion(session, selectedQuestionId, setSelectedQuestionId)}
-              >
-                다음 질문
+            {session.result ? (
+              <button className={styles.primaryButton} type="button" onClick={complete}>
+                저장된 최종 결과 보기
               </button>
+            ) : null}
+            <section className={styles.sectionTitle}>
+              <h2>AI 면접</h2>
+              <small>문항별 꼬리질문 최대 3개</small>
+            </section>
+            <div className={styles.questionList}>
+              {session.questions.map((question, index) => {
+                const messages = session.messages.filter((item) => item.questionId === question.id);
+                const followUpCount = messages.filter((item) => item.role === "follow_up").length;
+                const answer = answerDrafts[question.id] || "";
+                return (
+                  <InterviewQuestionPanel
+                    key={question.id}
+                    index={index}
+                    question={question}
+                    messages={messages}
+                    answer={answer}
+                    busy={busyQuestionId === question.id}
+                    canSubmitAnswer={Boolean(answer.trim()) && !busyQuestionId && busy !== "complete" && !session.completedAt}
+                    followUpCount={followUpCount}
+                    answerRef={(element) => {
+                      answerRefs.current[question.id] = element;
+                    }}
+                    onAnswerChange={(value) => {
+                      setAnswerDrafts((drafts) => ({ ...drafts, [question.id]: value }));
+                    }}
+                    onSubmitAnswer={() => submitAnswer(question.id)}
+                  />
+                );
+              })}
+            </div>
+            {error ? <p className={styles.error}>{error}</p> : null}
+            <div className={styles.singleBottomAction}>
               <button
                 className={styles.primaryButton}
                 type="button"
                 onClick={complete}
-                disabled={busy !== null || !hasAnsweredEveryQuestion(session)}
+                disabled={busy !== null || (!session.result && !hasAnsweredEveryQuestion(session))}
               >
                 최종 결과 보기
               </button>
@@ -437,49 +465,26 @@ function ProfileList({ title, items }: { title: string; items: string[] }) {
   );
 }
 
-function QuestionTabs({
-  questions,
-  selectedQuestionId,
-  answeredQuestionIds,
-  onSelect,
-}: {
-  questions: InterviewQuestion[];
-  selectedQuestionId: string;
-  answeredQuestionIds: Set<string>;
-  onSelect: (questionId: string) => void;
-}) {
-  return (
-    <div className={styles.questionTabs} aria-label="면접 질문 선택">
-      {questions.map((question, index) => (
-        <button
-          key={question.id}
-          type="button"
-          className={question.id === selectedQuestionId ? styles.questionActive : undefined}
-          onClick={() => onSelect(question.id)}
-        >
-          {answeredQuestionIds.has(question.id) ? "✓ " : ""}Q{index + 1}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function InterviewQuestionPanel({
+  index,
   question,
   messages,
   answer,
   busy,
   canSubmitAnswer,
+  followUpCount,
   answerRef,
   onAnswerChange,
   onSubmitAnswer,
 }: {
+  index: number;
   question: InterviewQuestion;
   messages: InterviewMessage[];
   answer: string;
-  busy: "start" | "answer" | "complete" | null;
+  busy: boolean;
   canSubmitAnswer: boolean;
-  answerRef: RefObject<HTMLTextAreaElement | null>;
+  followUpCount: number;
+  answerRef: (element: HTMLTextAreaElement | null) => void;
   onAnswerChange: (value: string) => void;
   onSubmitAnswer: () => void;
 }) {
@@ -489,8 +494,8 @@ function InterviewQuestionPanel({
     <section className={styles.interviewPanel}>
       <article className={styles.questionCard}>
         <div className={styles.questionMeta}>
-          <span>{question.difficulty} · {formatQuestionType(question.type)}</span>
-          <span>{latestFollowUp ? `꼬리질문 ${latestFollowUp.followUpIndex}` : "기본 질문"}</span>
+          <span>질문 {index + 1} · {question.difficulty} · {formatQuestionType(question.type)}</span>
+          <span>꼬리질문 {followUpCount}/3</span>
         </div>
         <h2>{prompt}</h2>
         <p>{question.intent}</p>
@@ -515,7 +520,7 @@ function InterviewQuestionPanel({
         <div className={styles.answerFooter}>
           <span>{answer.length.toLocaleString("ko-KR")} / {MAX_ANSWER_LENGTH.toLocaleString("ko-KR")}자</span>
           <button type="button" onClick={onSubmitAnswer} disabled={!canSubmitAnswer}>
-            {busy === "answer" ? "코칭 중" : "답변 제출"}
+            {busy ? "코칭 중" : "답변 제출"}
           </button>
         </div>
       </div>
@@ -708,16 +713,6 @@ function InterviewLoadingScreen() {
       </main>
     </div>
   );
-}
-
-function selectNextQuestion(
-  session: InterviewCoachingSession,
-  currentId: string,
-  setter: (questionId: string) => void,
-) {
-  const currentIndex = Math.max(0, session.questions.findIndex((item) => item.id === currentId));
-  const next = session.questions[(currentIndex + 1) % session.questions.length];
-  if (next) setter(next.id);
 }
 
 function hasAnsweredEveryQuestion(session: InterviewCoachingSession) {

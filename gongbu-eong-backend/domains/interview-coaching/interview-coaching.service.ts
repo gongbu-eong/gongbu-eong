@@ -34,6 +34,7 @@ const NCS_AREAS: Array<{
 ];
 
 const MAX_FOLLOW_UPS_PER_QUESTION = 3;
+const INTERVIEW_QUESTION_COUNT = 20;
 
 export type StartInterviewCoachingArgs = {
   userId?: string | null;
@@ -330,7 +331,7 @@ async function requestStartPayload(input: {
     model: getInterviewModel(),
     schemaName: "interview_coaching_start",
     schema: interviewStartSchema,
-    maxOutputTokens: 9000,
+    maxOutputTokens: 18000,
     content: [
       {
         type: "input_text",
@@ -347,7 +348,7 @@ ${input.jobContext || "연결된 공고 본문이 없습니다. 기업명과 직
 NCS 7개 영역은 반드시 모두 반환하세요.
 ${NCS_AREAS.map((area, index) => `${index + 1}. ${area.name}: ${area.description}`).join("\n")}
 
-질문은 5개를 생성하세요. 경험면접, 상황면접, 직무면접, 인성·가치관, 직업윤리 성격이 골고루 섞여야 합니다.
+질문은 ${INTERVIEW_QUESTION_COUNT}개를 생성하세요. 경험면접, 상황면접, 직무면접, 인성·가치관, 직업윤리 성격이 골고루 섞여야 합니다.
 반드시 JSON 객체 하나만 반환하고, 모든 문장은 한국어로 작성하세요.`,
       },
     ],
@@ -401,7 +402,7 @@ async function requestFinalResult(
     model: getInterviewModel(),
     schemaName: "interview_coaching_result",
     schema: finalResultSchema,
-    maxOutputTokens: 8000,
+    maxOutputTokens: 18000,
     content: [
       {
         type: "input_text",
@@ -491,7 +492,7 @@ function normalizeStartPayload(
     .map((item, index) => normalizeQuestion(item, index, ncsMappings))
     .filter(Boolean) as InterviewQuestion[];
 
-  const questionPlan = readStringList(record?.questionPlan).slice(0, 5);
+  const questionPlan = readStringList(record?.questionPlan).slice(0, INTERVIEW_QUESTION_COUNT);
 
   return {
     analysis: {
@@ -585,9 +586,129 @@ function fillQuestions(
       ncsAreas: ["직업윤리"],
       difficulty: "심화",
     },
+    {
+      id: "q6",
+      type: "experience",
+      question: "지원 직무와 관련해 가장 의미 있었던 성과를 상황, 행동, 결과 순서로 설명해 주세요.",
+      intent: "경험을 구조화해 전달하는 능력을 확인합니다.",
+      ncsAreas: ["의사소통능력", "문제해결능력"],
+      difficulty: "기본",
+    },
+    {
+      id: "q7",
+      type: "situation",
+      question: "업무 우선순위가 충돌했을 때 어떤 기준으로 판단하고 처리하겠습니까?",
+      intent: "우선순위 판단과 실행 방식을 확인합니다.",
+      ncsAreas: ["문제해결능력", "직업윤리"],
+      difficulty: "심화",
+    },
+    {
+      id: "q8",
+      type: "job",
+      question: "지원 직무에서 자주 다뤄야 할 자료나 정보를 어떻게 검토하고 관리하겠습니까?",
+      intent: "정보 활용과 정확성 관리 역량을 확인합니다.",
+      ncsAreas: ["정보능력", "의사소통능력"],
+      difficulty: "기본",
+    },
+    {
+      id: "q9",
+      type: "personality",
+      question: "동료가 맡은 일을 제때 끝내지 못해 전체 일정이 지연될 때 어떻게 대응하겠습니까?",
+      intent: "협업 상황에서의 소통과 문제 조정 방식을 확인합니다.",
+      ncsAreas: ["대인관계능력", "문제해결능력"],
+      difficulty: "심화",
+    },
+    {
+      id: "q10",
+      type: "ethics",
+      question: "업무 편의를 위해 절차를 생략하자는 제안을 받는다면 어떻게 하겠습니까?",
+      intent: "규정 준수와 책임감을 확인합니다.",
+      ncsAreas: ["직업윤리", "의사소통능력"],
+      difficulty: "기본",
+    },
+    {
+      id: "q11",
+      type: "experience",
+      question: "새로운 업무나 도구를 빠르게 익혀 적용했던 경험을 말씀해 주세요.",
+      intent: "학습 태도와 자기개발능력을 확인합니다.",
+      ncsAreas: ["자기개발능력", "정보능력"],
+      difficulty: "기본",
+    },
+    {
+      id: "q12",
+      type: "situation",
+      question: "민원이나 요청 사항이 반복적으로 발생한다면 원인을 어떻게 찾고 개선하겠습니까?",
+      intent: "반복 문제를 분석하고 개선하는 역량을 확인합니다.",
+      ncsAreas: ["문제해결능력", "의사소통능력"],
+      difficulty: "심화",
+    },
+    {
+      id: "q13",
+      type: "job",
+      question: "지원 직무에서 실수를 줄이기 위해 본인이 사용할 점검 방법을 설명해 주세요.",
+      intent: "업무 정확성과 자기관리 방식을 확인합니다.",
+      ncsAreas: ["직업윤리", "자기개발능력"],
+      difficulty: "기본",
+    },
+    {
+      id: "q14",
+      type: "personality",
+      question: "상대방이 내 의견을 받아들이지 않을 때 설득하거나 조율했던 경험이 있나요?",
+      intent: "설득과 갈등관리 방식을 확인합니다.",
+      ncsAreas: ["대인관계능력", "의사소통능력"],
+      difficulty: "기본",
+    },
+    {
+      id: "q15",
+      type: "ethics",
+      question: "공공기관 직원에게 가장 중요하다고 생각하는 태도는 무엇이며, 왜 그렇게 생각하나요?",
+      intent: "공공성과 직업윤리에 대한 이해를 확인합니다.",
+      ncsAreas: ["직업윤리"],
+      difficulty: "심화",
+    },
+    {
+      id: "q16",
+      type: "experience",
+      question: "정해진 기한 안에 여러 업무를 처리했던 경험을 구체적으로 설명해 주세요.",
+      intent: "시간 관리와 실행력을 확인합니다.",
+      ncsAreas: ["자기개발능력", "문제해결능력"],
+      difficulty: "기본",
+    },
+    {
+      id: "q17",
+      type: "situation",
+      question: "자료의 숫자나 기준이 서로 맞지 않는 상황을 발견하면 어떻게 확인하겠습니까?",
+      intent: "자료 검증과 수리·정보 활용 능력을 확인합니다.",
+      ncsAreas: ["수리능력", "정보능력"],
+      difficulty: "심화",
+    },
+    {
+      id: "q18",
+      type: "job",
+      question: "이 직무를 수행하며 가장 먼저 배우고 싶은 업무는 무엇이고, 어떻게 익히겠습니까?",
+      intent: "직무 이해와 성장 계획을 확인합니다.",
+      ncsAreas: ["자기개발능력", "정보능력"],
+      difficulty: "기본",
+    },
+    {
+      id: "q19",
+      type: "personality",
+      question: "팀 목표와 개인 방식이 다를 때 본인은 어떤 기준으로 행동하나요?",
+      intent: "조직 적응과 협업 태도를 확인합니다.",
+      ncsAreas: ["대인관계능력", "직업윤리"],
+      difficulty: "심화",
+    },
+    {
+      id: "q20",
+      type: "job",
+      question: "지원 직무에서 고객이나 내부 구성원에게 정보를 설명해야 한다면 어떤 점을 가장 신경 쓰겠습니까?",
+      intent: "상대방 중심의 설명 능력과 직무 소통 역량을 확인합니다.",
+      ncsAreas: ["의사소통능력", "정보능력"],
+      difficulty: "기본",
+    },
   ];
-  const merged = [...questions, ...defaults].slice(0, 5);
-  return merged.map((item, index) => ({ ...item, id: item.id || `q${index + 1}` }));
+  const merged = [...questions, ...defaults].slice(0, INTERVIEW_QUESTION_COUNT);
+  return merged.map((item, index) => ({ ...item, id: `q${index + 1}` }));
 }
 
 function normalizeAnswerFeedback(

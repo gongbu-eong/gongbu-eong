@@ -47,10 +47,7 @@
 .track{height:.5rem;margin:.45rem 0;border-radius:999px;background:#f1f4f8;overflow:hidden}
 .track span{display:block;height:100%;border-radius:inherit;background:#2f7ff0}
 .ncsItem p{margin:0;color:#5a6580;font-size:.75rem;line-height:1.5}
-.questionTabs{display:flex;gap:.5rem;margin:0 -1rem .875rem;padding:0 1rem .25rem;overflow-x:auto;scrollbar-width:none}
-.questionTabs::-webkit-scrollbar{display:none}
-.questionTabs button{flex:0 0 auto;min-width:4.5rem;height:2.5rem;border:1px solid #e4e8ef;border-radius:999px;background:#fff;color:#5a6580;font-weight:900}
-.questionTabs .questionActive{border-color:#2f7ff0;background:#2f7ff0;color:#fff}
+.questionList{display:grid;gap:1rem}
 .interviewPanel{display:grid;gap:1rem}
 .questionCard{padding:1rem;border-radius:.625rem;background:#f5f7fa}
 .questionMeta{display:flex;justify-content:space-between;gap:.75rem;color:#2f7ff0;font-size:.75rem;font-weight:900}
@@ -71,6 +68,7 @@
 .answerFooter button{flex:0 0 8rem;height:2.75rem;border:0;border-radius:.625rem;background:#2f7ff0;color:#fff;font-weight:900}
 .answerFooter button:disabled{background:#a7b0c2}
 .bottomActions{display:grid;grid-template-columns:1fr 1fr;gap:.625rem;margin-top:1rem}
+.singleBottomAction{margin-top:1rem}
 .resultHero{text-align:center}
 .resultHero span{display:inline-flex;align-items:center;height:1.75rem;padding:0 .75rem;border-radius:999px;background:#e8f1ff;color:#2f7ff0;font-size:.75rem;font-weight:900}
 .resultHero strong{display:block;margin:.875rem 0 .5rem;font-size:3rem;line-height:1}
