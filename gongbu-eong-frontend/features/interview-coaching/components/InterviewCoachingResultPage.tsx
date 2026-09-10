@@ -52,22 +52,26 @@ export function InterviewCoachingResultPage({
 function ResultView({ session }: { session: InterviewCoachingSession }) {
   const result = session.result;
   if (!result) return null;
+  const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
+  const strengths = cleanDisplayList(result.strengths);
+  const improvements = cleanDisplayList(result.improvements);
+  const futurePracticeQuestions = cleanDisplayList(result.futurePracticeQuestions);
   return (
     <>
       <section className={styles.resultHero}>
-        <span>{session.companyName} · {session.positionName}</span>
+        <span>{session.companyName} · {displayPositionName}</span>
         <strong>{result.score}<small>점</small></strong>
-        <p>{result.summary}</p>
+        <p>{cleanDisplayText(result.summary) || result.summary}</p>
       </section>
 
       <section className={styles.resultSection}>
         <h2>잘한 점</h2>
-        <ul>{result.strengths.map((item) => <li key={item}>{item}</li>)}</ul>
+        <ul>{strengths.map((item) => <li key={item}>{item}</li>)}</ul>
       </section>
 
       <section className={styles.resultSection}>
         <h2>보완할 점</h2>
-        <ul>{result.improvements.map((item) => <li key={item}>{item}</li>)}</ul>
+        <ul>{improvements.map((item) => <li key={item}>{item}</li>)}</ul>
       </section>
 
       <section className={styles.resultSection}>
@@ -75,8 +79,8 @@ function ResultView({ session }: { session: InterviewCoachingSession }) {
         <div className={styles.reviewList}>
           {result.questionReviews.map((review, index) => (
             <article className={styles.reviewCard} key={`${review.questionId}-${index}`}>
-              <strong>{review.question}<b>{review.score}점</b></strong>
-              <p>{review.summary}</p>
+              <strong>{cleanDisplayText(review.question) || review.question}<b>{review.score}점</b></strong>
+              <p>{cleanDisplayText(review.summary) || review.summary}</p>
               <div className={styles.badgeList}>
                 {review.ncsAreas.map((area) => <span key={area}>{area}</span>)}
               </div>
@@ -87,8 +91,24 @@ function ResultView({ session }: { session: InterviewCoachingSession }) {
 
       <section className={styles.resultSection}>
         <h2>추가 연습 질문</h2>
-        <ul>{result.futurePracticeQuestions.map((item) => <li key={item}>{item}</li>)}</ul>
+        <ul>{futurePracticeQuestions.map((item) => <li key={item}>{item}</li>)}</ul>
       </section>
     </>
   );
+}
+
+function cleanDisplayText(value?: string | null) {
+  return (value || "")
+    .replace(/\b[A-Z]\d{6}\b/gi, "")
+    .replace(/\s+([,.])/g, "$1")
+    .replace(/([\/|,])\s*([\/|,])+/g, "$1")
+    .replace(/^\s*[\/|,]\s*|\s*[\/|,]\s*$/g, "")
+    .replace(/\s*\/\s*/g, " / ")
+    .replace(/\s*\|\s*/g, " / ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function cleanDisplayList(items: string[]) {
+  return Array.from(new Set(items.map(cleanDisplayText).filter(Boolean)));
 }

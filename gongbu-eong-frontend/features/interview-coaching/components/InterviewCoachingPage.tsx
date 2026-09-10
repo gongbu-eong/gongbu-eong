@@ -438,22 +438,30 @@ export function InterviewCoachingPage({
 function InterviewAnalysisView({ session }: { session: InterviewCoachingSession }) {
   const profile = session.analysis.profile;
   const visibleMappings = getVisibleNcsMappings(session.analysis.ncsMappings);
+  const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
+  const displayDutyText = cleanDisplayText(session.dutyText) || session.dutyText;
+  const displayKeywords = cleanDisplayList(profile.keywords);
+  const displayMainTasks = cleanDisplayList(profile.mainTasks);
+  const displayKnowledge = cleanDisplayList([
+    ...profile.requiredKnowledge,
+    ...profile.preferredExperience,
+  ]).slice(0, 5);
   return (
     <>
       <section className={styles.profileCard}>
         <div className={styles.profileHeader}>
           <span>직무 내용 분석</span>
-          <strong>{session.companyName} · {session.positionName}</strong>
-          <p>{session.dutyText}</p>
+          <strong>{session.companyName} · {displayPositionName}</strong>
+          <p>{displayDutyText}</p>
         </div>
-        {profile.keywords.length ? (
+        {displayKeywords.length ? (
           <div className={styles.keywordList}>
-            {profile.keywords.map((item) => <span key={item}>{item}</span>)}
+            {displayKeywords.map((item) => <span key={item}>{item}</span>)}
           </div>
         ) : null}
         <div className={styles.profileGrid}>
-          <ProfileList title="주요 업무" items={profile.mainTasks} />
-          <ProfileList title="필요 지식/경험" items={[...profile.requiredKnowledge, ...profile.preferredExperience].slice(0, 5)} />
+          <ProfileList title="주요 업무" items={displayMainTasks} />
+          <ProfileList title="필요 지식/경험" items={displayKnowledge} />
         </div>
       </section>
       <section className={styles.sectionTitle}>
@@ -465,7 +473,7 @@ function InterviewAnalysisView({ session }: { session: InterviewCoachingSession 
           <article className={styles.ncsItem} key={item.name}>
             <strong>{item.name}<b>{item.relevance}%</b></strong>
             <div className={styles.track} aria-hidden="true"><span style={{ width: `${item.relevance}%` }} /></div>
-            <p>{item.reason}</p>
+            <p>{cleanDisplayText(item.reason) || item.reason}</p>
           </article>
         ))}
       </section>
@@ -657,7 +665,8 @@ function InterviewQuestionPanel({
   onSubmitAnswer: () => void;
 }) {
   const latestFollowUp = [...messages].reverse().find((item) => item.role === "follow_up");
-  const prompt = latestFollowUp?.content || question.question;
+  const prompt = cleanDisplayText(latestFollowUp?.content || question.question) || question.question;
+  const intent = cleanDisplayText(question.intent) || question.intent;
   const visibleMessages = messages.filter((item) => item.role === "answer");
   return (
     <section className={styles.interviewPanel}>
@@ -667,7 +676,7 @@ function InterviewQuestionPanel({
           <span>꼬리질문 {followUpCount}/3</span>
         </div>
         <h2>{prompt}</h2>
-        <p>{question.intent}</p>
+        <p>{intent}</p>
         <div className={styles.badgeList}>
           {mappedAreas.map((area) => <span key={area}>{area}</span>)}
         </div>
@@ -698,6 +707,7 @@ function InterviewQuestionPanel({
 }
 
 function ChatMessage({ message }: { message: InterviewMessage }) {
+  const content = cleanDisplayText(message.content) || message.content;
   const label = message.role === "answer"
     ? "내 답변"
     : message.role === "follow_up"
@@ -709,19 +719,19 @@ function ChatMessage({ message }: { message: InterviewMessage }) {
       {message.role === "answer" ? (
         <textarea
           className={styles.savedAnswer}
-          value={message.content}
+          value={content}
           readOnly
           aria-label="제출한 답변"
         />
       ) : (
-        <p>{message.content}</p>
+        <p>{content}</p>
       )}
       {message.feedback ? (
         <div className={styles.feedback}>
-          <b>{message.feedback.summary}</b>
+          <b>{cleanDisplayText(message.feedback.summary) || message.feedback.summary}</b>
           <ul>
-            {message.feedback.strengths.slice(0, 2).map((item) => <li key={`s-${item}`}>{item}</li>)}
-            {message.feedback.improvements.slice(0, 2).map((item) => <li key={`i-${item}`}>{item}</li>)}
+            {cleanDisplayList(message.feedback.strengths).slice(0, 2).map((item) => <li key={`s-${item}`}>{item}</li>)}
+            {cleanDisplayList(message.feedback.improvements).slice(0, 2).map((item) => <li key={`i-${item}`}>{item}</li>)}
           </ul>
         </div>
       ) : null}
@@ -899,6 +909,22 @@ function hasAnsweredAnyQuestion(session: InterviewCoachingSession) {
 
 function formatConnectedJobTitle(job: InterviewCoachingJob) {
   return job.isManual ? job.title : `[${job.institutionName}] ${job.title}`;
+}
+
+function cleanDisplayText(value?: string | null) {
+  return (value || "")
+    .replace(/\b[A-Z]\d{6}\b/gi, "")
+    .replace(/\s+([,.])/g, "$1")
+    .replace(/([\/|,])\s*([\/|,])+/g, "$1")
+    .replace(/^\s*[\/|,]\s*|\s*[\/|,]\s*$/g, "")
+    .replace(/\s*\/\s*/g, " / ")
+    .replace(/\s*\|\s*/g, " / ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function cleanDisplayList(items: string[]) {
+  return Array.from(new Set(items.map(cleanDisplayText).filter(Boolean)));
 }
 
 function formatQuestionType(type: InterviewQuestion["type"]) {

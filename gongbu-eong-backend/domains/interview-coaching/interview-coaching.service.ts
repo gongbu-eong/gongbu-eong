@@ -51,22 +51,29 @@ export type StartInterviewCoachingArgs = {
 function resolveInterviewInput(args: StartInterviewCoachingArgs) {
   const job = args.posting ? makeJobSnapshot(args.posting) : null;
   const manualCompanyName = cleanText(args.manualCompanyName).slice(0, 100);
-  const manualPositionName = cleanText(args.manualPositionName).slice(0, 100);
+  const manualPositionName = cleanJobLabel(args.manualPositionName).slice(0, 100);
   const submittedDutyText = cleanText(args.jobDuty);
   const meaningfulDutyText = isMeaningfulDutyText(submittedDutyText)
-    ? submittedDutyText.slice(0, 400)
+    ? cleanJobLabel(submittedDutyText).slice(0, 400)
     : "";
+  const postingJobCategory = cleanJobLabel(args.posting?.job_category);
+  const postingNcsCategory = cleanJobLabel(args.posting?.ncs_category);
+  const postingCategories = (args.posting?.categories || [])
+    .map(cleanJobLabel)
+    .filter(Boolean);
   const postingPositionName = args.posting
     ? [
-      args.posting.job_category,
-      args.posting.ncs_category,
-      args.posting.title,
-    ].map((item) => cleanText(item).slice(0, 120)).find(Boolean) || ""
+      postingJobCategory,
+      postingNcsCategory,
+      ...postingCategories,
+      removeJobCodesFromText(args.posting.title),
+    ].map((item) => item.slice(0, 120)).find(Boolean) || ""
     : "";
   const postingDutyText = args.posting
     ? Array.from(new Set([
-      cleanText(args.posting.job_category),
-      cleanText(args.posting.ncs_category),
+      postingJobCategory,
+      postingNcsCategory,
+      ...postingCategories,
       meaningfulDutyText,
     ].filter(Boolean))).join(" / ").slice(0, 400)
     : "";
@@ -86,7 +93,8 @@ function resolveInterviewInput(args: StartInterviewCoachingArgs) {
 function isMeaningfulDutyText(value: string) {
   const text = value.trim();
   if (!text) return false;
-  const normalized = text.toLowerCase().replace(/\s+/g, "");
+  const normalized = cleanJobLabel(text).toLowerCase().replace(/\s+/g, "");
+  if (!normalized) return false;
   return ![
     "test",
     "testing",
@@ -99,6 +107,35 @@ function isMeaningfulDutyText(value: string) {
     "-",
     ".",
   ].includes(normalized);
+}
+
+function cleanJobLabel(value?: string | null) {
+  const text = removeJobCodesFromText(value);
+  if (!text) return "";
+  const parts = text
+    .split(/[\/|,]/)
+    .map((item) => item.trim())
+    .filter((item) => item && !isJobCodeToken(item));
+
+  return (parts.length ? parts.join(" / ") : isJobCodeToken(text) ? "" : text)
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function removeJobCodesFromText(value?: string | null) {
+  return cleanText(value)
+    .replace(/\b[A-Z]\d{6}\b/gi, "")
+    .replace(/\s+([,.])/g, "$1")
+    .replace(/([\/|,])\s*([\/|,])+/g, "$1")
+    .replace(/^\s*[\/|,]\s*|\s*[\/|,]\s*$/g, "")
+    .replace(/\s*\/\s*/g, " / ")
+    .replace(/\s*\|\s*/g, " / ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function isJobCodeToken(value: string) {
+  return /^[A-Z]\d{6}$/i.test(value.trim());
 }
 
 export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
@@ -543,10 +580,16 @@ function makeJobSnapshot(posting: JobPostingDetailRow): InterviewCoachingJobDto 
 }
 
 function buildPostingContext(posting: JobPostingDetailRow) {
+  const categoryLabels = Array.from(new Set([
+    cleanJobLabel(posting.ncs_category),
+    cleanJobLabel(posting.job_category),
+    ...(posting.categories || []).map(cleanJobLabel),
+  ].filter(Boolean)));
+
   return [
-    `공고명: ${posting.title}`,
+    `공고명: ${removeJobCodesFromText(posting.title) || posting.title}`,
     `기관명: ${posting.institution_name}`,
-    `NCS/직무 분류: ${[posting.ncs_category, posting.job_category].filter(Boolean).join(" / ") || "-"}`,
+    `NCS/직무 분류: ${categoryLabels.join(" / ") || "-"}`,
     `기본 정보: ${posting.basic_info || "-"}`,
     `지원 자격: ${posting.qualification || "-"}`,
     `우대사항: ${posting.preference_condition || posting.preference || "-"}`,
@@ -565,27 +608,27 @@ function normalizeStartPayload(
   const fallbackProfile = buildFallbackProfile(fallback);
   const profile = {
     companyName:
-      readString(profileRecord?.companyName) || fallback.companyName,
+      removeJobCodesFromText(readString(profileRecord?.companyName)) || fallback.companyName,
     positionName:
-      readString(profileRecord?.positionName) || fallback.positionName,
-    dutyText: readString(profileRecord?.dutyText) || fallback.dutyText,
+      cleanJobLabel(readString(profileRecord?.positionName)) || fallback.positionName,
+    dutyText: removeJobCodesFromText(readString(profileRecord?.dutyText)) || fallback.dutyText,
     mainTasks: withFallbackList(
-      readStringList(profileRecord?.mainTasks),
+      readDisplayStringList(profileRecord?.mainTasks),
       fallbackProfile.mainTasks,
       5,
     ),
     requiredKnowledge: withFallbackList(
-      readStringList(profileRecord?.requiredKnowledge),
+      readDisplayStringList(profileRecord?.requiredKnowledge),
       fallbackProfile.requiredKnowledge,
       5,
     ),
     preferredExperience: withFallbackList(
-      readStringList(profileRecord?.preferredExperience),
+      readDisplayStringList(profileRecord?.preferredExperience),
       fallbackProfile.preferredExperience,
       5,
     ),
     keywords: withFallbackList(
-      readStringList(profileRecord?.keywords),
+      readDisplayStringList(profileRecord?.keywords),
       fallbackProfile.keywords,
       8,
     ),
@@ -641,9 +684,9 @@ function normalizeMapping(value: unknown, profile: InterviewAnalysis["profile"])
     name,
     relevance,
     reason:
-      contextualizeMappingReason(reason, profile, area?.description || name),
+      contextualizeMappingReason(removeJobCodesFromText(reason), profile, area?.description || name),
     interviewFocus:
-      readString(record.interviewFocus) ||
+      removeJobCodesFromText(readString(record.interviewFocus)) ||
       `${profile.companyName} ${profile.positionName} 면접에서 확인할 ${area?.description || name}`,
   };
 }
@@ -812,7 +855,7 @@ function buildFallbackProfile(fallback: {
 
 function withFallbackList(items: string[], fallback: string[], limit: number) {
   const merged = [...items, ...fallback]
-    .map((item) => item.trim())
+    .map((item) => removeJobCodesFromText(item))
     .filter(Boolean);
   return Array.from(new Set(merged)).slice(0, limit);
 }
@@ -839,7 +882,7 @@ function normalizeQuestion(
 ) {
   const record = asRecord(value);
   if (!record) return null;
-  const question = readString(record.question);
+  const question = removeJobCodesFromText(readString(record.question));
   if (!question) return null;
   const areas = readStringList(record.ncsAreas)
     .map(normalizeNcsAreaName)
@@ -850,7 +893,7 @@ function normalizeQuestion(
     type: normalizeQuestionType(record.type, index),
     question: contextualizeQuestion(question, profile),
     intent:
-      readString(record.intent) ||
+      removeJobCodesFromText(readString(record.intent)) ||
       `${profile.companyName} ${profile.positionName} 직무와 NCS 역량을 확인합니다.`,
     ncsAreas: allowedAreas,
     difficulty: readString(record.difficulty) === "심화" ? "심화" : "기본",
@@ -1062,12 +1105,12 @@ function normalizeAnswerFeedback(
       );
   return {
     summary:
-      readString(record?.summary) ||
+      removeJobCodesFromText(readString(record?.summary)) ||
       "답변의 핵심 방향은 확인되지만, 상황과 결과를 더 구체적으로 말하면 좋습니다.",
-    strengths: ensureList(record?.strengths, ["직무와 관련된 경험을 답변에 연결했습니다."]),
-    improvements: ensureList(record?.improvements, ["본인 역할, 판단 근거, 결과를 더 구체적으로 보완해 주세요."]),
+    strengths: ensureDisplayList(record?.strengths, ["직무와 관련된 경험을 답변에 연결했습니다."]),
+    improvements: ensureDisplayList(record?.improvements, ["본인 역할, 판단 근거, 결과를 더 구체적으로 보완해 주세요."]),
     nextAnswerGuide:
-      readString(record?.nextAnswerGuide) ||
+      removeJobCodesFromText(readString(record?.nextAnswerGuide)) ||
       "다음 답변에서는 상황, 본인 역할, 행동, 결과 순서로 정리해 보세요.",
     followUpQuestion,
   };
@@ -1100,10 +1143,10 @@ function normalizeResult(
   return {
     score: clampNumber(record?.score, 0, 100, 72),
     summary:
-      readString(record?.summary) ||
+      removeJobCodesFromText(readString(record?.summary)) ||
       "전체적으로 직무와 연결된 답변 방향은 잡혀 있습니다. 다만 면접에서는 본인 역할과 결과를 더 구체적으로 말하는 연습이 필요합니다.",
-    strengths: ensureList(record?.strengths, ["직무 관련 경험을 답변 소재로 활용했습니다."]),
-    improvements: ensureList(record?.improvements, ["상황, 행동, 결과를 더 선명하게 구분해 답변해 보세요."]),
+    strengths: ensureDisplayList(record?.strengths, ["직무 관련 경험을 답변 소재로 활용했습니다."]),
+    improvements: ensureDisplayList(record?.improvements, ["상황, 행동, 결과를 더 선명하게 구분해 답변해 보세요."]),
     questionReviews: reviews.length ? reviews : questions.map((question) => ({
       questionId: question.id,
       question: question.question,
@@ -1113,7 +1156,7 @@ function normalizeResult(
       improvements: ["본인 역할과 결과를 더 구체적으로 설명해 주세요."],
       ncsAreas: question.ncsAreas,
     })),
-    futurePracticeQuestions: ensureList(record?.futurePracticeQuestions, [
+    futurePracticeQuestions: ensureDisplayList(record?.futurePracticeQuestions, [
       "지원 직무에서 반복적으로 발생할 수 있는 문제 상황을 하나 정하고 해결 과정을 말해보세요.",
       "본인의 경험 중 공공기관 업무 태도와 연결되는 사례를 말해보세요.",
     ]).slice(0, 5),
@@ -1124,7 +1167,7 @@ function normalizeQuestionReview(value: unknown, fallback?: InterviewQuestion) {
   const record = asRecord(value);
   if (!record && !fallback) return null;
   const questionId = readString(record?.questionId) || fallback?.id || "q1";
-  const question = readString(record?.question) || fallback?.question || "면접 질문";
+  const question = removeJobCodesFromText(readString(record?.question)) || fallback?.question || "면접 질문";
   const areas = readStringList(record?.ncsAreas)
     .map(normalizeNcsAreaName)
     .filter(Boolean) as NcsAreaName[];
@@ -1132,9 +1175,9 @@ function normalizeQuestionReview(value: unknown, fallback?: InterviewQuestion) {
     questionId,
     question,
     score: clampNumber(record?.score, 0, 100, 70),
-    summary: readString(record?.summary) || "답변을 기준으로 종합 평가했습니다.",
-    strengths: ensureList(record?.strengths, ["질문에 대한 기본 답변 흐름이 있습니다."]),
-    improvements: ensureList(record?.improvements, ["구체적 근거와 결과를 보완해 주세요."]),
+    summary: removeJobCodesFromText(readString(record?.summary)) || "답변을 기준으로 종합 평가했습니다.",
+    strengths: ensureDisplayList(record?.strengths, ["질문에 대한 기본 답변 흐름이 있습니다."]),
+    improvements: ensureDisplayList(record?.improvements, ["구체적 근거와 결과를 보완해 주세요."]),
     ncsAreas: areas.length ? areas : fallback?.ncsAreas || ["문제해결능력"],
   };
 }
@@ -1152,14 +1195,18 @@ function normalizeNcsAreaName(value: unknown): NcsAreaName | null {
   return NCS_AREAS.find((area) => area.name.replace(/\s/g, "") === text)?.name || null;
 }
 
-function ensureList(value: unknown, fallback: string[]) {
-  const list = readStringList(value).slice(0, 4);
+function ensureDisplayList(value: unknown, fallback: string[]) {
+  const list = readDisplayStringList(value).slice(0, 4);
   return list.length ? list : fallback;
 }
 
 function readStringList(value: unknown) {
   if (typeof value === "string") return value.trim() ? [value.trim()] : [];
   return normalizeArray(value).map(readString).filter(Boolean);
+}
+
+function readDisplayStringList(value: unknown) {
+  return readStringList(value).map(removeJobCodesFromText).filter(Boolean);
 }
 
 function normalizeArray(value: unknown) {
