@@ -17,6 +17,7 @@ type InterviewHistoryItem = {
   title: string;
   score: number | null;
   isLinked: boolean;
+  status: InterviewCoachingSession["status"];
   href: string;
 };
 
@@ -146,6 +147,7 @@ function HistoryJobCard({ item }: { item: InterviewHistoryItem }) {
           <span className={item.isLinked ? styles.linkedPill : styles.generalPill}>
             {item.isLinked ? "공고 연결 코칭" : "일반 코칭"}
           </span>
+          <span className={styles.statusPill}>{formatInterviewStatus(item.status)}</span>
         </div>
         <strong>{item.title}</strong>
         <time>{date}</time>
@@ -166,8 +168,16 @@ function mapInterviewHistoryItem(item: InterviewCoachingSession): InterviewHisto
       : `${item.companyName || "기업 미정"} ${item.positionName || "직무 미정"}`.trim(),
     score: item.result?.score ?? null,
     isLinked,
+    status: item.status,
     href: `/my/interview-coaching/${item.id}`,
   };
+}
+
+function formatInterviewStatus(status: InterviewCoachingSession["status"]) {
+  if (status === "completed") return "완료";
+  if (status === "failed") return "오류";
+  if (status === "draft") return "준비 중";
+  return "진행 중";
 }
 
 function sortRecent<T extends { createdAt: string }>(records: T[]) {

@@ -173,6 +173,10 @@ export function InterviewCoachingPage({
 
   const submitAnswer = async (questionId: string) => {
     if (!session) return;
+    if (session.completedAt || session.result) {
+      showAlert("최종 결과가 생성된 면접 코칭은 답변을 추가할 수 없습니다.");
+      return;
+    }
     const value = (answerDrafts[questionId] || "").trim();
     if (!value) {
       showAlert("답변을 입력해 주세요.", answerRefs.current[questionId]);
@@ -333,6 +337,7 @@ export function InterviewCoachingPage({
                 const followUpCount = messages.filter((item) => item.role === "follow_up").length;
                 const answer = answerDrafts[question.id] || "";
                 const mappedAreas = getQuestionBadgeAreas(question, session.analysis.ncsMappings, index);
+                const readonly = Boolean(session.completedAt || session.result);
                 return (
                   <InterviewQuestionPanel
                     key={question.id}
@@ -342,7 +347,8 @@ export function InterviewCoachingPage({
                     messages={messages}
                     answer={answer}
                     busy={busyQuestionId === question.id}
-                    canSubmitAnswer={Boolean(answer.trim()) && !busyQuestionId && busy !== "complete" && !session.completedAt}
+                    readonly={readonly}
+                    canSubmitAnswer={Boolean(answer.trim()) && !busyQuestionId && busy !== "complete" && !readonly}
                     followUpCount={followUpCount}
                     answerRef={(element) => {
                       answerRefs.current[question.id] = element;
@@ -694,6 +700,7 @@ function InterviewQuestionPanel({
   messages,
   answer,
   busy,
+  readonly,
   canSubmitAnswer,
   followUpCount,
   answerRef,
@@ -706,6 +713,7 @@ function InterviewQuestionPanel({
   messages: InterviewMessage[];
   answer: string;
   busy: boolean;
+  readonly: boolean;
   canSubmitAnswer: boolean;
   followUpCount: number;
   answerRef: (element: HTMLTextAreaElement | null) => void;
@@ -738,33 +746,54 @@ function InterviewQuestionPanel({
       </article>
       {visibleMessages.length ? (
         <div className={styles.chatList}>
-          {visibleMessages.map((message) => <ChatMessage key={message.id} message={message} showFeedback={false} />)}
+          {visibleMessages.map((message) => (
+            <ChatMessage
+              key={message.id}
+              message={message}
+              ncsAreas={message.role === "follow_up" ? mappedAreas : []}
+              showFeedback={false}
+            />
+          ))}
         </div>
       ) : null}
-      <div className={styles.answerBox}>
-        <div className={styles.answerPrompt}>
-          <strong>{answerTargetLabel}</strong>
+      {readonly ? (
+        <div className={styles.answerLockedBox}>
+          최종 결과가 생성된 면접 코칭입니다. 답변을 추가하거나 수정할 수 없습니다.
         </div>
-        <textarea
-          ref={answerRef}
-          value={answer}
-          maxLength={MAX_ANSWER_LENGTH}
-          onChange={(event) => onAnswerChange(event.target.value)}
-          onFocus={(event) => focusField(event.currentTarget)}
-          placeholder={answerPlaceholder}
-        />
-        <div className={styles.answerFooter}>
-          <span>{answer.length.toLocaleString("ko-KR")} / {MAX_ANSWER_LENGTH.toLocaleString("ko-KR")}자</span>
-          <button type="button" onClick={onSubmitAnswer} disabled={!canSubmitAnswer}>
-            {busy ? "코칭 중" : "답변 제출"}
-          </button>
+      ) : (
+        <div className={styles.answerBox}>
+          <div className={styles.answerPrompt}>
+            <strong>{answerTargetLabel}</strong>
+          </div>
+          <textarea
+            ref={answerRef}
+            value={answer}
+            maxLength={MAX_ANSWER_LENGTH}
+            onChange={(event) => onAnswerChange(event.target.value)}
+            onFocus={(event) => focusField(event.currentTarget)}
+            placeholder={answerPlaceholder}
+          />
+          <div className={styles.answerFooter}>
+            <span>{answer.length.toLocaleString("ko-KR")} / {MAX_ANSWER_LENGTH.toLocaleString("ko-KR")}자</span>
+            <button type="button" onClick={onSubmitAnswer} disabled={!canSubmitAnswer}>
+              {busy ? "코칭 중" : "답변 제출"}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </section>
   );
 }
 
-function ChatMessage({ message, showFeedback = true }: { message: InterviewMessage; showFeedback?: boolean }) {
+function ChatMessage({
+  message,
+  ncsAreas = [],
+  showFeedback = true,
+}: {
+  message: InterviewMessage;
+  ncsAreas?: InterviewQuestion["ncsAreas"];
+  showFeedback?: boolean;
+}) {
   const content = cleanDisplayText(message.content) || message.content;
   const label = message.role === "answer"
     ? "내 답변"
@@ -784,6 +813,11 @@ function ChatMessage({ message, showFeedback = true }: { message: InterviewMessa
       ) : (
         <p>{content}</p>
       )}
+      {message.role === "follow_up" && ncsAreas.length ? (
+        <div className={styles.badgeList}>
+          {ncsAreas.map((area) => <span key={area}>{area}</span>)}
+        </div>
+      ) : null}
       {showFeedback && message.feedback ? (
         <div className={styles.feedback}>
           <b>{cleanDisplayText(message.feedback.summary) || message.feedback.summary}</b>

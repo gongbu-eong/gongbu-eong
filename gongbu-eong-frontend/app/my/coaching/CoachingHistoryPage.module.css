@@ -208,7 +208,8 @@
 }
 
 .linkedPill,
-.generalPill {
+.generalPill,
+.statusPill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -227,6 +228,11 @@
 }
 
 .generalPill {
+  background: #f5f7fa;
+  color: #5a6580;
+}
+
+.statusPill {
   background: #f5f7fa;
   color: #5a6580;
 }

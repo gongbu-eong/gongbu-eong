@@ -166,6 +166,8 @@ function ResultQuestionDetail({
   messages: InterviewMessage[];
   review: InterviewQuestionReview | null | undefined;
 }) {
+  const ncsAreas = review?.ncsAreas?.length ? review.ncsAreas : question.ncsAreas;
+
   return (
     <div className={styles.resultQuestionDetail}>
       <article className={styles.questionCard}>
@@ -176,7 +178,7 @@ function ResultQuestionDetail({
         <h2>{cleanDisplayText(question.question) || question.question}</h2>
         <p>{cleanDisplayText(question.intent) || question.intent}</p>
         <div className={styles.badgeList}>
-          {question.ncsAreas.map((area) => <span key={area}>{area}</span>)}
+          {ncsAreas.map((area) => <span key={area}>{area}</span>)}
         </div>
       </article>
 
@@ -189,7 +191,13 @@ function ResultQuestionDetail({
 
       {messages.length ? (
         <div className={styles.chatList}>
-          {messages.map((message) => <ResultConversationMessage message={message} key={message.id} />)}
+          {messages.map((message) => (
+            <ResultConversationMessage
+              message={message}
+              ncsAreas={message.role === "follow_up" ? ncsAreas : []}
+              key={message.id}
+            />
+          ))}
         </div>
       ) : (
         <p className={styles.lead}>이 문항에는 제출한 답변이 없습니다.</p>
@@ -198,7 +206,13 @@ function ResultQuestionDetail({
   );
 }
 
-function ResultConversationMessage({ message }: { message: InterviewMessage }) {
+function ResultConversationMessage({
+  message,
+  ncsAreas = [],
+}: {
+  message: InterviewMessage;
+  ncsAreas?: InterviewQuestion["ncsAreas"];
+}) {
   const content = cleanDisplayText(message.content) || message.content;
   const label = message.role === "answer"
     ? "내 답변"
@@ -219,6 +233,11 @@ function ResultConversationMessage({ message }: { message: InterviewMessage }) {
       ) : (
         <p>{content}</p>
       )}
+      {message.role === "follow_up" && ncsAreas.length ? (
+        <div className={styles.badgeList}>
+          {ncsAreas.map((area) => <span key={area}>{area}</span>)}
+        </div>
+      ) : null}
       {message.feedback ? (
         <div className={styles.feedback}>
           <b>{cleanDisplayText(message.feedback.summary) || message.feedback.summary}</b>

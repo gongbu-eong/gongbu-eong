@@ -74,10 +74,12 @@
 .chatFollow{background:#fffaf0;border-color:#ffd58a}
 .chatFollow strong{color:#c46a00}
 .chatFollow p{font-weight:800}
+.chatBubble .badgeList{margin-top:.75rem}
 .feedback{margin-top:.75rem;padding-top:.75rem;border-top:1px solid rgba(47,127,240,.16)}
 .feedback b{display:block;margin-bottom:.25rem;font-size:calc(.75rem + 3px);color:#1a2233}
 .feedback ul{margin:.25rem 0 0;padding-left:1.125rem;color:#5a6580;font-size:calc(.75rem + 3px);line-height:1.55}
 .answerBox{display:grid;gap:.625rem}
+.answerLockedBox{padding:1rem;border:1px solid #e4e8ef;border-radius:.75rem;background:#f5f7fa;color:#5a6580;font-size:calc(.8125rem + 3px);font-weight:800;line-height:1.55;word-break:keep-all}
 .answerPrompt{display:flex;align-items:center;justify-content:space-between;color:#2f7ff0;font-size:calc(.75rem + 3px);font-weight:900}
 .answerPrompt strong{font:inherit}
 .answerFooter{display:flex;align-items:center;justify-content:space-between;gap:.75rem}
