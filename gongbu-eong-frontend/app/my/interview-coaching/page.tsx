@@ -18,7 +18,6 @@ type InterviewHistoryItem = {
   score: number | null;
   isLinked: boolean;
   href: string;
-  status: InterviewCoachingSession["status"];
 };
 
 const PAGE_SIZE = 10;
@@ -73,7 +72,7 @@ export default function InterviewCoachingHistoryPage() {
 
         <section className={styles.historySection}>
           <div className={styles.sectionTitle}>
-            <h2>면접 코칭 목록</h2>
+            <h2>코칭 목록</h2>
             <span>{displayItems.length}건</span>
           </div>
 
@@ -145,9 +144,8 @@ function HistoryJobCard({ item }: { item: InterviewHistoryItem }) {
       <div className={styles.cardBody}>
         <div className={styles.badges}>
           <span className={item.isLinked ? styles.linkedPill : styles.generalPill}>
-            {item.isLinked ? "공고 연결" : "일반"}
+            {item.isLinked ? "공고 연결 코칭" : "일반 코칭"}
           </span>
-          {item.status !== "completed" ? <span className={styles.generalPill}>{formatInterviewStatus(item.status)}</span> : null}
         </div>
         <strong>{item.title}</strong>
         <time>{date}</time>
@@ -169,7 +167,6 @@ function mapInterviewHistoryItem(item: InterviewCoachingSession): InterviewHisto
     score: item.result?.score ?? null,
     isLinked,
     href: `/my/interview-coaching/${item.id}`,
-    status: item.status,
   };
 }
 
@@ -195,17 +192,4 @@ function formatDate(value: string) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}. ${month}. ${day}`;
-}
-
-function formatInterviewStatus(status: InterviewCoachingSession["status"]) {
-  switch (status) {
-    case "draft":
-      return "준비 중";
-    case "ready":
-      return "진행 중";
-    case "failed":
-      return "오류";
-    default:
-      return "완료";
-  }
 }

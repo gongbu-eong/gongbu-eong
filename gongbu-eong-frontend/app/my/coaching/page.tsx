@@ -73,7 +73,7 @@ export default function CoachingHistoryPage() {
 
         <section className={styles.historySection}>
           <div className={styles.sectionTitle}>
-            <h2>자소서 코칭 목록</h2>
+            <h2>코칭 목록</h2>
             <span>{displayItems.length}건</span>
           </div>
 
@@ -145,7 +145,7 @@ function HistoryJobCard({ item }: { item: UnifiedHistoryItem }) {
       <div className={styles.cardBody}>
         <div className={styles.badges}>
           <span className={item.isLinked ? styles.linkedPill : styles.generalPill}>
-            {item.isLinked ? "공고 연결" : "일반"}
+            {item.isLinked ? "공고 연결 코칭" : "일반 코칭"}
           </span>
         </div>
         <strong>{item.title}</strong>
