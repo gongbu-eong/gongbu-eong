@@ -62,28 +62,19 @@ export default function CoachingHistoryPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.frame}>
-        <h1>내 AI NCS 자소서 코칭 기록</h1>
+        <h1>내 자소서 코칭 기록</h1>
 
         <section className={styles.heroCard}>
           <div className={styles.heroCopy}>
-            <strong>AI NCS 자소서 코칭 기록을 확인하세요.</strong>
+            <strong>자소서 코칭 기록을 확인하세요.</strong>
             <span>총 {items.length}건</span>
           </div>
           <Image src="/coaching/history-hero.png" alt="" width={172} height={142} className={styles.heroImage} priority />
         </section>
 
-        {/* 면접 준비 목록은 추후 재노출 예정입니다.
-        {linkedItems.length ? (
-          <section className={styles.interviewList} aria-label="면접 준비 공고">
-            {linkedItems.slice(0, 2).map((item) => (
-              <HistoryJobCard item={item} variant="interview" key={`interview-${item.id}`} />
-            ))}
-          </section>
-        ) : null} */}
-
         <section className={styles.historySection}>
           <div className={styles.sectionTitle}>
-            <h2>AI NCS 자소서 코칭 목록</h2>
+            <h2>자소서 코칭 목록</h2>
             <span>{displayItems.length}건</span>
           </div>
 
@@ -102,12 +93,12 @@ export default function CoachingHistoryPage() {
           {visibleItems.length ? (
             <div className={styles.historyList}>
               {visibleItems.map((item) => (
-                <HistoryJobCard item={item} variant="history" key={`${item.kind}-${item.id}`} />
+                <HistoryJobCard item={item} key={`${item.kind}-${item.id}`} />
               ))}
             </div>
           ) : (
             <div className={styles.emptyCard}>
-              <p>저장된 코칭 기록이 없습니다.</p>
+              <p>저장된 자소서 코칭 기록이 없습니다.</p>
               <Link href="/ai-tools/coaching">AI NCS 자소서 코칭 받기</Link>
             </div>
           )}
@@ -145,13 +136,13 @@ export default function CoachingHistoryPage() {
   }
 }
 
-function HistoryJobCard({ item, variant }: { item: UnifiedHistoryItem; variant: "interview" | "history" }) {
+function HistoryJobCard({ item }: { item: UnifiedHistoryItem }) {
   const score = item.score == null ? null : Math.max(0, Math.min(100, Math.round(Number(item.score) || 0)));
   const date = formatDate(item.createdAt);
 
   return (
-    <Link href={item.href} className={variant === "interview" ? styles.interviewCard : styles.historyCard}>
-      {variant === "history" ? <span className={styles.scoreBox}>{score == null ? "-" : score}</span> : null}
+    <Link href={item.href} className={styles.historyCard}>
+      <span className={styles.scoreBox}>{score == null ? "-" : score}</span>
       <div className={styles.cardBody}>
         <div className={styles.badges}>
           <span className={styles.scorePill}>AI NCS 자소서 코칭</span>
@@ -161,7 +152,7 @@ function HistoryJobCard({ item, variant }: { item: UnifiedHistoryItem; variant: 
         </div>
         <strong>{item.title}</strong>
         <small className={styles.cardSubtitle}>{item.subtitle}</small>
-        {variant === "history" ? <time>{date}</time> : null}
+        <time>{date}</time>
       </div>
       <span className={styles.chevron} aria-hidden="true">{">"}</span>
     </Link>

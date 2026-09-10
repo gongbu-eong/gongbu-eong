@@ -62,19 +62,19 @@ export default function InterviewCoachingHistoryPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.frame}>
-        <h1>내 AI NCS 면접 코칭 기록</h1>
+        <h1>내 면접 코칭 기록</h1>
 
-        <section className={styles.heroCard}>
+        <section className={`${styles.heroCard} ${styles.interviewHeroCard}`}>
           <div className={styles.heroCopy}>
-            <strong>AI NCS 면접 코칭 기록을 확인하세요.</strong>
+            <strong>면접 코칭 기록을 확인하세요.</strong>
             <span>총 {items.length}건</span>
           </div>
-          <Image src="/coaching/history-hero.png" alt="" width={172} height={142} className={styles.heroImage} priority />
+          <Image src="/ai-tools/tool-interview.png" alt="" width={172} height={172} className={`${styles.heroImage} ${styles.interviewHeroImage}`} priority />
         </section>
 
         <section className={styles.historySection}>
           <div className={styles.sectionTitle}>
-            <h2>AI NCS 면접 코칭 목록</h2>
+            <h2>면접 코칭 목록</h2>
             <span>{displayItems.length}건</span>
           </div>
 
@@ -98,7 +98,7 @@ export default function InterviewCoachingHistoryPage() {
             </div>
           ) : (
             <div className={styles.emptyCard}>
-              <p>저장된 AI NCS 면접 코칭 기록이 없습니다.</p>
+              <p>저장된 면접 코칭 기록이 없습니다.</p>
               <Link href="/ai-tools/interview-coaching">AI NCS 면접 코칭 받기</Link>
             </div>
           )}
@@ -141,11 +141,11 @@ function HistoryJobCard({ item }: { item: InterviewHistoryItem }) {
   const date = formatDate(item.createdAt);
 
   return (
-    <Link href={item.href} className={styles.historyCard}>
-      <span className={styles.scoreBox}>{score == null ? "-" : score}</span>
+    <Link href={item.href} className={`${styles.historyCard} ${styles.interviewHistoryCard}`}>
+      <span className={`${styles.scoreBox} ${styles.interviewScoreBox}`}>{score == null ? "-" : score}</span>
       <div className={styles.cardBody}>
         <div className={styles.badges}>
-          <span className={styles.readyPill}>AI NCS 면접 코칭</span>
+          <span className={styles.interviewPill}>AI NCS 면접 코칭</span>
           <span className={item.isLinked ? styles.linkedPill : styles.generalPill}>
             {item.isLinked ? "공고 연결" : "일반"}
           </span>

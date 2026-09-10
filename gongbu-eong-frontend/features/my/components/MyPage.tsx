@@ -119,16 +119,16 @@ export function MyPage() {
             <span>찜한 공고</span>
           </div>
           <div className={styles.stat}>
-            <Link href="/my/coaching" className={styles.statCountLink} aria-label={`AI NCS 자소서 코칭 ${coverLetterCoachingCount}개 보기`}>
+            <Link href="/my/coaching" className={styles.statCountLink} aria-label={`자소서 코칭 기록 ${coverLetterCoachingCount}개 보기`}>
               {coverLetterCoachingCount}
             </Link>
-            <span>AI NCS 자소서 코칭</span>
+            <span>자소서 코칭</span>
           </div>
           <div className={styles.stat}>
-            <Link href="/my/interview-coaching" className={styles.statCountLink} aria-label={`AI NCS 면접 코칭 ${interviewCoachingCount}개 보기`}>
+            <Link href="/my/interview-coaching" className={styles.statCountLink} aria-label={`면접 코칭 기록 ${interviewCoachingCount}개 보기`}>
               {interviewCoachingCount}
             </Link>
-            <span>AI NCS 면접 코칭</span>
+            <span>면접 코칭</span>
           </div>
         </section>
 
@@ -155,7 +155,7 @@ export function MyPage() {
             iconSrc="/my/activity-cover-letter.png"
             iconWidth={28}
             iconHeight={30}
-            title="내 AI NCS 자소서 코칭 기록"
+            title="내 자소서 코칭 기록"
             count={coverLetterCoachingCount}
           />
           <MyMenuItem
@@ -163,7 +163,7 @@ export function MyPage() {
             iconSrc="/my/activity-interview.png"
             iconWidth={17}
             iconHeight={30}
-            title="내 AI NCS 면접 코칭 기록"
+            title="내 면접 코칭 기록"
             count={interviewCoachingCount}
           />
           {/*

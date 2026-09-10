@@ -30,6 +30,10 @@
   background: #0c3c4a;
 }
 
+.interviewHeroCard {
+  background: #1c3150;
+}
+
 .heroCopy {
   position: relative;
   z-index: 1;
@@ -59,6 +63,11 @@
   width: min(47.7%, 17.25rem);
   height: auto;
   transform: translateX(-50%);
+}
+
+.interviewHeroImage {
+  bottom: 1.25rem;
+  width: min(40%, 13.5rem);
 }
 
 .interviewList {
@@ -153,6 +162,10 @@
   border-bottom: 1px solid #e4e8ef;
 }
 
+.interviewHistoryCard {
+  min-height: 5rem;
+}
+
 .historyCard:last-child {
   border-bottom: 0;
 }
@@ -168,6 +181,11 @@
   color: #2f7ff0;
   font-size: 0.875rem;
   font-weight: 800;
+}
+
+.interviewScoreBox {
+  background: #fff3dc;
+  color: #b95f00;
 }
 
 .cardBody {
@@ -189,7 +207,8 @@
 .scorePill,
 .linkedPill,
 .generalPill,
-.readyPill {
+.readyPill,
+.interviewPill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -220,6 +239,11 @@
 .readyPill {
   background: #e8f1ff;
   color: #2f7ff0;
+}
+
+.interviewPill {
+  background: #fff3dc;
+  color: #b95f00;
 }
 
 .interviewCard strong,
