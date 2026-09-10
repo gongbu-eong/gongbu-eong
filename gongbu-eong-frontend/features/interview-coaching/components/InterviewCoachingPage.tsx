@@ -715,7 +715,16 @@ function ChatMessage({ message }: { message: InterviewMessage }) {
   return (
     <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""}`}>
       <strong>{label}</strong>
-      <p>{message.content}</p>
+      {message.role === "answer" ? (
+        <textarea
+          className={styles.savedAnswer}
+          value={message.content}
+          readOnly
+          aria-label="제출한 답변"
+        />
+      ) : (
+        <p>{message.content}</p>
+      )}
       {message.feedback ? (
         <div className={styles.feedback}>
           <b>{message.feedback.summary}</b>

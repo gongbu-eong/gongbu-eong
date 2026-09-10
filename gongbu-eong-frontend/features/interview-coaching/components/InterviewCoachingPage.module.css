@@ -65,6 +65,7 @@
 .chatBubble{padding:.875rem;border-radius:.75rem;background:#fff;border:1px solid #e4e8ef}
 .chatBubble strong{display:block;margin-bottom:.4rem;font-size:.75rem;color:#2f7ff0}
 .chatBubble p{margin:0;white-space:pre-wrap;color:#1a2233;font-size:.875rem;line-height:1.55}
+.savedAnswer{width:100%;height:9rem;box-sizing:border-box;border:1px solid #cfe1ff;border-radius:.5rem;background:#fff;padding:.75rem;color:#1a2233;font:inherit;font-size:.875rem;line-height:1.55;resize:vertical;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
 .chatAnswer{background:#eef5ff;border-color:#cfe1ff}
 .chatFollow{background:#fff8e8;border-color:#ffe0a6}
 .feedback{margin-top:.75rem;padding-top:.75rem;border-top:1px solid rgba(47,127,240,.16)}
