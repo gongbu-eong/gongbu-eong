@@ -489,12 +489,15 @@ ${input.jobContext || "연결된 공고 본문이 없습니다. 기업명과 직
 
 NCS 7개 후보:
 ${NCS_AREAS.map((area, index) => `${index + 1}. ${area.name}: ${area.description}`).join("\n")}
-ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무와 실제로 관련 있는 영역만 반환하세요.
-관련성이 약하거나 공고/직무 내용에서 근거를 찾기 어려운 영역은 ncsMappings에 넣지 마세요.
-반환 개수 제한은 없습니다. 2개만 관련 있으면 2개만, 6개가 관련 있으면 6개를 반환하세요.
-단, ncsMappings는 절대 빈 배열로 반환하지 마세요. 뚜렷한 관련 영역이 적더라도 공고와 직무 기준으로 가장 가까운 핵심 NCS 영역 1개 이상은 반드시 반환하세요.
-각 NCS 영역의 reason에는 "${input.companyName}"와 "${input.positionName}"를 직접 언급하고, 공고/직무의 어떤 내용 때문에 관련 영역으로 판단했는지 설명하세요.
-반환하는 영역의 relevance는 면접 질문으로 다룰 만한 관련도가 있을 때만 50~100 사이로 산정하세요.
+ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무 면접에서 실제 평가축으로 직접 사용할 핵심 NCS만 반환하세요.
+관련 기준은 "조금이라도 관련 있음"이 아니라 "이 직무 질문을 만들 때 반복적으로 확인해야 하는 핵심 역량"입니다.
+공공기관 신입 공통역량, 조직 생활에 일반적으로 필요한 역량, 보조적으로만 관련 있는 영역은 제외하세요.
+공고/직무 내용에서 직접 근거를 찾기 어려운 영역은 제외하세요.
+ncsMappings는 최소 1개 이상이어야 합니다. 직무 정보가 넓거나 근거가 부족하면 여러 개를 억지로 넣지 말고 가장 가까운 핵심 NCS 1개만 반환하세요.
+반환 개수는 AI가 공고의 주요 업무, 자격요건, 우대사항, 전형 정보를 근거로 판단하세요. 보통 핵심 평가축은 적은 수로 좁혀지지만, 서버가 정한 고정 개수는 없습니다.
+여러 영역을 반환하려면 각 영역마다 서로 다른 직접 근거가 있어야 합니다. 같은 근거를 여러 NCS에 중복 배정하지 마세요.
+각 NCS 영역의 reason에는 "${input.companyName}"와 "${input.positionName}"를 직접 언급하고, 공고/직무의 어떤 구체 문구 또는 업무 때문에 핵심 영역으로 판단했는지 설명하세요.
+반환하는 영역의 relevance는 핵심 평가축으로 다룰 만한 관련도가 있을 때만 60~100 사이로 산정하세요.
 
 profile에는 공고 내용을 분석한 값을 반드시 채우세요.
 - mainTasks: 공고에서 확인한 주요 업무 2~5개
@@ -545,8 +548,11 @@ ${partial.questions.map((item, index) => `${index + 1}. ${item.question} (${item
 
 요구사항:
 - profile.mainTasks, profile.requiredKnowledge, profile.preferredExperience, profile.keywords는 공고와 직무를 분석해 빈 배열 없이 채우세요.
-- ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무와 실제로 관련 있는 영역만 넣으세요.
+- ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무 면접에서 실제 평가축으로 직접 사용할 핵심 NCS만 넣으세요.
 - ncsMappings는 최소 1개 이상이어야 합니다.
+- 직무 정보가 넓거나 근거가 부족하면 여러 개를 억지로 넣지 말고 가장 가까운 핵심 NCS 1개만 반환하세요.
+- 반환 개수는 AI가 공고와 직무의 직접 근거를 보고 판단하세요. 서버가 정한 고정 개수는 없습니다.
+- 여러 영역을 반환하려면 각 영역마다 서로 다른 직접 근거가 있어야 합니다. 같은 근거를 여러 NCS에 중복 배정하지 마세요.
 - questions는 정확히 ${INTERVIEW_QUESTION_COUNT}개를 반환하세요.
 - 기존 질문과 의미가 겹치지 않게, 부족한 질문은 AI가 공고/직무/NCS 매핑을 기준으로 새로 생성하세요.
 - 각 질문의 ncsAreas는 ncsMappings에 포함된 NCS 영역 안에서만 선택하세요.
@@ -880,7 +886,8 @@ function uniqueNcsMappings(mappings: InterviewAnalysis["ncsMappings"]) {
       byName.set(mapping.name, mapping);
     }
   }
-  return Array.from(byName.values()).sort((left, right) => right.relevance - left.relevance);
+  return Array.from(byName.values())
+    .sort((left, right) => right.relevance - left.relevance);
 }
 
 function compactProfileKeywords(items: string[], hiddenContexts: string[]) {

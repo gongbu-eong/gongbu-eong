@@ -560,6 +560,7 @@ function QuestionTabs({
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     const list = tabListRef.current;
     if (!list) return;
+    if (event.pointerType === "mouse") return;
     const target = event.target;
     if (target instanceof HTMLElement && target.closest("button")) return;
     dragRef.current = {
