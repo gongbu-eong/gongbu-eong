@@ -496,6 +496,12 @@ ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positio
 각 NCS 영역의 reason에는 "${input.companyName}"와 "${input.positionName}"를 직접 언급하고, 공고/직무의 어떤 내용 때문에 관련 영역으로 판단했는지 설명하세요.
 반환하는 영역의 relevance는 면접 질문으로 다룰 만한 관련도가 있을 때만 50~100 사이로 산정하세요.
 
+profile에는 공고 내용을 분석한 값을 반드시 채우세요.
+- mainTasks: 공고에서 확인한 주요 업무 2~5개
+- requiredKnowledge: 공고 직무 수행에 필요한 지식/기술/자격 2~5개
+- preferredExperience: 우대사항 또는 있으면 좋은 경험 1~5개
+- keywords: 기업명, 직무명과 중복되지 않는 핵심 키워드 3~8개
+
 questions 배열은 정확히 ${INTERVIEW_QUESTION_COUNT}개를 생성하세요. 경험면접, 상황면접, 직무면접, 인성·가치관, 직업윤리 성격이 골고루 섞여야 합니다.
 각 질문은 "${input.companyName}" 또는 "${input.positionName}" 또는 직무 핵심 키워드 중 하나 이상을 자연스럽게 포함해, 범용 질문처럼 보이지 않게 작성하세요.
 각 질문의 ncsAreas는 ncsMappings에 반환한 관련 NCS 영역 안에서만 선택하세요. 반환하지 않은 NCS 영역을 질문 태그로 붙이지 마세요.
@@ -538,6 +544,7 @@ ${partial.analysis.ncsMappings.map((item) => `- ${item.name} ${item.relevance}%:
 ${partial.questions.map((item, index) => `${index + 1}. ${item.question} (${item.ncsAreas.join(", ")})`).join("\n") || "- 없음"}
 
 요구사항:
+- profile.mainTasks, profile.requiredKnowledge, profile.preferredExperience, profile.keywords는 공고와 직무를 분석해 빈 배열 없이 채우세요.
 - ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무와 실제로 관련 있는 영역만 넣으세요.
 - ncsMappings는 최소 1개 이상이어야 합니다.
 - questions는 정확히 ${INTERVIEW_QUESTION_COUNT}개를 반환하세요.
@@ -697,9 +704,13 @@ async function normalizeStartPayloadWithAiCompletion(
 }
 
 function isStartPayloadComplete(value: ReturnType<typeof normalizeStartPayload>) {
+  const profile = value.analysis.profile;
   return (
     value.analysis.ncsMappings.length > 0 &&
-    value.questions.length >= INTERVIEW_QUESTION_COUNT
+    value.questions.length >= INTERVIEW_QUESTION_COUNT &&
+    profile.mainTasks.length > 0 &&
+    profile.requiredKnowledge.length > 0 &&
+    profile.keywords.length > 0
   );
 }
 
@@ -743,17 +754,51 @@ function normalizeStartPayload(
   fallback: { companyName: string; positionName: string; dutyText: string },
 ) {
   const record = asRecord(value);
-  const profileRecord = asRecord(record?.profile);
+  const profileRecord =
+    asRecord(record?.profile) ||
+    asRecord(record?.jobProfile) ||
+    asRecord(record?.positionProfile) ||
+    asRecord(record?.analysis);
   const profile = {
     companyName:
       removeJobCodesFromText(readString(profileRecord?.companyName)) || fallback.companyName,
     positionName:
       cleanJobLabel(readString(profileRecord?.positionName)) || fallback.positionName,
     dutyText: removeJobCodesFromText(readString(profileRecord?.dutyText)) || fallback.dutyText,
-    mainTasks: uniqueDisplayList(readDisplayStringList(profileRecord?.mainTasks), 5),
-    requiredKnowledge: uniqueDisplayList(readDisplayStringList(profileRecord?.requiredKnowledge), 5),
-    preferredExperience: uniqueDisplayList(readDisplayStringList(profileRecord?.preferredExperience), 5),
-    keywords: uniqueDisplayList(readDisplayStringList(profileRecord?.keywords), 8),
+    mainTasks: uniqueDisplayList(readFirstDisplayStringList(profileRecord, [
+      "mainTasks",
+      "tasks",
+      "coreTasks",
+      "coreDuties",
+      "duties",
+      "jobDuties",
+      "responsibilities",
+    ]), 5),
+    requiredKnowledge: uniqueDisplayList(readFirstDisplayStringList(profileRecord, [
+      "requiredKnowledge",
+      "knowledge",
+      "requiredSkills",
+      "skills",
+      "qualifications",
+      "requirements",
+      "requiredCompetencies",
+    ]), 5),
+    preferredExperience: uniqueDisplayList(readFirstDisplayStringList(profileRecord, [
+      "preferredExperience",
+      "experiences",
+      "experience",
+      "preferredQualifications",
+      "preferredSkills",
+      "preferences",
+      "preferred",
+    ]), 5),
+    keywords: uniqueDisplayList(readFirstDisplayStringList(profileRecord, [
+      "keywords",
+      "keyWords",
+      "coreKeywords",
+      "jobKeywords",
+      "tags",
+    ]), 8),
   };
   profile.keywords = compactProfileKeywords(profile.keywords, [
     profile.companyName,
@@ -885,9 +930,20 @@ function normalizeQuestion(
 ) {
   const record = asRecord(value);
   if (!record) return null;
-  const question = removeJobCodesFromText(readString(record.question));
+  const question = removeJobCodesFromText(readFirstString(record, [
+    "question",
+    "prompt",
+    "content",
+    "text",
+  ]));
   if (!question) return null;
-  const areas = readStringList(record.ncsAreas)
+  const areas = readFirstStringList(record, [
+    "ncsAreas",
+    "ncsAreaNames",
+    "ncsCompetencies",
+    "competencies",
+    "areas",
+  ])
     .map(normalizeNcsAreaName)
     .filter(Boolean) as NcsAreaName[];
   const allowedAreas = constrainQuestionAreas(areas, mappings, index);
@@ -1038,6 +1094,37 @@ function readDisplayStringList(value: unknown) {
   return readStringList(value).map(removeJobCodesFromText).filter(Boolean);
 }
 
+function readFirstString(
+  record: Record<string, unknown> | null,
+  keys: string[],
+) {
+  if (!record) return "";
+  for (const key of keys) {
+    const value = readString(record[key]);
+    if (value) return value;
+  }
+  return "";
+}
+
+function readFirstStringList(
+  record: Record<string, unknown> | null,
+  keys: string[],
+) {
+  if (!record) return [];
+  for (const key of keys) {
+    const value = readStringList(record[key]);
+    if (value.length) return value;
+  }
+  return [];
+}
+
+function readFirstDisplayStringList(
+  record: Record<string, unknown> | null,
+  keys: string[],
+) {
+  return readFirstStringList(record, keys).map(removeJobCodesFromText).filter(Boolean);
+}
+
 function normalizeArray(value: unknown) {
   return Array.isArray(value) ? value : [];
 }
@@ -1088,11 +1175,77 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 const interviewStartSchema = {
   type: "object",
   additionalProperties: true,
+  required: ["profile", "ncsMappings", "questions"],
   properties: {
-    profile: { type: "object", additionalProperties: true },
-    ncsMappings: { type: "array", items: { type: "object", additionalProperties: true } },
+    profile: {
+      type: "object",
+      additionalProperties: true,
+      required: [
+        "companyName",
+        "positionName",
+        "dutyText",
+        "mainTasks",
+        "requiredKnowledge",
+        "preferredExperience",
+        "keywords",
+      ],
+      properties: {
+        companyName: { type: "string" },
+        positionName: { type: "string" },
+        dutyText: { type: "string" },
+        mainTasks: { type: "array", minItems: 1, items: { type: "string" } },
+        requiredKnowledge: { type: "array", minItems: 1, items: { type: "string" } },
+        preferredExperience: { type: "array", items: { type: "string" } },
+        keywords: { type: "array", minItems: 1, items: { type: "string" } },
+      },
+    },
+    ncsMappings: {
+      type: "array",
+      minItems: 1,
+      items: {
+        type: "object",
+        additionalProperties: true,
+        required: ["name", "relevance", "reason", "interviewFocus"],
+        properties: {
+          name: {
+            type: "string",
+            enum: NCS_AREAS.map((area) => area.name),
+          },
+          relevance: { type: "number", minimum: 0, maximum: 100 },
+          reason: { type: "string" },
+          interviewFocus: { type: "string" },
+        },
+      },
+    },
     questionPlan: { type: "array", items: { type: "string" } },
-    questions: { type: "array", items: { type: "object", additionalProperties: true } },
+    questions: {
+      type: "array",
+      minItems: INTERVIEW_QUESTION_COUNT,
+      maxItems: INTERVIEW_QUESTION_COUNT,
+      items: {
+        type: "object",
+        additionalProperties: true,
+        required: ["id", "type", "question", "intent", "ncsAreas", "difficulty"],
+        properties: {
+          id: { type: "string" },
+          type: {
+            type: "string",
+            enum: ["experience", "situation", "job", "personality", "ethics"],
+          },
+          question: { type: "string" },
+          intent: { type: "string" },
+          ncsAreas: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "string",
+              enum: NCS_AREAS.map((area) => area.name),
+            },
+          },
+          difficulty: { type: "string", enum: ["기본", "심화"] },
+        },
+      },
+    },
   },
 } as const;
 

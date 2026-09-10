@@ -560,6 +560,8 @@ function QuestionTabs({
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     const list = tabListRef.current;
     if (!list) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest("button")) return;
     dragRef.current = {
       dragging: true,
       startX: event.clientX,
@@ -612,7 +614,11 @@ function QuestionTabs({
               ref={isActive ? activeButtonRef : undefined}
               className={`${isActive ? styles.questionTabActive : ""} ${isAnswered ? styles.questionTabAnswered : ""}`}
               type="button"
-              onClick={() => onSelect(question.id)}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.preventDefault();
+                onSelect(question.id);
+              }}
               aria-current={isActive ? "true" : undefined}
               title={`질문 ${index + 1}`}
             >
