@@ -35,7 +35,13 @@ const NCS_AREAS: Array<{
 
 const MAX_FOLLOW_UPS_PER_QUESTION = 3;
 const INTERVIEW_QUESTION_COUNT = 20;
-const RELEVANT_NCS_THRESHOLD = 50;
+
+type InterviewStartInput = {
+  companyName: string;
+  positionName: string;
+  dutyText: string;
+  jobContext: string;
+};
 
 export type StartInterviewCoachingArgs = {
   userId?: string | null;
@@ -64,6 +70,7 @@ function resolveInterviewInput(args: StartInterviewCoachingArgs) {
     .filter(Boolean);
   const postingPositionName = args.posting
     ? [
+      meaningfulDutyText,
       postingJobCategory,
       postingNcsCategory,
       ...postingCategories,
@@ -71,22 +78,22 @@ function resolveInterviewInput(args: StartInterviewCoachingArgs) {
     ].map((item) => item.slice(0, 120)).find(Boolean) || ""
     : "";
   const postingDutyText = args.posting
-    ? Array.from(new Set([
+    ? uniqueDisplaySegments([
+      meaningfulDutyText,
       postingJobCategory,
       postingNcsCategory,
       ...postingCategories,
-      meaningfulDutyText,
-    ].filter(Boolean))).join(" / ").slice(0, 400)
+    ]).join(" / ").slice(0, 400)
     : "";
 
   return {
     job,
     companyName: job?.institutionName || manualCompanyName,
     positionName: args.posting
-      ? postingPositionName || manualPositionName || meaningfulDutyText
+      ? meaningfulDutyText || postingPositionName || manualPositionName
       : meaningfulDutyText || manualPositionName,
     dutyText: args.posting
-      ? postingDutyText || postingPositionName || manualPositionName || meaningfulDutyText
+      ? meaningfulDutyText || postingDutyText || postingPositionName || manualPositionName
       : meaningfulDutyText || manualPositionName,
   };
 }
@@ -139,6 +146,15 @@ function isJobCodeToken(value: string) {
   return /^[A-Z]\d{6}$/i.test(value.trim());
 }
 
+function uniqueDisplaySegments(values: string[]) {
+  const segments = values
+    .flatMap((value) => cleanJobLabel(value).split(/[\/|,]/))
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(segments));
+}
+
 export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
   const startedAt = Date.now();
   const traceId = args.traceId || undefined;
@@ -185,18 +201,22 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
       jobContextLength: jobContext.length,
       questionCount: INTERVIEW_QUESTION_COUNT,
     });
-    const aiPayload = await requestStartPayload({
+    const startInput = {
       ...fallbackProfile,
       jobContext,
-    });
+    };
+    const aiPayload = await requestStartPayload(startInput);
     logInterviewStage(traceId, "ai:start-payload:done", {
       sessionId,
       elapsedMs: Date.now() - startedAt,
     });
 
-    const { analysis, questions } = normalizeStartPayload(
+    const { analysis, questions } = await normalizeStartPayloadWithAiCompletion(
       aiPayload,
       fallbackProfile,
+      startInput,
+      traceId,
+      sessionId,
     );
     logInterviewStage(traceId, "ai:normalize:done", {
       sessionId,
@@ -302,18 +322,19 @@ export async function generateInterviewCoachingQuestions(args: {
   if (draft.status === "ready" && draft.questions.length) return draft;
 
   try {
-    const { analysis, questions } = normalizeStartPayload(
-      await requestStartPayload({
-        companyName: draft.companyName || "기업 미정",
-        positionName: draft.positionName || "직무 미정",
-        dutyText: draft.dutyText || draft.positionName || "직무 미정",
-        jobContext: "",
-      }),
-      {
-        companyName: draft.companyName || "기업 미정",
-        positionName: draft.positionName || "직무 미정",
-        dutyText: draft.dutyText || draft.positionName || "직무 미정",
-      },
+    const fallbackProfile = {
+      companyName: draft.companyName || "기업 미정",
+      positionName: draft.positionName || "직무 미정",
+      dutyText: draft.dutyText || draft.positionName || "직무 미정",
+    };
+    const startInput = {
+      ...fallbackProfile,
+      jobContext: "",
+    };
+    const { analysis, questions } = await normalizeStartPayloadWithAiCompletion(
+      await requestStartPayload(startInput),
+      fallbackProfile,
+      startInput,
     );
 
     await updateInterviewSessionAnalysis({
@@ -446,12 +467,7 @@ export { findInterviewSessionForViewer };
 
 export { listInterviewHistory, claimAnonymousInterviewSessions };
 
-async function requestStartPayload(input: {
-  companyName: string;
-  positionName: string;
-  dutyText: string;
-  jobContext: string;
-}) {
+async function requestStartPayload(input: InterviewStartInput) {
   return createOpenAiJsonResponse({
     model: getInterviewModel(),
     schemaName: "interview_coaching_start",
@@ -476,13 +492,59 @@ ${NCS_AREAS.map((area, index) => `${index + 1}. ${area.name}: ${area.description
 ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무와 실제로 관련 있는 영역만 반환하세요.
 관련성이 약하거나 공고/직무 내용에서 근거를 찾기 어려운 영역은 ncsMappings에 넣지 마세요.
 반환 개수 제한은 없습니다. 2개만 관련 있으면 2개만, 6개가 관련 있으면 6개를 반환하세요.
+단, ncsMappings는 절대 빈 배열로 반환하지 마세요. 뚜렷한 관련 영역이 적더라도 공고와 직무 기준으로 가장 가까운 핵심 NCS 영역 1개 이상은 반드시 반환하세요.
 각 NCS 영역의 reason에는 "${input.companyName}"와 "${input.positionName}"를 직접 언급하고, 공고/직무의 어떤 내용 때문에 관련 영역으로 판단했는지 설명하세요.
 반환하는 영역의 relevance는 면접 질문으로 다룰 만한 관련도가 있을 때만 50~100 사이로 산정하세요.
 
-질문은 ${INTERVIEW_QUESTION_COUNT}개를 생성하세요. 경험면접, 상황면접, 직무면접, 인성·가치관, 직업윤리 성격이 골고루 섞여야 합니다.
+questions 배열은 정확히 ${INTERVIEW_QUESTION_COUNT}개를 생성하세요. 경험면접, 상황면접, 직무면접, 인성·가치관, 직업윤리 성격이 골고루 섞여야 합니다.
 각 질문은 "${input.companyName}" 또는 "${input.positionName}" 또는 직무 핵심 키워드 중 하나 이상을 자연스럽게 포함해, 범용 질문처럼 보이지 않게 작성하세요.
 각 질문의 ncsAreas는 ncsMappings에 반환한 관련 NCS 영역 안에서만 선택하세요. 반환하지 않은 NCS 영역을 질문 태그로 붙이지 마세요.
 반드시 JSON 객체 하나만 반환하고, 모든 문장은 한국어로 작성하세요.`,
+      },
+    ],
+  });
+}
+
+async function requestStartSupplementPayload(
+  input: InterviewStartInput,
+  partial: ReturnType<typeof normalizeStartPayload>,
+) {
+  return createOpenAiJsonResponse({
+    model: getInterviewModel(),
+    schemaName: "interview_coaching_start_supplement",
+    schema: interviewStartSchema,
+    maxOutputTokens: 18000,
+    content: [
+      {
+        type: "input_text",
+        text: `한국어 NCS 직무 기반 AI 면접 코치입니다.
+앞선 AI 응답에서 NCS 매핑 또는 면접 질문 수가 부족했습니다.
+서버에서 임의 질문을 만들지 않도록, 아래 공고/직무 정보를 다시 분석해 최종 사용 가능한 JSON을 완성하세요.
+
+기업명: ${input.companyName}
+지원 직무: ${input.positionName}
+사용자 입력 직무 내용: ${input.dutyText}
+
+공고에서 참고할 내용:
+${input.jobContext || "연결된 공고 본문이 없습니다. 기업명과 직무명만 기준으로 분석하세요."}
+
+NCS 7개 후보:
+${NCS_AREAS.map((area, index) => `${index + 1}. ${area.name}: ${area.description}`).join("\n")}
+
+현재 확보된 NCS 매핑:
+${partial.analysis.ncsMappings.map((item) => `- ${item.name} ${item.relevance}%: ${item.reason}`).join("\n") || "- 없음"}
+
+현재 확보된 질문:
+${partial.questions.map((item, index) => `${index + 1}. ${item.question} (${item.ncsAreas.join(", ")})`).join("\n") || "- 없음"}
+
+요구사항:
+- ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무와 실제로 관련 있는 영역만 넣으세요.
+- ncsMappings는 최소 1개 이상이어야 합니다.
+- questions는 정확히 ${INTERVIEW_QUESTION_COUNT}개를 반환하세요.
+- 기존 질문과 의미가 겹치지 않게, 부족한 질문은 AI가 공고/직무/NCS 매핑을 기준으로 새로 생성하세요.
+- 각 질문의 ncsAreas는 ncsMappings에 포함된 NCS 영역 안에서만 선택하세요.
+- profile, ncsMappings, questionPlan, questions를 모두 포함한 JSON 객체 하나만 반환하세요.
+- 모든 문장은 한국어로 작성하세요.`,
       },
     ],
   });
@@ -603,50 +665,106 @@ function buildPostingContext(posting: JobPostingDetailRow) {
   ].join("\n").slice(0, 8000);
 }
 
+async function normalizeStartPayloadWithAiCompletion(
+  value: unknown,
+  fallback: { companyName: string; positionName: string; dutyText: string },
+  input: InterviewStartInput,
+  traceId?: string,
+  sessionId?: string,
+) {
+  let normalized = normalizeStartPayload(value, fallback);
+  if (isStartPayloadComplete(normalized)) return normalized;
+
+  for (let attempt = 1; attempt <= 2 && !isStartPayloadComplete(normalized); attempt += 1) {
+    logInterviewStage(traceId, "ai:start-supplement:start", {
+      sessionId,
+      attempt,
+      ncsMappingCount: normalized.analysis.ncsMappings.length,
+      questionCount: normalized.questions.length,
+    });
+    const supplementPayload = await requestStartSupplementPayload(input, normalized);
+    const supplemented = normalizeStartPayload(supplementPayload, fallback);
+    normalized = mergeStartPayloads(normalized, supplemented);
+    logInterviewStage(traceId, "ai:start-supplement:done", {
+      sessionId,
+      attempt,
+      ncsMappingCount: normalized.analysis.ncsMappings.length,
+      questionCount: normalized.questions.length,
+    });
+  }
+
+  return normalized;
+}
+
+function isStartPayloadComplete(value: ReturnType<typeof normalizeStartPayload>) {
+  return (
+    value.analysis.ncsMappings.length > 0 &&
+    value.questions.length >= INTERVIEW_QUESTION_COUNT
+  );
+}
+
+function mergeStartPayloads(
+  current: ReturnType<typeof normalizeStartPayload>,
+  supplemented: ReturnType<typeof normalizeStartPayload>,
+) {
+  const analysis = {
+    profile: hasProfileDetails(supplemented.analysis.profile)
+      ? supplemented.analysis.profile
+      : current.analysis.profile,
+    ncsMappings: supplemented.analysis.ncsMappings.length
+      ? supplemented.analysis.ncsMappings
+      : current.analysis.ncsMappings,
+    questionPlan: supplemented.analysis.questionPlan.length
+      ? supplemented.analysis.questionPlan
+      : current.analysis.questionPlan,
+  };
+
+  return {
+    analysis,
+    questions: mergeAiQuestions(
+      current.questions,
+      supplemented.questions,
+      analysis.ncsMappings,
+    ),
+  };
+}
+
+function hasProfileDetails(profile: InterviewAnalysis["profile"]) {
+  return Boolean(
+    profile.mainTasks.length ||
+      profile.requiredKnowledge.length ||
+      profile.preferredExperience.length ||
+      profile.keywords.length,
+  );
+}
+
 function normalizeStartPayload(
   value: unknown,
   fallback: { companyName: string; positionName: string; dutyText: string },
 ) {
   const record = asRecord(value);
   const profileRecord = asRecord(record?.profile);
-  const fallbackProfile = buildFallbackProfile(fallback);
   const profile = {
     companyName:
       removeJobCodesFromText(readString(profileRecord?.companyName)) || fallback.companyName,
     positionName:
       cleanJobLabel(readString(profileRecord?.positionName)) || fallback.positionName,
     dutyText: removeJobCodesFromText(readString(profileRecord?.dutyText)) || fallback.dutyText,
-    mainTasks: withFallbackList(
-      readDisplayStringList(profileRecord?.mainTasks),
-      fallbackProfile.mainTasks,
-      5,
-    ),
-    requiredKnowledge: withFallbackList(
-      readDisplayStringList(profileRecord?.requiredKnowledge),
-      fallbackProfile.requiredKnowledge,
-      5,
-    ),
-    preferredExperience: withFallbackList(
-      readDisplayStringList(profileRecord?.preferredExperience),
-      fallbackProfile.preferredExperience,
-      5,
-    ),
-    keywords: withFallbackList(
-      readDisplayStringList(profileRecord?.keywords),
-      fallbackProfile.keywords,
-      8,
-    ),
+    mainTasks: uniqueDisplayList(readDisplayStringList(profileRecord?.mainTasks), 5),
+    requiredKnowledge: uniqueDisplayList(readDisplayStringList(profileRecord?.requiredKnowledge), 5),
+    preferredExperience: uniqueDisplayList(readDisplayStringList(profileRecord?.preferredExperience), 5),
+    keywords: uniqueDisplayList(readDisplayStringList(profileRecord?.keywords), 8),
   };
+  profile.keywords = compactProfileKeywords(profile.keywords, [
+    profile.companyName,
+    profile.positionName,
+    profile.dutyText,
+  ]);
 
   const providedMappings = normalizeArray(record?.ncsMappings)
     .map((item) => normalizeMapping(item, profile))
     .filter(Boolean) as InterviewAnalysis["ncsMappings"];
-  const relevantProvidedMappings = providedMappings.filter(
-    (item) => item.relevance >= RELEVANT_NCS_THRESHOLD,
-  );
-  const ncsMappings = relevantProvidedMappings.length
-    ? relevantProvidedMappings
-    : buildFallbackNcsMappings(profile);
+  const ncsMappings = uniqueNcsMappings(providedMappings);
   const questionMappings = getQuestionNcsMappings(ncsMappings);
 
   const questions = normalizeArray(record?.questions)
@@ -663,30 +781,12 @@ function normalizeStartPayload(
         ? questionPlan
         : questions.map((item) => item.intent),
     },
-    questions: fillQuestions(questions, questionMappings, profile),
+    questions: mergeAiQuestions([], questions, questionMappings),
   };
 }
 
 function getQuestionNcsMappings(mappings: InterviewAnalysis["ncsMappings"]) {
-  const sorted = [...mappings].sort((left, right) => right.relevance - left.relevance);
-  const matched = sorted.filter((item) => item.relevance >= RELEVANT_NCS_THRESHOLD);
-  return matched.length ? matched : sorted.slice(0, 1);
-}
-
-function buildFallbackNcsMappings(profile: InterviewAnalysis["profile"]) {
-  const scored = NCS_AREAS
-    .map((area) => ({
-      area,
-      relevance: scoreNcsArea(area.name, profile),
-    }))
-    .sort((left, right) => right.relevance - left.relevance);
-  const matched = scored.filter((item) => item.relevance >= RELEVANT_NCS_THRESHOLD);
-  return (matched.length ? matched : scored.slice(0, 1)).map(({ area, relevance }) => ({
-    name: area.name,
-    relevance,
-    reason: `${profile.companyName}의 ${profile.positionName} 직무에서 ${area.description}을 확인할 필요가 있어 매핑했습니다.`,
-    interviewFocus: `${profile.companyName} ${profile.positionName} 지원자가 면접에서 설명해야 할 ${area.description}`,
-  }));
+  return [...mappings].sort((left, right) => right.relevance - left.relevance);
 }
 
 function normalizeMapping(value: unknown, profile: InterviewAnalysis["profile"]) {
@@ -694,7 +794,7 @@ function normalizeMapping(value: unknown, profile: InterviewAnalysis["profile"])
   const name = normalizeNcsAreaName(record?.name);
   if (!record || !name) return null;
   const area = NCS_AREAS.find((item) => item.name === name);
-  const relevance = clampNumber(record.relevance, 0, 100, scoreNcsArea(name, profile));
+  const relevance = clampNumber(record.relevance, 0, 100, 60);
   const reason = readString(record.reason);
   return {
     name,
@@ -721,159 +821,46 @@ function contextualizeMappingReason(
   return `${profile.companyName}의 ${profile.positionName} 직무 기준으로, ${reason}`;
 }
 
-function scoreNcsArea(
-  name: NcsAreaName,
-  profile: InterviewAnalysis["profile"],
-) {
-  const text = [
-    profile.companyName,
-    profile.positionName,
-    profile.dutyText,
-    ...profile.keywords,
-  ].join(" ").toLowerCase();
-  const keywordMap: Record<NcsAreaName, string[]> = {
-    의사소통능력: [
-      "문서",
-      "작성",
-      "보고",
-      "설명",
-      "민원",
-      "고객",
-      "상담",
-      "홍보",
-      "행정",
-      "사무",
-      "협의",
-      "커뮤니케이션",
-    ],
-    수리능력: [
-      "회계",
-      "세무",
-      "예산",
-      "정산",
-      "통계",
-      "수치",
-      "데이터",
-      "분석",
-      "계량",
-      "원가",
-      "재무",
-      "급여",
-    ],
-    문제해결능력: [
-      "문제",
-      "개선",
-      "해결",
-      "시설",
-      "안전",
-      "전기",
-      "기계",
-      "설비",
-      "운영",
-      "유지",
-      "점검",
-      "관리",
-      "장애",
-      "현장",
-    ],
-    자기개발능력: [
-      "교육",
-      "연구",
-      "학습",
-      "자격",
-      "전문",
-      "기술",
-      "훈련",
-      "개발",
-      "성장",
-      "신입",
-      "인턴",
-    ],
-    대인관계능력: [
-      "협업",
-      "팀",
-      "조정",
-      "갈등",
-      "고객",
-      "민원",
-      "서비스",
-      "대응",
-      "지원",
-      "관계",
-      "소통",
-    ],
-    정보능력: [
-      "정보",
-      "시스템",
-      "전산",
-      "it",
-      "데이터",
-      "자료",
-      "분석",
-      "보안",
-      "소프트웨어",
-      "엑셀",
-      "프로그램",
-      "온라인",
-    ],
-    직업윤리: [
-      "공공",
-      "규정",
-      "법",
-      "윤리",
-      "책임",
-      "청렴",
-      "보안",
-      "안전",
-      "환경",
-      "의료",
-      "병원",
-      "준수",
-      "원칙",
-    ],
-  };
-  const matches = keywordMap[name].reduce(
-    (count, keyword) => count + (text.includes(keyword.toLowerCase()) ? 1 : 0),
-    0,
-  );
-  const spread = Array.from(`${profile.companyName}${profile.positionName}${name}`)
-    .reduce((sum, char) => sum + char.charCodeAt(0), 0) % 9;
-  const score = 28 + matches * 11 + spread;
-  return Math.max(24, Math.min(92, score));
+function uniqueDisplayList(items: string[], limit: number) {
+  return Array.from(new Set(
+    items.map((item) => removeJobCodesFromText(item)).filter(Boolean),
+  )).slice(0, limit);
 }
 
-function buildFallbackProfile(fallback: {
-  companyName: string;
-  positionName: string;
-  dutyText: string;
-}) {
-  const company = fallback.companyName || "지원 기업";
-  const position = fallback.positionName || fallback.dutyText || "지원 직무";
-  const duty = fallback.dutyText || position;
-  return {
-    mainTasks: [
-      `${company} ${position} 공고에서 요구하는 직무 내용을 파악하고 수행합니다.`,
-      `${duty} 업무에 필요한 자료를 확인하고 정확하게 처리합니다.`,
-      `지원 부서와 이해관계자에게 필요한 정보를 정리해 전달합니다.`,
-    ],
-    requiredKnowledge: [
-      `${position} 직무 관련 기본 지식과 업무 절차 이해`,
-      `공고에 명시된 자격, 우대사항, 제출 기준에 대한 이해`,
-      `자료 확인, 일정 관리, 문서 작성 등 실무 처리 역량`,
-    ],
-    preferredExperience: [
-      `${position} 또는 유사 직무 수행 경험`,
-      `협업, 문제 해결, 민원/요청 대응 경험`,
-    ],
-    keywords: [company, position, ...duty.split(/[,\s/·]+/).filter(Boolean)].slice(0, 8),
-  };
+function uniqueNcsMappings(mappings: InterviewAnalysis["ncsMappings"]) {
+  const byName = new Map<NcsAreaName, InterviewAnalysis["ncsMappings"][number]>();
+  for (const mapping of mappings) {
+    const previous = byName.get(mapping.name);
+    if (!previous || mapping.relevance > previous.relevance) {
+      byName.set(mapping.name, mapping);
+    }
+  }
+  return Array.from(byName.values()).sort((left, right) => right.relevance - left.relevance);
 }
 
-function withFallbackList(items: string[], fallback: string[], limit: number) {
-  const merged = [...items, ...fallback]
-    .map((item) => removeJobCodesFromText(item))
-    .filter(Boolean);
-  return Array.from(new Set(merged)).slice(0, limit);
+function compactProfileKeywords(items: string[], hiddenContexts: string[]) {
+  const cleaned = Array.from(new Set(
+    items
+      .flatMap((item) => removeJobCodesFromText(item).split(/[\/|,]/))
+      .map((item) => item.trim())
+      .filter(Boolean),
+  ));
+  const exactHidden = hiddenContexts.map(removeJobCodesFromText);
+  const contextText = exactHidden.join(" ");
+
+  return cleaned.filter((item) => {
+    if (item.length < 2) return false;
+    if (exactHidden.includes(item)) return false;
+    const tokenPattern = new RegExp(`(^|[\\s./·()])${escapeRegExp(item)}($|[\\s./·()])`);
+    const coveredByLongerKeyword = cleaned.some(
+      (other) => other !== item && other.length > item.length && tokenPattern.test(other),
+    );
+    return !coveredByLongerKeyword && !tokenPattern.test(contextText);
+  }).slice(0, 8);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function contextualizeQuestion(
@@ -923,180 +910,25 @@ function constrainQuestionAreas(
 ) {
   const allowed = new Set(mappings.map((item) => item.name));
   const filtered = areas.filter((area) => allowed.has(area));
-  const fallback = mappings[index % Math.max(mappings.length, 1)]?.name || "문제해결능력";
-  return (filtered.length ? filtered : [fallback]).slice(0, 2);
+  const fallback = mappings[index % Math.max(mappings.length, 1)]?.name;
+  return (filtered.length ? filtered : fallback ? [fallback] : []).slice(0, 2);
 }
 
-function fillQuestions(
-  questions: InterviewQuestion[],
+function mergeAiQuestions(
+  currentQuestions: InterviewQuestion[],
+  nextQuestions: InterviewQuestion[],
   mappings: InterviewAnalysis["ncsMappings"],
-  profile: InterviewAnalysis["profile"],
 ) {
-  const company = profile.companyName || "지원 기업";
-  const position = profile.positionName || profile.dutyText || "지원 직무";
-  const defaults: InterviewQuestion[] = [
-    {
-      id: "q1",
-      type: "experience",
-      question: `${company}의 ${position} 직무와 가장 관련 있는 경험을 하나 설명해 주세요.`,
-      intent: "직무 이해와 경험의 연결성을 확인합니다.",
-      ncsAreas: ["의사소통능력", "문제해결능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q2",
-      type: "situation",
-      question: `${position} 업무 중 예상하지 못한 문제가 생겼을 때 원인을 파악하고 해결했던 과정을 말씀해 주세요.`,
-      intent: "문제해결 과정과 판단 근거를 확인합니다.",
-      ncsAreas: ["문제해결능력", "정보능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q3",
-      type: "job",
-      question: `${company}에서 ${position} 직무를 수행할 때 가장 중요하다고 생각하는 역량은 무엇인가요?`,
-      intent: "직무 핵심 역량 이해도를 확인합니다.",
-      ncsAreas: [mappings[0]?.name || "정보능력"],
-      difficulty: "심화",
-    },
-    {
-      id: "q4",
-      type: "personality",
-      question: `${position} 업무를 함께 수행하는 팀 안에서 의견이 달랐던 사람과 협업했던 경험을 말씀해 주세요.`,
-      intent: "협업 태도와 대인관계능력을 확인합니다.",
-      ncsAreas: ["대인관계능력", "의사소통능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q5",
-      type: "ethics",
-      question: `${company}의 ${position} 담당자로서 규정이나 원칙을 지키기 위해 불편함을 감수했던 경험이 있나요?`,
-      intent: "직업윤리와 책임감을 확인합니다.",
-      ncsAreas: ["직업윤리"],
-      difficulty: "심화",
-    },
-    {
-      id: "q6",
-      type: "experience",
-      question: `${position} 직무와 관련해 가장 의미 있었던 성과를 상황, 행동, 결과 순서로 설명해 주세요.`,
-      intent: "경험을 구조화해 전달하는 능력을 확인합니다.",
-      ncsAreas: ["의사소통능력", "문제해결능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q7",
-      type: "situation",
-      question: `${company}에서 ${position} 업무 우선순위가 충돌했을 때 어떤 기준으로 판단하고 처리하겠습니까?`,
-      intent: "우선순위 판단과 실행 방식을 확인합니다.",
-      ncsAreas: ["문제해결능력", "직업윤리"],
-      difficulty: "심화",
-    },
-    {
-      id: "q8",
-      type: "job",
-      question: `${position} 직무에서 자주 다뤄야 할 자료나 정보를 어떻게 검토하고 관리하겠습니까?`,
-      intent: "정보 활용과 정확성 관리 역량을 확인합니다.",
-      ncsAreas: ["정보능력", "의사소통능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q9",
-      type: "personality",
-      question: `${company}의 ${position} 업무에서 동료가 맡은 일을 제때 끝내지 못해 전체 일정이 지연될 때 어떻게 대응하겠습니까?`,
-      intent: "협업 상황에서의 소통과 문제 조정 방식을 확인합니다.",
-      ncsAreas: ["대인관계능력", "문제해결능력"],
-      difficulty: "심화",
-    },
-    {
-      id: "q10",
-      type: "ethics",
-      question: `${position} 업무 편의를 위해 절차를 생략하자는 제안을 받는다면 어떻게 하겠습니까?`,
-      intent: "규정 준수와 책임감을 확인합니다.",
-      ncsAreas: ["직업윤리", "의사소통능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q11",
-      type: "experience",
-      question: `${position} 직무에 필요한 새로운 업무나 도구를 빠르게 익혀 적용했던 경험을 말씀해 주세요.`,
-      intent: "학습 태도와 자기개발능력을 확인합니다.",
-      ncsAreas: ["자기개발능력", "정보능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q12",
-      type: "situation",
-      question: `${company}의 ${position} 업무에서 민원이나 요청 사항이 반복적으로 발생한다면 원인을 어떻게 찾고 개선하겠습니까?`,
-      intent: "반복 문제를 분석하고 개선하는 역량을 확인합니다.",
-      ncsAreas: ["문제해결능력", "의사소통능력"],
-      difficulty: "심화",
-    },
-    {
-      id: "q13",
-      type: "job",
-      question: `${position} 직무에서 실수를 줄이기 위해 본인이 사용할 점검 방법을 설명해 주세요.`,
-      intent: "업무 정확성과 자기관리 방식을 확인합니다.",
-      ncsAreas: ["직업윤리", "자기개발능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q14",
-      type: "personality",
-      question: `${position} 관련 업무에서 상대방이 내 의견을 받아들이지 않을 때 설득하거나 조율했던 경험이 있나요?`,
-      intent: "설득과 갈등관리 방식을 확인합니다.",
-      ncsAreas: ["대인관계능력", "의사소통능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q15",
-      type: "ethics",
-      question: `${company} 직원에게 가장 중요하다고 생각하는 태도는 무엇이며, 왜 그렇게 생각하나요?`,
-      intent: "공공성과 직업윤리에 대한 이해를 확인합니다.",
-      ncsAreas: ["직업윤리"],
-      difficulty: "심화",
-    },
-    {
-      id: "q16",
-      type: "experience",
-      question: `${position} 직무처럼 정해진 기한 안에 여러 업무를 처리했던 경험을 구체적으로 설명해 주세요.`,
-      intent: "시간 관리와 실행력을 확인합니다.",
-      ncsAreas: ["자기개발능력", "문제해결능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q17",
-      type: "situation",
-      question: `${position} 업무 중 자료의 숫자나 기준이 서로 맞지 않는 상황을 발견하면 어떻게 확인하겠습니까?`,
-      intent: "자료 검증과 수리·정보 활용 능력을 확인합니다.",
-      ncsAreas: ["수리능력", "정보능력"],
-      difficulty: "심화",
-    },
-    {
-      id: "q18",
-      type: "job",
-      question: `${company}의 ${position} 직무를 수행하며 가장 먼저 배우고 싶은 업무는 무엇이고, 어떻게 익히겠습니까?`,
-      intent: "직무 이해와 성장 계획을 확인합니다.",
-      ncsAreas: ["자기개발능력", "정보능력"],
-      difficulty: "기본",
-    },
-    {
-      id: "q19",
-      type: "personality",
-      question: `${position} 업무에서 팀 목표와 개인 방식이 다를 때 본인은 어떤 기준으로 행동하나요?`,
-      intent: "조직 적응과 협업 태도를 확인합니다.",
-      ncsAreas: ["대인관계능력", "직업윤리"],
-      difficulty: "심화",
-    },
-    {
-      id: "q20",
-      type: "job",
-      question: `${company}의 ${position} 직무에서 고객이나 내부 구성원에게 정보를 설명해야 한다면 어떤 점을 가장 신경 쓰겠습니까?`,
-      intent: "상대방 중심의 설명 능력과 직무 소통 역량을 확인합니다.",
-      ncsAreas: ["의사소통능력", "정보능력"],
-      difficulty: "기본",
-    },
-  ];
-  const merged = [...questions, ...defaults].slice(0, INTERVIEW_QUESTION_COUNT);
+  const seen = new Set<string>();
+  const merged = [...currentQuestions, ...nextQuestions]
+    .filter((item) => {
+      const key = item.question.replace(/\s+/g, " ").trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, INTERVIEW_QUESTION_COUNT);
+
   return merged.map((item, index) => ({
     ...item,
     id: `q${index + 1}`,
@@ -1120,14 +952,10 @@ function normalizeAnswerFeedback(
         question,
       );
   return {
-    summary:
-      removeJobCodesFromText(readString(record?.summary)) ||
-      "답변의 핵심 방향은 확인되지만, 상황과 결과를 더 구체적으로 말하면 좋습니다.",
-    strengths: ensureDisplayList(record?.strengths, ["직무와 관련된 경험을 답변에 연결했습니다."]),
-    improvements: ensureDisplayList(record?.improvements, ["본인 역할, 판단 근거, 결과를 더 구체적으로 보완해 주세요."]),
-    nextAnswerGuide:
-      removeJobCodesFromText(readString(record?.nextAnswerGuide)) ||
-      "다음 답변에서는 상황, 본인 역할, 행동, 결과 순서로 정리해 보세요.",
+    summary: removeJobCodesFromText(readString(record?.summary)),
+    strengths: uniqueDisplayList(readDisplayStringList(record?.strengths), 4),
+    improvements: uniqueDisplayList(readDisplayStringList(record?.improvements), 4),
+    nextAnswerGuide: removeJobCodesFromText(readString(record?.nextAnswerGuide)),
     followUpQuestion,
   };
 }
@@ -1158,24 +986,14 @@ function normalizeResult(
 
   return {
     score: clampNumber(record?.score, 0, 100, 72),
-    summary:
-      removeJobCodesFromText(readString(record?.summary)) ||
-      "전체적으로 직무와 연결된 답변 방향은 잡혀 있습니다. 다만 면접에서는 본인 역할과 결과를 더 구체적으로 말하는 연습이 필요합니다.",
-    strengths: ensureDisplayList(record?.strengths, ["직무 관련 경험을 답변 소재로 활용했습니다."]),
-    improvements: ensureDisplayList(record?.improvements, ["상황, 행동, 결과를 더 선명하게 구분해 답변해 보세요."]),
-    questionReviews: reviews.length ? reviews : questions.map((question) => ({
-      questionId: question.id,
-      question: question.question,
-      score: 70,
-      summary: "답변 방향은 적절하지만 구체성을 보완하면 좋습니다.",
-      strengths: ["질문의 핵심 의도에 답변하려는 흐름이 있습니다."],
-      improvements: ["본인 역할과 결과를 더 구체적으로 설명해 주세요."],
-      ncsAreas: question.ncsAreas,
-    })),
-    futurePracticeQuestions: ensureDisplayList(record?.futurePracticeQuestions, [
-      "지원 직무에서 반복적으로 발생할 수 있는 문제 상황을 하나 정하고 해결 과정을 말해보세요.",
-      "본인의 경험 중 공공기관 업무 태도와 연결되는 사례를 말해보세요.",
-    ]).slice(0, 5),
+    summary: removeJobCodesFromText(readString(record?.summary)),
+    strengths: uniqueDisplayList(readDisplayStringList(record?.strengths), 4),
+    improvements: uniqueDisplayList(readDisplayStringList(record?.improvements), 4),
+    questionReviews: reviews,
+    futurePracticeQuestions: uniqueDisplayList(
+      readDisplayStringList(record?.futurePracticeQuestions),
+      5,
+    ),
   };
 }
 
@@ -1191,10 +1009,10 @@ function normalizeQuestionReview(value: unknown, fallback?: InterviewQuestion) {
     questionId,
     question,
     score: clampNumber(record?.score, 0, 100, 70),
-    summary: removeJobCodesFromText(readString(record?.summary)) || "답변을 기준으로 종합 평가했습니다.",
-    strengths: ensureDisplayList(record?.strengths, ["질문에 대한 기본 답변 흐름이 있습니다."]),
-    improvements: ensureDisplayList(record?.improvements, ["구체적 근거와 결과를 보완해 주세요."]),
-    ncsAreas: areas.length ? areas : fallback?.ncsAreas || ["문제해결능력"],
+    summary: removeJobCodesFromText(readString(record?.summary)),
+    strengths: uniqueDisplayList(readDisplayStringList(record?.strengths), 4),
+    improvements: uniqueDisplayList(readDisplayStringList(record?.improvements), 4),
+    ncsAreas: areas.length ? areas : fallback?.ncsAreas || [],
   };
 }
 
@@ -1209,11 +1027,6 @@ function normalizeQuestionType(value: unknown, index: number): InterviewQuestion
 function normalizeNcsAreaName(value: unknown): NcsAreaName | null {
   const text = readString(value).replace(/\s/g, "");
   return NCS_AREAS.find((area) => area.name.replace(/\s/g, "") === text)?.name || null;
-}
-
-function ensureDisplayList(value: unknown, fallback: string[]) {
-  const list = readDisplayStringList(value).slice(0, 4);
-  return list.length ? list : fallback;
 }
 
 function readStringList(value: unknown) {

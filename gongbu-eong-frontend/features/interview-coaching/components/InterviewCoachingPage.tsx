@@ -26,7 +26,6 @@ import styles from "./InterviewCoachingPage.module.css";
 type ConnectedJob = InterviewCoachingJob & { duty: string };
 
 const MAX_ANSWER_LENGTH = 4000;
-const RELEVANT_NCS_THRESHOLD = 50;
 
 export function InterviewCoachingPage({
   initialSessionId,
@@ -441,7 +440,11 @@ function InterviewAnalysisView({ session }: { session: InterviewCoachingSession 
   const visibleMappings = getVisibleNcsMappings(session.analysis.ncsMappings);
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
   const displayDutyText = cleanDisplayText(session.dutyText) || session.dutyText;
-  const displayKeywords = cleanDisplayList(profile.keywords);
+  const displayKeywords = compactDisplayKeywords(profile.keywords, [
+    session.companyName,
+    displayPositionName,
+    displayDutyText,
+  ]);
   const displayMainTasks = cleanDisplayList(profile.mainTasks);
   const displayKnowledge = cleanDisplayList([
     ...profile.requiredKnowledge,
@@ -477,14 +480,16 @@ function InterviewAnalysisView({ session }: { session: InterviewCoachingSession 
             <p>{cleanDisplayText(item.reason) || item.reason}</p>
           </article>
         ))}
+        {!visibleMappings.length ? (
+          <p>AI가 생성한 NCS 매핑 결과가 없습니다.</p>
+        ) : null}
       </section>
     </>
   );
 }
 
 function getVisibleNcsMappings(mappings: InterviewNcsMapping[]) {
-  const sorted = [...mappings].sort((left, right) => right.relevance - left.relevance);
-  return sorted.filter((item) => item.relevance >= RELEVANT_NCS_THRESHOLD);
+  return [...mappings].sort((left, right) => right.relevance - left.relevance);
 }
 
 function getQuestionBadgeAreas(
@@ -927,6 +932,29 @@ function cleanDisplayText(value?: string | null) {
 
 function cleanDisplayList(items: string[]) {
   return Array.from(new Set(items.map(cleanDisplayText).filter(Boolean)));
+}
+
+function compactDisplayKeywords(items: string[], hiddenContexts: string[]) {
+  const cleaned = cleanDisplayList(items)
+    .flatMap((item) => item.split(/[\/|,]/))
+    .map((item) => cleanDisplayText(item))
+    .filter(Boolean);
+  const contextText = hiddenContexts.map(cleanDisplayText).join(" ");
+  const unique = Array.from(new Set(cleaned)).filter((item) => {
+    if (hiddenContexts.map(cleanDisplayText).includes(item)) return false;
+    if (item.length < 2) return false;
+    const tokenPattern = new RegExp(`(^|[\\s./·()])${escapeRegExp(item)}($|[\\s./·()])`);
+    const coveredByLongerKeyword = cleaned.some(
+      (other) => other !== item && other.length > item.length && tokenPattern.test(other),
+    );
+    const coveredByContext = tokenPattern.test(contextText);
+    return !coveredByLongerKeyword && !coveredByContext;
+  });
+  return unique.slice(0, 5);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function formatQuestionType(type: InterviewQuestion["type"]) {
