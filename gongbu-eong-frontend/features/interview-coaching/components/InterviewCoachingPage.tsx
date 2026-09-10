@@ -288,9 +288,12 @@ export function InterviewCoachingPage({
                     value={manualDuty}
                     onChange={(event) => setManualDuty(event.target.value)}
                     onFocus={(event) => focusField(event.currentTarget)}
-                    placeholder="면접 질문을 만들 직무 내용을 짧게 입력하세요."
+                    placeholder="예: 민원 응대, 예산 정산, 자료 검토, 보고서 작성 등 실제 수행할 업무를 입력해 주세요."
                   />
                 </div>
+                <p className={styles.manualNotice}>
+                  직접 입력 시에는 실제 채용공고의 자격요건, 우대사항, 전형 정보가 반영되지 않고 입력한 기업명과 직무 내용을 기준으로 질문이 생성됩니다. 더 정확한 코칭을 원하면 지원 공고를 연결해 주세요.
+                </p>
               </section>
             ) : null}
             {error ? <p className={styles.error}>{error}</p> : null}

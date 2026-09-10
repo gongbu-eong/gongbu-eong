@@ -12,6 +12,7 @@
 .connectedJobCard p{margin:0;color:#5a6580;font-size:calc(.8125rem + 3px);line-height:1.5}
 .manualCard,.profileCard,.ncsPanel,.interviewPanel,.resultHero,.resultSection{border:1px solid #e4e8ef;border-radius:.75rem;background:#fff;padding:1rem;box-shadow:0 .25rem .875rem rgba(26,34,51,.04)}
 .manualCard{display:grid;gap:.875rem;margin-top:1rem}
+.manualNotice{margin:0;padding:.75rem;border-radius:.5rem;background:#fff8e8;color:#7a5a1d;font-size:calc(.8125rem + 3px);line-height:1.55;word-break:keep-all}
 .sectionTitle{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:1.5rem 0 .75rem}
 .sectionTitle h2{margin:0;font-size:calc(1rem + 3px);font-weight:900}
 .sectionTitle small{color:#8a94a8;font-size:calc(.75rem + 3px)}

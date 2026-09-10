@@ -48,22 +48,63 @@ export type StartInterviewCoachingArgs = {
   traceId?: string | null;
 };
 
+function resolveInterviewInput(args: StartInterviewCoachingArgs) {
+  const job = args.posting ? makeJobSnapshot(args.posting) : null;
+  const manualCompanyName = cleanText(args.manualCompanyName).slice(0, 100);
+  const manualPositionName = cleanText(args.manualPositionName).slice(0, 100);
+  const submittedDutyText = cleanText(args.jobDuty);
+  const meaningfulDutyText = isMeaningfulDutyText(submittedDutyText)
+    ? submittedDutyText.slice(0, 400)
+    : "";
+  const postingPositionName = args.posting
+    ? [
+      args.posting.job_category,
+      args.posting.ncs_category,
+      args.posting.title,
+    ].map((item) => cleanText(item).slice(0, 120)).find(Boolean) || ""
+    : "";
+  const postingDutyText = args.posting
+    ? Array.from(new Set([
+      cleanText(args.posting.job_category),
+      cleanText(args.posting.ncs_category),
+      meaningfulDutyText,
+    ].filter(Boolean))).join(" / ").slice(0, 400)
+    : "";
+
+  return {
+    job,
+    companyName: job?.institutionName || manualCompanyName,
+    positionName: args.posting
+      ? postingPositionName || manualPositionName || meaningfulDutyText
+      : meaningfulDutyText || manualPositionName,
+    dutyText: args.posting
+      ? postingDutyText || postingPositionName || manualPositionName || meaningfulDutyText
+      : meaningfulDutyText || manualPositionName,
+  };
+}
+
+function isMeaningfulDutyText(value: string) {
+  const text = value.trim();
+  if (!text) return false;
+  const normalized = text.toLowerCase().replace(/\s+/g, "");
+  return ![
+    "test",
+    "testing",
+    "테스트",
+    "직무",
+    "없음",
+    "없습니다",
+    "na",
+    "n/a",
+    "-",
+    ".",
+  ].includes(normalized);
+}
+
 export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
   const startedAt = Date.now();
   const traceId = args.traceId || undefined;
-  const job = args.posting ? makeJobSnapshot(args.posting) : null;
-  const companyName =
-    job?.institutionName || cleanText(args.manualCompanyName).slice(0, 100);
-  const positionName =
-    cleanText(args.jobDuty) ||
-    args.posting?.job_category ||
-    args.posting?.ncs_category ||
-    cleanText(args.manualPositionName).slice(0, 100);
-  const dutyText =
-    cleanText(args.jobDuty) ||
-    args.posting?.job_category ||
-    args.posting?.ncs_category ||
-    cleanText(args.manualPositionName).slice(0, 400);
+  const { job, companyName, positionName, dutyText } = resolveInterviewInput(args);
 
   if (!companyName && !positionName && !dutyText) {
     throw new Error("지원 공고를 연결하거나 직무명을 입력해 주세요.");
@@ -186,19 +227,7 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
 }
 
 export async function createInterviewCoachingDraft(args: StartInterviewCoachingArgs) {
-  const job = args.posting ? makeJobSnapshot(args.posting) : null;
-  const companyName =
-    job?.institutionName || cleanText(args.manualCompanyName).slice(0, 100);
-  const positionName =
-    cleanText(args.jobDuty) ||
-    args.posting?.job_category ||
-    args.posting?.ncs_category ||
-    cleanText(args.manualPositionName).slice(0, 100);
-  const dutyText =
-    cleanText(args.jobDuty) ||
-    args.posting?.job_category ||
-    args.posting?.ncs_category ||
-    cleanText(args.manualPositionName).slice(0, 400);
+  const { job, companyName, positionName, dutyText } = resolveInterviewInput(args);
 
   if (!companyName && !positionName && !dutyText) {
     throw new Error("지원 공고를 연결하거나 직무명을 입력해 주세요.");
