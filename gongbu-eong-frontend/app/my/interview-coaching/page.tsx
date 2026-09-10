@@ -15,7 +15,6 @@ type InterviewHistoryItem = {
   kind: "interview";
   createdAt: string;
   title: string;
-  subtitle: string;
   score: number | null;
   isLinked: boolean;
   href: string;
@@ -145,14 +144,12 @@ function HistoryJobCard({ item }: { item: InterviewHistoryItem }) {
       <span className={`${styles.scoreBox} ${styles.interviewScoreBox}`}>{score == null ? "-" : score}</span>
       <div className={styles.cardBody}>
         <div className={styles.badges}>
-          <span className={styles.interviewPill}>AI NCS 면접 코칭</span>
           <span className={item.isLinked ? styles.linkedPill : styles.generalPill}>
             {item.isLinked ? "공고 연결" : "일반"}
           </span>
           {item.status !== "completed" ? <span className={styles.generalPill}>{formatInterviewStatus(item.status)}</span> : null}
         </div>
         <strong>{item.title}</strong>
-        <small className={styles.cardSubtitle}>{item.subtitle}</small>
         <time>{date}</time>
       </div>
       <span className={styles.chevron} aria-hidden="true">{">"}</span>
@@ -169,7 +166,6 @@ function mapInterviewHistoryItem(item: InterviewCoachingSession): InterviewHisto
     title: item.job
       ? makeJobTitle(item.job.institutionName, item.job.title)
       : `${item.companyName || "기업 미정"} ${item.positionName || "직무 미정"}`.trim(),
-    subtitle: item.result?.summary || item.dutyText || "AI NCS 면접 코칭",
     score: item.result?.score ?? null,
     isLinked,
     href: `/my/interview-coaching/${item.id}`,

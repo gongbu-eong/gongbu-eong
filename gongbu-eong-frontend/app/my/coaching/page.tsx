@@ -14,7 +14,6 @@ type UnifiedHistoryItem = {
   kind: "resume";
   createdAt: string;
   title: string;
-  subtitle: string;
   score: number | null;
   isLinked: boolean;
   href: string;
@@ -145,13 +144,11 @@ function HistoryJobCard({ item }: { item: UnifiedHistoryItem }) {
       <span className={styles.scoreBox}>{score == null ? "-" : score}</span>
       <div className={styles.cardBody}>
         <div className={styles.badges}>
-          <span className={styles.scorePill}>AI NCS 자소서 코칭</span>
           <span className={item.isLinked ? styles.linkedPill : styles.generalPill}>
             {item.isLinked ? "공고 연결" : "일반"}
           </span>
         </div>
         <strong>{item.title}</strong>
-        <small className={styles.cardSubtitle}>{item.subtitle}</small>
         <time>{date}</time>
       </div>
       <span className={styles.chevron} aria-hidden="true">{">"}</span>
@@ -167,8 +164,7 @@ function mapResumeHistoryItem(item: CoachingHistoryItem): UnifiedHistoryItem {
     createdAt: item.createdAt,
     title: item.job
       ? makeJobTitle(item.job.institutionName, item.job.title)
-      : "공고 연결 없이 받은 AI NCS 자소서 코칭",
-    subtitle: item.result?.summary || "AI NCS 자소서 코칭 결과",
+      : "공고 연결 없이 받은 코칭",
     score: item.result?.score ?? null,
     isLinked,
     href: `/my/coaching/${item.id}`,
