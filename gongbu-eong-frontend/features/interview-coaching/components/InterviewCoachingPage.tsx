@@ -837,7 +837,7 @@ function JobPicker({
   const manualTitle = manualJobKeyword.trim();
   return (
     <div className={styles.overlay}>
-      <section className={styles.modal}>
+      <section data-keyboard-sheet="true" className={styles.modal}>
         <div className={styles.sheetHandle} />
         <header>
           <h2>연결할 공고 선택</h2>
@@ -846,7 +846,7 @@ function JobPicker({
         <div className={styles.search}>
           <input
             value={query}
-            onFocus={(event) => focusField(event.currentTarget)}
+            onFocus={(event) => focusSheetField(event.currentTarget)}
             onChange={(event) => {
               setQuery(event.target.value);
               if (!jobs.length) setManualJobKeyword(event.target.value);
@@ -876,7 +876,7 @@ function JobPicker({
               <p>공고가 나오지 않는다면 직접 입력하거나,<br />재검색하세요.</p>
               <input
                 value={manualJobKeyword}
-                onFocus={(event) => focusField(event.currentTarget)}
+                onFocus={(event) => focusSheetField(event.currentTarget)}
                 onChange={(event) => setManualJobKeyword(event.target.value)}
                 placeholder="기업명이나, 공고명을 입력하세요."
               />
@@ -905,7 +905,7 @@ function JobDutySheet({
   const [duty, setDuty] = useState("");
   return (
     <div className={styles.overlay}>
-      <section className={styles.modal}>
+      <section data-keyboard-sheet="true" className={styles.modal}>
         <div className={styles.sheetHandle} />
         <header>
           <button type="button" onClick={onBack} aria-label="이전">‹</button>
@@ -920,7 +920,7 @@ function JobDutySheet({
         <input
           className={styles.jobDutyInput}
           value={duty}
-          onFocus={(event) => focusField(event.currentTarget)}
+          onFocus={(event) => focusSheetField(event.currentTarget)}
           onChange={(event) => setDuty(event.target.value)}
           placeholder="직무를 입력하세요."
         />
@@ -1029,4 +1029,24 @@ function focusField(element?: HTMLElement | null) {
   if (!element) return;
   if ("focus" in element) element.focus({ preventScroll: true });
   focusMobileInput(element);
+}
+
+function focusSheetField(element?: HTMLElement | null) {
+  if (!element) return;
+  const sheet = element.closest<HTMLElement>("[data-keyboard-sheet]");
+  if (!sheet) {
+    focusField(element);
+    return;
+  }
+  window.setTimeout(() => {
+    const sheetRect = sheet.getBoundingClientRect();
+    const targetRect = element.getBoundingClientRect();
+    const topPadding = 72;
+    const bottomPadding = 120;
+    if (targetRect.top < sheetRect.top + topPadding) {
+      sheet.scrollBy({ top: targetRect.top - sheetRect.top - topPadding, behavior: "smooth" });
+    } else if (targetRect.bottom > sheetRect.bottom - bottomPadding) {
+      sheet.scrollBy({ top: targetRect.bottom - sheetRect.bottom + bottomPadding, behavior: "smooth" });
+    }
+  }, 80);
 }

@@ -350,12 +350,12 @@ function JobPicker({
 }) {
   const manualTitle = manualJobKeyword.trim();
 
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet} ${styles.jobPickerSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => { setQuery(event.target.value); if (!jobs.length) setManualJobKeyword(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter") onSearch(); }} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div>{!searching && !jobs.length ? <p className={styles.jobResultCount}>검색결과 0</p> : null}<div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : <div className={styles.noJobResult}><strong>검색결과가 없습니다.</strong><p>공고가 나오지 않는다면 직접 입력하거나,<br />재검색하세요.</p><input value={manualJobKeyword} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setManualJobKeyword(event.target.value)} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" disabled={!manualTitle} onClick={() => onManualConfirm(manualTitle)}>공고 입력 완료</button></div>}</div></section></div>;
+  return <div className={styles.overlay}><section data-keyboard-sheet="true" className={`${styles.modal} ${styles.coachingSheet} ${styles.jobPickerSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => { setQuery(event.target.value); if (!jobs.length) setManualJobKeyword(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter") onSearch(); }} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div>{!searching && !jobs.length ? <p className={styles.jobResultCount}>검색결과 0</p> : null}<div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : <div className={styles.noJobResult}><strong>검색결과가 없습니다.</strong><p>공고가 나오지 않는다면 직접 입력하거나,<br />재검색하세요.</p><input value={manualJobKeyword} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => setManualJobKeyword(event.target.value)} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" disabled={!manualTitle} onClick={() => onManualConfirm(manualTitle)}>공고 입력 완료</button></div>}</div></section></div>;
 }
 
 function JobDutySheet({ job, onBack, onClose, onConfirm }: { job: CoachingJob; onBack: () => void; onClose: () => void; onConfirm: (duty: string) => void }) {
   const [duty, setDuty] = useState("");
-  return <div className={styles.overlay}><section className={`${styles.modal} ${styles.coachingSheet} ${styles.jobDutySheet}`}><div className={styles.sheetHandle} /><header><button type="button" onClick={onBack} aria-label="이전">‹</button><h2>직무</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.jobDutySelected}><span>{job.isManual ? "직접 입력한 공고" : job.institutionName}</span><strong>{formatConnectedJobTitle(job)}</strong></div><label className={styles.jobDutyLabel}>직무</label><input className={styles.jobDutyInput} value={duty} onFocus={(event) => focusField(event.currentTarget)} onChange={(event) => setDuty(event.target.value)} placeholder="직무를 입력하세요." /><button className={styles.primaryButton} type="button" disabled={!duty.trim()} onClick={() => onConfirm(duty.trim())}>공고 연결하기</button></section></div>;
+  return <div className={styles.overlay}><section data-keyboard-sheet="true" className={`${styles.modal} ${styles.coachingSheet} ${styles.jobDutySheet}`}><div className={styles.sheetHandle} /><header><button type="button" onClick={onBack} aria-label="이전">‹</button><h2>직무</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.jobDutySelected}><span>{job.isManual ? "직접 입력한 공고" : job.institutionName}</span><strong>{formatConnectedJobTitle(job)}</strong></div><label className={styles.jobDutyLabel}>직무</label><input className={styles.jobDutyInput} value={duty} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => setDuty(event.target.value)} placeholder="직무를 입력하세요." /><button className={styles.primaryButton} type="button" disabled={!duty.trim()} onClick={() => onConfirm(duty.trim())}>공고 연결하기</button></section></div>;
 }
 
 /*
@@ -434,6 +434,26 @@ function focusField(element?: HTMLElement | null) {
   if (!element) return;
   if ("focus" in element) element.focus({ preventScroll: true });
   focusMobileInput(element);
+}
+
+function focusSheetField(element?: HTMLElement | null) {
+  if (!element) return;
+  const sheet = element.closest<HTMLElement>("[data-keyboard-sheet]");
+  if (!sheet) {
+    focusField(element);
+    return;
+  }
+  window.setTimeout(() => {
+    const sheetRect = sheet.getBoundingClientRect();
+    const targetRect = element.getBoundingClientRect();
+    const topPadding = 72;
+    const bottomPadding = 120;
+    if (targetRect.top < sheetRect.top + topPadding) {
+      sheet.scrollBy({ top: targetRect.top - sheetRect.top - topPadding, behavior: "smooth" });
+    } else if (targetRect.bottom > sheetRect.bottom - bottomPadding) {
+      sheet.scrollBy({ top: targetRect.bottom - sheetRect.bottom + bottomPadding, behavior: "smooth" });
+    }
+  }, 80);
 }
 
 function formatConnectedJobTitle(job: CoachingJob) {

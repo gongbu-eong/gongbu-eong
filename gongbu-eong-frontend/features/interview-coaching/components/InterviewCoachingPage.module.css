@@ -104,8 +104,8 @@
 .resultQuestionTabs button.questionTabActive{border-color:#2f7ff0;background:#2f7ff0;color:#fff}
 .resultQuestionTabs button.questionTabAnswered:not(.questionTabActive){border-color:#b8d4ff;background:#e8f1ff;color:#2f7ff0}
 .resultQuestionDetail{display:grid;gap:.875rem}
-.overlay{position:fixed;top:0;right:0;bottom:var(--mobile-keyboard-inset,0px);left:0;z-index:1000;background:rgba(26,34,51,.5);display:flex;align-items:flex-end;justify-content:center}
-.modal{width:100%;max-width:37.5rem;min-height:43.75rem;max-height:min(82dvh,43.75rem);background:#fff;border-radius:1rem 1rem 0 0;padding:1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.overlay{position:fixed;inset:0;z-index:1000;box-sizing:border-box;height:100dvh;padding-bottom:var(--mobile-keyboard-inset,0px);background:rgba(26,34,51,.5);display:flex;align-items:flex-end;justify-content:center}
+.modal{box-sizing:border-box;width:100%;max-width:37.5rem;min-height:43.75rem;max-height:min(82dvh,43.75rem);background:#fff;border-radius:1rem 1rem 0 0;padding:1.25rem 1rem calc(1.25rem + env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .sheetHandle{width:2.5rem;height:.25rem;border-radius:999px;background:#e4e8ef;margin:0 auto 1.25rem}
 .modal header{display:flex;justify-content:space-between;align-items:center}.modal header h2{font-size:calc(1.0625rem + 3px)}.modal header button{border:0;background:none;font-size:calc(1.5rem + 3px);color:#5a6580}
 .search{display:flex;gap:.5rem}.search input{flex:1;border:1px solid #e4e8ef;border-radius:.3125rem;padding:.75rem;font:inherit}.search button{border:0;border-radius:.5rem;background:#2f7ff0;color:#fff;padding:0 1rem;font-weight:800}
@@ -117,4 +117,5 @@
 .alertDialog{width:min(20rem,100%);padding:1.5rem;border-radius:1rem;background:#fff;text-align:center;box-shadow:0 1rem 2.5rem rgba(26,34,51,.18)}
 .alertDialog h2{margin:0 0 1rem;font-size:calc(1rem + 3px);line-height:1.45}.alertDialog button{width:100%;height:2.875rem;border:0;border-radius:.625rem;background:#2f7ff0;color:#fff;font-size:calc(1rem + 3px);font-weight:900}
 @media (min-width:37.5rem){.frame{padding-left:2rem;padding-right:2rem}.overlay{align-items:center}.modal{border-radius:1rem;max-width:37.5rem}.profileGrid{grid-template-columns:1fr 1fr}}
+@media (max-width:37.4375rem){.overlay{align-items:flex-end}.modal{min-height:auto;height:min(700px,calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px));max-height:calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px);padding-bottom:calc(24px + env(safe-area-inset-bottom))}.search input,.noJobResult input,.jobDutyInput{font-size:16px;scroll-margin-bottom:calc(120px + var(--mobile-keyboard-inset,0px))}}
 @media (max-width:22.5rem){.bottomActions{grid-template-columns:1fr}.answerFooter{display:grid}.answerFooter button{width:100%}}
