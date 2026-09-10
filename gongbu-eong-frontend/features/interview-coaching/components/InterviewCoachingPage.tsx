@@ -504,7 +504,6 @@ function QuestionTabs({
   const activeButtonRef = useRef<HTMLButtonElement | null>(null);
   const dragRef = useRef({
     dragging: false,
-    moved: false,
     startX: 0,
     scrollLeft: 0,
   });
@@ -545,7 +544,6 @@ function QuestionTabs({
     if (!list) return;
     dragRef.current = {
       dragging: true,
-      moved: false,
       startX: event.clientX,
       scrollLeft: list.scrollLeft,
     };
@@ -556,7 +554,6 @@ function QuestionTabs({
     const list = tabListRef.current;
     if (!list || !dragRef.current.dragging) return;
     const distance = event.clientX - dragRef.current.startX;
-    if (Math.abs(distance) > 4) dragRef.current.moved = true;
     list.scrollLeft = dragRef.current.scrollLeft - distance;
   };
 
@@ -565,9 +562,6 @@ function QuestionTabs({
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     dragRef.current.dragging = false;
-    window.setTimeout(() => {
-      dragRef.current.moved = false;
-    }, 0);
   };
 
   return (
@@ -600,13 +594,7 @@ function QuestionTabs({
               ref={isActive ? activeButtonRef : undefined}
               className={`${isActive ? styles.questionTabActive : ""} ${isAnswered ? styles.questionTabAnswered : ""}`}
               type="button"
-              onClick={(event) => {
-                if (dragRef.current.moved) {
-                  event.preventDefault();
-                  return;
-                }
-                onSelect(question.id);
-              }}
+              onClick={() => onSelect(question.id)}
               aria-current={isActive ? "true" : undefined}
               title={`질문 ${index + 1}`}
             >
