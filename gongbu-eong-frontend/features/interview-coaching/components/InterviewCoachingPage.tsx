@@ -26,6 +26,7 @@ import styles from "./InterviewCoachingPage.module.css";
 type ConnectedJob = InterviewCoachingJob & { duty: string };
 
 const MAX_ANSWER_LENGTH = 4000;
+const RELEVANT_NCS_THRESHOLD = 50;
 
 export function InterviewCoachingPage({
   initialSessionId,
@@ -483,8 +484,7 @@ function InterviewAnalysisView({ session }: { session: InterviewCoachingSession 
 
 function getVisibleNcsMappings(mappings: InterviewNcsMapping[]) {
   const sorted = [...mappings].sort((left, right) => right.relevance - left.relevance);
-  const matched = sorted.filter((item) => item.relevance >= 50);
-  return (matched.length >= 3 ? matched : sorted.slice(0, 5)).slice(0, 5);
+  return sorted.filter((item) => item.relevance >= RELEVANT_NCS_THRESHOLD);
 }
 
 function getQuestionBadgeAreas(
@@ -497,7 +497,9 @@ function getQuestionBadgeAreas(
   const matched = question.ncsAreas.filter((area) => visibleNames.has(area));
   return matched.length
     ? matched
-    : [visibleMappings[index % Math.max(visibleMappings.length, 1)]?.name || "문제해결능력"];
+    : visibleMappings[index % Math.max(visibleMappings.length, 1)]
+      ? [visibleMappings[index % Math.max(visibleMappings.length, 1)].name]
+      : [];
 }
 
 function QuestionTabs({

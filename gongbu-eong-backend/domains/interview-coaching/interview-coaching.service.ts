@@ -35,6 +35,7 @@ const NCS_AREAS: Array<{
 
 const MAX_FOLLOW_UPS_PER_QUESTION = 3;
 const INTERVIEW_QUESTION_COUNT = 20;
+const RELEVANT_NCS_THRESHOLD = 50;
 
 export type StartInterviewCoachingArgs = {
   userId?: string | null;
@@ -460,7 +461,7 @@ async function requestStartPayload(input: {
       {
         type: "input_text",
         text: `한국어 NCS 직무 기반 AI 면접 코치입니다.
-지원 공고와 직무를 분석해 NCS 7개 영역과 매핑하고, 실제 면접 연습 질문을 생성하세요.
+지원 공고와 직무를 분석해 NCS 7개 후보 중 실제로 연관된 영역만 추출하고, 실제 면접 연습 질문을 생성하세요.
 모든 분석과 질문은 기업명, 지원 직무, 공고 내용에서 확인되는 업무/자격/우대사항을 근거로 작성하세요.
 
 기업명: ${input.companyName}
@@ -470,14 +471,17 @@ async function requestStartPayload(input: {
 공고에서 참고할 내용:
 ${input.jobContext || "연결된 공고 본문이 없습니다. 기업명과 직무명만 기준으로 분석하세요."}
 
-NCS 7개 영역은 반드시 모두 반환하세요.
+NCS 7개 후보:
 ${NCS_AREAS.map((area, index) => `${index + 1}. ${area.name}: ${area.description}`).join("\n")}
-각 NCS 영역의 reason에는 "${input.companyName}"와 "${input.positionName}"를 직접 언급하고, 공고/직무의 어떤 내용 때문에 관련도가 산정됐는지 설명하세요.
-관련도가 낮은 영역은 억지로 높게 주지 말고 45% 이하로 낮게 평가하세요.
+ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무와 실제로 관련 있는 영역만 반환하세요.
+관련성이 약하거나 공고/직무 내용에서 근거를 찾기 어려운 영역은 ncsMappings에 넣지 마세요.
+반환 개수 제한은 없습니다. 2개만 관련 있으면 2개만, 6개가 관련 있으면 6개를 반환하세요.
+각 NCS 영역의 reason에는 "${input.companyName}"와 "${input.positionName}"를 직접 언급하고, 공고/직무의 어떤 내용 때문에 관련 영역으로 판단했는지 설명하세요.
+반환하는 영역의 relevance는 면접 질문으로 다룰 만한 관련도가 있을 때만 50~100 사이로 산정하세요.
 
 질문은 ${INTERVIEW_QUESTION_COUNT}개를 생성하세요. 경험면접, 상황면접, 직무면접, 인성·가치관, 직업윤리 성격이 골고루 섞여야 합니다.
 각 질문은 "${input.companyName}" 또는 "${input.positionName}" 또는 직무 핵심 키워드 중 하나 이상을 자연스럽게 포함해, 범용 질문처럼 보이지 않게 작성하세요.
-각 질문의 ncsAreas는 관련도 높은 상위 NCS 영역 안에서만 선택하세요. 관련도가 낮은 NCS 영역을 질문 태그로 붙이지 마세요.
+각 질문의 ncsAreas는 ncsMappings에 반환한 관련 NCS 영역 안에서만 선택하세요. 반환하지 않은 NCS 영역을 질문 태그로 붙이지 마세요.
 반드시 JSON 객체 하나만 반환하고, 모든 문장은 한국어로 작성하세요.`,
       },
     ],
@@ -637,16 +641,12 @@ function normalizeStartPayload(
   const providedMappings = normalizeArray(record?.ncsMappings)
     .map((item) => normalizeMapping(item, profile))
     .filter(Boolean) as InterviewAnalysis["ncsMappings"];
-  const mappingMap = new Map(providedMappings.map((item) => [item.name, item]));
-  const ncsMappings = NCS_AREAS.map((area) => {
-    const mapped = mappingMap.get(area.name);
-    return mapped || {
-      name: area.name,
-      relevance: scoreNcsArea(area.name, profile),
-      reason: `${profile.companyName}의 ${profile.positionName} 직무에서 ${area.description}을 확인할 필요가 있어 매핑했습니다.`,
-      interviewFocus: `${profile.companyName} ${profile.positionName} 지원자가 면접에서 설명해야 할 ${area.description}`,
-    };
-  });
+  const relevantProvidedMappings = providedMappings.filter(
+    (item) => item.relevance >= RELEVANT_NCS_THRESHOLD,
+  );
+  const ncsMappings = relevantProvidedMappings.length
+    ? relevantProvidedMappings
+    : buildFallbackNcsMappings(profile);
   const questionMappings = getQuestionNcsMappings(ncsMappings);
 
   const questions = normalizeArray(record?.questions)
@@ -669,8 +669,24 @@ function normalizeStartPayload(
 
 function getQuestionNcsMappings(mappings: InterviewAnalysis["ncsMappings"]) {
   const sorted = [...mappings].sort((left, right) => right.relevance - left.relevance);
-  const matched = sorted.filter((item) => item.relevance >= 50);
-  return (matched.length >= 3 ? matched : sorted.slice(0, 5)).slice(0, 5);
+  const matched = sorted.filter((item) => item.relevance >= RELEVANT_NCS_THRESHOLD);
+  return matched.length ? matched : sorted.slice(0, 1);
+}
+
+function buildFallbackNcsMappings(profile: InterviewAnalysis["profile"]) {
+  const scored = NCS_AREAS
+    .map((area) => ({
+      area,
+      relevance: scoreNcsArea(area.name, profile),
+    }))
+    .sort((left, right) => right.relevance - left.relevance);
+  const matched = scored.filter((item) => item.relevance >= RELEVANT_NCS_THRESHOLD);
+  return (matched.length ? matched : scored.slice(0, 1)).map(({ area, relevance }) => ({
+    name: area.name,
+    relevance,
+    reason: `${profile.companyName}의 ${profile.positionName} 직무에서 ${area.description}을 확인할 필요가 있어 매핑했습니다.`,
+    interviewFocus: `${profile.companyName} ${profile.positionName} 지원자가 면접에서 설명해야 할 ${area.description}`,
+  }));
 }
 
 function normalizeMapping(value: unknown, profile: InterviewAnalysis["profile"]) {
