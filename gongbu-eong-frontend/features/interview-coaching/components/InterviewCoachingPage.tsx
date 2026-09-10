@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getJobPostings } from "@/features/home/home.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
@@ -500,28 +500,130 @@ function QuestionTabs({
   activeQuestionId: string;
   onSelect: (questionId: string) => void;
 }) {
+  const tabListRef = useRef<HTMLDivElement | null>(null);
+  const activeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const dragRef = useRef({
+    dragging: false,
+    moved: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
   const answered = new Set(
     messages.filter((item) => item.role === "answer").map((item) => item.questionId),
   );
+
+  useEffect(() => {
+    activeButtonRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeQuestionId]);
+
+  const scrollTabs = (direction: -1 | 1) => {
+    const list = tabListRef.current;
+    if (!list) return;
+    list.scrollBy({
+      left: direction * Math.max(list.clientWidth * 0.75, 220),
+      behavior: "smooth",
+    });
+  };
+
+  const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
+    const list = tabListRef.current;
+    if (!list) return;
+    const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      ? event.deltaX
+      : event.deltaY;
+    if (!delta) return;
+    event.preventDefault();
+    list.scrollLeft += delta;
+  };
+
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    const list = tabListRef.current;
+    if (!list) return;
+    dragRef.current = {
+      dragging: true,
+      moved: false,
+      startX: event.clientX,
+      scrollLeft: list.scrollLeft,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const list = tabListRef.current;
+    if (!list || !dragRef.current.dragging) return;
+    const distance = event.clientX - dragRef.current.startX;
+    if (Math.abs(distance) > 4) dragRef.current.moved = true;
+    list.scrollLeft = dragRef.current.scrollLeft - distance;
+  };
+
+  const handlePointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    dragRef.current.dragging = false;
+    window.setTimeout(() => {
+      dragRef.current.moved = false;
+    }, 0);
+  };
+
   return (
-    <nav className={styles.questionTabs} aria-label="면접 질문 선택">
-      {questions.map((question, index) => {
-        const isActive = question.id === activeQuestionId;
-        const isAnswered = answered.has(question.id);
-        return (
-          <button
-            key={question.id}
-            className={`${isActive ? styles.questionTabActive : ""} ${isAnswered ? styles.questionTabAnswered : ""}`}
-            type="button"
-            onClick={() => onSelect(question.id)}
-            aria-current={isActive ? "true" : undefined}
-            title={`질문 ${index + 1}`}
-          >
-            Q{index + 1}
-          </button>
-        );
-      })}
-    </nav>
+    <div className={styles.questionTabsShell}>
+      <button
+        className={styles.questionTabsControl}
+        type="button"
+        onClick={() => scrollTabs(-1)}
+        aria-label="이전 질문 탭 보기"
+      >
+        {"<"}
+      </button>
+      <nav
+        ref={tabListRef}
+        className={styles.questionTabs}
+        aria-label="면접 질문 선택"
+        onWheel={handleWheel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onPointerLeave={handlePointerEnd}
+      >
+        {questions.map((question, index) => {
+          const isActive = question.id === activeQuestionId;
+          const isAnswered = answered.has(question.id);
+          return (
+            <button
+              key={question.id}
+              ref={isActive ? activeButtonRef : undefined}
+              className={`${isActive ? styles.questionTabActive : ""} ${isAnswered ? styles.questionTabAnswered : ""}`}
+              type="button"
+              onClick={(event) => {
+                if (dragRef.current.moved) {
+                  event.preventDefault();
+                  return;
+                }
+                onSelect(question.id);
+              }}
+              aria-current={isActive ? "true" : undefined}
+              title={`질문 ${index + 1}`}
+            >
+              Q{index + 1}
+            </button>
+          );
+        })}
+      </nav>
+      <button
+        className={styles.questionTabsControl}
+        type="button"
+        onClick={() => scrollTabs(1)}
+        aria-label="다음 질문 탭 보기"
+      >
+        {">"}
+      </button>
+    </div>
   );
 }
 
