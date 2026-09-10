@@ -45,9 +45,12 @@ export type StartInterviewCoachingArgs = {
   jobDuty?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;
+  traceId?: string | null;
 };
 
 export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
+  const startedAt = Date.now();
+  const traceId = args.traceId || undefined;
   const job = args.posting ? makeJobSnapshot(args.posting) : null;
   const companyName =
     job?.institutionName || cleanText(args.manualCompanyName).slice(0, 100);
@@ -66,6 +69,14 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     throw new Error("지원 공고를 연결하거나 직무명을 입력해 주세요.");
   }
 
+  logInterviewStage(traceId, "service:start", {
+    hasUserId: Boolean(args.userId),
+    hasAnonymousId: Boolean(args.anonymousId),
+    hasPosting: Boolean(args.posting),
+    companyName: companyName || "기업 미정",
+    positionName: positionName || "직무 미정",
+  });
+  logInterviewStage(traceId, "db:create-session:start");
   const sessionId = await createInterviewSession({
     userId: args.userId,
     anonymousId: args.anonymousId,
@@ -77,6 +88,10 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     ipAddress: args.ipAddress,
     userAgent: args.userAgent,
   });
+  logInterviewStage(traceId, "db:create-session:done", {
+    sessionId,
+    elapsedMs: Date.now() - startedAt,
+  });
 
   const jobContext = args.posting ? buildPostingContext(args.posting) : "";
   const fallbackProfile = {
@@ -86,14 +101,31 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
   };
 
   try {
+    logInterviewStage(traceId, "ai:start-payload:start", {
+      sessionId,
+      jobContextLength: jobContext.length,
+      questionCount: INTERVIEW_QUESTION_COUNT,
+    });
+    const aiPayload = await requestStartPayload({
+      ...fallbackProfile,
+      jobContext,
+    });
+    logInterviewStage(traceId, "ai:start-payload:done", {
+      sessionId,
+      elapsedMs: Date.now() - startedAt,
+    });
+
     const { analysis, questions } = normalizeStartPayload(
-      await requestStartPayload({
-        ...fallbackProfile,
-        jobContext,
-      }),
+      aiPayload,
       fallbackProfile,
     );
+    logInterviewStage(traceId, "ai:normalize:done", {
+      sessionId,
+      ncsMappingCount: analysis.ncsMappings.length,
+      questionCount: questions.length,
+    });
 
+    logInterviewStage(traceId, "db:update-analysis:start", { sessionId });
     await updateInterviewSessionAnalysis({
       sessionId,
       companyName: analysis.profile.companyName,
@@ -102,7 +134,15 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
       analysis,
       questions,
     });
+    logInterviewStage(traceId, "db:update-analysis:done", {
+      sessionId,
+      elapsedMs: Date.now() - startedAt,
+    });
 
+    logInterviewStage(traceId, "db:add-question-messages:start", {
+      sessionId,
+      questionCount: questions.length,
+    });
     for (const question of questions) {
       await addInterviewMessage({
         sessionId,
@@ -111,7 +151,15 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
         content: question.question,
       });
     }
+    logInterviewStage(traceId, "db:add-question-messages:done", {
+      sessionId,
+      elapsedMs: Date.now() - startedAt,
+    });
   } catch (error) {
+    logInterviewError(traceId, "service:start-failed", error, {
+      sessionId,
+      elapsedMs: Date.now() - startedAt,
+    });
     await markInterviewSessionFailed(
       sessionId,
       error instanceof Error && error.message
@@ -123,12 +171,17 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     throw error;
   }
 
+  logInterviewStage(traceId, "db:find-created-session:start", { sessionId });
   const session = await findInterviewSessionForViewer({
     sessionId,
     userId: args.userId,
     anonymousId: args.userId ? null : args.anonymousId,
   });
   if (!session) throw new Error("면접 코칭 세션을 생성하지 못했습니다.");
+  logInterviewStage(traceId, "service:done", {
+    sessionId,
+    elapsedMs: Date.now() - startedAt,
+  });
   return session;
 }
 
@@ -307,6 +360,9 @@ export async function completeInterviewCoaching(args: {
 }) {
   const session = await findInterviewSessionForViewer(args);
   if (!session) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
+  if (!session.messages.some((item) => item.role === "answer")) {
+    throw new Error("면접 답변을 하나 이상 제출하면 결과를 확인할 수 있어요.");
+  }
   const result = normalizeResult(
     await requestFinalResult(session),
     session.questions,
@@ -402,6 +458,9 @@ async function requestFinalResult(
   session: Awaited<ReturnType<typeof findInterviewSessionForViewer>>,
 ) {
   if (!session) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
+  const answeredQuestionIds = new Set(
+    session.messages.filter((item) => item.role === "answer").map((item) => item.questionId),
+  );
   return createOpenAiJsonResponse({
     model: getInterviewModel(),
     schemaName: "interview_coaching_result",
@@ -420,6 +479,8 @@ ${session.questions.map((item, index) => `${index + 1}. ${item.question}`).join(
 대화 기록:
 ${session.messages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.followUpIndex}` : ""}: ${item.content}`).join("\n")}
 
+답변한 문항 수: ${answeredQuestionIds.size}개
+최종 평가는 답변이 제출된 문항과 그 꼬리질문 기록을 중심으로 작성하세요. 답변하지 않은 문항은 평가하지 말고, 필요하면 추가 연습 권장 문항으로만 다루세요.
 점수는 공식 NCS 점수가 아니라 서비스용 참고 점수입니다.
 반드시 JSON 객체 하나만 반환하세요.`,
       },
@@ -499,11 +560,11 @@ function normalizeStartPayload(
     .map((item) => normalizeMapping(item, profile))
     .filter(Boolean) as InterviewAnalysis["ncsMappings"];
   const mappingMap = new Map(providedMappings.map((item) => [item.name, item]));
-  const ncsMappings = NCS_AREAS.map((area, index) => {
+  const ncsMappings = NCS_AREAS.map((area) => {
     const mapped = mappingMap.get(area.name);
     return mapped || {
       name: area.name,
-      relevance: index < 3 ? 72 - index * 8 : 42,
+      relevance: scoreNcsArea(area.name, profile),
       reason: `${profile.companyName}의 ${profile.positionName} 직무에서 ${area.description}을 확인할 필요가 있어 매핑했습니다.`,
       interviewFocus: `${profile.companyName} ${profile.positionName} 지원자가 면접에서 설명해야 할 ${area.description}`,
     };
@@ -532,16 +593,152 @@ function normalizeMapping(value: unknown, profile: InterviewAnalysis["profile"])
   const name = normalizeNcsAreaName(record?.name);
   if (!record || !name) return null;
   const area = NCS_AREAS.find((item) => item.name === name);
+  const relevance = clampNumber(record.relevance, 0, 100, scoreNcsArea(name, profile));
+  const reason = readString(record.reason);
   return {
     name,
-    relevance: clampNumber(record.relevance, 0, 100, 50),
+    relevance,
     reason:
-      readString(record.reason) ||
-      `${profile.companyName}의 ${profile.positionName} 직무에서 ${area?.description || name}을 확인하기 위해 매핑했습니다.`,
+      contextualizeMappingReason(reason, profile, area?.description || name),
     interviewFocus:
       readString(record.interviewFocus) ||
       `${profile.companyName} ${profile.positionName} 면접에서 확인할 ${area?.description || name}`,
   };
+}
+
+function contextualizeMappingReason(
+  reason: string,
+  profile: InterviewAnalysis["profile"],
+  fallbackFocus: string,
+) {
+  if (!reason) {
+    return `${profile.companyName}의 ${profile.positionName} 직무에서 ${fallbackFocus}을 확인하기 위해 매핑했습니다.`;
+  }
+  if (reason.includes(profile.companyName) || reason.includes(profile.positionName)) {
+    return reason;
+  }
+  return `${profile.companyName}의 ${profile.positionName} 직무 기준으로, ${reason}`;
+}
+
+function scoreNcsArea(
+  name: NcsAreaName,
+  profile: InterviewAnalysis["profile"],
+) {
+  const text = [
+    profile.companyName,
+    profile.positionName,
+    profile.dutyText,
+    ...profile.keywords,
+  ].join(" ").toLowerCase();
+  const keywordMap: Record<NcsAreaName, string[]> = {
+    의사소통능력: [
+      "문서",
+      "작성",
+      "보고",
+      "설명",
+      "민원",
+      "고객",
+      "상담",
+      "홍보",
+      "행정",
+      "사무",
+      "협의",
+      "커뮤니케이션",
+    ],
+    수리능력: [
+      "회계",
+      "세무",
+      "예산",
+      "정산",
+      "통계",
+      "수치",
+      "데이터",
+      "분석",
+      "계량",
+      "원가",
+      "재무",
+      "급여",
+    ],
+    문제해결능력: [
+      "문제",
+      "개선",
+      "해결",
+      "시설",
+      "안전",
+      "전기",
+      "기계",
+      "설비",
+      "운영",
+      "유지",
+      "점검",
+      "관리",
+      "장애",
+      "현장",
+    ],
+    자기개발능력: [
+      "교육",
+      "연구",
+      "학습",
+      "자격",
+      "전문",
+      "기술",
+      "훈련",
+      "개발",
+      "성장",
+      "신입",
+      "인턴",
+    ],
+    대인관계능력: [
+      "협업",
+      "팀",
+      "조정",
+      "갈등",
+      "고객",
+      "민원",
+      "서비스",
+      "대응",
+      "지원",
+      "관계",
+      "소통",
+    ],
+    정보능력: [
+      "정보",
+      "시스템",
+      "전산",
+      "it",
+      "데이터",
+      "자료",
+      "분석",
+      "보안",
+      "소프트웨어",
+      "엑셀",
+      "프로그램",
+      "온라인",
+    ],
+    직업윤리: [
+      "공공",
+      "규정",
+      "법",
+      "윤리",
+      "책임",
+      "청렴",
+      "보안",
+      "안전",
+      "환경",
+      "의료",
+      "병원",
+      "준수",
+      "원칙",
+    ],
+  };
+  const matches = keywordMap[name].reduce(
+    (count, keyword) => count + (text.includes(keyword.toLowerCase()) ? 1 : 0),
+    0,
+  );
+  const spread = Array.from(`${profile.companyName}${profile.positionName}${name}`)
+    .reduce((sum, char) => sum + char.charCodeAt(0), 0) % 9;
+  const score = 28 + matches * 11 + spread;
+  return Math.max(24, Math.min(92, score));
 }
 
 function buildFallbackProfile(fallback: {
@@ -898,6 +1095,29 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
 
 function readString(value: unknown) {
   return typeof value === "string" ? cleanText(value) : "";
+}
+
+function logInterviewStage(
+  traceId: string | undefined,
+  stage: string,
+  details?: Record<string, unknown>,
+) {
+  if (!traceId) return;
+  console.info(`[InterviewCoaching:${traceId}] ${stage}`, details || {});
+}
+
+function logInterviewError(
+  traceId: string | undefined,
+  stage: string,
+  error: unknown,
+  details?: Record<string, unknown>,
+) {
+  if (!traceId) return;
+  console.error(`[InterviewCoaching:${traceId}] ${stage}`, {
+    ...details,
+    message: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
 }
 
 function cleanText(value?: string | null) {

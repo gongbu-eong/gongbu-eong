@@ -27,8 +27,17 @@ export async function startInterviewCoaching(args: {
     ok: boolean;
     session: InterviewCoachingSession;
     message?: string;
+    requestId?: string;
   };
-  if (!response.ok || !body.ok) throw new Error(body.message || "면접 코칭을 시작하지 못했습니다.");
+  if (!response.ok || !body.ok) {
+    console.error("[InterviewCoaching] start failed", {
+      status: response.status,
+      requestId: body.requestId,
+      message: body.message,
+      body,
+    });
+    throw new Error(body.message || "면접 코칭을 시작하지 못했습니다.");
+  }
   return body;
 }
 

@@ -50,6 +50,7 @@ export function InterviewCoachingPage({
   const [manualDuty, setManualDuty] = useState("");
   const [session, setSession] = useState<InterviewCoachingSession | null>(null);
   const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
+  const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
   const [busy, setBusy] = useState<"load" | "start" | "complete" | null>(
     initialSessionId ? "load" : null,
   );
@@ -159,6 +160,7 @@ export function InterviewCoachingPage({
         jobDuty: dutyText || null,
       });
       setSession(result.session);
+      setActiveQuestionId(result.session.questions[0]?.id || null);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "면접 코칭을 시작하지 못했습니다.";
@@ -206,8 +208,8 @@ export function InterviewCoachingPage({
       );
       return;
     }
-    if (!hasAnsweredEveryQuestion(session)) {
-      showAlert("생성된 면접 질문에 한 번씩 답변한 뒤 결과를 확인할 수 있어요.");
+    if (!hasAnsweredAnyQuestion(session)) {
+      showAlert("면접 답변을 하나 이상 제출하면 결과를 확인할 수 있어요.");
       return;
     }
 
@@ -226,6 +228,10 @@ export function InterviewCoachingPage({
       setBusy(null);
     }
   };
+
+  const selectedQuestionId = session?.questions.some((item) => item.id === activeQuestionId)
+    ? activeQuestionId || ""
+    : session?.questions[0]?.id || "";
 
   if (busy === "start") return <InterviewLoadingScreen />;
 
@@ -256,38 +262,37 @@ export function InterviewCoachingPage({
               </>
             )}
 
-            <section className={styles.manualCard}>
-              <div className={styles.field}>
-                <span>기업명</span>
-                <input
-                  value={manualCompanyName}
-                  onChange={(event) => setManualCompanyName(event.target.value)}
-                  onFocus={(event) => focusField(event.currentTarget)}
-                  placeholder="예: 한국전력공사"
-                  disabled={Boolean(connectedJob && !connectedJob.isManual)}
-                />
-              </div>
-              <div className={styles.field}>
-                <span>지원 직무</span>
-                <input
-                  value={manualPositionName}
-                  onChange={(event) => setManualPositionName(event.target.value)}
-                  onFocus={(event) => focusField(event.currentTarget)}
-                  placeholder="예: 사무행정, 전기, 토목"
-                  disabled={Boolean(connectedJob)}
-                />
-              </div>
-              <div className={styles.field}>
-                <span>직무</span>
-                <textarea
-                  value={manualDuty}
-                  onChange={(event) => setManualDuty(event.target.value)}
-                  onFocus={(event) => focusField(event.currentTarget)}
-                  placeholder="면접 질문을 만들 직무 내용을 짧게 입력하세요."
-                  disabled={Boolean(connectedJob)}
-                />
-              </div>
-            </section>
+            {!connectedJob ? (
+              <section className={styles.manualCard}>
+                <div className={styles.field}>
+                  <span>기업명</span>
+                  <input
+                    value={manualCompanyName}
+                    onChange={(event) => setManualCompanyName(event.target.value)}
+                    onFocus={(event) => focusField(event.currentTarget)}
+                    placeholder="예: 한국전력공사"
+                  />
+                </div>
+                <div className={styles.field}>
+                  <span>지원 직무</span>
+                  <input
+                    value={manualPositionName}
+                    onChange={(event) => setManualPositionName(event.target.value)}
+                    onFocus={(event) => focusField(event.currentTarget)}
+                    placeholder="예: 사무행정, 전기, 토목"
+                  />
+                </div>
+                <div className={styles.field}>
+                  <span>직무</span>
+                  <textarea
+                    value={manualDuty}
+                    onChange={(event) => setManualDuty(event.target.value)}
+                    onFocus={(event) => focusField(event.currentTarget)}
+                    placeholder="면접 질문을 만들 직무 내용을 짧게 입력하세요."
+                  />
+                </div>
+              </section>
+            ) : null}
             {error ? <p className={styles.error}>{error}</p> : null}
             <button
               className={styles.primaryButton}
@@ -310,8 +315,17 @@ export function InterviewCoachingPage({
               <h2>AI 면접</h2>
               <small>문항별 꼬리질문 최대 3개</small>
             </section>
+            <QuestionTabs
+              questions={session.questions}
+              messages={session.messages}
+              activeQuestionId={selectedQuestionId}
+              onSelect={setActiveQuestionId}
+            />
             <div className={styles.questionList}>
-              {session.questions.map((question, index) => {
+              {session.questions
+                .filter((question) => question.id === selectedQuestionId)
+                .map((question) => {
+                const index = session.questions.findIndex((item) => item.id === question.id);
                 const messages = session.messages.filter((item) => item.questionId === question.id);
                 const followUpCount = messages.filter((item) => item.role === "follow_up").length;
                 const answer = answerDrafts[question.id] || "";
@@ -342,7 +356,7 @@ export function InterviewCoachingPage({
                 className={styles.primaryButton}
                 type="button"
                 onClick={complete}
-                disabled={busy !== null || (!session.result && !hasAnsweredEveryQuestion(session))}
+                disabled={busy !== null || (!session.result && !hasAnsweredAnyQuestion(session))}
               >
                 최종 결과 보기
               </button>
@@ -458,6 +472,42 @@ function getVisibleNcsMappings(mappings: InterviewNcsMapping[]) {
   const sorted = [...mappings].sort((left, right) => right.relevance - left.relevance);
   const matched = sorted.filter((item) => item.relevance >= 50);
   return (matched.length >= 3 ? matched : sorted.slice(0, 5)).slice(0, 5);
+}
+
+function QuestionTabs({
+  questions,
+  messages,
+  activeQuestionId,
+  onSelect,
+}: {
+  questions: InterviewQuestion[];
+  messages: InterviewMessage[];
+  activeQuestionId: string;
+  onSelect: (questionId: string) => void;
+}) {
+  const answered = new Set(
+    messages.filter((item) => item.role === "answer").map((item) => item.questionId),
+  );
+  return (
+    <nav className={styles.questionTabs} aria-label="면접 질문 선택">
+      {questions.map((question, index) => {
+        const isActive = question.id === activeQuestionId;
+        const isAnswered = answered.has(question.id);
+        return (
+          <button
+            key={question.id}
+            className={`${isActive ? styles.questionTabActive : ""} ${isAnswered ? styles.questionTabAnswered : ""}`}
+            type="button"
+            onClick={() => onSelect(question.id)}
+            aria-current={isActive ? "true" : undefined}
+            title={`질문 ${index + 1}`}
+          >
+            Q{index + 1}
+          </button>
+        );
+      })}
+    </nav>
+  );
 }
 
 function ProfileList({ title, items }: { title: string; items: string[] }) {
@@ -724,11 +774,8 @@ function InterviewLoadingScreen() {
   );
 }
 
-function hasAnsweredEveryQuestion(session: InterviewCoachingSession) {
-  const answered = new Set(
-    session.messages.filter((item) => item.role === "answer").map((item) => item.questionId),
-  );
-  return session.questions.length > 0 && session.questions.every((item) => answered.has(item.id));
+function hasAnsweredAnyQuestion(session: InterviewCoachingSession) {
+  return session.messages.some((item) => item.role === "answer");
 }
 
 function formatConnectedJobTitle(job: InterviewCoachingJob) {
