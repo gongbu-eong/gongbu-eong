@@ -318,6 +318,8 @@ export async function answerInterviewQuestion(args: {
     feedback = normalizeAnswerFeedback(
       await requestAnswerFeedback(session, question, answer, followUpCount),
       followUpCount,
+      session,
+      question,
     );
 
     await updateInterviewMessageFeedback(answerMessage.id, feedback);
@@ -409,6 +411,7 @@ ${NCS_AREAS.map((area, index) => `${index + 1}. ${area.name}: ${area.description
 
 질문은 ${INTERVIEW_QUESTION_COUNT}개를 생성하세요. 경험면접, 상황면접, 직무면접, 인성·가치관, 직업윤리 성격이 골고루 섞여야 합니다.
 각 질문은 "${input.companyName}" 또는 "${input.positionName}" 또는 직무 핵심 키워드 중 하나 이상을 자연스럽게 포함해, 범용 질문처럼 보이지 않게 작성하세요.
+각 질문의 ncsAreas는 관련도 높은 상위 NCS 영역 안에서만 선택하세요. 관련도가 낮은 NCS 영역을 질문 태그로 붙이지 마세요.
 반드시 JSON 객체 하나만 반환하고, 모든 문장은 한국어로 작성하세요.`,
       },
     ],
@@ -447,7 +450,10 @@ ${session.messages.filter((item) => item.questionId === question.id).map((item) 
 ${answer}
 
 정답/오답 판정이 아니라 면접 답변 코칭 관점으로 설명하세요.
-꼬리질문은 답변에서 빠진 상황, 본인 역할, 판단 근거, 행동, 결과 중 하나를 구체적으로 묻는 문장이어야 합니다.
+꼬리질문은 반드시 현재 질문의 관련 NCS(${question.ncsAreas.join(", ")})와 ${session.companyName}의 ${session.positionName} 직무 맥락 안에서 이어져야 합니다.
+갑자기 다른 NCS 영역, 다른 직무, 다른 산업의 질문으로 넘어가지 마세요.
+꼬리질문은 지원자의 이번 답변에서 빠진 상황, 본인 역할, 판단 근거, 행동, 결과 중 하나를 구체적으로 묻는 문장이어야 합니다.
+followUpQuestion 문장 안에는 가능한 한 "${session.companyName}", "${session.positionName}", 또는 현재 질문의 핵심 표현 중 하나를 자연스럽게 포함하세요.
 반드시 JSON 객체 하나만 반환하세요.`,
       },
     ],
@@ -569,9 +575,10 @@ function normalizeStartPayload(
       interviewFocus: `${profile.companyName} ${profile.positionName} 지원자가 면접에서 설명해야 할 ${area.description}`,
     };
   });
+  const questionMappings = getQuestionNcsMappings(ncsMappings);
 
   const questions = normalizeArray(record?.questions)
-    .map((item, index) => normalizeQuestion(item, index, ncsMappings, profile))
+    .map((item, index) => normalizeQuestion(item, index, questionMappings, profile))
     .filter(Boolean) as InterviewQuestion[];
 
   const questionPlan = readStringList(record?.questionPlan).slice(0, INTERVIEW_QUESTION_COUNT);
@@ -584,8 +591,14 @@ function normalizeStartPayload(
         ? questionPlan
         : questions.map((item) => item.intent),
     },
-    questions: fillQuestions(questions, ncsMappings, profile),
+    questions: fillQuestions(questions, questionMappings, profile),
   };
+}
+
+function getQuestionNcsMappings(mappings: InterviewAnalysis["ncsMappings"]) {
+  const sorted = [...mappings].sort((left, right) => right.relevance - left.relevance);
+  const matched = sorted.filter((item) => item.relevance >= 50);
+  return (matched.length >= 3 ? matched : sorted.slice(0, 5)).slice(0, 5);
 }
 
 function normalizeMapping(value: unknown, profile: InterviewAnalysis["profile"]) {
@@ -802,6 +815,7 @@ function normalizeQuestion(
   const areas = readStringList(record.ncsAreas)
     .map(normalizeNcsAreaName)
     .filter(Boolean) as NcsAreaName[];
+  const allowedAreas = constrainQuestionAreas(areas, mappings, index);
   return {
     id: readString(record.id) || `q${index + 1}`,
     type: normalizeQuestionType(record.type, index),
@@ -809,9 +823,20 @@ function normalizeQuestion(
     intent:
       readString(record.intent) ||
       `${profile.companyName} ${profile.positionName} 직무와 NCS 역량을 확인합니다.`,
-    ncsAreas: areas.length ? areas.slice(0, 3) : [mappings[index % mappings.length]?.name || "문제해결능력"],
+    ncsAreas: allowedAreas,
     difficulty: readString(record.difficulty) === "심화" ? "심화" : "기본",
   };
+}
+
+function constrainQuestionAreas(
+  areas: NcsAreaName[],
+  mappings: InterviewAnalysis["ncsMappings"],
+  index: number,
+) {
+  const allowed = new Set(mappings.map((item) => item.name));
+  const filtered = areas.filter((area) => allowed.has(area));
+  const fallback = mappings[index % Math.max(mappings.length, 1)]?.name || "문제해결능력";
+  return (filtered.length ? filtered : [fallback]).slice(0, 2);
 }
 
 function fillQuestions(
@@ -984,18 +1009,28 @@ function fillQuestions(
     },
   ];
   const merged = [...questions, ...defaults].slice(0, INTERVIEW_QUESTION_COUNT);
-  return merged.map((item, index) => ({ ...item, id: `q${index + 1}` }));
+  return merged.map((item, index) => ({
+    ...item,
+    id: `q${index + 1}`,
+    ncsAreas: constrainQuestionAreas(item.ncsAreas, mappings, index),
+  }));
 }
 
 function normalizeAnswerFeedback(
   value: unknown,
   followUpCount: number,
+  session: NonNullable<Awaited<ReturnType<typeof findInterviewSessionForViewer>>>,
+  question: InterviewQuestion,
 ): InterviewAnswerFeedback {
   const record = asRecord(value);
   const followUpQuestion =
     followUpCount >= MAX_FOLLOW_UPS_PER_QUESTION
       ? null
-      : readString(record?.followUpQuestion).slice(0, 240) || null;
+      : contextualizeFollowUpQuestion(
+        readString(record?.followUpQuestion).slice(0, 240),
+        session,
+        question,
+      );
   return {
     summary:
       readString(record?.summary) ||
@@ -1007,6 +1042,21 @@ function normalizeAnswerFeedback(
       "다음 답변에서는 상황, 본인 역할, 행동, 결과 순서로 정리해 보세요.",
     followUpQuestion,
   };
+}
+
+function contextualizeFollowUpQuestion(
+  followUpQuestion: string,
+  session: NonNullable<Awaited<ReturnType<typeof findInterviewSessionForViewer>>>,
+  question: InterviewQuestion,
+) {
+  if (!followUpQuestion) return null;
+  const hasContext =
+    followUpQuestion.includes(session.companyName) ||
+    followUpQuestion.includes(session.positionName) ||
+    question.ncsAreas.some((area) => followUpQuestion.includes(area));
+  if (hasContext) return followUpQuestion;
+
+  return `${session.companyName}의 ${session.positionName} 직무와 ${question.ncsAreas.join(", ")} 역량 기준으로, ${followUpQuestion}`;
 }
 
 function normalizeResult(

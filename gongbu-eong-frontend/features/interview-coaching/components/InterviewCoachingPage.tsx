@@ -329,11 +329,13 @@ export function InterviewCoachingPage({
                 const messages = session.messages.filter((item) => item.questionId === question.id);
                 const followUpCount = messages.filter((item) => item.role === "follow_up").length;
                 const answer = answerDrafts[question.id] || "";
+                const mappedAreas = getQuestionBadgeAreas(question, session.analysis.ncsMappings, index);
                 return (
                   <InterviewQuestionPanel
                     key={question.id}
                     index={index}
                     question={question}
+                    mappedAreas={mappedAreas}
                     messages={messages}
                     answer={answer}
                     busy={busyQuestionId === question.id}
@@ -474,6 +476,19 @@ function getVisibleNcsMappings(mappings: InterviewNcsMapping[]) {
   return (matched.length >= 3 ? matched : sorted.slice(0, 5)).slice(0, 5);
 }
 
+function getQuestionBadgeAreas(
+  question: InterviewQuestion,
+  mappings: InterviewNcsMapping[],
+  index: number,
+) {
+  const visibleMappings = getVisibleNcsMappings(mappings);
+  const visibleNames = new Set(visibleMappings.map((item) => item.name));
+  const matched = question.ncsAreas.filter((area) => visibleNames.has(area));
+  return matched.length
+    ? matched
+    : [visibleMappings[index % Math.max(visibleMappings.length, 1)]?.name || "문제해결능력"];
+}
+
 function QuestionTabs({
   questions,
   messages,
@@ -526,6 +541,7 @@ function ProfileList({ title, items }: { title: string; items: string[] }) {
 function InterviewQuestionPanel({
   index,
   question,
+  mappedAreas,
   messages,
   answer,
   busy,
@@ -537,6 +553,7 @@ function InterviewQuestionPanel({
 }: {
   index: number;
   question: InterviewQuestion;
+  mappedAreas: InterviewQuestion["ncsAreas"];
   messages: InterviewMessage[];
   answer: string;
   busy: boolean;
@@ -559,7 +576,7 @@ function InterviewQuestionPanel({
         <h2>{prompt}</h2>
         <p>{question.intent}</p>
         <div className={styles.badgeList}>
-          {question.ncsAreas.map((area) => <span key={area}>{area}</span>)}
+          {mappedAreas.map((area) => <span key={area}>{area}</span>)}
         </div>
       </article>
       {visibleMessages.length ? (
