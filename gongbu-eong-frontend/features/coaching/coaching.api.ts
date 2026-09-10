@@ -48,13 +48,13 @@ async function readJsonResponse(response: Response) {
   const text = await response.text();
 
   if (!contentType.toLowerCase().includes("application/json")) {
-    throw new Error("AI 자소서 코칭 처리 중 서버 응답 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+    throw new Error("AI NCS 자소서 코칭 처리 중 서버 응답 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
   }
 
   try {
     return JSON.parse(text) as unknown;
   } catch {
-    throw new Error("AI 자소서 코칭 응답을 읽지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    throw new Error("AI NCS 자소서 코칭 응답을 읽지 못했습니다. 잠시 후 다시 시도해 주세요.");
   }
 }
 export type { CoachingFeedback, CoachingHistoryItem, CoachingJob };

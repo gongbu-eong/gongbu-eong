@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         message:
           error instanceof Error && error.message
             ? error.message
-            : "AI 면접 코칭을 시작하지 못했습니다.",
+            : "AI NCS 면접 코칭을 시작하지 못했습니다.",
       },
       { status: 500 },
     );

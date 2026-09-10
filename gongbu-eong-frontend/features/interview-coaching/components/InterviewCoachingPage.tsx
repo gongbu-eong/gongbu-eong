@@ -74,7 +74,7 @@ export function InterviewCoachingPage({
       })
       .catch((caught) => {
         if (!active) return;
-        const message = caught instanceof Error ? caught.message : "면접 코칭 기록을 불러오지 못했습니다.";
+        const message = caught instanceof Error ? caught.message : "AI NCS 면접 코칭 기록을 불러오지 못했습니다.";
         setError(message);
       })
       .finally(() => {
@@ -163,7 +163,7 @@ export function InterviewCoachingPage({
       setActiveQuestionId(result.session.questions[0]?.id || null);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "면접 코칭을 시작하지 못했습니다.";
+      const message = caught instanceof Error ? caught.message : "AI NCS 면접 코칭을 시작하지 못했습니다.";
       setError(message);
       showAlert(message);
     } finally {
@@ -239,11 +239,11 @@ export function InterviewCoachingPage({
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.frame}>
-        <h1>NCS 직무 기반 AI 면접 코칭</h1>
+        <h1>AI NCS 면접 코칭</h1>
         <p className={styles.lead}>
           지원 직무를 NCS 역량과 연결한 뒤, AI 면접 질문과 꼬리질문으로 답변을 연습해요.
         </p>
-        {busy === "load" ? <p className={styles.lead}>저장된 면접 코칭 기록을 불러오고 있어요.</p> : null}
+        {busy === "load" ? <p className={styles.lead}>저장된 AI NCS 면접 코칭 기록을 불러오고 있어요.</p> : null}
 
         {busy === "load" ? null : !session ? (
           <>
@@ -257,7 +257,7 @@ export function InterviewCoachingPage({
                 <p className={styles.helper}>
                   공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.
                   <br />
-                  연결하지 않아도 직무명만으로 면접 코칭을 받을 수 있어요.
+                  연결하지 않아도 직무명만으로 AI NCS 면접 코칭을 받을 수 있어요.
                 </p>
               </>
             )}
@@ -518,8 +518,12 @@ function QuestionTabs({
   activeQuestionId: string;
   onSelect: (questionId: string) => void;
 }) {
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const tabListRef = useRef<HTMLDivElement | null>(null);
   const activeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [isPinned, setIsPinned] = useState(false);
+  const [pinnedHeight, setPinnedHeight] = useState(0);
   const dragRef = useRef({
     dragging: false,
     startX: 0,
@@ -536,6 +540,25 @@ function QuestionTabs({
       inline: "center",
     });
   }, [activeQuestionId]);
+
+  useEffect(() => {
+    const updatePinnedState = () => {
+      const anchor = anchorRef.current;
+      const shell = shellRef.current;
+      if (!anchor || !shell) return;
+      const headerHeight = 48;
+      setPinnedHeight(shell.offsetHeight);
+      setIsPinned(anchor.getBoundingClientRect().top <= headerHeight);
+    };
+
+    updatePinnedState();
+    window.addEventListener("scroll", updatePinnedState, { passive: true });
+    window.addEventListener("resize", updatePinnedState);
+    return () => {
+      window.removeEventListener("scroll", updatePinnedState);
+      window.removeEventListener("resize", updatePinnedState);
+    };
+  }, []);
 
   const scrollTabs = (direction: -1 | 1) => {
     const list = tabListRef.current;
@@ -586,7 +609,17 @@ function QuestionTabs({
   };
 
   return (
-    <div className={styles.questionTabsShell}>
+    <>
+    <div
+      ref={anchorRef}
+      className={styles.questionTabsAnchor}
+      style={{ height: isPinned ? pinnedHeight : 0 }}
+      aria-hidden="true"
+    />
+    <div
+      ref={shellRef}
+      className={`${styles.questionTabsShell} ${isPinned ? styles.questionTabsFixed : ""}`}
+    >
       <button
         className={styles.questionTabsControl}
         type="button"
@@ -637,6 +670,7 @@ function QuestionTabs({
         {">"}
       </button>
     </div>
+    </>
   );
 }
 
@@ -704,7 +738,7 @@ function InterviewQuestionPanel({
       </article>
       {visibleMessages.length ? (
         <div className={styles.chatList}>
-          {visibleMessages.map((message) => <ChatMessage key={message.id} message={message} />)}
+          {visibleMessages.map((message) => <ChatMessage key={message.id} message={message} showFeedback={false} />)}
         </div>
       ) : null}
       <div className={styles.answerBox}>
@@ -730,7 +764,7 @@ function InterviewQuestionPanel({
   );
 }
 
-function ChatMessage({ message }: { message: InterviewMessage }) {
+function ChatMessage({ message, showFeedback = true }: { message: InterviewMessage; showFeedback?: boolean }) {
   const content = cleanDisplayText(message.content) || message.content;
   const label = message.role === "answer"
     ? "내 답변"
@@ -750,7 +784,7 @@ function ChatMessage({ message }: { message: InterviewMessage }) {
       ) : (
         <p>{content}</p>
       )}
-      {message.feedback ? (
+      {showFeedback && message.feedback ? (
         <div className={styles.feedback}>
           <b>{cleanDisplayText(message.feedback.summary) || message.feedback.summary}</b>
           <ul>

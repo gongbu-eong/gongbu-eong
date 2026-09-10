@@ -56,7 +56,7 @@ async function requestAiFeedback(args: CoachResumeArgs, prepared: PreparedCoachi
     return ensureRenderableFeedback(feedback, prepared.originalText, args.questions || []);
   } catch (error) {
     console.error("Invalid coaching response payload", error);
-    throw new Error("AI 자소서 코칭 결과를 해석하지 못했습니다. 다시 시도해 주세요.");
+    throw new Error("AI NCS 자소서 코칭 결과를 해석하지 못했습니다. 다시 시도해 주세요.");
   }
 }
 

@@ -224,7 +224,7 @@ export function CoachingPage() {
     <main className={`${styles.frame} ${styles.newCoachingFrame}`}>
       <h1>AI NCS 자소서 코칭</h1>
       <section className={styles.intro}><strong>자소서를 AI가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
-      {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <><button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button><p className={styles.helper}>공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.<br />연결하지 않아도 일반 자소서 코칭을 받을 수 있어요.</p></>}
+      {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <><button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button><p className={styles.helper}>공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.<br />연결하지 않아도 일반 AI NCS 자소서 코칭을 받을 수 있어요.</p></>}
 
       <section className={styles.questionSection}>
         <div className={styles.sectionHeading}><h2>자소서 문항</h2><button type="button" onClick={addQuestion} disabled={questions.length >= MAX_QUESTION_COUNT}>+ 추가</button></div>
@@ -318,7 +318,7 @@ export function CoachingPage() {
 }
 
 function CoachingLoadingScreen() {
-  return <div className={`${styles.page} ${styles.coachingLoadingPage}`}><main className={styles.coachingLoadingFrame} aria-live="polite" aria-busy="true"><Image src="/coaching/coaching-loading-owl.png" alt="" width={114} height={140} priority className={styles.coachingLoadingImage} /><h1>데이터 분석중입니다...</h1><p>AI 자소서 코칭을 진행중이에요.</p><div className={styles.coachingLoadingTrack} aria-hidden="true"><span /></div></main></div>;
+  return <div className={`${styles.page} ${styles.coachingLoadingPage}`}><main className={styles.coachingLoadingFrame} aria-live="polite" aria-busy="true"><Image src="/coaching/coaching-loading-owl.png" alt="" width={114} height={140} priority className={styles.coachingLoadingImage} /><h1>데이터 분석중입니다...</h1><p>AI NCS 자소서 코칭을 진행중이에요.</p><div className={styles.coachingLoadingTrack} aria-hidden="true"><span /></div></main></div>;
 }
 
 function ConnectedJobCard({ job, onRemove }: { job: ConnectedJob; onRemove: () => void }) {

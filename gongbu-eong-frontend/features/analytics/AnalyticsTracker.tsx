@@ -111,7 +111,7 @@ function getScreenClickBucket(pathname: string) {
     return { key: "job_detail", name: "공고상세" };
   }
   if (pathname.startsWith("/ai-tools/interview-coaching")) {
-    return { key: "interview_coaching", name: "NCS 직무 기반 AI 면접 코칭" };
+    return { key: "interview_coaching", name: "AI NCS 면접 코칭" };
   }
   if (pathname.startsWith("/ai-tools/coaching")) {
     return { key: "coaching", name: "AI NCS 자소서 코칭" };

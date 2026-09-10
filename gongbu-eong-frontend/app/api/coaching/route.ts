@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         {
           ok: false,
           message:
-            "AI 자소서 코칭 처리 중 서버 응답 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
+            "AI NCS 자소서 코칭 처리 중 서버 응답 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.",
         },
         { status: response.ok ? 502 : response.status },
       );
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       {
         ok: false,
         message:
-          "AI 자소서 코칭 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+          "AI NCS 자소서 코칭 서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.",
       },
       { status: 502 },
     );

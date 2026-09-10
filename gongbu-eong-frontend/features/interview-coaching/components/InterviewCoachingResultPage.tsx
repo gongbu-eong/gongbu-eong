@@ -4,8 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getInterviewCoachingSession } from "../interview-coaching.api";
-import type { InterviewCoachingSession } from "../interview-coaching.dto";
+import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion } from "../interview-coaching.dto";
 import styles from "./InterviewCoachingPage.module.css";
+
+type InterviewQuestionReview = NonNullable<InterviewCoachingSession["result"]>["questionReviews"][number];
 
 export function InterviewCoachingResultPage({
   sessionId,
@@ -24,7 +26,7 @@ export function InterviewCoachingResultPage({
         if (mounted) setSession(response.session);
       })
       .catch((caught) => {
-        if (mounted) setError(caught instanceof Error ? caught.message : "면접 코칭 결과를 불러오지 못했습니다.");
+        if (mounted) setError(caught instanceof Error ? caught.message : "AI NCS 면접 코칭 결과를 불러오지 못했습니다.");
       });
     return () => {
       mounted = false;
@@ -35,13 +37,13 @@ export function InterviewCoachingResultPage({
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.frame}>
-        <Link href="/ai-tools/interview-coaching" className={styles.lead}>‹ 다시 면접 코칭하기</Link>
-        <h1>NCS 직무 기반 AI 면접 코칭 결과</h1>
+        <Link href="/ai-tools/interview-coaching" className={styles.lead}>‹ 다시 AI NCS 면접 코칭하기</Link>
+        <h1>AI NCS 면접 코칭 결과</h1>
         {error ? <p className={styles.error}>{error}</p> : null}
         {!session && !error ? <p className={styles.lead}>결과를 불러오고 있어요.</p> : null}
         {session?.result ? <ResultView session={session} /> : null}
         {session && !session.result ? (
-          <p className={styles.lead}>아직 최종 결과가 생성되지 않았습니다. 면접 코칭 화면에서 결과를 먼저 생성해 주세요.</p>
+          <p className={styles.lead}>아직 최종 결과가 생성되지 않았습니다. AI NCS 면접 코칭 화면에서 결과를 먼저 생성해 주세요.</p>
         ) : null}
       </main>
       <AppFooter active="ai" />
@@ -51,11 +53,31 @@ export function InterviewCoachingResultPage({
 
 function ResultView({ session }: { session: InterviewCoachingSession }) {
   const result = session.result;
+  const firstAnsweredQuestionId =
+    session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
+    session.questions[0]?.id ||
+    "";
+  const [activeQuestionId, setActiveQuestionId] = useState(firstAnsweredQuestionId);
   if (!result) return null;
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
   const strengths = cleanDisplayList(result.strengths);
   const improvements = cleanDisplayList(result.improvements);
   const futurePracticeQuestions = cleanDisplayList(result.futurePracticeQuestions);
+  const selectedQuestion =
+    session.questions.find((question) => question.id === activeQuestionId) ||
+    session.questions[0] ||
+    null;
+  const selectedMessages = selectedQuestion
+    ? session.messages.filter(
+      (message) =>
+        message.questionId === selectedQuestion.id &&
+        (message.role === "answer" || message.role === "follow_up"),
+    )
+    : [];
+  const selectedReview = selectedQuestion
+    ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
+    : null;
+
   return (
     <>
       <section className={styles.resultHero}>
@@ -76,17 +98,19 @@ function ResultView({ session }: { session: InterviewCoachingSession }) {
 
       <section className={styles.resultSection}>
         <h2>문항별 답변 코칭</h2>
-        <div className={styles.reviewList}>
-          {result.questionReviews.map((review, index) => (
-            <article className={styles.reviewCard} key={`${review.questionId}-${index}`}>
-              <strong>{cleanDisplayText(review.question) || review.question}<b>{review.score}점</b></strong>
-              <p>{cleanDisplayText(review.summary) || review.summary}</p>
-              <div className={styles.badgeList}>
-                {review.ncsAreas.map((area) => <span key={area}>{area}</span>)}
-              </div>
-            </article>
-          ))}
-        </div>
+        <ResultQuestionTabs
+          questions={session.questions}
+          messages={session.messages}
+          activeQuestionId={activeQuestionId}
+          onSelect={setActiveQuestionId}
+        />
+        {selectedQuestion ? (
+          <ResultQuestionDetail
+            question={selectedQuestion}
+            messages={selectedMessages}
+            review={selectedReview}
+          />
+        ) : null}
       </section>
 
       <section className={styles.resultSection}>
@@ -95,6 +119,141 @@ function ResultView({ session }: { session: InterviewCoachingSession }) {
       </section>
     </>
   );
+}
+
+function ResultQuestionTabs({
+  questions,
+  messages,
+  activeQuestionId,
+  onSelect,
+}: {
+  questions: InterviewQuestion[];
+  messages: InterviewMessage[];
+  activeQuestionId: string;
+  onSelect: (questionId: string) => void;
+}) {
+  const answered = new Set(
+    messages.filter((message) => message.role === "answer").map((message) => message.questionId),
+  );
+
+  return (
+    <nav className={styles.resultQuestionTabs} aria-label="결과 문항 선택">
+      {questions.map((question, index) => {
+        const isActive = question.id === activeQuestionId;
+        const isAnswered = answered.has(question.id);
+        return (
+          <button
+            type="button"
+            key={question.id}
+            className={`${isActive ? styles.questionTabActive : ""} ${isAnswered ? styles.questionTabAnswered : ""}`}
+            onClick={() => onSelect(question.id)}
+            aria-current={isActive ? "true" : undefined}
+          >
+            Q{index + 1}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+function ResultQuestionDetail({
+  question,
+  messages,
+  review,
+}: {
+  question: InterviewQuestion;
+  messages: InterviewMessage[];
+  review: InterviewQuestionReview | null | undefined;
+}) {
+  return (
+    <div className={styles.resultQuestionDetail}>
+      <article className={styles.questionCard}>
+        <div className={styles.questionMeta}>
+          <span>{question.difficulty} · {formatQuestionType(question.type)}</span>
+          {review ? <span>{review.score}점</span> : null}
+        </div>
+        <h2>{cleanDisplayText(question.question) || question.question}</h2>
+        <p>{cleanDisplayText(question.intent) || question.intent}</p>
+        <div className={styles.badgeList}>
+          {question.ncsAreas.map((area) => <span key={area}>{area}</span>)}
+        </div>
+      </article>
+
+      {review ? (
+        <article className={styles.reviewCard}>
+          <strong>최종 문항 평가<b>{review.score}점</b></strong>
+          <p>{cleanDisplayText(review.summary) || review.summary}</p>
+        </article>
+      ) : null}
+
+      {messages.length ? (
+        <div className={styles.chatList}>
+          {messages.map((message) => <ResultConversationMessage message={message} key={message.id} />)}
+        </div>
+      ) : (
+        <p className={styles.lead}>이 문항에는 제출한 답변이 없습니다.</p>
+      )}
+    </div>
+  );
+}
+
+function ResultConversationMessage({ message }: { message: InterviewMessage }) {
+  const content = cleanDisplayText(message.content) || message.content;
+  const label = message.role === "answer"
+    ? "내 답변"
+    : message.role === "follow_up"
+      ? `면접관 꼬리질문 ${message.followUpIndex || ""}`
+      : "AI 질문";
+
+  return (
+    <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""}`}>
+      <strong>{label}</strong>
+      {message.role === "answer" ? (
+        <textarea
+          className={styles.savedAnswer}
+          value={content}
+          readOnly
+          aria-label="제출한 답변"
+        />
+      ) : (
+        <p>{content}</p>
+      )}
+      {message.feedback ? (
+        <div className={styles.feedback}>
+          <b>{cleanDisplayText(message.feedback.summary) || message.feedback.summary}</b>
+          {message.feedback.nextAnswerGuide ? (
+            <p>{cleanDisplayText(message.feedback.nextAnswerGuide) || message.feedback.nextAnswerGuide}</p>
+          ) : null}
+          <ul>
+            {cleanDisplayList(message.feedback.strengths).slice(0, 2).map((item) => <li key={`s-${item}`}>{item}</li>)}
+            {cleanDisplayList(message.feedback.improvements).slice(0, 2).map((item) => <li key={`i-${item}`}>{item}</li>)}
+          </ul>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function hasQuestionAnswer(messages: InterviewMessage[], questionId: string) {
+  return messages.some((message) => message.questionId === questionId && message.role === "answer");
+}
+
+function formatQuestionType(type: InterviewQuestion["type"]) {
+  switch (type) {
+    case "experience":
+      return "경험면접";
+    case "situation":
+      return "상황면접";
+    case "job":
+      return "직무면접";
+    case "personality":
+      return "인성면접";
+    case "ethics":
+      return "직업윤리";
+    default:
+      return "면접";
+  }
 }
 
 function cleanDisplayText(value?: string | null) {

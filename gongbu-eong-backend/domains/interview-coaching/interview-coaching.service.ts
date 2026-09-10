@@ -263,7 +263,7 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
       sessionId,
       error instanceof Error && error.message
         ? error.message
-        : "AI 면접 코칭 질문 생성에 실패했습니다.",
+        : "AI NCS 면접 코칭 질문 생성에 실패했습니다.",
     ).catch((markError) => {
       console.error("[InterviewCoaching] failed to mark session failed", markError);
     });
@@ -276,7 +276,7 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     userId: args.userId,
     anonymousId: args.userId ? null : args.anonymousId,
   });
-  if (!session) throw new Error("면접 코칭 세션을 생성하지 못했습니다.");
+  if (!session) throw new Error("AI NCS 면접 코칭 세션을 생성하지 못했습니다.");
   logInterviewStage(traceId, "service:done", {
     sessionId,
     elapsedMs: Date.now() - startedAt,
@@ -308,7 +308,7 @@ export async function createInterviewCoachingDraft(args: StartInterviewCoachingA
     userId: args.userId,
     anonymousId: args.userId ? null : args.anonymousId,
   });
-  if (!session) throw new Error("면접 코칭 세션을 생성하지 못했습니다.");
+  if (!session) throw new Error("AI NCS 면접 코칭 세션을 생성하지 못했습니다.");
   return session;
 }
 
@@ -318,7 +318,7 @@ export async function generateInterviewCoachingQuestions(args: {
   anonymousId?: string | null;
 }) {
   const draft = await findInterviewSessionForViewer(args);
-  if (!draft) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
+  if (!draft) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
   if (draft.status === "ready" && draft.questions.length) return draft;
 
   try {
@@ -359,7 +359,7 @@ export async function generateInterviewCoachingQuestions(args: {
       draft.id,
       error instanceof Error && error.message
         ? error.message
-        : "AI 면접 코칭 질문 생성에 실패했습니다.",
+        : "AI NCS 면접 코칭 질문 생성에 실패했습니다.",
     ).catch((markError) => {
       console.error("[InterviewCoaching] failed to mark session failed", markError);
     });
@@ -382,8 +382,8 @@ export async function answerInterviewQuestion(args: {
   anonymousId?: string | null;
 }) {
   const session = await findInterviewSessionForViewer(args);
-  if (!session) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
-  if (session.completedAt) throw new Error("이미 완료된 면접 코칭입니다.");
+  if (!session) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
+  if (session.completedAt) throw new Error("이미 완료된 AI NCS 면접 코칭입니다.");
 
   const question = session.questions.find((item) => item.id === args.questionId);
   if (!question) throw new Error("면접 질문을 찾지 못했습니다.");
@@ -407,7 +407,6 @@ export async function answerInterviewQuestion(args: {
       await requestAnswerFeedback(session, question, answer, followUpCount),
       followUpCount,
       session,
-      question,
     );
 
     await updateInterviewMessageFeedback(answerMessage.id, feedback);
@@ -426,7 +425,7 @@ export async function answerInterviewQuestion(args: {
       session.id,
       error instanceof Error && error.message
         ? error.message
-        : "AI 면접 답변 코칭에 실패했습니다.",
+        : "AI NCS 면접 코칭 답변 피드백 생성에 실패했습니다.",
     ).catch((markError) => {
       console.error("[InterviewCoaching] failed to mark session failed", markError);
     });
@@ -449,7 +448,7 @@ export async function completeInterviewCoaching(args: {
   anonymousId?: string | null;
 }) {
   const session = await findInterviewSessionForViewer(args);
-  if (!session) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
+  if (!session) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
   if (!session.messages.some((item) => item.role === "answer")) {
     throw new Error("면접 답변을 하나 이상 제출하면 결과를 확인할 수 있어요.");
   }
@@ -476,7 +475,7 @@ async function requestStartPayload(input: InterviewStartInput) {
     content: [
       {
         type: "input_text",
-        text: `한국어 NCS 직무 기반 AI 면접 코치입니다.
+        text: `한국어 AI NCS 면접 코치입니다.
 지원 공고와 직무를 분석해 NCS 7개 후보 중 실제로 연관된 영역만 추출하고, 실제 면접 연습 질문을 생성하세요.
 모든 분석과 질문은 기업명, 지원 직무, 공고 내용에서 확인되는 업무/자격/우대사항을 근거로 작성하세요.
 
@@ -526,7 +525,7 @@ async function requestStartSupplementPayload(
     content: [
       {
         type: "input_text",
-        text: `한국어 NCS 직무 기반 AI 면접 코치입니다.
+        text: `한국어 AI NCS 면접 코치입니다.
 앞선 AI 응답에서 NCS 매핑 또는 면접 질문 수가 부족했습니다.
 서버에서 임의 질문을 만들지 않도록, 아래 공고/직무 정보를 다시 분석해 최종 사용 가능한 JSON을 완성하세요.
 
@@ -569,7 +568,7 @@ async function requestAnswerFeedback(
   answer: string,
   followUpCount: number,
 ) {
-  if (!session) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
+  if (!session) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
   const questionMessages = session.messages.filter((item) => item.questionId === question.id);
   const latestMessage = [...questionMessages].reverse().find(
     (item) => item.role === "answer" || item.role === "follow_up",
@@ -593,6 +592,7 @@ async function requestAnswerFeedback(
 
 기업/직무: ${session.companyName} / ${session.positionName}
 NCS 매핑: ${session.analysis.ncsMappings.map((item) => `${item.name} ${item.relevance}%`).join(", ")}
+NCS 7개 후보: ${NCS_AREAS.map((area) => area.name).join(", ")}
 원 질문: ${question.question}
 질문 의도: ${question.intent}
 관련 NCS: ${question.ncsAreas.join(", ")}
@@ -607,8 +607,8 @@ ${answer}
 
 정답/오답 판정이 아니라 면접 답변 코칭 관점으로 설명하세요.
 피드백은 반드시 "이번에 지원자가 답해야 하는 면접관 질문"에 대한 이번 답변 기준으로 작성하세요. 꼬리질문 답변을 평가할 때 원 질문만 기준으로 되돌아가 평가하지 마세요.
-꼬리질문은 반드시 현재 질문의 관련 NCS(${question.ncsAreas.join(", ")})와 ${session.companyName}의 ${session.positionName} 직무 맥락 안에서 이어져야 합니다.
-갑자기 다른 NCS 영역, 다른 직무, 다른 산업의 질문으로 넘어가지 마세요.
+꼬리질문은 원 질문의 관련 NCS(${question.ncsAreas.join(", ")})에만 고정하지 말고, NCS 7개 후보 중 지원자의 이번 답변과 ${session.companyName}의 ${session.positionName} 직무 면접 흐름에 자연스럽게 이어지는 영역을 AI가 판단해 생성하세요.
+같은 문항 안에서도 꼬리질문이 계속 같은 NCS만 반복되지 않도록 하되, 갑자기 무관한 직무, 산업, 상황으로 넘어가지 마세요.
 꼬리질문은 지원자의 이번 답변에서 빠진 상황, 본인 역할, 판단 근거, 행동, 결과 중 하나를 구체적으로 묻는 문장이어야 합니다.
 followUpQuestion 문장 안에는 가능한 한 "${session.companyName}", "${session.positionName}", 또는 현재 질문의 핵심 표현 중 하나를 자연스럽게 포함하세요.
 반드시 JSON 객체 하나만 반환하세요.`,
@@ -620,7 +620,7 @@ followUpQuestion 문장 안에는 가능한 한 "${session.companyName}", "${ses
 async function requestFinalResult(
   session: Awaited<ReturnType<typeof findInterviewSessionForViewer>>,
 ) {
-  if (!session) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
+  if (!session) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
   const answeredQuestionIds = new Set(
     session.messages.filter((item) => item.role === "answer").map((item) => item.questionId),
   );
@@ -632,7 +632,7 @@ async function requestFinalResult(
     content: [
       {
         type: "input_text",
-        text: `한국어 NCS 직무 기반 AI 면접 코치입니다. 면접 연습 전체를 종합해 최종 결과를 작성하세요.
+        text: `한국어 AI NCS 면접 코치입니다. 면접 연습 전체를 종합해 최종 결과를 작성하세요.
 
 기업/직무: ${session.companyName} / ${session.positionName}
 NCS 매핑: ${session.analysis.ncsMappings.map((item) => `${item.name} ${item.relevance}% - ${item.reason}`).join("\n")}
@@ -1015,7 +1015,6 @@ function normalizeAnswerFeedback(
   value: unknown,
   followUpCount: number,
   session: NonNullable<Awaited<ReturnType<typeof findInterviewSessionForViewer>>>,
-  question: InterviewQuestion,
 ): InterviewAnswerFeedback {
   const record = asRecord(value);
   const followUpQuestion =
@@ -1024,7 +1023,6 @@ function normalizeAnswerFeedback(
       : contextualizeFollowUpQuestion(
         readString(record?.followUpQuestion).slice(0, 240),
         session,
-        question,
       );
   return {
     summary: removeJobCodesFromText(readString(record?.summary)),
@@ -1038,16 +1036,15 @@ function normalizeAnswerFeedback(
 function contextualizeFollowUpQuestion(
   followUpQuestion: string,
   session: NonNullable<Awaited<ReturnType<typeof findInterviewSessionForViewer>>>,
-  question: InterviewQuestion,
 ) {
   if (!followUpQuestion) return null;
   const hasContext =
     followUpQuestion.includes(session.companyName) ||
     followUpQuestion.includes(session.positionName) ||
-    question.ncsAreas.some((area) => followUpQuestion.includes(area));
+    NCS_AREAS.some((area) => followUpQuestion.includes(area.name));
   if (hasContext) return followUpQuestion;
 
-  return `${session.companyName}의 ${session.positionName} 직무와 ${question.ncsAreas.join(", ")} 역량 기준으로, ${followUpQuestion}`;
+  return `${session.companyName}의 ${session.positionName} 직무 면접 흐름에서, ${followUpQuestion}`;
 }
 
 function normalizeResult(

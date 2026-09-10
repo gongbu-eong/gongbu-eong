@@ -12,7 +12,7 @@ type DiagnosisPageProps = {
 export const metadata: Metadata = {
   title: "강점·성향 진단 | 공부엉이",
   description:
-    "공기업 취업 성향 테스트, 강점·성향 진단, 직무 성향 분석, 추천 공고, NCS 자소서 코칭 연결까지 16문항으로 확인하세요.",
+    "공기업 취업 성향 테스트, 강점·성향 진단, 직무 성향 분석, 추천 공고, AI NCS 자소서 코칭 연결까지 16문항으로 확인하세요.",
   alternates: {
     canonical: canonicalUrl("/ai-tools/diagnosis"),
   },

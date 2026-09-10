@@ -29,7 +29,7 @@ export async function GET(
     if (!session) {
       return jsonWithCors(
         request,
-        { ok: false, message: "면접 코칭 결과를 찾지 못했습니다." },
+        { ok: false, message: "AI NCS 면접 코칭 결과를 찾지 못했습니다." },
         { status: 404 },
       );
     }
@@ -43,7 +43,7 @@ export async function GET(
         message:
           error instanceof Error && error.message
             ? error.message
-            : "면접 코칭 결과를 불러오지 못했습니다.",
+            : "AI NCS 면접 코칭 결과를 불러오지 못했습니다.",
       },
       { status: 500 },
     );

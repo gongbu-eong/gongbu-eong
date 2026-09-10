@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
         message:
           error instanceof Error && error.message
             ? error.message
-            : "AI 면접 코칭 기록을 불러오지 못했습니다.",
+            : "AI NCS 면접 코칭 기록을 불러오지 못했습니다.",
       },
       { status: 500 },
     );

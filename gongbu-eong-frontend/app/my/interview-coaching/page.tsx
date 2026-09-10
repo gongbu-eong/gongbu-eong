@@ -4,39 +4,39 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { listCoachingHistory } from "@/features/coaching/coaching.api";
-import type { CoachingHistoryItem } from "@/features/coaching/coaching.dto";
-import styles from "./CoachingHistoryPage.module.css";
+import { listInterviewCoachingHistory } from "@/features/interview-coaching/interview-coaching.api";
+import type { InterviewCoachingSession } from "@/features/interview-coaching/interview-coaching.dto";
+import { getAnonymousId } from "@/shared/session/anonymous-id";
+import styles from "../coaching/CoachingHistoryPage.module.css";
 
 type HistoryFilter = "all" | "linked" | "general";
-type UnifiedHistoryItem = {
+type InterviewHistoryItem = {
   id: string;
-  kind: "resume";
+  kind: "interview";
   createdAt: string;
   title: string;
   subtitle: string;
   score: number | null;
   isLinked: boolean;
   href: string;
+  status: InterviewCoachingSession["status"];
 };
 
 const PAGE_SIZE = 10;
 
-export default function CoachingHistoryPage() {
-  const [items, setItems] = useState<CoachingHistoryItem[]>([]);
+export default function InterviewCoachingHistoryPage() {
+  const [items, setItems] = useState<InterviewCoachingSession[]>([]);
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
     let active = true;
-    listCoachingHistory()
-      .then((coachingResponse) => {
-        if (!active) return;
-        setItems(coachingResponse.items);
+    listInterviewCoachingHistory(getAnonymousId())
+      .then((response) => {
+        if (active) setItems(response.items);
       })
       .catch(() => {
-        if (!active) return;
-        setItems([]);
+        if (active) setItems([]);
       });
     return () => {
       active = false;
@@ -44,7 +44,7 @@ export default function CoachingHistoryPage() {
   }, []);
 
   const unifiedItems = useMemo(
-    () => sortRecent(items.map(mapResumeHistoryItem)),
+    () => sortRecent(items.map(mapInterviewHistoryItem)),
     [items],
   );
   const linkedItems = useMemo(() => unifiedItems.filter((item) => item.isLinked), [unifiedItems]);
@@ -62,32 +62,23 @@ export default function CoachingHistoryPage() {
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.frame}>
-        <h1>내 AI NCS 자소서 코칭 기록</h1>
+        <h1>내 AI NCS 면접 코칭 기록</h1>
 
         <section className={styles.heroCard}>
           <div className={styles.heroCopy}>
-            <strong>AI NCS 자소서 코칭 기록을 확인하세요.</strong>
+            <strong>AI NCS 면접 코칭 기록을 확인하세요.</strong>
             <span>총 {items.length}건</span>
           </div>
           <Image src="/coaching/history-hero.png" alt="" width={172} height={142} className={styles.heroImage} priority />
         </section>
 
-        {/* 면접 준비 목록은 추후 재노출 예정입니다.
-        {linkedItems.length ? (
-          <section className={styles.interviewList} aria-label="면접 준비 공고">
-            {linkedItems.slice(0, 2).map((item) => (
-              <HistoryJobCard item={item} variant="interview" key={`interview-${item.id}`} />
-            ))}
-          </section>
-        ) : null} */}
-
         <section className={styles.historySection}>
           <div className={styles.sectionTitle}>
-            <h2>AI NCS 자소서 코칭 목록</h2>
+            <h2>AI NCS 면접 코칭 목록</h2>
             <span>{displayItems.length}건</span>
           </div>
 
-          <div className={styles.filterTabs} role="tablist" aria-label="코칭 기록 필터">
+          <div className={styles.filterTabs} role="tablist" aria-label="AI NCS 면접 코칭 기록 필터">
             <button type="button" className={filter === "all" ? styles.activeFilter : undefined} onClick={() => changeFilter("all")}>
               전체
             </button>
@@ -102,18 +93,18 @@ export default function CoachingHistoryPage() {
           {visibleItems.length ? (
             <div className={styles.historyList}>
               {visibleItems.map((item) => (
-                <HistoryJobCard item={item} variant="history" key={`${item.kind}-${item.id}`} />
+                <HistoryJobCard item={item} key={item.id} />
               ))}
             </div>
           ) : (
             <div className={styles.emptyCard}>
-              <p>저장된 코칭 기록이 없습니다.</p>
-              <Link href="/ai-tools/coaching">AI NCS 자소서 코칭 받기</Link>
+              <p>저장된 AI NCS 면접 코칭 기록이 없습니다.</p>
+              <Link href="/ai-tools/interview-coaching">AI NCS 면접 코칭 받기</Link>
             </div>
           )}
 
           {displayItems.length > PAGE_SIZE ? (
-            <nav className={styles.pagination} aria-label="코칭 목록 페이지">
+            <nav className={styles.pagination} aria-label="AI NCS 면접 코칭 목록 페이지">
               <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage === 1} aria-label="이전 페이지">
                 &lt;
               </button>
@@ -145,47 +136,49 @@ export default function CoachingHistoryPage() {
   }
 }
 
-function HistoryJobCard({ item, variant }: { item: UnifiedHistoryItem; variant: "interview" | "history" }) {
+function HistoryJobCard({ item }: { item: InterviewHistoryItem }) {
   const score = item.score == null ? null : Math.max(0, Math.min(100, Math.round(Number(item.score) || 0)));
   const date = formatDate(item.createdAt);
 
   return (
-    <Link href={item.href} className={variant === "interview" ? styles.interviewCard : styles.historyCard}>
-      {variant === "history" ? <span className={styles.scoreBox}>{score == null ? "-" : score}</span> : null}
+    <Link href={item.href} className={styles.historyCard}>
+      <span className={styles.scoreBox}>{score == null ? "-" : score}</span>
       <div className={styles.cardBody}>
         <div className={styles.badges}>
-          <span className={styles.scorePill}>AI NCS 자소서 코칭</span>
+          <span className={styles.readyPill}>AI NCS 면접 코칭</span>
           <span className={item.isLinked ? styles.linkedPill : styles.generalPill}>
             {item.isLinked ? "공고 연결" : "일반"}
           </span>
+          {item.status !== "completed" ? <span className={styles.generalPill}>{formatInterviewStatus(item.status)}</span> : null}
         </div>
         <strong>{item.title}</strong>
         <small className={styles.cardSubtitle}>{item.subtitle}</small>
-        {variant === "history" ? <time>{date}</time> : null}
+        <time>{date}</time>
       </div>
       <span className={styles.chevron} aria-hidden="true">{">"}</span>
     </Link>
   );
 }
 
-function mapResumeHistoryItem(item: CoachingHistoryItem): UnifiedHistoryItem {
+function mapInterviewHistoryItem(item: InterviewCoachingSession): InterviewHistoryItem {
   const isLinked = Boolean(item.job);
   return {
     id: item.id,
-    kind: "resume",
+    kind: "interview",
     createdAt: item.createdAt,
     title: item.job
       ? makeJobTitle(item.job.institutionName, item.job.title)
-      : "공고 연결 없이 받은 AI NCS 자소서 코칭",
-    subtitle: item.result?.summary || "AI NCS 자소서 코칭 결과",
+      : `${item.companyName || "기업 미정"} ${item.positionName || "직무 미정"}`.trim(),
+    subtitle: item.result?.summary || item.dutyText || "AI NCS 면접 코칭",
     score: item.result?.score ?? null,
     isLinked,
-    href: `/my/coaching/${item.id}`,
+    href: `/my/interview-coaching/${item.id}`,
+    status: item.status,
   };
 }
 
-function sortRecent<T extends { createdAt: string }>(items: T[]) {
-  return [...items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+function sortRecent<T extends { createdAt: string }>(records: T[]) {
+  return [...records].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 function makePageNumbers(currentPage: number, pageCount: number) {
@@ -206,4 +199,17 @@ function formatDate(value: string) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}. ${month}. ${day}`;
+}
+
+function formatInterviewStatus(status: InterviewCoachingSession["status"]) {
+  switch (status) {
+    case "draft":
+      return "준비 중";
+    case "ready":
+      return "진행 중";
+    case "failed":
+      return "오류";
+    default:
+      return "완료";
+  }
 }

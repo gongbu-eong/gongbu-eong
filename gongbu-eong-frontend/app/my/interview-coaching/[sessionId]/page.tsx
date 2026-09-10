@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { InterviewCoachingPage } from "@/features/interview-coaching/components/InterviewCoachingPage";
 
 export const metadata: Metadata = {
-  title: "AI 면접 코칭 이어하기 | 공부엉이",
-  description: "저장된 NCS 직무 기반 AI 면접 코칭을 이어서 진행하세요.",
+  title: "AI NCS 면접 코칭 이어하기 | 공부엉이",
+  description: "저장된 AI NCS 면접 코칭을 이어서 진행하세요.",
   robots: { index: false, follow: false },
 };
 

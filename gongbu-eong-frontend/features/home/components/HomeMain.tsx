@@ -46,16 +46,16 @@ const aiTools = [
     title: "AI NCS 자소서 코칭",
     description: "합격하는 문장으로 AI가 다듬어 드려요.",
     image: "/home/home-tool-diagnosis.png",
-    imageAlt: "AI 자소서 코칭",
+    imageAlt: "AI NCS 자소서 코칭",
   },
   {
     href: "#",
     tag: "준비중",
     memberTag: "준비중",
-    title: "AI 면접 코칭",
+    title: "AI NCS 면접 코칭",
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
     image: "/home/home-tool-interview.png",
-    imageAlt: "AI 면접 코칭",
+    imageAlt: "AI NCS 면접 코칭",
     comingSoon: true,
   }
 ];
@@ -791,8 +791,8 @@ export function HomeMenuDrawer({
             items={[
               // "AI 도구 모음",
               "직무 성향 진단",
-              "AI 자소서 코칭",
-              "AI 면접 코칭",
+              "AI NCS 자소서 코칭",
+              "AI NCS 면접 코칭",
               // "심리·직무 테스트 모음",
             ]}
             hrefs={user ? [
