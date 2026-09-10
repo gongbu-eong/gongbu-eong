@@ -678,10 +678,17 @@ function InterviewQuestionPanel({
   onAnswerChange: (value: string) => void;
   onSubmitAnswer: () => void;
 }) {
-  const latestFollowUp = [...messages].reverse().find((item) => item.role === "follow_up");
-  const prompt = cleanDisplayText(latestFollowUp?.content || question.question) || question.question;
+  const prompt = cleanDisplayText(question.question) || question.question;
   const intent = cleanDisplayText(question.intent) || question.intent;
-  const visibleMessages = messages.filter((item) => item.role === "answer");
+  const visibleMessages = messages.filter((item) => item.role === "answer" || item.role === "follow_up");
+  const latestMessage = [...visibleMessages].reverse()[0];
+  const isAnsweringFollowUp = latestMessage?.role === "follow_up";
+  const answerTargetLabel = isAnsweringFollowUp
+    ? `꼬리질문 ${latestMessage.followUpIndex || followUpCount} 답변`
+    : "답변 작성";
+  const answerPlaceholder = isAnsweringFollowUp
+    ? "위 꼬리질문에 대해 면접장에서 말하듯 답변해 보세요."
+    : "면접장에서 말하듯 답변을 적어보세요.";
   return (
     <section className={styles.interviewPanel}>
       <article className={styles.questionCard}>
@@ -701,13 +708,16 @@ function InterviewQuestionPanel({
         </div>
       ) : null}
       <div className={styles.answerBox}>
+        <div className={styles.answerPrompt}>
+          <strong>{answerTargetLabel}</strong>
+        </div>
         <textarea
           ref={answerRef}
           value={answer}
           maxLength={MAX_ANSWER_LENGTH}
           onChange={(event) => onAnswerChange(event.target.value)}
           onFocus={(event) => focusField(event.currentTarget)}
-          placeholder="면접장에서 말하듯 답변을 적어보세요."
+          placeholder={answerPlaceholder}
         />
         <div className={styles.answerFooter}>
           <span>{answer.length.toLocaleString("ko-KR")} / {MAX_ANSWER_LENGTH.toLocaleString("ko-KR")}자</span>
@@ -725,7 +735,7 @@ function ChatMessage({ message }: { message: InterviewMessage }) {
   const label = message.role === "answer"
     ? "내 답변"
     : message.role === "follow_up"
-      ? `꼬리질문 ${message.followUpIndex || ""}`
+      ? `면접관 꼬리질문 ${message.followUpIndex || ""}`
       : "AI 질문";
   return (
     <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""}`}>

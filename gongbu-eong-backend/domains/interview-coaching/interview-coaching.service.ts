@@ -570,6 +570,15 @@ async function requestAnswerFeedback(
   followUpCount: number,
 ) {
   if (!session) throw new Error("면접 코칭 세션을 찾지 못했습니다.");
+  const questionMessages = session.messages.filter((item) => item.questionId === question.id);
+  const latestMessage = [...questionMessages].reverse().find(
+    (item) => item.role === "answer" || item.role === "follow_up",
+  );
+  const currentPrompt = latestMessage?.role === "follow_up" ? latestMessage.content : question.question;
+  const currentPromptLabel = latestMessage?.role === "follow_up"
+    ? `꼬리질문 ${latestMessage.followUpIndex || followUpCount}`
+    : "원 질문";
+
   return createOpenAiJsonResponse({
     model: getInterviewModel(),
     schemaName: "interview_answer_feedback",
@@ -584,17 +593,20 @@ async function requestAnswerFeedback(
 
 기업/직무: ${session.companyName} / ${session.positionName}
 NCS 매핑: ${session.analysis.ncsMappings.map((item) => `${item.name} ${item.relevance}%`).join(", ")}
-현재 질문: ${question.question}
+원 질문: ${question.question}
 질문 의도: ${question.intent}
 관련 NCS: ${question.ncsAreas.join(", ")}
+이번 답변 대상: ${currentPromptLabel}
+이번에 지원자가 답해야 하는 면접관 질문: ${currentPrompt}
 
 이전 대화:
-${session.messages.filter((item) => item.questionId === question.id).map((item) => `${item.role}: ${item.content}`).join("\n")}
+${questionMessages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.followUpIndex}` : ""}: ${item.content}`).join("\n")}
 
 이번 답변:
 ${answer}
 
 정답/오답 판정이 아니라 면접 답변 코칭 관점으로 설명하세요.
+피드백은 반드시 "이번에 지원자가 답해야 하는 면접관 질문"에 대한 이번 답변 기준으로 작성하세요. 꼬리질문 답변을 평가할 때 원 질문만 기준으로 되돌아가 평가하지 마세요.
 꼬리질문은 반드시 현재 질문의 관련 NCS(${question.ncsAreas.join(", ")})와 ${session.companyName}의 ${session.positionName} 직무 맥락 안에서 이어져야 합니다.
 갑자기 다른 NCS 영역, 다른 직무, 다른 산업의 질문으로 넘어가지 마세요.
 꼬리질문은 지원자의 이번 답변에서 빠진 상황, 본인 역할, 판단 근거, 행동, 결과 중 하나를 구체적으로 묻는 문장이어야 합니다.
