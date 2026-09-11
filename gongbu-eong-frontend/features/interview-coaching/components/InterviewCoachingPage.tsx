@@ -26,6 +26,7 @@ import styles from "./InterviewCoachingPage.module.css";
 type ConnectedJob = InterviewCoachingJob & { duty: string };
 
 const MAX_ANSWER_LENGTH = 4000;
+const MAX_FOLLOW_UPS_PER_QUESTION = 3;
 
 export function InterviewCoachingPage({
   initialSessionId,
@@ -348,9 +349,15 @@ export function InterviewCoachingPage({
                 const index = session.questions.findIndex((item) => item.id === question.id);
                 const messages = session.messages.filter((item) => item.questionId === question.id);
                 const followUpCount = messages.filter((item) => item.role === "follow_up").length;
+                const latestMessage = [...messages]
+                  .reverse()
+                  .find((item) => item.role === "answer" || item.role === "follow_up");
+                const isQuestionCompleted =
+                  followUpCount >= MAX_FOLLOW_UPS_PER_QUESTION &&
+                  latestMessage?.role === "answer";
                 const answer = answerDrafts[question.id] || "";
                 const mappedAreas = getQuestionBadgeAreas(question, session.analysis.ncsMappings, index);
-                const readonly = Boolean(session.completedAt || session.result);
+                const readonly = Boolean(session.completedAt || session.result || isQuestionCompleted);
                 return (
                   <InterviewQuestionPanel
                     key={question.id}
@@ -361,6 +368,11 @@ export function InterviewCoachingPage({
                     answer={answer}
                     busy={busyQuestionId === question.id}
                     readonly={readonly}
+                    readonlyReason={
+                      isQuestionCompleted && !session.completedAt && !session.result
+                        ? "이 문항은 꼬리질문 3개 답변까지 완료되어 더 이상 답변을 추가할 수 없습니다."
+                        : "최종 결과가 생성된 면접 코칭입니다. 답변을 추가하거나 수정할 수 없습니다."
+                    }
                     canSubmitAnswer={Boolean(answer.trim()) && !busyQuestionId && busy !== "complete" && !readonly}
                     followUpCount={followUpCount}
                     answerRef={(element) => {
@@ -730,6 +742,7 @@ function InterviewQuestionPanel({
   answer,
   busy,
   readonly,
+  readonlyReason,
   canSubmitAnswer,
   followUpCount,
   answerRef,
@@ -743,6 +756,7 @@ function InterviewQuestionPanel({
   answer: string;
   busy: boolean;
   readonly: boolean;
+  readonlyReason: string;
   canSubmitAnswer: boolean;
   followUpCount: number;
   answerRef: (element: HTMLTextAreaElement | null) => void;
@@ -787,7 +801,7 @@ function InterviewQuestionPanel({
       ) : null}
       {readonly ? (
         <div className={styles.answerLockedBox}>
-          최종 결과가 생성된 면접 코칭입니다. 답변을 추가하거나 수정할 수 없습니다.
+          {readonlyReason}
         </div>
       ) : (
         <div className={styles.answerBox}>

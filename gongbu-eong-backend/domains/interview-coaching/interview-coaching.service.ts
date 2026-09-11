@@ -394,6 +394,17 @@ export async function answerInterviewQuestion(args: {
   const followUpCount = session.messages.filter(
     (item) => item.questionId === question.id && item.role === "follow_up",
   ).length;
+  const questionMessages = session.messages.filter((item) => item.questionId === question.id);
+  const latestQuestionMessage = [...questionMessages].reverse().find(
+    (item) => item.role === "answer" || item.role === "follow_up",
+  );
+  if (
+    followUpCount >= MAX_FOLLOW_UPS_PER_QUESTION &&
+    latestQuestionMessage?.role === "answer"
+  ) {
+    throw new Error("이 문항은 꼬리질문 답변까지 완료되어 더 이상 답변을 추가할 수 없습니다.");
+  }
+
   const answerMessage = await addInterviewMessage({
     sessionId: session.id,
     questionId: question.id,
@@ -404,9 +415,29 @@ export async function answerInterviewQuestion(args: {
   let feedback: InterviewAnswerFeedback;
   try {
     feedback = normalizeAnswerFeedback(
-      await requestAnswerFeedback(session, question, answer, followUpCount),
+      await requestAnswerFeedback(
+        session,
+        question,
+        answer,
+        followUpCount,
+        followUpCount < MAX_FOLLOW_UPS_PER_QUESTION,
+      ),
       followUpCount,
     );
+    if (!feedback.followUpQuestion && followUpCount < MAX_FOLLOW_UPS_PER_QUESTION) {
+      const retryFollowUpQuestion = await requestRequiredFollowUpQuestion(
+        session,
+        question,
+        answer,
+        followUpCount,
+      ).catch((error) => {
+        console.warn("[InterviewCoaching] follow-up retry failed", error);
+        return null;
+      });
+      if (retryFollowUpQuestion) {
+        feedback = { ...feedback, followUpQuestion: retryFollowUpQuestion };
+      }
+    }
 
     await updateInterviewMessageFeedback(answerMessage.id, feedback);
 
@@ -568,6 +599,7 @@ async function requestAnswerFeedback(
   question: InterviewQuestion,
   answer: string,
   followUpCount: number,
+  requireFollowUp: boolean,
 ) {
   if (!session) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
   const questionMessages = session.messages.filter((item) => item.questionId === question.id);
@@ -582,14 +614,15 @@ async function requestAnswerFeedback(
   return createOpenAiJsonResponse({
     model: getInterviewModel(),
     schemaName: "interview_answer_feedback",
-    schema: answerFeedbackSchema,
+    schema: requireFollowUp ? requiredAnswerFeedbackSchema : answerFeedbackSchema,
     maxOutputTokens: 4500,
     content: [
       {
         type: "input_text",
-        text: `한국어 AI 면접관입니다. 지원자의 답변을 평가하고 필요한 경우 꼬리질문을 1개 생성하세요.
+        text: `한국어 AI 면접관입니다. 지원자의 답변을 평가하고 꼬리질문 흐름을 이어가세요.
 한 문항당 꼬리질문은 최대 ${MAX_FOLLOW_UPS_PER_QUESTION}개입니다. 이미 나온 꼬리질문 수는 ${followUpCount}개입니다.
 이미 ${MAX_FOLLOW_UPS_PER_QUESTION}개가 나왔다면 followUpQuestion은 null로 반환하세요.
+아직 ${MAX_FOLLOW_UPS_PER_QUESTION}개가 나오지 않았다면 followUpQuestion은 반드시 비어 있지 않은 문자열로 반환하세요. 지원자의 답변이 짧거나 부족해도, 빠진 판단 근거나 실제 행동을 확인하는 꼬리질문을 만드세요.
 
 기업/직무: ${session.companyName} / ${session.positionName}
 NCS 매핑: ${session.analysis.ncsMappings.map((item) => `${item.name} ${item.relevance}%`).join(", ")}
@@ -650,6 +683,52 @@ ${session.messages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.fo
       },
     ],
   });
+}
+
+async function requestRequiredFollowUpQuestion(
+  session: Awaited<ReturnType<typeof findInterviewSessionForViewer>>,
+  question: InterviewQuestion,
+  answer: string,
+  followUpCount: number,
+) {
+  if (!session) return null;
+  const questionMessages = session.messages.filter((item) => item.questionId === question.id);
+  const latestMessage = [...questionMessages].reverse().find(
+    (item) => item.role === "answer" || item.role === "follow_up",
+  );
+  const currentPrompt = latestMessage?.role === "follow_up" ? latestMessage.content : question.question;
+  const payload = await createOpenAiJsonResponse({
+    model: getInterviewModel(),
+    schemaName: "interview_required_follow_up",
+    schema: requiredFollowUpQuestionSchema,
+    maxOutputTokens: 1200,
+    content: [
+      {
+        type: "input_text",
+        text: `한국어 AI 면접관입니다. 아래 답변을 듣고 다음 꼬리질문 1개만 생성하세요.
+
+이미 나온 꼬리질문 수: ${followUpCount}개
+생성할 꼬리질문 번호: ${followUpCount + 1}
+최대 꼬리질문 수: ${MAX_FOLLOW_UPS_PER_QUESTION}개
+
+기업/직무: ${session.companyName} / ${session.positionName}
+관련 NCS: ${question.ncsAreas.join(", ")}
+원 질문: ${question.question}
+이번에 지원자가 답한 질문: ${currentPrompt}
+
+이전 대화:
+${questionMessages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.followUpIndex}` : ""}: ${item.content}`).join("\n")}
+
+지원자 답변:
+${answer}
+
+지원자의 답변에서 빠진 상황, 본인 역할, 판단 근거, 행동, 결과 중 하나를 실제 면접관 말투로 물어보세요.
+기업명/직무명을 억지로 반복하지 말고, 필요할 때만 "우리 기관", "우리 병원", "해당 직무", "현장"처럼 자연스럽게 말하세요.
+반드시 followUpQuestion에 비어 있지 않은 한국어 질문 문장 하나를 넣은 JSON 객체만 반환하세요.`,
+      },
+    ],
+  });
+  return removeJobCodesFromText(readString(asRecord(payload)?.followUpQuestion).slice(0, 240)) || null;
 }
 
 function getInterviewModel() {
@@ -1243,6 +1322,28 @@ const answerFeedbackSchema = {
     improvements: { type: "array", items: { type: "string" } },
     nextAnswerGuide: { type: "string" },
     followUpQuestion: { type: ["string", "null"] },
+  },
+} as const;
+
+const requiredAnswerFeedbackSchema = {
+  type: "object",
+  additionalProperties: true,
+  required: ["summary", "strengths", "improvements", "nextAnswerGuide", "followUpQuestion"],
+  properties: {
+    summary: { type: "string" },
+    strengths: { type: "array", items: { type: "string" } },
+    improvements: { type: "array", items: { type: "string" } },
+    nextAnswerGuide: { type: "string" },
+    followUpQuestion: { type: "string" },
+  },
+} as const;
+
+const requiredFollowUpQuestionSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["followUpQuestion"],
+  properties: {
+    followUpQuestion: { type: "string" },
   },
 } as const;
 
