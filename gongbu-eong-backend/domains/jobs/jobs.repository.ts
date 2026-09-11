@@ -268,6 +268,7 @@ export async function findRecommendedJobPostings(
 ) {
   const values: unknown[] = [args.personalityCode];
   const includeClosedMonths = normalizeIncludeClosedMonths(args.includeClosedMonths);
+  const activeFilter = includeClosedMonths > 0 ? "" : "AND postings.is_active = TRUE";
   const categoryFilter = buildAnyTextFilter("categories.name", args.ncsCategory, values);
   const regionFilter = buildAnyTextFilter("postings.work_region", args.region, values);
   const employmentFilter = buildEmploymentTypeFilter(args.employmentType, values);
@@ -377,7 +378,8 @@ export async function findRecommendedJobPostings(
         ON matched_categories.job_posting_id = postings.id
       LEFT JOIN public.public_institutions institutions
         ON institutions.id = postings.institution_id
-      WHERE postings.is_active = TRUE
+      WHERE TRUE
+        ${activeFilter}
         ${applicationEndFilter}
         ${regularEmploymentFilter}
         ${monthlyDateFilter}
@@ -420,6 +422,7 @@ export async function findJobPostings(args: {
 }) {
   const values: unknown[] = [];
   const includeClosedMonths = normalizeIncludeClosedMonths(args.includeClosedMonths);
+  const activeFilter = includeClosedMonths > 0 ? "" : "AND postings.is_active = TRUE";
   const categoryFilter = args.categoryCode
     ? `AND EXISTS (
         SELECT 1
@@ -528,7 +531,8 @@ export async function findJobPostings(args: {
         ON posting_categories.job_posting_id = postings.id
       LEFT JOIN public.job_categories categories
         ON categories.id = posting_categories.job_category_id
-      WHERE postings.is_active = TRUE
+      WHERE TRUE
+        ${activeFilter}
         ${applicationEndFilter}
         ${categoryFilter}
         ${bookmarkFilter}
