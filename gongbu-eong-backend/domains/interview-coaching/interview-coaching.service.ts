@@ -646,13 +646,15 @@ ${questionMessages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.fo
 ${answer}
 
 정답/오답 판정이 아니라 면접 답변 코칭 관점으로 설명하세요.
+먼저 이번 답변이 "이번에 지원자가 답해야 하는 면접관 질문"과 의미상 관련이 있는지 AI가 판단하세요.
+답변이 질문과 거의 무관하면, 단순히 구체성이 부족하다고 평가하지 말고 질문 의도와 다른 답변이라는 점을 면접관 말투로 짚은 뒤 원래 질문에 맞는 답을 다시 요구하는 꼬리질문을 만드세요.
+답변이 질문과 관련은 있지만 추상적이면, 사례, 본인 역할, 판단 근거, 실행 과정, 결과 중 빠진 부분을 파고드는 꼬리질문을 만드세요.
 피드백은 반드시 "이번에 지원자가 답해야 하는 면접관 질문"에 대한 이번 답변 기준으로 작성하세요. 꼬리질문 답변을 평가할 때 원 질문만 기준으로 되돌아가 평가하지 마세요.
 꼬리질문은 원 질문의 관련 NCS(${question.ncsAreas.join(", ")})에만 고정하지 말고, NCS 7개 후보 중 지원자의 이번 답변과 ${session.companyName}의 ${session.positionName} 직무 면접 흐름에 자연스럽게 이어지는 영역을 AI가 판단해 생성하세요.
 followUpNcsAreas는 반드시 followUpQuestion의 검증 관점과 일치해야 합니다. 원 질문의 NCS를 그대로 복사하지 말고 이번 답변의 빈틈을 기준으로 선택하세요.
 같은 문항 안에서도 꼬리질문이 계속 같은 NCS만 반복되지 않도록 하되, 갑자기 무관한 직무, 산업, 상황으로 넘어가지 마세요.
 꼬리질문은 지원자의 이번 답변에서 빠진 상황, 본인 역할, 판단 근거, 행동, 결과, 객관적 기준 중 하나를 구체적으로 묻는 문장이어야 합니다.
 압박면접처럼 논리적이고 객관적으로 물어보세요. 단, 무례하거나 비난하는 표현은 피하고 실제 면접관이 할 법한 수준으로 작성하세요.
-답변이 "test", "잘 모르겠습니다", 한두 문장처럼 부실하면, followUpQuestion 안에서 "지금 답변만으로는 본인의 역할이나 판단 근거가 확인되지 않습니다"처럼 부족한 점을 짚은 뒤 반드시 이어서 질문하세요.
 followUpQuestion은 실제 면접관이 지원자의 답변을 듣고 바로 이어 묻는 말투로 작성하세요. 기업명/직무명을 억지로 반복하지 말고, 필요할 때만 "우리 기관", "우리 병원", "해당 직무", "현장"처럼 자연스럽게 말하세요.
 반드시 JSON 객체 하나만 반환하세요.`,
       },
@@ -733,17 +735,19 @@ ${questionMessages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.fo
 지원자 답변:
 ${answer}
 
+먼저 지원자 답변이 "이번에 지원자가 답한 질문"과 의미상 관련이 있는지 AI가 판단하세요.
+답변이 질문과 거의 무관하면, 질문 의도와 다른 답변이라는 점을 면접관 말투로 짚은 뒤 원래 질문에 맞는 답을 다시 요구하는 꼬리질문을 만드세요.
+답변이 질문과 관련은 있지만 추상적이면, 사례, 본인 역할, 판단 근거, 실행 과정, 결과 중 빠진 부분을 파고드는 꼬리질문을 만드세요.
 지원자의 답변에서 빠진 상황, 본인 역할, 판단 근거, 행동, 결과, 객관적 기준 중 하나를 실제 면접관 말투로 물어보세요.
 followUpNcsAreas에는 NCS 7개 후보 중 이번 꼬리질문이 검증하는 역량 1~2개를 넣으세요. 원 질문 관련 NCS를 그대로 복사하지 말고 이번 답변의 빈틈을 기준으로 선택하세요.
 압박면접처럼 논리적이고 객관적으로 물어보세요. 단, 무례하거나 비난하는 표현은 피하고 실제 면접관이 할 법한 수준으로 작성하세요.
-답변이 "test", "잘 모르겠습니다", 한두 문장처럼 부실하면, followUpQuestion 안에서 "지금 답변만으로는 본인의 역할이나 판단 근거가 확인되지 않습니다"처럼 부족한 점을 짚은 뒤 반드시 이어서 질문하세요.
 기업명/직무명을 억지로 반복하지 말고, 필요할 때만 "우리 기관", "우리 병원", "해당 직무", "현장"처럼 자연스럽게 말하세요.
 반드시 followUpQuestion에는 비어 있지 않은 한국어 질문 문장 하나를, followUpNcsAreas에는 NCS 역량 1~2개를 넣은 JSON 객체만 반환하세요.`,
       },
     ],
   });
   const record = asRecord(payload);
-  const questionText = removeJobCodesFromText(readString(record?.followUpQuestion).slice(0, 260)) || null;
+  const questionText = removeJobCodesFromText(readString(record?.followUpQuestion)) || null;
   if (!questionText) return null;
   return {
     question: questionText,
@@ -1105,7 +1109,7 @@ function normalizeAnswerFeedback(
   const followUpQuestion =
     followUpCount >= MAX_FOLLOW_UPS_PER_QUESTION
       ? null
-      : removeJobCodesFromText(readString(record?.followUpQuestion).slice(0, 260)) || null;
+      : removeJobCodesFromText(readString(record?.followUpQuestion)) || null;
   const followUpNcsAreas = followUpQuestion
     ? normalizeNcsAreaList(record?.followUpNcsAreas).slice(0, 2)
     : [];

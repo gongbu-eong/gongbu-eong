@@ -72,12 +72,12 @@ export function InterviewCoachingPage({
   const [alertMessage, setAlertMessage] = useState("");
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
 
-  useBodyScrollLock(Boolean(jobPickerOpen || dutySheetJob || alertMessage || completeConfirmOpen));
+  useBodyScrollLock(Boolean(jobPickerOpen || dutySheetJob || alertMessage || completeConfirmOpen || busyQuestionId));
 
   useEffect(() => {
-    if (!jobPickerOpen && !dutySheetJob && !alertMessage && !completeConfirmOpen) return;
+    if (!jobPickerOpen && !dutySheetJob && !alertMessage && !completeConfirmOpen && !busyQuestionId) return;
     return watchMobileKeyboardInset();
-  }, [jobPickerOpen, dutySheetJob, alertMessage, completeConfirmOpen]);
+  }, [jobPickerOpen, dutySheetJob, alertMessage, completeConfirmOpen, busyQuestionId]);
 
   useEffect(() => {
     if (!initialSessionId) return;
@@ -485,6 +485,7 @@ export function InterviewCoachingPage({
           }}
         />
       ) : null}
+      {busyQuestionId ? <AnswerLoadingOverlay /> : null}
     </div>
   );
 }
@@ -1089,6 +1090,15 @@ function InterviewLoadingScreen({ mode }: { mode: "start" | "complete" }) {
         <p>{isCompleting ? "곧 AI NCS 면접 코칭 결과를 보여드릴게요." : "곧 실전 면접 질문을 만들어 드릴게요."}</p>
         <div className={styles.loadingTrack} aria-hidden="true"><span /></div>
       </main>
+    </div>
+  );
+}
+
+function AnswerLoadingOverlay() {
+  return (
+    <div className={styles.answerLoadingOverlay} role="status" aria-live="polite">
+      <span className={styles.answerLoadingSpinner} aria-hidden="true" />
+      <p className={styles.answerLoadingText}>답변을 분석하고 꼬리질문을 만들고 있어요.</p>
     </div>
   );
 }
