@@ -71,6 +71,12 @@ export type InterviewCoachingResult = {
     questionId: string;
     question: string;
     score: number;
+    answerScore: number;
+    followUpScores: Array<{
+      followUpIndex: number;
+      score: number;
+      summary: string;
+    }>;
     summary: string;
     strengths: string[];
     improvements: string[];

@@ -94,24 +94,6 @@ function ResultView({
 
   return (
     <>
-      <InterviewAnalysisView session={session} />
-
-      <section className={styles.resultHero}>
-        <span>{session.companyName} · {displayPositionName}</span>
-        <strong>{result.score}<small>점</small></strong>
-        <p>{cleanDisplayText(result.summary) || result.summary}</p>
-      </section>
-
-      <section className={styles.resultSection}>
-        <h2>잘한 점</h2>
-        <ul>{strengths.map((item) => <li key={item}>{item}</li>)}</ul>
-      </section>
-
-      <section className={styles.resultSection}>
-        <h2>보완할 점</h2>
-        <ul>{improvements.map((item) => <li key={item}>{item}</li>)}</ul>
-      </section>
-
       <section className={styles.resultSection}>
         <h2>문항별 답변 코칭</h2>
         <ResultQuestionTabs
@@ -129,10 +111,31 @@ function ResultView({
         ) : null}
       </section>
 
+      <section className={styles.resultHero}>
+        <h2>점수(토탈)</h2>
+        <span>{session.companyName} · {displayPositionName}</span>
+        <strong>{result.score}<small>/100점</small></strong>
+        <p>{cleanDisplayText(result.summary) || result.summary}</p>
+      </section>
+
+      <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
+
+      <section className={styles.resultSection}>
+        <h2>잘한 점</h2>
+        <ul>{strengths.map((item) => <li key={item}>{item}</li>)}</ul>
+      </section>
+
+      <section className={styles.resultSection}>
+        <h2>보완할 점</h2>
+        <ul>{improvements.map((item) => <li key={item}>{item}</li>)}</ul>
+      </section>
+
       <section className={styles.resultSection}>
         <h2>추가 연습 질문</h2>
         <ul>{futurePracticeQuestions.map((item) => <li key={item}>{item}</li>)}</ul>
       </section>
+
+      <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
 
       <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
         다시 코칭받기
@@ -203,6 +206,10 @@ function ResultQuestionDetail({
       </article>
 
       {review ? (
+        <QuestionScoreBreakdown review={review} />
+      ) : null}
+
+      {review ? (
         <article className={styles.reviewCard}>
           <strong>최종 문항 평가<b>{review.score}점</b></strong>
           <p>{cleanDisplayText(review.summary) || review.summary}</p>
@@ -223,6 +230,30 @@ function ResultQuestionDetail({
         <p className={styles.lead}>이 문항에는 제출한 답변이 없습니다.</p>
       )}
     </div>
+  );
+}
+
+function QuestionScoreBreakdown({ review }: { review: InterviewQuestionReview }) {
+  const answerScore = typeof review.answerScore === "number" ? review.answerScore : review.score;
+  const followUpScores = Array.isArray(review.followUpScores) ? review.followUpScores : [];
+  return (
+    <article className={styles.scoreBreakdown}>
+      <div>
+        <span>질문 답변 점수</span>
+        <strong>{answerScore}<small>/100점</small></strong>
+      </div>
+      {followUpScores.length ? (
+        followUpScores.map((item) => (
+          <div key={item.followUpIndex}>
+            <span>꼬리질문 {item.followUpIndex} 답변 점수</span>
+            <strong>{item.score}<small>/100점</small></strong>
+            {item.summary ? <p>{cleanDisplayText(item.summary) || item.summary}</p> : null}
+          </div>
+        ))
+      ) : (
+        <p>답변한 꼬리질문이 없어서 꼬리질문 점수는 아직 없습니다.</p>
+      )}
+    </article>
   );
 }
 

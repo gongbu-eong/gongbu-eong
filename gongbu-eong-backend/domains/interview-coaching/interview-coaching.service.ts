@@ -17,6 +17,7 @@ import type {
   InterviewCoachingJobDto,
   InterviewCoachingResult,
   InterviewQuestion,
+  InterviewQuestionReview,
   NcsAreaName,
 } from "./interview-coaching.dto";
 
@@ -34,7 +35,7 @@ const NCS_AREAS: Array<{
 ];
 
 const MAX_FOLLOW_UPS_PER_QUESTION = 3;
-const INTERVIEW_QUESTION_COUNT = 20;
+const INTERVIEW_QUESTION_COUNT = 5;
 
 type InterviewStartInput = {
   companyName: string;
@@ -688,7 +689,13 @@ ${session.questions.map((item, index) => `${index + 1}. ${item.question}`).join(
 ${session.messages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.followUpIndex}` : ""}: ${item.content}`).join("\n")}
 
 답변한 문항 수: ${answeredQuestionIds.size}개
-최종 평가는 답변이 제출된 문항과 그 꼬리질문 기록을 중심으로 작성하세요. 답변하지 않은 문항은 평가하지 말고, 필요하면 추가 연습 권장 문항으로만 다루세요.
+최종 평가는 답변이 제출된 모든 면접 질문의 원 질문 답변과 꼬리질문 답변을 기준으로 작성하세요.
+답변하지 않은 문항은 점수 산정에 포함하지 말고, 필요하면 추가 연습 권장 문항으로만 다루세요.
+score는 전체 토탈 점수이며 100점 만점입니다. 제출된 원 질문 답변과 꼬리질문 답변 전체를 종합해 산정하세요.
+questionReviews에는 답변이 하나 이상 제출된 문항별 평가를 넣으세요.
+각 questionReview의 score는 해당 문항 묶음 전체 점수이며 100점 만점입니다.
+각 questionReview의 answerScore는 원 질문에 대한 첫 답변 점수이며 100점 만점입니다.
+각 questionReview의 followUpScores는 실제로 답변한 꼬리질문별 점수 배열입니다. 각 항목은 followUpIndex, score, summary를 포함하고, score는 100점 만점입니다.
 점수는 공식 NCS 점수가 아니라 서비스용 참고 점수입니다.
 반드시 JSON 객체 하나만 반환하세요.`,
       },
@@ -1150,17 +1157,44 @@ function normalizeQuestionReview(value: unknown, fallback?: InterviewQuestion) {
   if (!record && !fallback) return null;
   const questionId = readString(record?.questionId) || fallback?.id || "q1";
   const question = removeJobCodesFromText(readString(record?.question)) || fallback?.question || "면접 질문";
+  const score = clampNumber(record?.score, 0, 100, 70);
   const areas = readStringList(record?.ncsAreas)
     .map(normalizeNcsAreaName)
     .filter(Boolean) as NcsAreaName[];
   return {
     questionId,
     question,
-    score: clampNumber(record?.score, 0, 100, 70),
+    score,
+    answerScore: clampNumber(readFirstDefined(record, [
+      "answerScore",
+      "baseAnswerScore",
+      "originalAnswerScore",
+      "questionAnswerScore",
+    ]), 0, 100, score),
+    followUpScores: normalizeArray(readFirstDefined(record, [
+      "followUpScores",
+      "followUpAnswerScores",
+      "tailQuestionScores",
+    ])).map(normalizeFollowUpScore).filter(Boolean) as InterviewQuestionReview["followUpScores"],
     summary: removeJobCodesFromText(readString(record?.summary)),
     strengths: uniqueDisplayList(readDisplayStringList(record?.strengths), 4),
     improvements: uniqueDisplayList(readDisplayStringList(record?.improvements), 4),
     ncsAreas: areas.length ? areas : fallback?.ncsAreas || [],
+  };
+}
+
+function normalizeFollowUpScore(value: unknown) {
+  const record = asRecord(value);
+  if (!record) return null;
+  const followUpIndex = clampNumber(readFirstDefined(record, [
+    "followUpIndex",
+    "index",
+    "questionIndex",
+  ]), 1, MAX_FOLLOW_UPS_PER_QUESTION, 1);
+  return {
+    followUpIndex,
+    score: clampNumber(record.score, 0, 100, 70),
+    summary: removeJobCodesFromText(readString(record.summary)),
   };
 }
 
@@ -1200,6 +1234,17 @@ function readFirstString(
     if (value) return value;
   }
   return "";
+}
+
+function readFirstDefined(
+  record: Record<string, unknown> | null,
+  keys: string[],
+) {
+  if (!record) return undefined;
+  for (const key of keys) {
+    if (record[key] !== undefined && record[key] !== null) return record[key];
+  }
+  return undefined;
 }
 
 function readFirstStringList(
@@ -1412,7 +1457,41 @@ const finalResultSchema = {
     summary: { type: "string" },
     strengths: { type: "array", items: { type: "string" } },
     improvements: { type: "array", items: { type: "string" } },
-    questionReviews: { type: "array", items: { type: "object", additionalProperties: true } },
+    questionReviews: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          questionId: { type: "string" },
+          question: { type: "string" },
+          score: { type: "number" },
+          answerScore: { type: "number" },
+          followUpScores: {
+            type: "array",
+            items: {
+              type: "object",
+              additionalProperties: true,
+              properties: {
+                followUpIndex: { type: "number" },
+                score: { type: "number" },
+                summary: { type: "string" },
+              },
+            },
+          },
+          summary: { type: "string" },
+          strengths: { type: "array", items: { type: "string" } },
+          improvements: { type: "array", items: { type: "string" } },
+          ncsAreas: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: NCS_AREAS.map((area) => area.name),
+            },
+          },
+        },
+      },
+    },
     futurePracticeQuestions: { type: "array", items: { type: "string" } },
   },
 } as const;

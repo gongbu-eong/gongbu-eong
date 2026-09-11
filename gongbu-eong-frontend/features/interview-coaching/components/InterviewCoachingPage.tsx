@@ -490,7 +490,17 @@ export function InterviewCoachingPage({
   );
 }
 
-export function InterviewAnalysisView({ session }: { session: InterviewCoachingSession }) {
+export function InterviewAnalysisView({
+  session,
+  mode = "full",
+  profileTitle = "직무 내용 분석",
+  ncsTitle = "NCS 직무/관련 영역 매핑",
+}: {
+  session: InterviewCoachingSession;
+  mode?: "full" | "profile" | "ncs";
+  profileTitle?: string;
+  ncsTitle?: string;
+}) {
   const profile = session.analysis.profile;
   const visibleMappings = getVisibleNcsMappings(session.analysis.ncsMappings);
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
@@ -507,9 +517,9 @@ export function InterviewAnalysisView({ session }: { session: InterviewCoachingS
   ]).slice(0, 5);
   return (
     <>
-      <section className={styles.profileCard}>
+      {mode !== "ncs" ? <section className={styles.profileCard}>
         <div className={styles.profileHeader}>
-          <span>직무 내용 분석</span>
+          <span>{profileTitle}</span>
           <strong>{session.companyName} · {displayPositionName}</strong>
           <p>{displayDutyText}</p>
         </div>
@@ -522,12 +532,12 @@ export function InterviewAnalysisView({ session }: { session: InterviewCoachingS
           <ProfileList title="주요 업무" items={displayMainTasks} />
           <ProfileList title="필요 지식/경험" items={displayKnowledge} />
         </div>
-      </section>
-      <section className={styles.sectionTitle}>
-        <h2>NCS 직무/관련 영역 매핑</h2>
+      </section> : null}
+      {mode !== "profile" ? <section className={styles.sectionTitle}>
+        <h2>{ncsTitle}</h2>
         <small>{visibleMappings.length}개 매칭</small>
-      </section>
-      <section className={styles.ncsPanel}>
+      </section> : null}
+      {mode !== "profile" ? <section className={styles.ncsPanel}>
         {visibleMappings.map((item) => (
           <article className={styles.ncsItem} key={item.name}>
             <strong>{item.name}<b>{item.relevance}%</b></strong>
@@ -538,7 +548,7 @@ export function InterviewAnalysisView({ session }: { session: InterviewCoachingS
         {!visibleMappings.length ? (
           <p>AI가 생성한 NCS 매핑 결과가 없습니다.</p>
         ) : null}
-      </section>
+      </section> : null}
     </>
   );
 }

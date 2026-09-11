@@ -89,12 +89,20 @@
 .bottomActions{display:grid;grid-template-columns:1fr 1fr;gap:.625rem;margin-top:1rem}
 .singleBottomAction{margin-top:1rem}
 .resultHero{margin-top:1.25rem;border:0;border-top:1px solid #e8f1ff;border-bottom:1px solid #e8f1ff;border-radius:0;background:#fff;text-align:center;box-shadow:none}
+.resultHero h2{margin:0 0 .875rem;color:#1a2233;font-size:calc(1rem + 3px);font-weight:900;line-height:1.4}
 .resultHero span{display:inline-flex;align-items:center;min-height:1.75rem;padding:0 .75rem;border-radius:999px;background:#e8f1ff;color:#2f7ff0;font-size:calc(.75rem + 3px);font-weight:900;line-height:1.4}
 .resultHero strong{display:block;margin:1rem 0 .5rem;color:#1a2233;font-size:calc(3.25rem + 3px);font-weight:900;line-height:1}
 .resultHero strong small{margin-left:.25rem;font-size:calc(.875rem + 3px);font-weight:600;color:#5a6580}
 .resultHero p{max-width:31rem;margin:0 auto;color:#5a6580;font-size:calc(.8125rem + 3px);line-height:1.6;word-break:keep-all}
+.resultHero+.profileCard{margin-top:1.5rem}
 .resultSection{margin-top:1.5rem;border:0;border-bottom:1px solid #e8f1ff;border-radius:0;background:#fff;padding:0 0 1.25rem;box-shadow:none}
 .resultSection h2{margin:0 0 .875rem;color:#1a2233;font-size:calc(1rem + 3px);font-weight:900;line-height:1.4}
+.scoreBreakdown{display:grid;gap:.625rem;padding:1rem;border:1px solid #dbeafe;border-radius:.75rem;background:#f8fbff}
+.scoreBreakdown div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.25rem .75rem;align-items:center}
+.scoreBreakdown span{color:#5a6580;font-size:calc(.75rem + 3px);font-weight:800}
+.scoreBreakdown strong{color:#2f7ff0;font-size:calc(1rem + 3px);font-weight:900}
+.scoreBreakdown small{margin-left:.125rem;color:#5a6580;font-size:calc(.75rem + 3px);font-weight:700}
+.scoreBreakdown p{grid-column:1/-1;margin:0;color:#5a6580;font-size:calc(.75rem + 3px);line-height:1.55;word-break:keep-all}
 .reviewList{display:grid;gap:.75rem}
 .reviewCard{padding:1rem;border:1px solid #e8f1ff;border-radius:.625rem;background:#f8fbff}
 .reviewCard strong{display:flex;justify-content:space-between;gap:.75rem;font-size:calc(.875rem + 3px);line-height:1.45}
