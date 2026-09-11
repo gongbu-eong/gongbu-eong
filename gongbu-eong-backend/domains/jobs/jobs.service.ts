@@ -82,7 +82,10 @@ export async function getJobPostings(args: {
   includeClosedMonths?: number;
   sort?: "closing" | "latest" | "views" | "recommended";
 }): Promise<JobPostingListResponseDto> {
-  const limit = clamp(args.limit ?? 20, 1, 100);
+  const includeClosedMonths = args.includeClosedMonths || 0;
+  const limit = args.limit == null && includeClosedMonths > 0
+    ? undefined
+    : clamp(args.limit ?? 20, 1, 100);
   const offset = Math.max(args.offset ?? 0, 0);
   const view = args.view || "all";
   const searchQuery = args.query?.trim().slice(0, MAX_JOB_SEARCH_QUERY_LENGTH) || undefined;
@@ -100,7 +103,7 @@ export async function getJobPostings(args: {
       ? await findRecommendedJobPostings(
           {
             personalityCode: diagnosisType.code,
-            limit,
+            limit: limit ?? 100,
             offset,
             userId: args.userId,
             monthlyRegularOnly: args.monthlyRegularOnly,
@@ -111,7 +114,7 @@ export async function getJobPostings(args: {
             careerRequirement: args.careerRequirement,
             startDate: args.startDate,
             endDate: args.endDate,
-            includeClosedMonths: args.includeClosedMonths,
+            includeClosedMonths,
             sort: args.sort,
           },
         )
@@ -120,7 +123,7 @@ export async function getJobPostings(args: {
     return {
       items: result.rows.map(toJobPostingDto),
       total: result.total,
-      limit,
+      limit: limit ?? result.total,
       offset,
       recommendationTypeName: diagnosisType?.name || null,
     };
@@ -140,14 +143,14 @@ export async function getJobPostings(args: {
     careerRequirement: args.careerRequirement,
     startDate: args.startDate,
     endDate: args.endDate,
-    includeClosedMonths: args.includeClosedMonths,
+    includeClosedMonths,
     sort: view === "closing" ? "closing" : args.sort,
   });
 
   return {
     items: result.rows.map(toJobPostingDto),
     total: result.total,
-    limit,
+    limit: limit ?? result.total,
     offset,
     recommendationTypeName: null,
   };

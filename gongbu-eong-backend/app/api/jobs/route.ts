@@ -7,7 +7,8 @@ import { jsonWithCors } from "@/lib/cors";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  const limit = Number(request.nextUrl.searchParams.get("limit") || 20);
+  const requestedLimit = request.nextUrl.searchParams.get("limit");
+  const limit = requestedLimit == null ? undefined : Number(requestedLimit);
   const offset = Number(request.nextUrl.searchParams.get("offset") || 0);
   const includeClosedMonths = Number(request.nextUrl.searchParams.get("includeClosedMonths") || 0);
   const categoryCode =
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
     request,
     await getJobPostings({
       categoryCode,
-      limit: Number.isFinite(limit) ? limit : 20,
+      limit: limit == null || Number.isFinite(limit) ? limit : 20,
       offset: Number.isFinite(offset) ? offset : 0,
       view,
       userId: user?.id,

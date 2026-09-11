@@ -112,7 +112,9 @@ function buildApplicationEndFilter(includeClosedMonths: number, values: unknown[
   return `
     AND (
       postings.application_end_at IS NULL
-      OR postings.application_end_at::date >= (CURRENT_DATE - (${monthsParam}::int * INTERVAL '1 month'))::date
+      OR postings.application_end_at::date BETWEEN
+        (CURRENT_DATE - (${monthsParam}::int * INTERVAL '1 month'))::date
+        AND (CURRENT_DATE + (${monthsParam}::int * INTERVAL '1 month'))::date
     )
   `;
 }
@@ -400,9 +402,9 @@ export async function findRecommendedJobPostings(
 }
 
 export async function findJobPostings(args: {
-  categoryCode?: string;
-  limit: number;
-  offset: number;
+    categoryCode?: string;
+    limit?: number;
+    offset: number;
   userId?: string;
   bookmarkedOnly?: boolean;
   query?: string;
@@ -455,6 +457,9 @@ export async function findJobPostings(args: {
     ? `AND postings.announcement_at::date <= $${values.push(args.endDate)}::date`
     : "";
   const applicationEndFilter = buildApplicationEndFilter(includeClosedMonths, values);
+  const latestOrder = includeClosedMonths
+    ? "postings.application_end_at DESC NULLS LAST, postings.announcement_at DESC NULLS LAST, postings.created_at DESC"
+    : "postings.announcement_at DESC NULLS LAST, postings.created_at DESC";
   const closingOrder = includeClosedMonths
     ? `
       CASE
@@ -474,14 +479,17 @@ export async function findJobPostings(args: {
     : "postings.application_end_at ASC NULLS LAST, postings.created_at DESC";
   const orderBy =
     args.sort === "latest"
-      ? "postings.announcement_at DESC NULLS LAST, postings.created_at DESC"
+      ? latestOrder
       : args.sort === "views"
         ? "postings.view_count DESC, postings.application_end_at ASC NULLS LAST"
         : closingOrder;
 
-  values.push(args.limit, args.offset);
-  const limitParam = `$${values.length - 1}`;
-  const offsetParam = `$${values.length}`;
+  const limitClause = args.limit == null
+    ? ""
+    : `LIMIT $${values.push(args.limit)}`;
+  const offsetClause = args.limit == null && !args.offset
+    ? ""
+    : `OFFSET $${values.push(args.offset)}`;
 
   const result = await query<JobPostingRow & { total_count: string }>(
     `
@@ -534,8 +542,8 @@ export async function findJobPostings(args: {
         ${endDateFilter}
       GROUP BY postings.id, institutions.name
       ORDER BY ${orderBy}
-      LIMIT ${limitParam}
-      OFFSET ${offsetParam}
+      ${limitClause}
+      ${offsetClause}
     `,
     values,
   );
