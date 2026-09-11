@@ -3,8 +3,11 @@ import type { CoachingFeedback, CoachingHistoryDto, CoachingInputType, CoachingJ
 
 type Row = { result_id: string; request_id: string; created_at: string; input_type: CoachingInputType; source_filename: string | null; input_text: string; job_posting_snapshot: CoachingJobDto | null; feedback: CoachingFeedback | null; user_id: string | null; anonymous_id: string | null };
 
-export async function createCoachingRequest(args: { userId?: string | null; anonymousId?: string | null; jobPostingId?: string | null; jobSnapshot?: CoachingJobDto | null; resumeId?: string | null; inputType: CoachingInputType; sourceFileId?: string | null; sourceFilename?: string | null; inputText: string }) {
-  const result = await db.query<{ id: string }>("INSERT INTO public.resume_coaching_requests (user_id, anonymous_id, job_posting_id, resume_id, input_type, source_file_id, source_filename, input_text, job_posting_snapshot, entry_source) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, 'ai_tools') RETURNING id", [args.userId || null, args.anonymousId || null, args.jobPostingId || null, args.resumeId || null, args.inputType, args.sourceFileId || null, args.sourceFilename || null, args.inputText, JSON.stringify(args.jobSnapshot || {})]);
+export async function createCoachingRequest(args: { userId?: string | null; anonymousId?: string | null; jobPostingId?: string | null; jobSnapshot?: CoachingJobDto | null; resumeId?: string | null; inputType: CoachingInputType; sourceFileId?: string | null; sourceFilename?: string | null; inputText: string; ipAddress?: string | null; userAgent?: string | null }) {
+  const result = await db.query<{ id: string }>(
+    "INSERT INTO public.resume_coaching_requests (user_id, anonymous_id, job_posting_id, resume_id, input_type, source_file_id, source_filename, input_text, job_posting_snapshot, entry_source, ip_address, user_agent) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, 'ai_tools', $10, $11) RETURNING id",
+    [args.userId || null, args.anonymousId || null, args.jobPostingId || null, args.resumeId || null, args.inputType, args.sourceFileId || null, args.sourceFilename || null, args.inputText, JSON.stringify(args.jobSnapshot || {}), args.ipAddress || null, args.userAgent || null],
+  );
   return result.rows[0].id;
 }
 

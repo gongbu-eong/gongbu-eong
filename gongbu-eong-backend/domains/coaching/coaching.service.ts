@@ -2,7 +2,7 @@ import { claimAnonymousCoachingResults, createCoachingRequest, createCoachingRes
 import type { CoachingFeedback, CoachingFramework, CoachingInputType, CoachingJobDto, CoachingQuestionInput, CoachingQuestionReview, CoachingReviewSeverity, CoachingSection, CoachingSubmissionReview } from "./coaching.dto";
 import { extractResumeDocumentText } from "@/domains/resumes/resumes.ai";
 import { createOpenAiJsonResponse, getOpenAiModel, makeOpenAiFileDataUrl } from "@/lib/openai";
-export type CoachResumeArgs = { userId?: string | null; anonymousId?: string | null; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; jobPostingId?: string | null; job?: CoachingJobDto | null; jobDuty?: string | null; questions?: CoachingQuestionInput[]; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null };
+export type CoachResumeArgs = { userId?: string | null; anonymousId?: string | null; inputType: CoachingInputType; inputText: string; file?: { name: string; type: string; buffer: Buffer }; jobPostingId?: string | null; job?: CoachingJobDto | null; jobDuty?: string | null; questions?: CoachingQuestionInput[]; resumeId?: string | null; resumeAdditionalNotes?: string | null; sourceFileId?: string | null; ipAddress?: string | null; userAgent?: string | null };
 
 export async function coachResume(args: CoachResumeArgs) {
   const prepared = await prepareCoachingSource(args);

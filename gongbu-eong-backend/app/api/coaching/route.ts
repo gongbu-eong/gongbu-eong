@@ -28,6 +28,7 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const ipAddress = getRequestIp(request);
     const user = await getSessionUser(request);
     const form = await request.formData();
     const inputType: CoachResumeArgs["inputType"] =
@@ -83,6 +84,8 @@ export async function POST(request: NextRequest) {
       resumeId: null,
       resumeAdditionalNotes: null,
       sourceFileId: null,
+      ipAddress,
+      userAgent: request.headers.get("user-agent") || undefined,
     };
     const preparedSource = await prepareCoachingSource(coachingArgs);
     const savedFile = file && user ? await createPendingResumeFile(user.id, file) : null;
@@ -149,6 +152,24 @@ function readAnonymousId(value: FormDataEntryValue | null) {
 
 function isUuid(value: string) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function getRequestIp(request: NextRequest) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const rawIp =
+    forwardedFor?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "";
+  return normalizeIp(rawIp);
+}
+
+function normalizeIp(value: string) {
+  const text = value.trim();
+  if (!text || text.toLowerCase() === "unknown") return undefined;
+  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(text)) {
+    return text.split(":")[0];
+  }
+  return text;
 }
 
 function parseQuestionInputs(value: FormDataEntryValue | null): CoachingQuestionInput[] {

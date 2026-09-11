@@ -17,11 +17,7 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const requestId = randomUUID();
   const startedAt = Date.now();
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  const ipAddress =
-    forwardedFor?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    undefined;
+  const ipAddress = getRequestIp(request);
 
   try {
     console.info(`[InterviewCoaching:${requestId}] POST /api/interview-coaching start`);
@@ -114,6 +110,24 @@ export async function POST(request: NextRequest) {
 
 function readString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getRequestIp(request: NextRequest) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  const rawIp =
+    forwardedFor?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip") ||
+    "";
+  return normalizeIp(rawIp);
+}
+
+function normalizeIp(value: string) {
+  const text = value.trim();
+  if (!text || text.toLowerCase() === "unknown") return undefined;
+  if (/^\d{1,3}(?:\.\d{1,3}){3}:\d+$/.test(text)) {
+    return text.split(":")[0];
+  }
+  return text;
 }
 
 function readAnonymousId(value: unknown) {
