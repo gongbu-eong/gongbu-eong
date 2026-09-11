@@ -70,7 +70,7 @@ export function CoachingPage() {
     const searchTerm = nextQuery.trim();
     setSearching(true);
     try {
-      const result = await getJobPostings({ query: searchTerm, limit: 20, sort: "closing", employmentType: "정규직", includeClosedMonths: 6 });
+      const result = await getJobPostings({ query: searchTerm, sort: "latest", employmentType: "정규직", includeClosedMonths: 6 });
       if (searchId !== jobSearchSeqRef.current) return;
       const activeJobs = result.items.map((item) => ({ id: item.id, institutionName: item.institutionName, title: item.title, applicationEndAt: item.applicationEndAt }));
       setJobs(activeJobs);

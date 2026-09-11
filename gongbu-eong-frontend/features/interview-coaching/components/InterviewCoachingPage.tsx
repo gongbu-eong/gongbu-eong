@@ -114,8 +114,7 @@ export function InterviewCoachingPage({
     try {
       const result = await getJobPostings({
         query: searchTerm,
-        limit: 20,
-        sort: "closing",
+        sort: "latest",
         employmentType: "정규직",
         includeClosedMonths: 6,
       });
