@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 export async function GET(request: NextRequest) {
   const limit = Number(request.nextUrl.searchParams.get("limit") || 20);
   const offset = Number(request.nextUrl.searchParams.get("offset") || 0);
+  const includeClosedMonths = Number(request.nextUrl.searchParams.get("includeClosedMonths") || 0);
   const categoryCode =
     request.nextUrl.searchParams.get("category") || undefined;
   const requestedView = request.nextUrl.searchParams.get("view");
@@ -43,6 +44,9 @@ export async function GET(request: NextRequest) {
       startDate: value("startDate"),
       endDate: value("endDate"),
       monthlyRegularOnly: value("scope") === "monthly-regular",
+      includeClosedMonths: Number.isFinite(includeClosedMonths)
+        ? includeClosedMonths
+        : 0,
       sort:
         value("sort") === "latest" || value("sort") === "views"
           ? (value("sort") as "latest" | "views")

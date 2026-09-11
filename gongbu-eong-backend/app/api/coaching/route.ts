@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     const fileValidationMessage = file ? validateResumeFile(file) : null;
     if (fileValidationMessage) return jsonWithCors(request, { ok: false, message: fileValidationMessage }, { status: 400 });
     const posting = jobId ? await findJobPostingById(jobId, user?.id) : null;
-    if (jobId && (!posting || (posting.application_end_at && new Date(posting.application_end_at).getTime() < Date.now()))) return jsonWithCors(request, { ok: false, message: "마감된 공고는 연결할 수 없습니다." }, { status: 400 });
+    if (jobId && !posting) return jsonWithCors(request, { ok: false, message: "연결할 공고를 찾지 못했습니다." }, { status: 404 });
     const manualJob: CoachingJobDto | null = !posting && manualJobTitle ? {
       id: `manual:${manualJobTitle.slice(0, 80)}`,
       institutionName: "직접 입력",

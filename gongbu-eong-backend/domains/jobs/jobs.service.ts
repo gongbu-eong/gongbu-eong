@@ -79,6 +79,7 @@ export async function getJobPostings(args: {
   startDate?: string;
   endDate?: string;
   monthlyRegularOnly?: boolean;
+  includeClosedMonths?: number;
   sort?: "closing" | "latest" | "views" | "recommended";
 }): Promise<JobPostingListResponseDto> {
   const limit = clamp(args.limit ?? 20, 1, 100);
@@ -110,6 +111,7 @@ export async function getJobPostings(args: {
             careerRequirement: args.careerRequirement,
             startDate: args.startDate,
             endDate: args.endDate,
+            includeClosedMonths: args.includeClosedMonths,
             sort: args.sort,
           },
         )
@@ -138,6 +140,7 @@ export async function getJobPostings(args: {
     careerRequirement: args.careerRequirement,
     startDate: args.startDate,
     endDate: args.endDate,
+    includeClosedMonths: args.includeClosedMonths,
     sort: view === "closing" ? "closing" : args.sort,
   });
 

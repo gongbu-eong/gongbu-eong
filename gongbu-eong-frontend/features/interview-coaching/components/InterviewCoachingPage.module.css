@@ -24,6 +24,20 @@
 .primaryButton{margin-top:1.25rem;background:#2f7ff0;color:#fff}
 .primaryButton:disabled{background:#a7b0c2}
 .secondaryButton{background:#f5f7fa;color:#2f7ff0}
+.inputFrame{padding:4rem 1rem 6.75rem;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.inputFrame h1{margin:0 0 1rem;color:#1a2233;font-size:1.25rem;font-weight:800;line-height:1.25}
+.inputFrame .lead{margin:0 0 1.5rem;color:#5a6580;font-size:.875rem;font-weight:400;line-height:1.357}
+.inputFrame .jobConnect{height:3.25rem;border-radius:.75rem;font-size:1rem;font-weight:800;line-height:1}
+.inputFrame .helper{margin:1rem 0 1.5rem;color:#5a6580;font-size:.8125rem;font-weight:400;line-height:1.385}
+.inputFrame .manualCard{gap:1rem;margin-top:0;padding:1rem;border-radius:.75rem}
+.inputFrame .field{gap:.5rem}
+.inputFrame .field span{color:#8a94a8;font-size:.875rem;font-weight:700;line-height:1}
+.inputFrame .field input,.inputFrame .field textarea{border-radius:.5rem;padding:0 .875rem;font-size:1rem;font-weight:400;line-height:1.375}
+.inputFrame .field input{height:3.25rem}
+.inputFrame .field textarea{min-height:6.125rem;padding-top:.875rem;padding-bottom:.875rem}
+.inputFrame .field input::placeholder,.inputFrame .field textarea::placeholder{color:#9aa4b8}
+.inputFrame .manualNotice{padding:.875rem;border-radius:.5rem;font-size:.875rem;font-weight:400;line-height:1.429}
+.inputFrame .primaryButton{height:3.25rem;margin-top:1.25rem;border-radius:.75rem;font-size:1rem;font-weight:800;line-height:1}
 .error{margin:.75rem 0 0;color:#e8544d;font-size:calc(.8125rem + 3px);line-height:1.45}
 .loadingPage{display:grid;place-items:center;min-height:100vh;background:#fff}
 .loadingFrame{width:min(100%,37.5rem);box-sizing:border-box;padding:2rem;text-align:center}

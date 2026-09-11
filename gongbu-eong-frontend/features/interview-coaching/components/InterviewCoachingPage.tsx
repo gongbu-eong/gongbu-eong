@@ -117,10 +117,10 @@ export function InterviewCoachingPage({
         limit: 20,
         sort: "closing",
         employmentType: "정규직",
+        includeClosedMonths: 6,
       });
       if (searchId !== jobSearchSeqRef.current) return;
       const activeJobs = result.items
-        .filter((item) => !item.isClosed)
         .map((item) => ({
           id: item.id,
           institutionName: item.institutionName,
@@ -265,13 +265,14 @@ export function InterviewCoachingPage({
   const selectedQuestionId = session?.questions.some((item) => item.id === activeQuestionId)
     ? activeQuestionId || ""
     : session?.questions[0]?.id || "";
+  const isInputScreen = busy !== "load" && !session;
 
   if (busy === "start" || busy === "complete") return <InterviewLoadingScreen mode={busy} />;
 
   return (
     <div className={styles.page}>
       <AppHeader />
-      <main className={styles.frame}>
+      <main className={`${styles.frame} ${isInputScreen ? styles.inputFrame : ""}`}>
         <h1>AI NCS 면접 코칭</h1>
         <p className={styles.lead}>
           지원 직무를 NCS 역량과 연결한 뒤, AI 면접 질문과 꼬리질문으로 답변을 연습해요.
@@ -450,14 +451,9 @@ export function InterviewCoachingPage({
           }}
           onConfirm={(duty) => {
             setConnectedJob({ ...dutySheetJob, duty });
-            if (dutySheetJob.isManual) {
-              setManualPositionName(dutySheetJob.title);
-              setManualDuty(duty);
-            } else {
-              setManualCompanyName(dutySheetJob.institutionName);
-              setManualPositionName(dutySheetJob.title);
-              setManualDuty(duty);
-            }
+            setManualCompanyName("");
+            setManualPositionName("");
+            setManualDuty("");
             setDutySheetJob(null);
             closeJobPicker();
           }}

@@ -98,6 +98,25 @@ function employmentColumn() {
   return "COALESCE(postings.employment_type, '')";
 }
 
+function normalizeIncludeClosedMonths(value?: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(Math.max(Math.trunc(value || 0), 0), 24);
+}
+
+function buildApplicationEndFilter(includeClosedMonths: number, values: unknown[]) {
+  if (includeClosedMonths <= 0) {
+    return "AND (postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE)";
+  }
+
+  const monthsParam = `$${values.push(includeClosedMonths)}`;
+  return `
+    AND (
+      postings.application_end_at IS NULL
+      OR postings.application_end_at::date >= (CURRENT_DATE - (${monthsParam}::int * INTERVAL '1 month'))::date
+    )
+  `;
+}
+
 export async function findLatestDiagnosisType(userId: string) {
   const result = await query<{
     code: string;
@@ -241,10 +260,12 @@ export async function findRecommendedJobPostings(
     careerRequirement?: string;
     startDate?: string;
     endDate?: string;
+    includeClosedMonths?: number;
     sort?: "closing" | "latest" | "views" | "recommended";
   },
 ) {
   const values: unknown[] = [args.personalityCode];
+  const includeClosedMonths = normalizeIncludeClosedMonths(args.includeClosedMonths);
   const categoryFilter = buildAnyTextFilter("categories.name", args.ncsCategory, values);
   const regionFilter = buildAnyTextFilter("postings.work_region", args.region, values);
   const employmentFilter = buildEmploymentTypeFilter(args.employmentType, values);
@@ -256,6 +277,7 @@ export async function findRecommendedJobPostings(
   const endDateFilter = args.endDate
     ? `AND postings.announcement_at::date <= $${values.push(args.endDate)}::date`
     : "";
+  const applicationEndFilter = buildApplicationEndFilter(includeClosedMonths, values);
   const limitParam = `$${values.push(args.limit)}`;
   const userParam = `$${values.push(args.userId || null)}`;
   const offsetParam = `$${values.push(args.offset || 0)}`;
@@ -354,7 +376,7 @@ export async function findRecommendedJobPostings(
       LEFT JOIN public.public_institutions institutions
         ON institutions.id = postings.institution_id
       WHERE postings.is_active = TRUE
-        AND (postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE)
+        ${applicationEndFilter}
         ${regularEmploymentFilter}
         ${monthlyDateFilter}
         ${regionFilter}
@@ -391,9 +413,11 @@ export async function findJobPostings(args: {
   careerRequirement?: string;
   startDate?: string;
   endDate?: string;
+  includeClosedMonths?: number;
   sort?: "closing" | "latest" | "views" | "recommended";
 }) {
   const values: unknown[] = [];
+  const includeClosedMonths = normalizeIncludeClosedMonths(args.includeClosedMonths);
   const categoryFilter = args.categoryCode
     ? `AND EXISTS (
         SELECT 1
@@ -430,12 +454,30 @@ export async function findJobPostings(args: {
   const endDateFilter = args.endDate
     ? `AND postings.announcement_at::date <= $${values.push(args.endDate)}::date`
     : "";
+  const applicationEndFilter = buildApplicationEndFilter(includeClosedMonths, values);
+  const closingOrder = includeClosedMonths
+    ? `
+      CASE
+        WHEN postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE THEN 0
+        ELSE 1
+      END,
+      CASE
+        WHEN postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE
+          THEN postings.application_end_at
+      END ASC NULLS LAST,
+      CASE
+        WHEN postings.application_end_at::date < CURRENT_DATE
+          THEN postings.application_end_at
+      END DESC NULLS LAST,
+      postings.created_at DESC
+    `
+    : "postings.application_end_at ASC NULLS LAST, postings.created_at DESC";
   const orderBy =
     args.sort === "latest"
       ? "postings.announcement_at DESC NULLS LAST, postings.created_at DESC"
       : args.sort === "views"
         ? "postings.view_count DESC, postings.application_end_at ASC NULLS LAST"
-        : "postings.application_end_at ASC NULLS LAST, postings.created_at DESC";
+        : closingOrder;
 
   values.push(args.limit, args.offset);
   const limitParam = `$${values.length - 1}`;
@@ -479,7 +521,7 @@ export async function findJobPostings(args: {
       LEFT JOIN public.job_categories categories
         ON categories.id = posting_categories.job_category_id
       WHERE postings.is_active = TRUE
-        AND (postings.application_end_at IS NULL OR postings.application_end_at::date >= CURRENT_DATE)
+        ${applicationEndFilter}
         ${categoryFilter}
         ${bookmarkFilter}
         ${queryFilter}

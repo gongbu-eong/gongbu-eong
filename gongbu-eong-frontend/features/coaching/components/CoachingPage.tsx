@@ -70,9 +70,9 @@ export function CoachingPage() {
     const searchTerm = nextQuery.trim();
     setSearching(true);
     try {
-      const result = await getJobPostings({ query: searchTerm, limit: 20, sort: "closing", employmentType: "정규직" });
+      const result = await getJobPostings({ query: searchTerm, limit: 20, sort: "closing", employmentType: "정규직", includeClosedMonths: 6 });
       if (searchId !== jobSearchSeqRef.current) return;
-      const activeJobs = result.items.filter((item) => !item.isClosed).map((item) => ({ id: item.id, institutionName: item.institutionName, title: item.title, applicationEndAt: item.applicationEndAt }));
+      const activeJobs = result.items.map((item) => ({ id: item.id, institutionName: item.institutionName, title: item.title, applicationEndAt: item.applicationEndAt }));
       setJobs(activeJobs);
       if (!activeJobs.length) setManualJobKeyword(searchTerm);
     } finally {
