@@ -42,7 +42,7 @@ export function InterviewCoachingResultPage({
         <h1>AI NCS 면접 코칭 결과</h1>
         {error ? <p className={styles.error}>{error}</p> : null}
         {!session && !error ? <p className={styles.lead}>결과를 불러오고 있어요.</p> : null}
-        {session?.result ? <ResultView session={session} anonymousId={anonymousId} /> : null}
+        {session?.result ? <ResultView session={session} /> : null}
         {session && !session.result ? (
           <p className={styles.lead}>아직 최종 결과가 생성되지 않았습니다. AI NCS 면접 코칭 화면에서 결과를 먼저 생성해 주세요.</p>
         ) : null}
@@ -54,10 +54,8 @@ export function InterviewCoachingResultPage({
 
 function ResultView({
   session,
-  anonymousId,
 }: {
   session: InterviewCoachingSession;
-  anonymousId?: string | null;
 }) {
   const result = session.result;
   const firstAnsweredQuestionId =
@@ -84,7 +82,6 @@ function ResultView({
   const selectedReview = selectedQuestion
     ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
     : null;
-  const practiceHref = `/my/interview-coaching/${session.id}?view=practice${anonymousId ? `&anonymousId=${encodeURIComponent(anonymousId)}` : ""}`;
 
   return (
     <>
@@ -128,8 +125,8 @@ function ResultView({
         <ul>{futurePracticeQuestions.map((item) => <li key={item}>{item}</li>)}</ul>
       </section>
 
-      <Link href={practiceHref} className={styles.resultBackButton}>
-        면접 화면 보기
+      <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
+        다시 코칭받기
       </Link>
     </>
   );

@@ -256,7 +256,7 @@ export function InterviewCoachingPage({
     ? activeQuestionId || ""
     : session?.questions[0]?.id || "";
 
-  if (busy === "start") return <InterviewLoadingScreen />;
+  if (busy === "start" || busy === "complete") return <InterviewLoadingScreen mode={busy} />;
 
   return (
     <div className={styles.page}>
@@ -466,8 +466,8 @@ export function InterviewCoachingPage({
         <ConfirmDialog
           title="최종 결과를 생성할까요?"
           message="최종 결과를 생성하면 이 면접 코칭은 완료 처리되어 더 이상 답변을 추가하거나 수정할 수 없습니다."
-          cancelLabel="취소"
-          confirmLabel="결과 보기"
+          cancelLabel="아니오"
+          confirmLabel="네"
           onCancel={() => setCompleteConfirmOpen(false)}
           onConfirm={() => {
             setCompleteConfirmOpen(false);
@@ -1054,13 +1054,14 @@ function ConfirmDialog({
   );
 }
 
-function InterviewLoadingScreen() {
+function InterviewLoadingScreen({ mode }: { mode: "start" | "complete" }) {
+  const isCompleting = mode === "complete";
   return (
     <div className={styles.loadingPage}>
       <main className={styles.loadingFrame} aria-live="polite" aria-busy="true">
         <Image src="/coaching/coaching-loading-owl.png" alt="" width={114} height={140} priority />
-        <h1>직무와 NCS 역량을 분석하고 있어요.</h1>
-        <p>곧 실전 면접 질문을 만들어 드릴게요.</p>
+        <h1>{isCompleting ? "면접 답변을 종합하고 있어요." : "직무와 NCS 역량을 분석하고 있어요."}</h1>
+        <p>{isCompleting ? "곧 AI NCS 면접 코칭 결과를 보여드릴게요." : "곧 실전 면접 질문을 만들어 드릴게요."}</p>
         <div className={styles.loadingTrack} aria-hidden="true"><span /></div>
       </main>
     </div>
