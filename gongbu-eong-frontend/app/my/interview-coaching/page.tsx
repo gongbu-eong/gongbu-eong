@@ -29,6 +29,17 @@ export default function InterviewCoachingHistoryPage() {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
+    const scrollTop = () => window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    scrollTop();
+    const frame = window.requestAnimationFrame(scrollTop);
+    const timer = window.setTimeout(scrollTop, 0);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
     let active = true;
     listInterviewCoachingHistory(getAnonymousId())
       .then((response) => {
