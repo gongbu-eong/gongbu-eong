@@ -172,7 +172,9 @@ export function InterviewCoachingPage({
       });
       setSession(result.session);
       setActiveQuestionId(result.session.questions[0]?.id || null);
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollToPageTop();
+      window.requestAnimationFrame(scrollToPageTop);
+      window.setTimeout(scrollToPageTop, 0);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : "AI NCS 면접 코칭을 시작하지 못했습니다.";
       setError(message);
@@ -564,10 +566,13 @@ function QuestionTabs({
   );
 
   useEffect(() => {
-    activeButtonRef.current?.scrollIntoView({
+    const list = tabListRef.current;
+    const button = activeButtonRef.current;
+    if (!list || !button) return;
+    const left = button.offsetLeft - Math.max(0, (list.clientWidth - button.offsetWidth) / 2);
+    list.scrollTo({
+      left: Math.max(0, left),
       behavior: "smooth",
-      block: "nearest",
-      inline: "center",
     });
   }, [activeQuestionId]);
 
@@ -1110,6 +1115,10 @@ function formatQuestionType(type: InterviewQuestion["type"]) {
     default:
       return "면접질문";
   }
+}
+
+function scrollToPageTop() {
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 }
 
 function focusField(element?: HTMLElement | null) {
