@@ -9,9 +9,17 @@ export const metadata: Metadata = {
 
 export default async function MyInterviewCoachingSessionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
+  searchParams: Promise<{ anonymousId?: string; view?: string }>;
 }) {
-  const { sessionId } = await params;
-  return <InterviewCoachingPage initialSessionId={sessionId} />;
+  const [{ sessionId }, query] = await Promise.all([params, searchParams]);
+  return (
+    <InterviewCoachingPage
+      initialSessionId={sessionId}
+      initialAnonymousId={query.anonymousId || null}
+      allowCompletedView={query.view === "practice"}
+    />
+  );
 }

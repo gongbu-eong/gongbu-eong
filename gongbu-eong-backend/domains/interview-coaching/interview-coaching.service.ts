@@ -406,7 +406,6 @@ export async function answerInterviewQuestion(args: {
     feedback = normalizeAnswerFeedback(
       await requestAnswerFeedback(session, question, answer, followUpCount),
       followUpCount,
-      session,
     );
 
     await updateInterviewMessageFeedback(answerMessage.id, feedback);
@@ -505,7 +504,8 @@ profile에는 공고 내용을 분석한 값을 반드시 채우세요.
 - keywords: 기업명, 직무명과 중복되지 않는 핵심 키워드 3~8개
 
 questions 배열은 정확히 ${INTERVIEW_QUESTION_COUNT}개를 생성하세요. 경험면접, 상황면접, 직무면접, 인성·가치관, 직업윤리 성격이 골고루 섞여야 합니다.
-각 질문은 "${input.companyName}" 또는 "${input.positionName}" 또는 직무 핵심 키워드 중 하나 이상을 자연스럽게 포함해, 범용 질문처럼 보이지 않게 작성하세요.
+질문은 실제 면접관이 말하듯 자연스럽게 작성하세요. 모든 문장에 기업명이나 직무명을 반복해서 넣지 말고, 필요할 때만 "우리 기관", "우리 병원", "해당 직무", "현장"처럼 실제 면접에서 쓰는 표현으로 맥락을 녹이세요.
+범용 질문처럼 보이지 않도록 공고의 업무, 자격요건, 근무 환경, 평가할 NCS 역량이 질문 상황 안에 자연스럽게 드러나야 합니다.
 각 질문의 ncsAreas는 ncsMappings에 반환한 관련 NCS 영역 안에서만 선택하세요. 반환하지 않은 NCS 영역을 질문 태그로 붙이지 마세요.
 반드시 JSON 객체 하나만 반환하고, 모든 문장은 한국어로 작성하세요.`,
       },
@@ -554,6 +554,7 @@ ${partial.questions.map((item, index) => `${index + 1}. ${item.question} (${item
 - 여러 영역을 반환하려면 각 영역마다 서로 다른 직접 근거가 있어야 합니다. 같은 근거를 여러 NCS에 중복 배정하지 마세요.
 - questions는 정확히 ${INTERVIEW_QUESTION_COUNT}개를 반환하세요.
 - 기존 질문과 의미가 겹치지 않게, 부족한 질문은 AI가 공고/직무/NCS 매핑을 기준으로 새로 생성하세요.
+- 질문은 실제 면접관이 말하듯 자연스럽게 작성하세요. 기업명과 직무명을 매번 문장에 억지로 넣지 말고, 필요할 때만 "우리 기관", "우리 병원", "해당 직무", "현장"처럼 자연스러운 표현으로 맥락을 녹이세요.
 - 각 질문의 ncsAreas는 ncsMappings에 포함된 NCS 영역 안에서만 선택하세요.
 - profile, ncsMappings, questionPlan, questions를 모두 포함한 JSON 객체 하나만 반환하세요.
 - 모든 문장은 한국어로 작성하세요.`,
@@ -610,7 +611,7 @@ ${answer}
 꼬리질문은 원 질문의 관련 NCS(${question.ncsAreas.join(", ")})에만 고정하지 말고, NCS 7개 후보 중 지원자의 이번 답변과 ${session.companyName}의 ${session.positionName} 직무 면접 흐름에 자연스럽게 이어지는 영역을 AI가 판단해 생성하세요.
 같은 문항 안에서도 꼬리질문이 계속 같은 NCS만 반복되지 않도록 하되, 갑자기 무관한 직무, 산업, 상황으로 넘어가지 마세요.
 꼬리질문은 지원자의 이번 답변에서 빠진 상황, 본인 역할, 판단 근거, 행동, 결과 중 하나를 구체적으로 묻는 문장이어야 합니다.
-followUpQuestion 문장 안에는 가능한 한 "${session.companyName}", "${session.positionName}", 또는 현재 질문의 핵심 표현 중 하나를 자연스럽게 포함하세요.
+followUpQuestion은 실제 면접관이 지원자의 답변을 듣고 바로 이어 묻는 말투로 작성하세요. 기업명/직무명을 억지로 반복하지 말고, 필요할 때만 "우리 기관", "우리 병원", "해당 직무", "현장"처럼 자연스럽게 말하세요.
 반드시 JSON 객체 하나만 반환하세요.`,
       },
     ],
@@ -927,20 +928,6 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function contextualizeQuestion(
-  question: string,
-  profile: InterviewAnalysis["profile"],
-) {
-  const company = profile.companyName;
-  const position = profile.positionName || profile.dutyText;
-  if (!company && !position) return question;
-  if ((company && question.includes(company)) || (position && question.includes(position))) {
-    return question;
-  }
-  const context = [company, position].filter(Boolean).join("의 ");
-  return `${context} 기준으로, ${question}`;
-}
-
 function normalizeQuestion(
   value: unknown,
   index: number,
@@ -969,7 +956,7 @@ function normalizeQuestion(
   return {
     id: readString(record.id) || `q${index + 1}`,
     type: normalizeQuestionType(record.type, index),
-    question: contextualizeQuestion(question, profile),
+    question,
     intent:
       removeJobCodesFromText(readString(record.intent)) ||
       `${profile.companyName} ${profile.positionName} 직무와 NCS 역량을 확인합니다.`,
@@ -1014,16 +1001,12 @@ function mergeAiQuestions(
 function normalizeAnswerFeedback(
   value: unknown,
   followUpCount: number,
-  session: NonNullable<Awaited<ReturnType<typeof findInterviewSessionForViewer>>>,
 ): InterviewAnswerFeedback {
   const record = asRecord(value);
   const followUpQuestion =
     followUpCount >= MAX_FOLLOW_UPS_PER_QUESTION
       ? null
-      : contextualizeFollowUpQuestion(
-        readString(record?.followUpQuestion).slice(0, 240),
-        session,
-      );
+      : removeJobCodesFromText(readString(record?.followUpQuestion).slice(0, 240)) || null;
   return {
     summary: removeJobCodesFromText(readString(record?.summary)),
     strengths: uniqueDisplayList(readDisplayStringList(record?.strengths), 4),
@@ -1031,20 +1014,6 @@ function normalizeAnswerFeedback(
     nextAnswerGuide: removeJobCodesFromText(readString(record?.nextAnswerGuide)),
     followUpQuestion,
   };
-}
-
-function contextualizeFollowUpQuestion(
-  followUpQuestion: string,
-  session: NonNullable<Awaited<ReturnType<typeof findInterviewSessionForViewer>>>,
-) {
-  if (!followUpQuestion) return null;
-  const hasContext =
-    followUpQuestion.includes(session.companyName) ||
-    followUpQuestion.includes(session.positionName) ||
-    NCS_AREAS.some((area) => followUpQuestion.includes(area.name));
-  if (hasContext) return followUpQuestion;
-
-  return `${session.companyName}의 ${session.positionName} 직무 면접 흐름에서, ${followUpQuestion}`;
 }
 
 function normalizeResult(

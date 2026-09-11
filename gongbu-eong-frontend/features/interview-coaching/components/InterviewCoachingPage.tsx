@@ -30,9 +30,11 @@ const MAX_ANSWER_LENGTH = 4000;
 export function InterviewCoachingPage({
   initialSessionId,
   initialAnonymousId,
+  allowCompletedView = false,
 }: {
   initialSessionId?: string;
   initialAnonymousId?: string | null;
+  allowCompletedView?: boolean;
 } = {}) {
   const router = useRouter();
   const jobSearchSeqRef = useRef(0);
@@ -57,20 +59,29 @@ export function InterviewCoachingPage({
   const [busyQuestionId, setBusyQuestionId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
+  const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
 
-  useBodyScrollLock(Boolean(jobPickerOpen || dutySheetJob || alertMessage));
+  useBodyScrollLock(Boolean(jobPickerOpen || dutySheetJob || alertMessage || completeConfirmOpen));
 
   useEffect(() => {
-    if (!jobPickerOpen && !dutySheetJob && !alertMessage) return;
+    if (!jobPickerOpen && !dutySheetJob && !alertMessage && !completeConfirmOpen) return;
     return watchMobileKeyboardInset();
-  }, [jobPickerOpen, dutySheetJob, alertMessage]);
+  }, [jobPickerOpen, dutySheetJob, alertMessage, completeConfirmOpen]);
 
   useEffect(() => {
     if (!initialSessionId) return;
     let active = true;
     getInterviewCoachingSession(initialSessionId, initialAnonymousId || getAnonymousId())
       .then((response) => {
-        if (active) setSession(response.session);
+        if (!active) return;
+        if (!allowCompletedView && (response.session.result || response.session.completedAt)) {
+          const anonymousId = initialAnonymousId || getAnonymousId();
+          router.replace(
+            `/ai-tools/interview-coaching/result/${response.session.id}?anonymousId=${encodeURIComponent(anonymousId)}`,
+          );
+          return;
+        }
+        setSession(response.session);
       })
       .catch((caught) => {
         if (!active) return;
@@ -83,7 +94,7 @@ export function InterviewCoachingPage({
     return () => {
       active = false;
     };
-  }, [initialAnonymousId, initialSessionId]);
+  }, [allowCompletedView, initialAnonymousId, initialSessionId, router]);
 
   const searchJobs = async (nextQuery = query) => {
     const searchId = ++jobSearchSeqRef.current;
@@ -203,7 +214,7 @@ export function InterviewCoachingPage({
     }
   };
 
-  const complete = async () => {
+  const requestComplete = () => {
     if (!session) return;
     const anonymousId = getAnonymousId();
     if (session.result) {
@@ -216,7 +227,12 @@ export function InterviewCoachingPage({
       showAlert("면접 답변을 하나 이상 제출하면 결과를 확인할 수 있어요.");
       return;
     }
+    setCompleteConfirmOpen(true);
+  };
 
+  const complete = async () => {
+    if (!session) return;
+    const anonymousId = getAnonymousId();
     setBusy("complete");
     setError("");
     try {
@@ -313,11 +329,6 @@ export function InterviewCoachingPage({
         ) : (
           <>
             <InterviewAnalysisView session={session} />
-            {session.result ? (
-              <button className={styles.primaryButton} type="button" onClick={complete}>
-                저장된 최종 결과 보기
-              </button>
-            ) : null}
             <section className={styles.sectionTitle}>
               <h2>AI 면접</h2>
               <small>문항별 꼬리질문 최대 3개</small>
@@ -366,7 +377,7 @@ export function InterviewCoachingPage({
               <button
                 className={styles.primaryButton}
                 type="button"
-                onClick={complete}
+                onClick={requestComplete}
                 disabled={busy !== null || (!session.result && !hasAnsweredAnyQuestion(session))}
               >
                 최종 결과 보기
@@ -437,11 +448,24 @@ export function InterviewCoachingPage({
           }}
         />
       ) : null}
+      {completeConfirmOpen ? (
+        <ConfirmDialog
+          title="최종 결과를 생성할까요?"
+          message="최종 결과를 생성하면 이 면접 코칭은 완료 처리되어 더 이상 답변을 추가하거나 수정할 수 없습니다."
+          cancelLabel="취소"
+          confirmLabel="결과 보기"
+          onCancel={() => setCompleteConfirmOpen(false)}
+          onConfirm={() => {
+            setCompleteConfirmOpen(false);
+            void complete();
+          }}
+        />
+      ) : null}
     </div>
   );
 }
 
-function InterviewAnalysisView({ session }: { session: InterviewCoachingSession }) {
+export function InterviewAnalysisView({ session }: { session: InterviewCoachingSession }) {
   const profile = session.analysis.profile;
   const visibleMappings = getVisibleNcsMappings(session.analysis.ncsMappings);
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
@@ -977,6 +1001,35 @@ function AlertDialog({ message, onClose }: { message: string; onClose: () => voi
       <section className={styles.alertDialog}>
         <h2>{message}</h2>
         <button type="button" onClick={onClose}>확인</button>
+      </section>
+    </div>
+  );
+}
+
+function ConfirmDialog({
+  title,
+  message,
+  cancelLabel,
+  confirmLabel,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  message: string;
+  cancelLabel: string;
+  confirmLabel: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className={styles.dialogOverlay} role="alertdialog" aria-modal="true">
+      <section className={styles.alertDialog}>
+        <h2>{title}</h2>
+        <p>{message}</p>
+        <div className={styles.confirmActions}>
+          <button type="button" onClick={onCancel}>{cancelLabel}</button>
+          <button type="button" onClick={onConfirm}>{confirmLabel}</button>
+        </div>
       </section>
     </div>
   );

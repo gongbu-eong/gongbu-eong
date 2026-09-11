@@ -169,7 +169,9 @@ function mapInterviewHistoryItem(item: InterviewCoachingSession): InterviewHisto
     score: item.result?.score ?? null,
     isLinked,
     status: item.status,
-    href: `/my/interview-coaching/${item.id}`,
+    href: item.result || item.completedAt
+      ? `/ai-tools/interview-coaching/result/${item.id}?anonymousId=${encodeURIComponent(getAnonymousId())}`
+      : `/my/interview-coaching/${item.id}`,
   };
 }
 

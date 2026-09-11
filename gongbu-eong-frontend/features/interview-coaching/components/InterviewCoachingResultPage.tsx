@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getInterviewCoachingSession } from "../interview-coaching.api";
 import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion } from "../interview-coaching.dto";
+import { InterviewAnalysisView } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
 
 type InterviewQuestionReview = NonNullable<InterviewCoachingSession["result"]>["questionReviews"][number];
@@ -41,7 +42,7 @@ export function InterviewCoachingResultPage({
         <h1>AI NCS 면접 코칭 결과</h1>
         {error ? <p className={styles.error}>{error}</p> : null}
         {!session && !error ? <p className={styles.lead}>결과를 불러오고 있어요.</p> : null}
-        {session?.result ? <ResultView session={session} /> : null}
+        {session?.result ? <ResultView session={session} anonymousId={anonymousId} /> : null}
         {session && !session.result ? (
           <p className={styles.lead}>아직 최종 결과가 생성되지 않았습니다. AI NCS 면접 코칭 화면에서 결과를 먼저 생성해 주세요.</p>
         ) : null}
@@ -51,7 +52,13 @@ export function InterviewCoachingResultPage({
   );
 }
 
-function ResultView({ session }: { session: InterviewCoachingSession }) {
+function ResultView({
+  session,
+  anonymousId,
+}: {
+  session: InterviewCoachingSession;
+  anonymousId?: string | null;
+}) {
   const result = session.result;
   const firstAnsweredQuestionId =
     session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
@@ -77,9 +84,12 @@ function ResultView({ session }: { session: InterviewCoachingSession }) {
   const selectedReview = selectedQuestion
     ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
     : null;
+  const practiceHref = `/my/interview-coaching/${session.id}?view=practice${anonymousId ? `&anonymousId=${encodeURIComponent(anonymousId)}` : ""}`;
 
   return (
     <>
+      <InterviewAnalysisView session={session} />
+
       <section className={styles.resultHero}>
         <span>{session.companyName} · {displayPositionName}</span>
         <strong>{result.score}<small>점</small></strong>
@@ -117,6 +127,10 @@ function ResultView({ session }: { session: InterviewCoachingSession }) {
         <h2>추가 연습 질문</h2>
         <ul>{futurePracticeQuestions.map((item) => <li key={item}>{item}</li>)}</ul>
       </section>
+
+      <Link href={practiceHref} className={styles.resultBackButton}>
+        면접 화면 보기
+      </Link>
     </>
   );
 }
