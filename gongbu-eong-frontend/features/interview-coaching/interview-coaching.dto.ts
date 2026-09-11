@@ -42,6 +42,7 @@ export type InterviewQuestion = {
 };
 
 export type InterviewAnswerFeedback = {
+  score?: number;
   summary: string;
   strengths: string[];
   improvements: string[];

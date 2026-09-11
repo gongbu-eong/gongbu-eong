@@ -68,6 +68,10 @@
 .chatBubble{padding:.875rem;border-radius:.75rem;background:#fff;border:1px solid #e4e8ef}
 .chatBubble strong{display:block;margin-bottom:.4rem;font-size:calc(.75rem + 3px);color:#2f7ff0}
 .chatBubble p{margin:0;white-space:pre-wrap;color:#1a2233;font-size:calc(.875rem + 3px);line-height:1.55}
+.answerScoreBadge{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:0 0 .625rem;padding:.625rem .75rem;border-radius:.5rem;background:#fff;color:#5a6580}
+.answerScoreBadge span{font-size:calc(.75rem + 3px);font-weight:800}
+.answerScoreBadge b{color:#2f7ff0;font-size:calc(1rem + 3px);font-weight:900}
+.answerScoreBadge small{margin-left:.125rem;color:#5a6580;font-size:calc(.75rem + 3px)}
 .savedAnswer{width:100%;height:9rem;box-sizing:border-box;border:1px solid #dbe3ee;border-radius:.5rem;background:#f5f7fa;padding:.75rem;color:#1a2233;font:inherit;font-size:calc(.875rem + 3px);line-height:1.55;resize:none;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;cursor:default;caret-color:transparent}
 .savedAnswer:focus{outline:2px solid #dbeafe;outline-offset:0}
 .chatAnswer{background:#eef5ff;border-color:#cfe1ff}

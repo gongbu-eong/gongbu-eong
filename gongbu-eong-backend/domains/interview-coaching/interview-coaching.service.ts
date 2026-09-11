@@ -649,6 +649,10 @@ ${questionMessages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.fo
 ${answer}
 
 정답/오답 판정이 아니라 면접 답변 코칭 관점으로 설명하세요.
+score에는 이번 답변 하나에 대한 점수를 100점 만점 정수로 넣으세요. 0~10점 척도를 쓰지 마세요.
+질문과 무관한 답변, 장난성 답변, 의미 없는 단답은 10~29점 범위에서 평가하세요.
+질문과 관련은 있지만 구체적 사례/역할/판단 근거가 부족한 답변은 30~59점 범위에서 평가하세요.
+직무 맥락, 본인 역할, 판단 근거, 실행 과정, 결과가 확인되는 답변만 60점 이상으로 평가하세요.
 먼저 이번 답변이 "이번에 지원자가 답해야 하는 면접관 질문"과 의미상 관련이 있는지 AI가 판단하세요.
 답변이 질문과 거의 무관하면, 단순히 구체성이 부족하다고 평가하지 말고 질문 의도와 다른 답변이라는 점을 면접관 말투로 짚은 뒤 원래 질문에 맞는 답을 다시 요구하는 꼬리질문을 만드세요.
 답변이 질문과 관련은 있지만 추상적이면, 사례, 본인 역할, 판단 근거, 실행 과정, 결과 중 빠진 부분을 파고드는 꼬리질문을 만드세요.
@@ -701,6 +705,8 @@ questionReviews에는 답변이 하나 이상 제출된 문항별 평가를 넣�
 각 questionReview의 followUpScores는 실제로 답변한 꼬리질문별 점수 배열입니다. 각 항목은 followUpIndex, score, summary를 포함하고, score는 100점 만점입니다.
 점수는 반드시 0~100 범위의 정수로 작성하세요. 0~10점 척도로 작성하지 마세요.
 의미 있는 답변이 부족해도 일반적인 서비스용 100점 척도로 채점하세요. 무응답에 가까운 단답/문맥 무관 답변은 보통 20~39점, 질문과 관련은 있지만 근거가 빈약한 답변은 보통 40~59점, 구체성과 직무 연관성이 확인되는 답변은 60점 이상으로 평가하세요.
+평가 요약에 "평가하기 어렵다", "확인할 수 없다", "관련 역량이 드러나지 않는다", "문맥과 맞지 않는다"는 취지가 들어가면 해당 답변 점수와 문항 점수는 높은 점수로 줄 수 없습니다.
+score, answerScore, followUpScores의 score와 summary는 서로 모순되면 안 됩니다.
 점수는 공식 NCS 점수가 아니라 서비스용 참고 점수입니다.
 반드시 JSON 객체 하나만 반환하세요.`,
       },
@@ -1126,6 +1132,7 @@ function normalizeAnswerFeedback(
     ? normalizeNcsAreaList(record?.followUpNcsAreas).slice(0, 2)
     : [];
   return {
+    score: normalizeInterviewScore(record?.score, 40),
     summary: removeJobCodesFromText(readString(record?.summary)),
     strengths: uniqueDisplayList(readDisplayStringList(record?.strengths), 4),
     improvements: uniqueDisplayList(readDisplayStringList(record?.improvements), 4),
@@ -1155,7 +1162,7 @@ function normalizeResult(
       return normalizeQuestionReview(
         rawReview,
         thread.question,
-        getAnsweredFollowUpIndexes(thread.messages),
+        thread.messages,
       );
     })
     .filter(Boolean) as InterviewCoachingResult["questionReviews"];
@@ -1182,17 +1189,18 @@ function normalizeResult(
 function normalizeQuestionReview(
   value: unknown,
   fallback?: InterviewQuestion,
-  answeredFollowUpIndexes: number[] = [],
+  messages: InterviewSessionMessage[] = [],
 ) {
   const record = asRecord(value);
   if (!record && !fallback) return null;
   const questionId = readString(record?.questionId) || fallback?.id || "q1";
   const question = removeJobCodesFromText(readString(record?.question)) || fallback?.question || "면접 질문";
-  const rawScore = normalizeInterviewScore(record?.score, 70);
+  const storedScores = getStoredAnswerScores(messages);
+  const rawScore = normalizeInterviewScore(record?.score, storedScores.answerScore ?? 40);
   const areas = readStringList(record?.ncsAreas)
     .map(normalizeNcsAreaName)
     .filter(Boolean) as NcsAreaName[];
-  const answerScore = normalizeInterviewScore(readFirstDefined(record, [
+  const answerScore = storedScores.answerScore ?? normalizeInterviewScore(readFirstDefined(record, [
     "answerScore",
     "baseAnswerScore",
     "originalAnswerScore",
@@ -1208,9 +1216,10 @@ function normalizeQuestionReview(
   const rawFollowUpScoreByIndex = new Map(
     rawFollowUpScores.map((item) => [item.followUpIndex, item]),
   );
-  const followUpScores = answeredFollowUpIndexes.map((followUpIndex) => {
+  const followUpScores = storedScores.followUpIndexes.map((followUpIndex) => {
     const scoreItem = rawFollowUpScoreByIndex.get(followUpIndex);
-    return scoreItem || {
+    const storedScoreItem = storedScores.followUpScoreByIndex.get(followUpIndex);
+    return storedScoreItem || scoreItem || {
       followUpIndex,
       score: rawScore,
       summary: "",
@@ -1256,14 +1265,6 @@ function filterAnsweredConversation(messages: InterviewSessionMessage[]) {
   });
 }
 
-function getAnsweredFollowUpIndexes(messages: InterviewSessionMessage[]) {
-  return Array.from(new Set(
-    messages
-      .filter((item) => item.role === "follow_up" && item.followUpIndex)
-      .map((item) => item.followUpIndex as number),
-  )).sort((left, right) => left - right);
-}
-
 function normalizeFollowUpScore(value: unknown) {
   const record = asRecord(value);
   if (!record) return null;
@@ -1277,6 +1278,41 @@ function normalizeFollowUpScore(value: unknown) {
     score: normalizeInterviewScore(record.score, 70),
     summary: removeJobCodesFromText(readString(record.summary)),
   };
+}
+
+function getStoredAnswerScores(messages: InterviewSessionMessage[]) {
+  let answerScore: number | null = null;
+  const followUpScoreByIndex = new Map<number, InterviewQuestionReview["followUpScores"][number]>();
+
+  messages.forEach((message, index) => {
+    if (message.role !== "answer") return;
+    const score = normalizeInterviewScore(message.feedback?.score, 40);
+    const previousPrompt = findPreviousPromptMessage(messages, index);
+    if (previousPrompt?.role === "follow_up" && previousPrompt.followUpIndex) {
+      followUpScoreByIndex.set(previousPrompt.followUpIndex, {
+        followUpIndex: previousPrompt.followUpIndex,
+        score,
+        summary: removeJobCodesFromText(readString(message.feedback?.summary)),
+      });
+      return;
+    }
+    if (answerScore === null) answerScore = score;
+  });
+
+  return {
+    answerScore,
+    followUpIndexes: Array.from(followUpScoreByIndex.keys()).sort((left, right) => left - right),
+    followUpScoreByIndex,
+  };
+}
+
+function findPreviousPromptMessage(messages: InterviewSessionMessage[], answerIndex: number) {
+  for (let index = answerIndex - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role === "follow_up") return message;
+    if (message.role === "answer") return null;
+  }
+  return null;
 }
 
 function normalizeQuestionType(value: unknown, index: number): InterviewQuestion["type"] {
@@ -1361,7 +1397,6 @@ function normalizeInterviewScore(value: unknown, fallback: number) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   const rounded = Math.round(number);
-  if (rounded > 0 && rounded <= 10) return rounded * 10;
   return Math.max(0, Math.min(100, rounded));
 }
 
@@ -1488,7 +1523,9 @@ const interviewStartSchema = {
 const answerFeedbackSchema = {
   type: "object",
   additionalProperties: true,
+  required: ["score", "summary", "strengths", "improvements", "nextAnswerGuide", "followUpQuestion"],
   properties: {
+    score: { type: "number" },
     summary: { type: "string" },
     strengths: { type: "array", items: { type: "string" } },
     improvements: { type: "array", items: { type: "string" } },
@@ -1507,8 +1544,9 @@ const answerFeedbackSchema = {
 const requiredAnswerFeedbackSchema = {
   type: "object",
   additionalProperties: true,
-  required: ["summary", "strengths", "improvements", "nextAnswerGuide", "followUpQuestion", "followUpNcsAreas"],
+  required: ["score", "summary", "strengths", "improvements", "nextAnswerGuide", "followUpQuestion", "followUpNcsAreas"],
   properties: {
+    score: { type: "number" },
     summary: { type: "string" },
     strengths: { type: "array", items: { type: "string" } },
     improvements: { type: "array", items: { type: "string" } },

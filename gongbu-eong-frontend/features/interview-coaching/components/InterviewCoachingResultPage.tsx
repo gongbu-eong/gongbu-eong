@@ -68,20 +68,18 @@ function ResultView({
 }) {
   const result = session.result;
   const firstAnsweredQuestionId =
-  session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
+    session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
     session.questions[0]?.id ||
     "";
   const [activeQuestionId, setActiveQuestionId] = useState(firstAnsweredQuestionId);
   if (!result) return null;
-  const answeredQuestions = session.questions.filter((question) => hasQuestionAnswer(session.messages, question.id));
-  const resultQuestions = answeredQuestions.length ? answeredQuestions : session.questions;
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
   const strengths = cleanDisplayList(result.strengths);
   const improvements = cleanDisplayList(result.improvements);
   const futurePracticeQuestions = cleanDisplayList(result.futurePracticeQuestions);
   const selectedQuestion =
-    resultQuestions.find((question) => question.id === activeQuestionId) ||
-    resultQuestions[0] ||
+    session.questions.find((question) => question.id === activeQuestionId) ||
+    session.questions[0] ||
     null;
   const selectedMessages = selectedQuestion
     ? filterAnsweredConversation(
@@ -97,7 +95,7 @@ function ResultView({
       <section className={styles.resultSection}>
         <h2>문항별 답변 코칭</h2>
         <ResultQuestionTabs
-          questions={resultQuestions}
+          questions={session.questions}
           messages={session.messages}
           activeQuestionId={activeQuestionId}
           onSelect={setActiveQuestionId}
@@ -218,13 +216,18 @@ function ResultQuestionDetail({
 
       {messages.length ? (
         <div className={styles.chatList}>
-          {messages.map((message, messageIndex) => (
-            <ResultConversationMessage
-              message={message}
-              ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(messages, messageIndex) : []}
-              key={message.id}
-            />
-          ))}
+          {messages.map((message, messageIndex) => {
+            const answerScore = getAnswerMessageScore(message, messages, messageIndex, review);
+            return (
+              <ResultConversationMessage
+                message={message}
+                ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(messages, messageIndex) : []}
+                scoreLabel={answerScore?.label}
+                score={answerScore?.score}
+                key={message.id}
+              />
+            );
+          })}
         </div>
       ) : (
         <p className={styles.lead}>이 문항에는 제출한 답변이 없습니다.</p>
@@ -260,9 +263,13 @@ function QuestionScoreBreakdown({ review }: { review: InterviewQuestionReview })
 function ResultConversationMessage({
   message,
   ncsAreas = [],
+  scoreLabel,
+  score,
 }: {
   message: InterviewMessage;
   ncsAreas?: InterviewQuestion["ncsAreas"];
+  scoreLabel?: string;
+  score?: number;
 }) {
   const content = cleanDisplayText(message.content) || message.content;
   const label = message.role === "answer"
@@ -274,6 +281,12 @@ function ResultConversationMessage({
   return (
     <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""}`}>
       <strong>{label}</strong>
+      {message.role === "answer" && typeof score === "number" ? (
+        <div className={styles.answerScoreBadge}>
+          <span>{scoreLabel || "답변 점수"}</span>
+          <b>{score}<small>/100점</small></b>
+        </div>
+      ) : null}
       {message.role === "answer" ? (
         <textarea
           className={styles.savedAnswer}
@@ -313,6 +326,38 @@ function getFollowUpNcsAreas(messages: InterviewMessage[], messageIndex: number)
     }
   }
   return [];
+}
+
+function getAnswerMessageScore(
+  message: InterviewMessage,
+  messages: InterviewMessage[],
+  messageIndex: number,
+  review: InterviewQuestionReview | null | undefined,
+) {
+  if (message.role !== "answer") return null;
+  const previousPrompt = findPreviousPromptMessage(messages, messageIndex);
+  if (previousPrompt?.role === "follow_up" && previousPrompt.followUpIndex) {
+    const followUpScore = review?.followUpScores?.find(
+      (item) => item.followUpIndex === previousPrompt.followUpIndex,
+    );
+    return {
+      label: `꼬리질문 ${previousPrompt.followUpIndex} 답변 점수`,
+      score: followUpScore?.score ?? message.feedback?.score,
+    };
+  }
+  return {
+    label: "질문 답변 점수",
+    score: review?.answerScore ?? message.feedback?.score,
+  };
+}
+
+function findPreviousPromptMessage(messages: InterviewMessage[], answerIndex: number) {
+  for (let index = answerIndex - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role === "follow_up") return message;
+    if (message.role === "answer") return null;
+  }
+  return null;
 }
 
 function filterAnsweredConversation(messages: InterviewMessage[]) {
