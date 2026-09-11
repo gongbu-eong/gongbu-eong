@@ -43,6 +43,8 @@ type InterviewStartInput = {
   dutyText: string;
   jobContext: string;
 };
+type InterviewSession = NonNullable<Awaited<ReturnType<typeof findInterviewSessionForViewer>>>;
+type InterviewSessionMessage = InterviewSession["messages"][number];
 
 export type StartInterviewCoachingArgs = {
   userId?: string | null;
@@ -489,7 +491,7 @@ export async function completeInterviewCoaching(args: {
   }
   const result = normalizeResult(
     await requestFinalResult(session),
-    session.questions,
+    session,
   );
   await updateInterviewResult(session.id, result);
   const updated = await findInterviewSessionForViewer(args);
@@ -667,9 +669,7 @@ async function requestFinalResult(
   session: Awaited<ReturnType<typeof findInterviewSessionForViewer>>,
 ) {
   if (!session) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
-  const answeredQuestionIds = new Set(
-    session.messages.filter((item) => item.role === "answer").map((item) => item.questionId),
-  );
+  const scoringThreads = buildScoringThreads(session);
   return createOpenAiJsonResponse({
     model: getInterviewModel(),
     schemaName: "interview_coaching_result",
@@ -685,17 +685,22 @@ NCS 매핑: ${session.analysis.ncsMappings.map((item) => `${item.name} ${item.re
 질문 목록:
 ${session.questions.map((item, index) => `${index + 1}. ${item.question}`).join("\n")}
 
-대화 기록:
-${session.messages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.followUpIndex}` : ""}: ${item.content}`).join("\n")}
+채점 대상 대화 기록:
+${scoringThreads.map((thread) => [
+    `문항 ${thread.questionIndex}. ${thread.question.question}`,
+    ...thread.messages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.followUpIndex}` : ""}: ${item.content}`),
+  ].join("\n")).join("\n\n")}
 
-답변한 문항 수: ${answeredQuestionIds.size}개
+답변한 문항 수: ${scoringThreads.length}개
 최종 평가는 답변이 제출된 모든 면접 질문의 원 질문 답변과 꼬리질문 답변을 기준으로 작성하세요.
-답변하지 않은 문항은 점수 산정에 포함하지 말고, 필요하면 추가 연습 권장 문항으로만 다루세요.
+답변하지 않은 문항과 답변하지 않은 꼬리질문은 점수 산정, questionReviews, 대화 평가에 포함하지 마세요.
 score는 전체 토탈 점수이며 100점 만점입니다. 제출된 원 질문 답변과 꼬리질문 답변 전체를 종합해 산정하세요.
 questionReviews에는 답변이 하나 이상 제출된 문항별 평가를 넣으세요.
 각 questionReview의 score는 해당 문항 묶음 전체 점수이며 100점 만점입니다.
 각 questionReview의 answerScore는 원 질문에 대한 첫 답변 점수이며 100점 만점입니다.
 각 questionReview의 followUpScores는 실제로 답변한 꼬리질문별 점수 배열입니다. 각 항목은 followUpIndex, score, summary를 포함하고, score는 100점 만점입니다.
+점수는 반드시 0~100 범위의 정수로 작성하세요. 0~10점 척도로 작성하지 마세요.
+의미 있는 답변이 부족해도 일반적인 서비스용 100점 척도로 채점하세요. 무응답에 가까운 단답/문맥 무관 답변은 보통 20~39점, 질문과 관련은 있지만 근거가 빈약한 답변은 보통 40~59점, 구체성과 직무 연관성이 확인되는 답변은 60점 이상으로 평가하세요.
 점수는 공식 NCS 점수가 아니라 서비스용 참고 점수입니다.
 반드시 JSON 객체 하나만 반환하세요.`,
       },
@@ -1132,15 +1137,37 @@ function normalizeAnswerFeedback(
 
 function normalizeResult(
   value: unknown,
-  questions: InterviewQuestion[],
+  session: InterviewSession,
 ): InterviewCoachingResult {
   const record = asRecord(value);
-  const reviews = normalizeArray(record?.questionReviews)
-    .map((item, index) => normalizeQuestionReview(item, questions[index]))
+  const scoringThreads = buildScoringThreads(session);
+  const rawReviews = normalizeArray(record?.questionReviews);
+  const usedRawReviewIndexes = new Set<number>();
+  const reviews = scoringThreads
+    .map((thread, index) => {
+      const matchedRawIndex = rawReviews.findIndex((item, rawIndex) => {
+        if (usedRawReviewIndexes.has(rawIndex)) return false;
+        return readString(asRecord(item)?.questionId) === thread.question.id;
+      });
+      const rawIndex = matchedRawIndex >= 0 ? matchedRawIndex : index;
+      const rawReview = rawReviews[rawIndex];
+      usedRawReviewIndexes.add(rawIndex);
+      return normalizeQuestionReview(
+        rawReview,
+        thread.question,
+        getAnsweredFollowUpIndexes(thread.messages),
+      );
+    })
     .filter(Boolean) as InterviewCoachingResult["questionReviews"];
+  const totalScoreValues = reviews.flatMap((review) => [
+    review.answerScore,
+    ...review.followUpScores.map((item) => item.score),
+  ]);
 
   return {
-    score: clampNumber(record?.score, 0, 100, 72),
+    score: totalScoreValues.length
+      ? averageScore(totalScoreValues)
+      : normalizeInterviewScore(record?.score, 72),
     summary: removeJobCodesFromText(readString(record?.summary)),
     strengths: uniqueDisplayList(readDisplayStringList(record?.strengths), 4),
     improvements: uniqueDisplayList(readDisplayStringList(record?.improvements), 4),
@@ -1152,35 +1179,89 @@ function normalizeResult(
   };
 }
 
-function normalizeQuestionReview(value: unknown, fallback?: InterviewQuestion) {
+function normalizeQuestionReview(
+  value: unknown,
+  fallback?: InterviewQuestion,
+  answeredFollowUpIndexes: number[] = [],
+) {
   const record = asRecord(value);
   if (!record && !fallback) return null;
   const questionId = readString(record?.questionId) || fallback?.id || "q1";
   const question = removeJobCodesFromText(readString(record?.question)) || fallback?.question || "면접 질문";
-  const score = clampNumber(record?.score, 0, 100, 70);
+  const rawScore = normalizeInterviewScore(record?.score, 70);
   const areas = readStringList(record?.ncsAreas)
     .map(normalizeNcsAreaName)
     .filter(Boolean) as NcsAreaName[];
+  const answerScore = normalizeInterviewScore(readFirstDefined(record, [
+    "answerScore",
+    "baseAnswerScore",
+    "originalAnswerScore",
+    "questionAnswerScore",
+  ]), rawScore);
+  const rawFollowUpScores = normalizeArray(readFirstDefined(record, [
+    "followUpScores",
+    "followUpAnswerScores",
+    "tailQuestionScores",
+  ]))
+    .map(normalizeFollowUpScore)
+    .filter(Boolean) as InterviewQuestionReview["followUpScores"];
+  const rawFollowUpScoreByIndex = new Map(
+    rawFollowUpScores.map((item) => [item.followUpIndex, item]),
+  );
+  const followUpScores = answeredFollowUpIndexes.map((followUpIndex) => {
+    const scoreItem = rawFollowUpScoreByIndex.get(followUpIndex);
+    return scoreItem || {
+      followUpIndex,
+      score: rawScore,
+      summary: "",
+    };
+  });
+  const score = averageScore([
+    answerScore,
+    ...followUpScores.map((item) => item.score),
+  ]);
   return {
     questionId,
     question,
     score,
-    answerScore: clampNumber(readFirstDefined(record, [
-      "answerScore",
-      "baseAnswerScore",
-      "originalAnswerScore",
-      "questionAnswerScore",
-    ]), 0, 100, score),
-    followUpScores: normalizeArray(readFirstDefined(record, [
-      "followUpScores",
-      "followUpAnswerScores",
-      "tailQuestionScores",
-    ])).map(normalizeFollowUpScore).filter(Boolean) as InterviewQuestionReview["followUpScores"],
+    answerScore,
+    followUpScores,
     summary: removeJobCodesFromText(readString(record?.summary)),
     strengths: uniqueDisplayList(readDisplayStringList(record?.strengths), 4),
     improvements: uniqueDisplayList(readDisplayStringList(record?.improvements), 4),
     ncsAreas: areas.length ? areas : fallback?.ncsAreas || [],
   };
+}
+
+function buildScoringThreads(session: InterviewSession) {
+  return session.questions
+    .map((question, index) => ({
+      question,
+      questionIndex: index + 1,
+      messages: filterAnsweredConversation(
+        session.messages.filter((item) => item.questionId === question.id),
+      ),
+    }))
+    .filter((thread) => thread.messages.some((item) => item.role === "answer"));
+}
+
+function filterAnsweredConversation(messages: InterviewSessionMessage[]) {
+  const relevantMessages = messages.filter((item) => item.role === "answer" || item.role === "follow_up");
+  return relevantMessages.filter((message, index) => {
+    if (message.role === "answer") return true;
+    const nextMessage = relevantMessages
+      .slice(index + 1)
+      .find((item) => item.role === "answer" || item.role === "follow_up");
+    return nextMessage?.role === "answer";
+  });
+}
+
+function getAnsweredFollowUpIndexes(messages: InterviewSessionMessage[]) {
+  return Array.from(new Set(
+    messages
+      .filter((item) => item.role === "follow_up" && item.followUpIndex)
+      .map((item) => item.followUpIndex as number),
+  )).sort((left, right) => left - right);
 }
 
 function normalizeFollowUpScore(value: unknown) {
@@ -1193,7 +1274,7 @@ function normalizeFollowUpScore(value: unknown) {
   ]), 1, MAX_FOLLOW_UPS_PER_QUESTION, 1);
   return {
     followUpIndex,
-    score: clampNumber(record.score, 0, 100, 70),
+    score: normalizeInterviewScore(record.score, 70),
     summary: removeJobCodesFromText(readString(record.summary)),
   };
 }
@@ -1274,6 +1355,20 @@ function clampNumber(value: unknown, min: number, max: number, fallback: number)
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
   return Math.max(min, Math.min(max, Math.round(number)));
+}
+
+function normalizeInterviewScore(value: unknown, fallback: number) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  const rounded = Math.round(number);
+  if (rounded > 0 && rounded <= 10) return rounded * 10;
+  return Math.max(0, Math.min(100, rounded));
+}
+
+function averageScore(values: number[]) {
+  const validValues = values.filter((value) => Number.isFinite(value));
+  if (!validValues.length) return 0;
+  return Math.round(validValues.reduce((sum, value) => sum + value, 0) / validValues.length);
 }
 
 function readString(value: unknown) {
@@ -1452,6 +1547,7 @@ const requiredFollowUpQuestionSchema = {
 const finalResultSchema = {
   type: "object",
   additionalProperties: true,
+  required: ["score", "summary", "strengths", "improvements", "questionReviews", "futurePracticeQuestions"],
   properties: {
     score: { type: "number" },
     summary: { type: "string" },
@@ -1462,6 +1558,17 @@ const finalResultSchema = {
       items: {
         type: "object",
         additionalProperties: true,
+        required: [
+          "questionId",
+          "question",
+          "score",
+          "answerScore",
+          "followUpScores",
+          "summary",
+          "strengths",
+          "improvements",
+          "ncsAreas",
+        ],
         properties: {
           questionId: { type: "string" },
           question: { type: "string" },
@@ -1472,6 +1579,7 @@ const finalResultSchema = {
             items: {
               type: "object",
               additionalProperties: true,
+              required: ["followUpIndex", "score", "summary"],
               properties: {
                 followUpIndex: { type: "number" },
                 score: { type: "number" },

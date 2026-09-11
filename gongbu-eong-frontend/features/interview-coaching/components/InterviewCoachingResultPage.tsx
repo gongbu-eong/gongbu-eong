@@ -68,24 +68,24 @@ function ResultView({
 }) {
   const result = session.result;
   const firstAnsweredQuestionId =
-    session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
+  session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
     session.questions[0]?.id ||
     "";
   const [activeQuestionId, setActiveQuestionId] = useState(firstAnsweredQuestionId);
   if (!result) return null;
+  const answeredQuestions = session.questions.filter((question) => hasQuestionAnswer(session.messages, question.id));
+  const resultQuestions = answeredQuestions.length ? answeredQuestions : session.questions;
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
   const strengths = cleanDisplayList(result.strengths);
   const improvements = cleanDisplayList(result.improvements);
   const futurePracticeQuestions = cleanDisplayList(result.futurePracticeQuestions);
   const selectedQuestion =
-    session.questions.find((question) => question.id === activeQuestionId) ||
-    session.questions[0] ||
+    resultQuestions.find((question) => question.id === activeQuestionId) ||
+    resultQuestions[0] ||
     null;
   const selectedMessages = selectedQuestion
-    ? session.messages.filter(
-      (message) =>
-        message.questionId === selectedQuestion.id &&
-        (message.role === "answer" || message.role === "follow_up"),
+    ? filterAnsweredConversation(
+      session.messages.filter((message) => message.questionId === selectedQuestion.id),
     )
     : [];
   const selectedReview = selectedQuestion
@@ -97,7 +97,7 @@ function ResultView({
       <section className={styles.resultSection}>
         <h2>문항별 답변 코칭</h2>
         <ResultQuestionTabs
-          questions={session.questions}
+          questions={resultQuestions}
           messages={session.messages}
           activeQuestionId={activeQuestionId}
           onSelect={setActiveQuestionId}
@@ -313,6 +313,17 @@ function getFollowUpNcsAreas(messages: InterviewMessage[], messageIndex: number)
     }
   }
   return [];
+}
+
+function filterAnsweredConversation(messages: InterviewMessage[]) {
+  const relevantMessages = messages.filter((item) => item.role === "answer" || item.role === "follow_up");
+  return relevantMessages.filter((message, index) => {
+    if (message.role === "answer") return true;
+    const nextMessage = relevantMessages
+      .slice(index + 1)
+      .find((item) => item.role === "answer" || item.role === "follow_up");
+    return nextMessage?.role === "answer";
+  });
 }
 
 function uniqueNcsAreas(values: string[]) {
