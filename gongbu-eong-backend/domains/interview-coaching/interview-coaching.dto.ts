@@ -67,6 +67,7 @@ export type InterviewAnswerFeedback = {
   improvements: string[];
   nextAnswerGuide: string;
   followUpQuestion?: string | null;
+  followUpNcsAreas?: NcsAreaName[];
 };
 
 export type InterviewQuestionReview = {

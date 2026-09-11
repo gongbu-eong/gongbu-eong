@@ -4,11 +4,20 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getInterviewCoachingSession } from "../interview-coaching.api";
-import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion } from "../interview-coaching.dto";
+import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
 import { InterviewAnalysisView } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
 
 type InterviewQuestionReview = NonNullable<InterviewCoachingSession["result"]>["questionReviews"][number];
+const NCS_AREA_NAMES: NcsAreaName[] = [
+  "의사소통능력",
+  "수리능력",
+  "문제해결능력",
+  "자기개발능력",
+  "대인관계능력",
+  "정보능력",
+  "직업윤리",
+];
 
 export function InterviewCoachingResultPage({
   sessionId,
@@ -202,10 +211,10 @@ function ResultQuestionDetail({
 
       {messages.length ? (
         <div className={styles.chatList}>
-          {messages.map((message) => (
+          {messages.map((message, messageIndex) => (
             <ResultConversationMessage
               message={message}
-              ncsAreas={message.role === "follow_up" ? ncsAreas : []}
+              ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(messages, messageIndex) : []}
               key={message.id}
             />
           ))}
@@ -263,6 +272,21 @@ function ResultConversationMessage({
       ) : null}
     </article>
   );
+}
+
+function getFollowUpNcsAreas(messages: InterviewMessage[], messageIndex: number) {
+  for (let index = messageIndex - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role === "answer") {
+      return uniqueNcsAreas(message.feedback?.followUpNcsAreas || []);
+    }
+  }
+  return [];
+}
+
+function uniqueNcsAreas(values: string[]) {
+  const validNames = new Set(NCS_AREA_NAMES);
+  return Array.from(new Set(values.filter((value): value is NcsAreaName => validNames.has(value as NcsAreaName))));
 }
 
 function hasQuestionAnswer(messages: InterviewMessage[], questionId: string) {

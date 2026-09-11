@@ -20,6 +20,7 @@ import type {
   InterviewMessage,
   InterviewNcsMapping,
   InterviewQuestion,
+  NcsAreaName,
 } from "../interview-coaching.dto";
 import styles from "./InterviewCoachingPage.module.css";
 
@@ -27,6 +28,15 @@ type ConnectedJob = InterviewCoachingJob & { duty: string };
 
 const MAX_ANSWER_LENGTH = 4000;
 const MAX_FOLLOW_UPS_PER_QUESTION = 3;
+const NCS_AREA_NAMES: NcsAreaName[] = [
+  "의사소통능력",
+  "수리능력",
+  "문제해결능력",
+  "자기개발능력",
+  "대인관계능력",
+  "정보능력",
+  "직업윤리",
+];
 
 export function InterviewCoachingPage({
   initialSessionId,
@@ -789,11 +799,11 @@ function InterviewQuestionPanel({
       </article>
       {visibleMessages.length ? (
         <div className={styles.chatList}>
-          {visibleMessages.map((message) => (
+          {visibleMessages.map((message, messageIndex) => (
             <ChatMessage
               key={message.id}
               message={message}
-              ncsAreas={message.role === "follow_up" ? mappedAreas : []}
+              ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(visibleMessages, messageIndex) : []}
               showFeedback={false}
             />
           ))}
@@ -872,6 +882,21 @@ function ChatMessage({
       ) : null}
     </article>
   );
+}
+
+function getFollowUpNcsAreas(messages: InterviewMessage[], messageIndex: number) {
+  for (let index = messageIndex - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role === "answer") {
+      return uniqueNcsAreas(message.feedback?.followUpNcsAreas || []);
+    }
+  }
+  return [];
+}
+
+function uniqueNcsAreas(values: string[]) {
+  const validNames = new Set(NCS_AREA_NAMES);
+  return Array.from(new Set(values.filter((value): value is NcsAreaName => validNames.has(value as NcsAreaName))));
 }
 
 function ConnectedJobCard({ job, onRemove }: { job: ConnectedJob; onRemove: () => void }) {
