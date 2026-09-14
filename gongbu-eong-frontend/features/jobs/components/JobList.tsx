@@ -73,7 +73,7 @@ export function JobList({
   scope,
   initialNcs = [],
   initialQuery = "",
-  initialSort = "closing",
+  initialSort = "views",
   initialJobs = [],
   initialTotal = 0,
   initialRecommendationTypeName = null,
@@ -521,9 +521,9 @@ export function JobList({
                 ) : null}
                 <label className={styles.sortSelect}>
                   <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+                    <option value="views">조회순</option>
                     <option value="closing">{isShowingRecommendedScope ? "추천순" : "마감순"}</option>
                     <option value="latest">등록순</option>
-                    <option value="views">조회순</option>
                   </select>
                   <ChevronIcon />
                 </label>

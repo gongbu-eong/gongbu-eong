@@ -146,7 +146,7 @@ function parseView(value?: string): JobListView {
 }
 
 function parseSort(value?: string) {
-  return value === "latest" || value === "views" ? value : "closing";
+  return value === "closing" || value === "latest" ? value : "views";
 }
 
 function splitParam(value?: string) {
