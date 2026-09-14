@@ -118,7 +118,7 @@ export function CommunityMain({
             }}
           />
 
-          {query ? null : (
+          {!query && visiblePopular.length ? (
             <section className={styles.popularSection}>
               <div className={styles.sectionHeader}>
                 <h2>전체 인기글</h2>
@@ -129,10 +129,9 @@ export function CommunityMain({
               </div>
               <div className={styles.popularList}>
                 {visiblePopular.map((post, index) => <PostItem key={post.id} post={post} rank={index + 1} />)}
-                {!visiblePopular.length ? <EmptyState>인기글이 아직 없습니다.</EmptyState> : null}
               </div>
             </section>
-          )}
+          ) : null}
 
           <div className={`${styles.sectionHeader} ${styles.allPostsHeader}`}>
             <h2>{query ? `‘${query}’ 검색 결과` : "전체 글"}</h2>
