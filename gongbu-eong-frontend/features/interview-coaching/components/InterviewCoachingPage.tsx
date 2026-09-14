@@ -57,7 +57,7 @@ export function InterviewCoachingPage({
   const [query, setQuery] = useState("");
   const [jobs, setJobs] = useState<InterviewCoachingJob[]>([]);
   const [searching, setSearching] = useState(false);
-  const [manualJobKeyword, setManualJobKeyword] = useState("");
+  const [hasSearchedJobs, setHasSearchedJobs] = useState(false);
   const [manualCompanyName, setManualCompanyName] = useState("");
   const [manualPositionName, setManualPositionName] = useState("");
   const [manualDuty, setManualDuty] = useState("");
@@ -110,12 +110,18 @@ export function InterviewCoachingPage({
   const searchJobs = async (nextQuery = query) => {
     const searchId = ++jobSearchSeqRef.current;
     const searchTerm = nextQuery.trim();
+    if (!searchTerm) {
+      setJobs([]);
+      setHasSearchedJobs(false);
+      setSearching(false);
+      return;
+    }
+    setHasSearchedJobs(true);
     setSearching(true);
     try {
       const result = await getJobPostings({
         query: searchTerm,
         sort: "latest",
-        employmentType: "정규직",
         includeClosedMonths: 6,
       });
       if (searchId !== jobSearchSeqRef.current) return;
@@ -127,7 +133,6 @@ export function InterviewCoachingPage({
           applicationEndAt: item.applicationEndAt,
         }));
       setJobs(activeJobs);
-      if (!activeJobs.length) setManualJobKeyword(searchTerm);
     } finally {
       if (searchId === jobSearchSeqRef.current) setSearching(false);
     }
@@ -136,9 +141,8 @@ export function InterviewCoachingPage({
   const openJobPicker = () => {
     setQuery("");
     setJobs([]);
-    setManualJobKeyword("");
+    setHasSearchedJobs(false);
     setJobPickerOpen(true);
-    void searchJobs("");
   };
 
   const closeJobPicker = () => {
@@ -146,7 +150,7 @@ export function InterviewCoachingPage({
     setSearching(false);
     setQuery("");
     setJobs([]);
-    setManualJobKeyword("");
+    setHasSearchedJobs(false);
     setJobPickerOpen(false);
   };
 
@@ -417,22 +421,11 @@ export function InterviewCoachingPage({
           setQuery={setQuery}
           jobs={jobs}
           searching={searching}
-          manualJobKeyword={manualJobKeyword}
-          setManualJobKeyword={setManualJobKeyword}
+          hasSearched={hasSearchedJobs}
           onSearch={() => searchJobs()}
           onPick={(item) => {
             setJobPickerOpen(false);
             setDutySheetJob(item);
-          }}
-          onManualConfirm={(title) => {
-            setJobPickerOpen(false);
-            setDutySheetJob({
-              id: `manual:${title}`,
-              institutionName: "직접 입력",
-              title,
-              applicationEndAt: null,
-              isManual: true,
-            });
           }}
           onClose={closeJobPicker}
         />
@@ -924,28 +917,24 @@ function JobPicker({
   setQuery,
   jobs,
   searching,
-  manualJobKeyword,
-  setManualJobKeyword,
+  hasSearched,
   onSearch,
   onPick,
-  onManualConfirm,
   onClose,
 }: {
   query: string;
   setQuery: (value: string) => void;
   jobs: InterviewCoachingJob[];
   searching: boolean;
-  manualJobKeyword: string;
-  setManualJobKeyword: (value: string) => void;
+  hasSearched: boolean;
   onSearch: () => void;
   onPick: (job: InterviewCoachingJob) => void;
-  onManualConfirm: (title: string) => void;
   onClose: () => void;
 }) {
-  const manualTitle = manualJobKeyword.trim();
+  const searchLabel = query.trim() || "입력한 검색어";
   return (
     <div className={styles.overlay}>
-      <section data-keyboard-sheet="true" className={styles.modal}>
+      <section data-keyboard-sheet="true" className={`${styles.modal} ${styles.jobPickerSheet}`}>
         <div className={styles.sheetHandle} />
         <header>
           <h2>연결할 공고 선택</h2>
@@ -955,10 +944,7 @@ function JobPicker({
           <input
             value={query}
             onFocus={(event) => focusSheetField(event.currentTarget)}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              if (!jobs.length) setManualJobKeyword(event.target.value);
-            }}
+            onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter") onSearch();
             }}
@@ -966,7 +952,6 @@ function JobPicker({
           />
           <button type="button" onClick={onSearch}>검색</button>
         </div>
-        {!searching && !jobs.length ? <p className={styles.jobResultCount}>검색결과 0</p> : null}
         <div className={styles.jobResults}>
           {searching ? (
             <p>공고를 찾는 중...</p>
@@ -978,20 +963,16 @@ function JobPicker({
                 <small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small>
               </button>
             ))
-          ) : (
+          ) : hasSearched ? (
             <div className={styles.noJobResult}>
-              <strong>검색결과가 없습니다.</strong>
-              <p>공고가 나오지 않는다면 직접 입력하거나,<br />재검색하세요.</p>
-              <input
-                value={manualJobKeyword}
-                onFocus={(event) => focusSheetField(event.currentTarget)}
-                onChange={(event) => setManualJobKeyword(event.target.value)}
-                placeholder="기업명이나, 공고명을 입력하세요."
-              />
-              <button type="button" disabled={!manualTitle} onClick={() => onManualConfirm(manualTitle)}>
-                공고 입력 완료
-              </button>
+              <strong><span>{`'${searchLabel}'`}</span>에 대한 검색결과가 없습니다.</strong>
+              <ul>
+                <li>단어의 철자가 정확한지 확인해 주세요. 검색어를 줄이거나, 더 일반적인 검색어로 검색해 보세요.</li>
+                <li>설정한 검색 조건이 있다면 일부 해제 하거나 변경해 보세요.</li>
+              </ul>
             </div>
+          ) : (
+            <p className={styles.searchGuide}>검색해주세요.</p>
           )}
         </div>
       </section>

@@ -50,7 +50,7 @@ export function CoachingPage() {
   const [query, setQuery] = useState("");
   const [jobs, setJobs] = useState<CoachingJob[]>([]);
   const [searching, setSearching] = useState(false);
-  const [manualJobKeyword, setManualJobKeyword] = useState("");
+  const [hasSearchedJobs, setHasSearchedJobs] = useState(false);
   // const [confirmOpen, setConfirmOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
   useBodyScrollLock(Boolean(termsOpen || jobPickerOpen || dutySheetJob || alertMessage));
@@ -68,13 +68,19 @@ export function CoachingPage() {
   const searchJobs = async (nextQuery = query) => {
     const searchId = ++jobSearchSeqRef.current;
     const searchTerm = nextQuery.trim();
+    if (!searchTerm) {
+      setJobs([]);
+      setHasSearchedJobs(false);
+      setSearching(false);
+      return;
+    }
+    setHasSearchedJobs(true);
     setSearching(true);
     try {
-      const result = await getJobPostings({ query: searchTerm, sort: "latest", employmentType: "정규직", includeClosedMonths: 6 });
+      const result = await getJobPostings({ query: searchTerm, sort: "latest", includeClosedMonths: 6 });
       if (searchId !== jobSearchSeqRef.current) return;
       const activeJobs = result.items.map((item) => ({ id: item.id, institutionName: item.institutionName, title: item.title, applicationEndAt: item.applicationEndAt }));
       setJobs(activeJobs);
-      if (!activeJobs.length) setManualJobKeyword(searchTerm);
     } finally {
       if (searchId === jobSearchSeqRef.current) setSearching(false);
     }
@@ -83,9 +89,8 @@ export function CoachingPage() {
   const openJobPicker = () => {
     setQuery("");
     setJobs([]);
-    setManualJobKeyword("");
+    setHasSearchedJobs(false);
     setJobPickerOpen(true);
-    void searchJobs("");
   };
 
   const closeJobPicker = () => {
@@ -93,7 +98,7 @@ export function CoachingPage() {
     setSearching(false);
     setQuery("");
     setJobs([]);
-    setManualJobKeyword("");
+    setHasSearchedJobs(false);
     setJobPickerOpen(false);
   };
 
@@ -310,7 +315,7 @@ export function CoachingPage() {
     </main>
     <AppFooter active="ai" />
     {termsOpen ? <TermsSheet onConfirm={() => { setTermsConfirmed(true); setTermsOpen(false); }} onClose={() => setTermsOpen(false)} /> : null}
-    {jobPickerOpen ? <JobPicker query={query} setQuery={setQuery} jobs={jobs} searching={searching} manualJobKeyword={manualJobKeyword} setManualJobKeyword={setManualJobKeyword} onSearch={() => searchJobs()} onPick={(item) => { setJobPickerOpen(false); setDutySheetJob(item); }} onManualConfirm={(title) => { setJobPickerOpen(false); setDutySheetJob({ id: `manual:${title}`, institutionName: "직접 입력", title, applicationEndAt: null, isManual: true }); }} onClose={closeJobPicker} /> : null}
+    {jobPickerOpen ? <JobPicker query={query} setQuery={setQuery} jobs={jobs} searching={searching} hasSearched={hasSearchedJobs} onSearch={() => searchJobs()} onPick={(item) => { setJobPickerOpen(false); setDutySheetJob(item); }} onClose={closeJobPicker} /> : null}
     {dutySheetJob ? <JobDutySheet job={dutySheetJob} onBack={() => { setDutySheetJob(null); setJobPickerOpen(true); }} onClose={() => { setDutySheetJob(null); closeJobPicker(); }} onConfirm={(duty) => { setConnectedJob({ ...dutySheetJob, duty }); setDutySheetJob(null); closeJobPicker(); }} /> : null}
     {/* {confirmOpen ? <CoachingConfirmDialog onCancel={() => setConfirmOpen(false)} onConfirm={runCoaching} /> : null} */}
     {alertMessage ? <CoachingAlertDialog message={alertMessage} onClose={() => { setAlertMessage(""); window.setTimeout(() => focusField(alertFocusRef.current), 0); }} /> : null}
@@ -330,27 +335,23 @@ function JobPicker({
   setQuery,
   jobs,
   searching,
-  manualJobKeyword,
-  setManualJobKeyword,
+  hasSearched,
   onSearch,
   onPick,
-  onManualConfirm,
   onClose,
 }: {
   query: string;
   setQuery: (value: string) => void;
   jobs: CoachingJob[];
   searching: boolean;
-  manualJobKeyword: string;
-  setManualJobKeyword: (value: string) => void;
+  hasSearched: boolean;
   onSearch: () => void;
   onPick: (job: CoachingJob) => void;
-  onManualConfirm: (title: string) => void;
   onClose: () => void;
 }) {
-  const manualTitle = manualJobKeyword.trim();
+  const searchLabel = query.trim() || "입력한 검색어";
 
-  return <div className={styles.overlay}><section data-keyboard-sheet="true" className={`${styles.modal} ${styles.coachingSheet} ${styles.jobPickerSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => { setQuery(event.target.value); if (!jobs.length) setManualJobKeyword(event.target.value); }} onKeyDown={(event) => { if (event.key === "Enter") onSearch(); }} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div>{!searching && !jobs.length ? <p className={styles.jobResultCount}>검색결과 0</p> : null}<div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : <div className={styles.noJobResult}><strong>검색결과가 없습니다.</strong><p>공고가 나오지 않는다면 직접 입력하거나,<br />재검색하세요.</p><input value={manualJobKeyword} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => setManualJobKeyword(event.target.value)} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" disabled={!manualTitle} onClick={() => onManualConfirm(manualTitle)}>공고 입력 완료</button></div>}</div></section></div>;
+  return <div className={styles.overlay}><section data-keyboard-sheet="true" className={`${styles.modal} ${styles.coachingSheet} ${styles.jobPickerSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") onSearch(); }} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div><div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : hasSearched ? <div className={styles.noJobResult}><strong><span>{`'${searchLabel}'`}</span>에 대한 검색결과가 없습니다.</strong><ul><li>단어의 철자가 정확한지 확인해 주세요. 검색어를 줄이거나, 더 일반적인 검색어로 검색해 보세요.</li><li>설정한 검색 조건이 있다면 일부 해제 하거나 변경해 보세요.</li></ul></div> : <p className={styles.searchGuide}>검색해주세요.</p>}</div></section></div>;
 }
 
 function JobDutySheet({ job, onBack, onClose, onConfirm }: { job: CoachingJob; onBack: () => void; onClose: () => void; onConfirm: (duty: string) => void }) {
