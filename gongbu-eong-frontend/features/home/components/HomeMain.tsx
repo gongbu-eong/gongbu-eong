@@ -781,7 +781,12 @@ export function HomeMenuDrawer({
             icon="calendar"
             title="캘린더"
             items={["전체 채용 캘린더", "나만의 캘린더"]}
-            hrefs={["/calendar", user ? "/calendar" : makeLoginHref("/calendar")]}
+            hrefs={[
+              "/calendar?scope=all",
+              user
+                ? "/calendar?scope=mine"
+                : makeLoginHref("/calendar?scope=mine"),
+            ]}
             onNavigate={onClose}
           />
           <DrawerSection

@@ -128,7 +128,12 @@ export function EventMenuDrawer({
             icon="calendar"
             title="캘린더"
             items={["전체 채용 캘린더", "나만의 캘린더"]}
-            hrefs={["/calendar", user ? "/calendar" : "/login"]}
+            hrefs={[
+              "/calendar?scope=all",
+              user
+                ? "/calendar?scope=mine"
+                : "/login?returnTo=%2Fcalendar%3Fscope%3Dmine",
+            ]}
             onNavigate={onClose}
           />
           <DrawerSection

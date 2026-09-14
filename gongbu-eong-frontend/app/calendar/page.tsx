@@ -20,11 +20,27 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function CalendarPage() {
+type CalendarPageProps = {
+  searchParams?: Promise<{ scope?: string; view?: string }>;
+};
+
+function normalizeCalendarScope(
+  searchParams: Awaited<NonNullable<CalendarPageProps["searchParams"]>>,
+) {
+  const scope = searchParams.scope || searchParams.view;
+
+  return scope === "mine" || scope === "bookmarked" ? "mine" : "all";
+}
+
+export default async function CalendarPage({ searchParams }: CalendarPageProps) {
+  const params = await searchParams;
+  const initialScope = normalizeCalendarScope(params || {});
   const initialCalendar = await getCalendarJobPostingsForServer();
 
   return (
     <CalendarMain
+      key={initialScope}
+      initialScope={initialScope}
       initialMonthKey={initialCalendar.monthKey}
       initialMonthJobs={initialCalendar.items}
     />
