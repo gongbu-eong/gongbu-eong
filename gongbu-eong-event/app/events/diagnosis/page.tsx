@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { Suspense } from "react";
-import { DiagnosisStartEvent } from "@/features/diagnosis/components/DiagnosisAnalyticsEvents";
 import { DiagnosisFlow } from "@/features/diagnosis/components/DiagnosisFlow";
 import { getDiagnosisShareImageUrl } from "@/features/diagnosis/diagnosis-share";
 import { requireEventSession } from "@/shared/event-session";
@@ -37,14 +35,7 @@ export default async function DiagnosisEventPage() {
     await requireEventSession("1", "/events/diagnosis");
   }
 
-  return (
-    <>
-      <Suspense fallback={null}>
-        <DiagnosisStartEvent />
-      </Suspense>
-      <DiagnosisFlow />
-    </>
-  );
+  return <DiagnosisFlow />;
 }
 
 function isSearchCrawler(userAgent: string | null) {

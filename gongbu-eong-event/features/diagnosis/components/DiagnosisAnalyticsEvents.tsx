@@ -4,24 +4,6 @@ import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { trackProductEvent } from "@/features/analytics/analytics.api";
 
-export function DiagnosisStartEvent() {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  useEffect(() => {
-    const query = searchParams.toString();
-
-    trackProductEvent({
-      eventType: "diagnosis_start",
-      properties: {
-        path: query ? `${pathname}?${query}` : pathname,
-      },
-    });
-  }, [pathname, searchParams]);
-
-  return null;
-}
-
 export function DiagnosisResultViewEvent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();

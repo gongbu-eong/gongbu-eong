@@ -218,6 +218,12 @@ export function DiagnosisFlow() {
     isSubmittingRef.current = false;
     setAnswers({});
     setState({ status: "loading" });
+    trackProductEvent({
+      eventType: "diagnosis_start",
+      properties: {
+        action: "start_button_click",
+      },
+    });
 
     try {
       const response = await getDiagnosisQuestions();
