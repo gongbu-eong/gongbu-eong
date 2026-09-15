@@ -6,6 +6,10 @@ import { logPageView } from "@/features/access/access.api";
 import { getCurrentUser } from "@/features/home/home.api";
 import {
   getStoredAttributionContext,
+  getExternalReferrer,
+  getScreenBucket,
+  getStoredPreviousPath,
+  rememberCurrentPath,
   saveStoredAttribution,
   syncAttribution,
   trackProductEvent,
@@ -40,6 +44,9 @@ export function AnalyticsTracker() {
   useEffect(() => {
     const query = searchParams.toString();
     const path = query ? `${pathname}?${query}` : pathname;
+    const previousPath = getStoredPreviousPath();
+    const externalReferrer = getExternalReferrer();
+    const screen = getScreenBucket(path);
     const explicitAttribution = captureAttribution(searchParams, path);
     const current = explicitAttribution || captureCurrentSession(path);
     const { first, last } = getStoredAttributionContext();
@@ -47,12 +54,15 @@ export function AnalyticsTracker() {
     logPageView({
       path,
       title: document.title,
+      referrer: externalReferrer || undefined,
+      previousPath,
       metadata: {
         attribution: {
           first: summarizeAttribution(first),
           last: summarizeAttribution(last),
           current: summarizeAttribution(current),
         },
+        screen,
       },
     });
 
@@ -70,6 +80,7 @@ export function AnalyticsTracker() {
       last: storedLast,
       current,
     });
+    rememberCurrentPath(path);
   }, [pathname, searchParams]);
 
   useEffect(() => {
@@ -82,7 +93,7 @@ export function AnalyticsTracker() {
       );
       if (!clickable) return;
 
-      const screen = getScreenClickBucket(window.location.pathname);
+      const screen = getScreenBucket(window.location.pathname);
       trackProductEvent({
         eventType: "screen_click",
         properties: {
@@ -103,36 +114,6 @@ export function AnalyticsTracker() {
   }, []);
 
   return null;
-}
-
-function getScreenClickBucket(pathname: string) {
-  if (pathname === "/") return { key: "home", name: "홈" };
-  if (/^\/jobs\/[^/]+/.test(pathname)) {
-    return { key: "job_detail", name: "공고상세" };
-  }
-  if (pathname.startsWith("/ai-tools/interview-coaching")) {
-    return { key: "interview_coaching", name: "AI NCS 면접 코칭" };
-  }
-  if (pathname.startsWith("/ai-tools/coaching")) {
-    return { key: "coaching", name: "AI NCS 자소서 코칭" };
-  }
-  if (pathname.startsWith("/ai-tools/diagnosis")) {
-    return { key: "diagnosis", name: "강약점" };
-  }
-  if (pathname.startsWith("/community")) {
-    return { key: "community", name: "커뮤니티" };
-  }
-  if (pathname.startsWith("/my")) {
-    return { key: "my", name: "마이페이지" };
-  }
-  if (pathname.startsWith("/calendar")) {
-    return { key: "calendar", name: "캘린더" };
-  }
-  if (pathname.startsWith("/login")) {
-    return { key: "login", name: "로그인" };
-  }
-
-  return { key: "other", name: "기타" };
 }
 
 function getElementText(element: Element) {
@@ -168,7 +149,7 @@ function captureAttribution(
     ...snapshot,
     landingUrl: window.location.href,
     landingPath,
-    referrer: document.referrer || null,
+    referrer: getExternalReferrer(),
     capturedAt: new Date().toISOString(),
   };
 }
@@ -195,7 +176,7 @@ function captureCurrentSession(landingPath: string): AttributionSnapshot {
     utm_medium: referrerHost ? "referral" : "direct",
     landingUrl: window.location.href,
     landingPath,
-    referrer: document.referrer || null,
+    referrer: getExternalReferrer(),
     capturedAt: new Date().toISOString(),
   };
 }

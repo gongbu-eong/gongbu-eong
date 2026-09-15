@@ -1,4 +1,10 @@
 import { getAnonymousId } from "@/shared/session/anonymous-id";
+import {
+  classifyTrafficChannel,
+  getAnalyticsSessionId,
+  getExternalReferrer,
+  getScreenBucket,
+} from "@/features/analytics/analytics.api";
 
 const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
@@ -7,8 +13,12 @@ export function logPageView(args: {
   path: string;
   title?: string;
   referrer?: string;
+  previousPath?: string | null;
   metadata?: Record<string, unknown>;
 }) {
+  const externalReferrer = args.referrer ?? getExternalReferrer();
+  const screen = getScreenBucket(args.path);
+
   fetch(`${backendUrl}/api/access-logs`, {
     method: "POST",
     keepalive: true,
@@ -21,9 +31,27 @@ export function logPageView(args: {
       eventName: "page_view",
       path: args.path,
       title: args.title,
-      referrer: (args.referrer ?? document.referrer) || undefined,
+      referrer: externalReferrer || undefined,
       entrySource: resolveEntrySource(args.path),
-      metadata: args.metadata,
+      sessionId: getAnalyticsSessionId(),
+      previousPath: args.previousPath || undefined,
+      canonicalPath: screen.canonicalPath,
+      screenKey: screen.key,
+      trafficChannel: classifyTrafficChannel(
+        args.path,
+        externalReferrer || null,
+        args.previousPath || null,
+      ),
+      metadata: {
+        ...(args.metadata || {}),
+        navigation: {
+          previousPath: args.previousPath || null,
+          externalReferrer: externalReferrer || null,
+          canonicalPath: screen.canonicalPath,
+          screenKey: screen.key,
+          screenName: screen.name,
+        },
+      },
     }),
   }).catch(() => {
     // Logging must never block page rendering.
@@ -31,8 +59,16 @@ export function logPageView(args: {
 }
 
 function resolveEntrySource(path: string) {
+  if (path.startsWith("/jobs")) {
+    return "jobs";
+  }
+
   if (path.startsWith("/ai-tools/diagnosis")) {
-    return "diagnosis";
+    return "strength_diagnosis";
+  }
+
+  if (path.startsWith("/events/diagnosis")) {
+    return "strength_diagnosis";
   }
 
   if (path.startsWith("/ai-tools")) {
