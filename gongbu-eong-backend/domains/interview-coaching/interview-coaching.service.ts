@@ -5,6 +5,7 @@ import {
   addInterviewMessage,
   claimAnonymousInterviewSessions,
   createInterviewSession,
+  findInterviewMaterialFileForViewer,
   findInterviewSessionForViewer,
   listInterviewHistory,
   markInterviewSessionFailed,
@@ -193,6 +194,8 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     materialInputType: preparedMaterial.inputType,
     materialText: preparedMaterial.text ? preparedMaterial.text.slice(0, 12000) : null,
     materialFilename: preparedMaterial.filename,
+    materialFileContentType: preparedMaterial.contentType,
+    materialFileData: preparedMaterial.fileBuffer,
     termsAgreedAt: args.termsAgreed ? new Date().toISOString() : null,
     ipAddress: args.ipAddress,
     userAgent: args.userAgent,
@@ -319,6 +322,8 @@ export async function createInterviewCoachingDraft(args: StartInterviewCoachingA
     materialInputType: args.materialInputType || null,
     materialText: cleanText(args.materialText).slice(0, 12000) || null,
     materialFilename: args.materialFile?.name || null,
+    materialFileContentType: args.materialFile?.type || null,
+    materialFileData: args.materialFile?.buffer || null,
     termsAgreedAt: args.termsAgreed ? new Date().toISOString() : null,
     ipAddress: args.ipAddress,
     userAgent: args.userAgent,
@@ -343,6 +348,8 @@ async function prepareInterviewMaterial(args: StartInterviewCoachingArgs) {
     return {
       inputType,
       filename: args.materialFile.name,
+      contentType: args.materialFile.type || "application/octet-stream",
+      fileBuffer: args.materialFile.buffer,
       text: cleanText(extractedText).slice(0, 12000),
     };
   }
@@ -350,8 +357,18 @@ async function prepareInterviewMaterial(args: StartInterviewCoachingArgs) {
   return {
     inputType,
     filename: null,
+    contentType: null,
+    fileBuffer: null,
     text: cleanText(args.materialText).slice(0, 12000),
   };
+}
+
+export async function findInterviewMaterialFile(args: {
+  sessionId: string;
+  userId?: string | null;
+  anonymousId?: string | null;
+}) {
+  return findInterviewMaterialFileForViewer(args);
 }
 
 function appendInterviewMaterialContext(

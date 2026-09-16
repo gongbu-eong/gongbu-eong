@@ -25,6 +25,7 @@ type SessionRow = {
   material_input_type: InterviewMaterialInputType | null;
   material_text: string | null;
   material_filename: string | null;
+  material_file_available: boolean | null;
   terms_agreed_at: string | null;
   job_snapshot: InterviewCoachingJobDto | null;
   analysis: InterviewAnalysis | null;
@@ -55,6 +56,8 @@ export async function createInterviewSession(args: {
   materialInputType?: InterviewMaterialInputType | null;
   materialText?: string | null;
   materialFilename?: string | null;
+  materialFileContentType?: string | null;
+  materialFileData?: Buffer | null;
   termsAgreedAt?: string | null;
   analysis?: InterviewAnalysis | null;
   questions?: InterviewQuestion[] | null;
@@ -77,12 +80,14 @@ export async function createInterviewSession(args: {
         material_input_type,
         material_text,
         material_filename,
+        material_file_content_type,
+        material_file_data,
         terms_agreed_at,
         job_snapshot,
         analysis,
         questions
       )
-      VALUES ($1, $2, $3, 'ai_tools', $4, $5, 'draft', $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15::jsonb)
+      VALUES ($1, $2, $3, 'ai_tools', $4, $5, 'draft', $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb, $16::jsonb, $17::jsonb)
       RETURNING id
     `,
     [
@@ -97,6 +102,8 @@ export async function createInterviewSession(args: {
       args.materialInputType || null,
       args.materialText || null,
       args.materialFilename || null,
+      args.materialFileContentType || null,
+      args.materialFileData || null,
       args.termsAgreedAt || null,
       JSON.stringify(args.jobSnapshot || {}),
       JSON.stringify(args.analysis || {}),
@@ -175,6 +182,7 @@ export async function findInterviewSessionForViewer(args: {
         material_input_type,
         material_text,
         material_filename,
+        material_file_data IS NOT NULL AS material_file_available,
         terms_agreed_at,
         job_snapshot,
         analysis,
@@ -219,6 +227,7 @@ export async function listInterviewHistory(userId: string) {
         material_input_type,
         material_text,
         material_filename,
+        material_file_data IS NOT NULL AS material_file_available,
         terms_agreed_at,
         job_snapshot,
         analysis,
@@ -253,6 +262,46 @@ export async function claimAnonymousInterviewSessions(
     [userId, anonymousId],
   );
   return result.rowCount || 0;
+}
+
+export async function findInterviewMaterialFileForViewer(args: {
+  sessionId: string;
+  userId?: string | null;
+  anonymousId?: string | null;
+}) {
+  const result = await db.query<{
+    material_filename: string | null;
+    material_file_content_type: string | null;
+    material_file_data: Buffer | null;
+  }>(
+    `
+      SELECT
+        material_filename,
+        material_file_content_type,
+        material_file_data
+      FROM public.interview_coaching_sessions
+      WHERE id = $1::uuid
+        AND material_input_type = 'file'
+        AND material_file_data IS NOT NULL
+        AND (
+          ($2::uuid IS NOT NULL AND user_id = $2::uuid)
+          OR (
+            $3::uuid IS NOT NULL
+            AND user_id IS NULL
+            AND anonymous_id = $3::uuid
+          )
+        )
+      LIMIT 1
+    `,
+    [args.sessionId, args.userId || null, args.anonymousId || null],
+  );
+  const row = result.rows[0];
+  if (!row?.material_file_data) return null;
+  return {
+    filename: row.material_filename || "interview-material",
+    contentType: row.material_file_content_type || "application/octet-stream",
+    data: row.material_file_data,
+  };
 }
 
 export async function addInterviewMessage(args: {
@@ -367,6 +416,7 @@ function mapSession(
     materialInputType: row.material_input_type || null,
     materialText: row.material_text || null,
     materialFilename: row.material_filename || null,
+    materialFileAvailable: Boolean(row.material_file_available),
     termsAgreedAt: row.terms_agreed_at || null,
     job: row.job_snapshot?.id ? row.job_snapshot : null,
     analysis: normalizeAnalysis(row),

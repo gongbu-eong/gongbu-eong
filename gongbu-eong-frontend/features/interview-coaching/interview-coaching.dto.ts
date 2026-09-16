@@ -99,6 +99,7 @@ export type InterviewCoachingSession = {
   materialInputType?: InterviewMaterialInputType | null;
   materialText?: string | null;
   materialFilename?: string | null;
+  materialFileAvailable?: boolean;
   termsAgreedAt?: string | null;
   job: InterviewCoachingJob | null;
   analysis: {

@@ -110,6 +110,7 @@ export type InterviewCoachingSessionDto = {
   materialInputType?: InterviewMaterialInputType | null;
   materialText?: string | null;
   materialFilename?: string | null;
+  materialFileAvailable?: boolean;
   termsAgreedAt?: string | null;
   job: InterviewCoachingJobDto | null;
   analysis: InterviewAnalysis;

@@ -126,6 +126,35 @@ export async function getInterviewCoachingSession(
   return body;
 }
 
+export async function downloadInterviewMaterialFile(args: {
+  sessionId: string;
+  filename?: string | null;
+  anonymousId?: string | null;
+}) {
+  const searchParams = new URLSearchParams();
+  if (args.anonymousId) searchParams.set("anonymousId", args.anonymousId);
+  const query = searchParams.size ? `?${searchParams.toString()}` : "";
+  const response = await fetch(
+    `${backendUrl}/api/interview-coaching/${encodeURIComponent(args.sessionId)}/material-file${query}`,
+    { credentials: "include", cache: "no-store" },
+  );
+
+  if (!response.ok) {
+    const body = await readJsonResponse(response).catch(() => null) as { message?: string } | null;
+    throw new Error(body?.message || "면접 자료 파일을 다운로드하지 못했습니다.");
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = args.filename || "interview-material";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
 export async function listInterviewCoachingHistory(anonymousId?: string | null) {
   const searchParams = new URLSearchParams();
   if (anonymousId) searchParams.set("anonymousId", anonymousId);

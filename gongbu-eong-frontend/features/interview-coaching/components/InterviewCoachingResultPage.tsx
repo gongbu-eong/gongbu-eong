@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { getInterviewCoachingSession } from "../interview-coaching.api";
+import { downloadInterviewMaterialFile, getInterviewCoachingSession } from "../interview-coaching.api";
 import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
 import { InterviewAnalysisView } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
@@ -50,7 +50,7 @@ export function InterviewCoachingResultPage({
         <h1>AI NCS 면접 코칭 결과</h1>
         {error ? <p className={styles.error}>{error}</p> : null}
         {!session && !error ? <p className={styles.lead}>결과를 불러오고 있어요.</p> : null}
-        {session?.result ? <ResultView session={session} /> : null}
+        {session?.result ? <ResultView session={session} anonymousId={anonymousId} /> : null}
         {session && !session.result ? (
           <p className={styles.lead}>아직 최종 결과가 생성되지 않았습니다. AI NCS 면접 코칭 화면에서 결과를 먼저 생성해 주세요.</p>
         ) : null}
@@ -62,8 +62,10 @@ export function InterviewCoachingResultPage({
 
 function ResultView({
   session,
+  anonymousId,
 }: {
   session: InterviewCoachingSession;
+  anonymousId?: string | null;
 }) {
   const result = session.result;
   const firstAnsweredQuestionId =
@@ -88,6 +90,10 @@ function ResultView({
   const selectedReview = selectedQuestion
     ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
     : null;
+  const canDownloadMaterialFile =
+    session.materialInputType === "file" &&
+    Boolean(session.materialFilename) &&
+    Boolean(session.materialFileAvailable);
 
   return (
     <>
@@ -134,9 +140,23 @@ function ResultView({
 
       <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
 
-      <button type="button" className={styles.resultDownloadButton} onClick={() => window.print()}>
-        NCS 면접 코칭 다운받기
-      </button>
+      {canDownloadMaterialFile ? (
+        <button
+          type="button"
+          className={styles.resultDownloadButton}
+          onClick={() => {
+            downloadInterviewMaterialFile({
+              sessionId: session.id,
+              filename: session.materialFilename,
+              anonymousId,
+            }).catch((caught) => {
+              alert(caught instanceof Error ? caught.message : "면접 자료 파일을 다운로드하지 못했습니다.");
+            });
+          }}
+        >
+          NCS 면접 코칭 다운받기
+        </button>
+      ) : null}
       <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
         NCS 면접 코칭 다시하기
       </Link>
