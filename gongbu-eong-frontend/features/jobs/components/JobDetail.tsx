@@ -22,6 +22,8 @@ import { makeLoginHref } from "@/shared/navigation/login";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import styles from "./JobDetail.module.css";
 
+const JOB_FILE_DOWNLOAD_FRAME = "job-file-download-frame";
+
 type JobDetailBannerVariant = {
   key: string;
   name: string;
@@ -431,7 +433,7 @@ export function JobDetail({
                       <a
                         key={file.id}
                         href={file.fileUrl}
-                        target="_blank"
+                        target={JOB_FILE_DOWNLOAD_FRAME}
                         rel="noreferrer"
                       >
                         <span className={styles.fileBadge}>{getFileBadge(file.fileType, file.fileName)}</span>
@@ -440,6 +442,13 @@ export function JobDetail({
                       </a>
                     ))}
                   </div>
+                  <iframe
+                    className={styles.fileDownloadFrame}
+                    name={JOB_FILE_DOWNLOAD_FRAME}
+                    title="첨부파일 다운로드"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                  />
                 </DetailSection>
               ) : null}
 

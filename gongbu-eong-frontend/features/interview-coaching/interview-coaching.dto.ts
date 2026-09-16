@@ -62,6 +62,7 @@ export type InterviewMessage = {
 };
 
 export type InterviewCoachingStatus = "draft" | "ready" | "completed" | "failed";
+export type InterviewMaterialInputType = "file" | "text";
 
 export type InterviewCoachingResult = {
   score: number;
@@ -95,6 +96,10 @@ export type InterviewCoachingSession = {
   companyName: string;
   positionName: string;
   dutyText: string;
+  materialInputType?: InterviewMaterialInputType | null;
+  materialText?: string | null;
+  materialFilename?: string | null;
+  termsAgreedAt?: string | null;
   job: InterviewCoachingJob | null;
   analysis: {
     profile: InterviewJobProfile;

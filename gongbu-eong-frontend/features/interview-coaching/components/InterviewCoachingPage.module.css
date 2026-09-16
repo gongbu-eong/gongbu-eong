@@ -159,3 +159,114 @@
 @media (min-width:37.5rem){.frame{padding-left:2rem;padding-right:2rem}.overlay{align-items:center}.modal{border-radius:1rem;max-width:37.5rem}.profileGrid{grid-template-columns:1fr 1fr}}
 @media (max-width:37.4375rem){.overlay{align-items:flex-end}.modal{min-height:auto;height:min(700px,calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px));max-height:calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px);padding-bottom:calc(24px + env(safe-area-inset-bottom))}.search input,.noJobResult input,.jobDutyInput{font-size:16px;scroll-margin-bottom:calc(120px + var(--mobile-keyboard-inset,0px))}}
 @media (max-width:22.5rem){.bottomActions{grid-template-columns:1fr}.answerFooter{display:grid}.answerFooter button{width:100%}}
+
+/* Figma 2529 AI NCS interview coaching refresh */
+.inputFrame{max-width:393px;padding:64px 16px 108px;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.inputFrame h1{margin:0 0 18px;color:#1a2233;font-size:23px;font-weight:800;line-height:1;letter-spacing:0}
+.inputFrame .lead{margin:0 0 18px;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;letter-spacing:0}
+.inputFrame .lead::before{content:"Ai가 모의면접을 만들고 코칭해드려요";display:block;margin-bottom:8px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
+.interviewTabs{display:grid;grid-template-columns:1fr 1fr;margin:18px 0 20px;border-bottom:1px solid #5a6580}
+.interviewTabs button{height:46px;border:0;border-right:1px solid #5a6580;background:#f5f7fa;color:#1a2233;font:inherit;font-size:17px;font-weight:400}
+.interviewTabs button:first-child{border-left:0}
+.interviewTabs button:last-child{border-right:1px solid #5a6580}
+.interviewTabs .interviewTabActive{position:relative;top:1px;border:1px solid #5a6580;border-bottom-color:#fff;background:#fff}
+.interviewInputSection{margin-top:24px}
+.interviewInputSection h2{margin:0 0 18px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
+.inputFrame .jobConnect{height:52px;border:1px dashed #2f7ff0;border-radius:12px;background:#fff;color:#2f7ff0;font-size:16px;font-weight:800;line-height:1}
+.helperBox{box-sizing:border-box;margin:16px 0 0;padding:16px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:17px;font-weight:400;line-height:1.32;word-break:keep-all}
+.directInputFields{display:grid;gap:16px}
+.directInputFields label{display:grid;gap:10px}
+.directInputFields span{color:#1a2233;font-size:18px;font-weight:700;line-height:1}
+.directInputFields input{width:100%;height:46px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:5px;background:#fff;padding:0 16px;color:#1a2233;font:inherit;font-size:16px}
+.directInputFields input::placeholder{color:#9aa4b8}
+.materialPanel{box-sizing:border-box;min-height:321px;padding:8px;border-radius:5px;background:#f5f7fa}
+.materialTabs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
+.materialTabs button{height:46px;border:0;border-radius:10px;background:#f5f7fa;color:#5a6580;font:inherit;font-size:17px;font-weight:400}
+.materialTabs .materialTabActive{border:1px solid #2f7ff0;background:#fff;color:#2f7ff0}
+.materialDrop{display:flex;width:100%;height:200px;box-sizing:border-box;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px dashed #1c5fc4;border-radius:10px;background:#e8f1ff;color:#1a2233;text-align:center}
+.materialDrop input{display:none}
+.materialDrop strong{max-width:100%;padding:0 14px;color:#1a2233;font-size:15px;font-weight:500;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.materialDrop small{color:#9aa4b8;font-size:12px;font-weight:500}
+.materialDropActive{box-shadow:inset 0 0 0 1px #1c5fc4}
+.materialDropIcon{display:grid;place-items:center;width:38px;height:38px;border-radius:999px;background:#2f7ff0;color:#fff;font-size:28px;font-weight:300}
+.materialPanel textarea{display:block;width:100%;height:200px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:5px;background:#fff;padding:16px;color:#1a2233;font:inherit;font-size:16px;line-height:1.45;resize:none}
+.materialPanel textarea::placeholder{color:#9aa4b8}
+.materialCounter{display:block;margin-top:8px;color:#5a6580;font-size:14px;text-align:right}
+.fileRemoveButton{margin:8px 0 0;border:0;background:transparent;color:#e8544d;font-size:13px;font-weight:700}
+.termsCheck{display:flex;align-items:center;gap:8px;width:100%;margin:16px 0 0;border:0;background:transparent;padding:0;color:#9aa4b8;font-size:15px;font-weight:500;text-align:left}
+.termsCheck span{display:grid;place-items:center;width:24px;height:24px;border:1px solid #e4e8ef;border-radius:999px;color:#2f7ff0;font-size:15px;font-weight:800;flex:0 0 auto}
+.termsCheck[aria-pressed="true"]{color:#5a6580}
+.termsCheck[aria-pressed="true"] span{border-color:#2f7ff0;background:#e8f1ff}
+.inputFrame>.primaryButton{height:52px;margin-top:16px;border-radius:12px;font-size:16px;font-weight:800}
+.inputFrame>.primaryButton:disabled{background:#9aa4b8}
+.termsSheet{display:flex;flex-direction:column;height:min(84vh,760px);max-height:min(84vh,760px);min-height:auto;padding:0 16px 16px;border-radius:15px 15px 0 0}
+.termsSheet .sheetHandle{margin-top:8px}
+.termsSheet header{height:56px;flex:0 0 auto;border-bottom:1px solid #e4e8ef}
+.termsSheet header h2{margin:0;color:#1a2233;font-size:18px;font-weight:700}
+.termsScroll{flex:1;min-height:0;overflow:auto;padding:18px 0 12px}
+.termsArticle{margin:0 0 28px}
+.termsArticle h3{margin:0 0 10px;color:#1a2233;font-size:18px;font-weight:700;line-height:1}
+.termsArticle p{margin:0;color:#5a6580;font-size:16px;font-weight:400;line-height:1.45;white-space:pre-wrap}
+.termsSheet>.primaryButton{flex:0 0 auto;height:52px;margin-top:10px;border-radius:12px}
+.connectedJobCard{margin:0;padding:16px 44px 16px 16px;border:1px solid #e4e8ef;border-radius:5px;box-shadow:none}
+.connectedJobCard span,.connectedJobCard em{font-size:15px;color:#5a6580}
+.connectedJobCard strong{font-size:17px;font-weight:500}
+.connectedJobCard p{font-size:17px}
+
+.frame:not(.inputFrame){max-width:393px;padding:64px 16px 108px}
+.frame:not(.inputFrame)>h1{font-size:23px;font-weight:800;line-height:1}
+.frame:not(.inputFrame)>.lead{font-size:15px}
+.profileCard{border:0;border-radius:0;padding:0;box-shadow:none}
+.profileHeader span{display:block;margin-bottom:14px;color:#5a6580!important;font-size:18px!important;font-weight:700!important}
+.profileHeader strong{margin:0 0 8px;color:#1a2233;font-size:18px;font-weight:700;line-height:1.25}
+.profileHeader p{margin:0;color:#5a6580;font-size:17px;line-height:1.35}
+.keywordList{gap:8px;margin:16px 0}
+.keywordList span,.badgeList span{min-height:32px;padding:0 12px;border-radius:555px;background:#f5f7fa;color:#5a6580;font-size:14px;font-weight:600}
+.profileGrid{display:grid;gap:16px;margin-top:16px}
+.profileGrid article{padding:16px;border-radius:5px;background:#f5f7fa}
+.profileGrid h3{font-size:18px;font-weight:700}
+.profileGrid ul{padding-left:0;list-style:none;font-size:17px;line-height:1.35}
+.profileGrid li+li{margin-top:16px}
+.questionTabsShell{grid-template-columns:minmax(0,1fr);margin:24px -16px 20px;padding:16px 36px;border-top:0;border-bottom:1px solid #e4e8ef;box-shadow:none}
+.questionTabsControl{display:none}
+.questionTabs button{min-width:52px;height:36px;border-radius:555px;font-size:14px}
+.interviewPanel{gap:24px}
+.questionCard{padding:0 0 20px;border-radius:0;border-bottom:1px solid #e4e8ef;background:#fff}
+.questionMeta{font-size:18px;font-weight:700;color:#2f7ff0}
+.questionMeta span:last-child{color:#9aa4b8;font-size:15px;font-weight:400}
+.questionCard h2{margin:18px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35}
+.questionCard p{display:none}
+.chatList{gap:24px}
+.chatBubble{padding:0 0 20px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:#fff}
+.chatBubble strong{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;color:#2f7ff0;font-size:18px;font-weight:700}
+.chatBubble p{color:#5a6580;font-size:17px;line-height:1.35}
+.chatAnswer{background:#fff}
+.chatFollow{background:#fff}
+.chatFollow strong{color:#1fb573}
+.savedAnswer{height:120px;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;color:#5a6580;font-size:17px}
+.answerBox{gap:10px}
+.answerPrompt{color:#2f7ff0;font-size:18px;font-weight:700}
+.answerBox textarea{height:120px;border-radius:10px;font-size:17px;resize:none}
+.answerFooter span{font-size:17px;color:#9aa4b8}
+.answerFooter button{flex:0 0 126px;height:46px;border-radius:10px;font-size:15px}
+.singleBottomAction .primaryButton{height:52px;border-radius:12px}
+.resultQuestionTabs{position:sticky;top:48px;z-index:20;margin:22px -16px 24px;padding:16px 36px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;box-shadow:none}
+.resultQuestionTabs button{min-width:52px;height:36px;font-size:14px}
+.scoreBreakdown{border:0;border-radius:0;background:#fff;padding:0}
+.scoreBreakdown div{min-height:46px;border:1px solid #2f7ff0;border-radius:10px;padding:0 16px}
+.scoreBreakdown span,.scoreBreakdown strong{font-size:16px}
+.reviewCard{border:0;border-radius:0;background:#fff;padding:0}
+.reviewCard strong{display:block;color:#1a2233;font-size:18px;line-height:1.4}
+.reviewCard p,.feedback p,.feedback ul{color:#5a6580;font-size:17px;line-height:1.45}
+.resultHero{border:0;text-align:left}
+.resultSection{border-bottom:0}
+.resultSection h2{font-size:20px;font-weight:700}
+.ncsPanel{gap:24px}
+.ncsItem strong{font-size:18px}
+.ncsItem p{font-size:17px;line-height:1.35}
+.track{height:12px;background:#e4e8ef}
+
+@media (max-width:37.4375rem){
+  .termsSheet,.jobPickerSheet{height:min(700px,calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px));max-height:calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px)}
+  .materialPanel textarea,.directInputFields input,.jobPickerSheet .search input,.jobDutyInput{font-size:16px;scroll-margin-bottom:calc(140px + var(--mobile-keyboard-inset,0px))}
+}

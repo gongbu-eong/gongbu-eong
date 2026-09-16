@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { getSessionUser } from "@/domains/auth/session";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
 import { startInterviewCoaching } from "@/domains/interview-coaching/interview-coaching.service";
+import { validateResumeFile } from "@/domains/resumes/resume-file-storage";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
 
 export const runtime = "nodejs";
@@ -28,14 +29,16 @@ export async function POST(request: NextRequest) {
       elapsedMs: Date.now() - startedAt,
     });
 
-    const body = (await request.json()) as Record<string, unknown>;
-    const anonymousId = readAnonymousId(body.anonymousId);
+    const payload = await readInterviewStartPayload(request);
+    const anonymousId = readAnonymousId(payload.anonymousId);
     console.info(`[InterviewCoaching:${requestId}] request:parsed`, {
       hasAnonymousId: Boolean(anonymousId),
-      hasJobPostingId: Boolean(readString(body.jobPostingId)),
-      hasManualCompanyName: Boolean(readString(body.manualCompanyName)),
-      hasManualPositionName: Boolean(readString(body.manualPositionName)),
-      hasJobDuty: Boolean(readString(body.jobDuty)),
+      hasJobPostingId: Boolean(readString(payload.jobPostingId)),
+      hasManualCompanyName: Boolean(readString(payload.manualCompanyName)),
+      hasManualPositionName: Boolean(readString(payload.manualPositionName)),
+      hasJobDuty: Boolean(readString(payload.jobDuty)),
+      materialInputType: payload.materialInputType,
+      hasMaterialFile: Boolean(payload.materialFile),
     });
 
     if (!user && !anonymousId) {
@@ -50,7 +53,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const jobPostingId = readString(body.jobPostingId);
+    if (!payload.termsAgreed) {
+      return jsonWithCors(
+        request,
+        { ok: false, message: "AI NCS 면접 약관동의를 완료해 주세요." },
+        { status: 400 },
+      );
+    }
+
+    if (payload.materialFile) {
+      if (payload.materialFile.size > 10 * 1024 * 1024) {
+        return jsonWithCors(
+          request,
+          { ok: false, message: "면접 자료 파일은 10MB 이하만 첨부할 수 있습니다." },
+          { status: 400 },
+        );
+      }
+      const validationMessage = validateResumeFile(payload.materialFile);
+      if (validationMessage) {
+        return jsonWithCors(request, { ok: false, message: validationMessage }, { status: 400 });
+      }
+    }
+
+    const jobPostingId = readString(payload.jobPostingId);
     console.info(`[InterviewCoaching:${requestId}] job:lookup:start`, {
       jobPostingId: jobPostingId || null,
     });
@@ -74,9 +99,19 @@ export async function POST(request: NextRequest) {
       userId: user?.id || null,
       anonymousId,
       posting,
-      manualCompanyName: readString(body.manualCompanyName),
-      manualPositionName: readString(body.manualPositionName),
-      jobDuty: readString(body.jobDuty),
+      manualCompanyName: readString(payload.manualCompanyName),
+      manualPositionName: readString(payload.manualPositionName),
+      jobDuty: readString(payload.jobDuty),
+      materialInputType: payload.materialInputType,
+      materialText: readString(payload.materialText),
+      materialFile: payload.materialFile
+        ? {
+            name: payload.materialFile.name,
+            type: payload.materialFile.type,
+            buffer: Buffer.from(await payload.materialFile.arrayBuffer()),
+          }
+        : null,
+      termsAgreed: payload.termsAgreed,
       ipAddress,
       userAgent: request.headers.get("user-agent") || undefined,
       traceId: requestId,
@@ -106,6 +141,38 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+async function readInterviewStartPayload(request: NextRequest) {
+  const contentType = request.headers.get("content-type") || "";
+  if (contentType.toLowerCase().includes("multipart/form-data")) {
+    const form = await request.formData();
+    const materialFileEntry = form.get("materialFile");
+    return {
+      anonymousId: form.get("anonymousId"),
+      jobPostingId: form.get("jobPostingId"),
+      manualCompanyName: form.get("manualCompanyName"),
+      manualPositionName: form.get("manualPositionName"),
+      jobDuty: form.get("jobDuty"),
+      materialInputType: form.get("materialInputType") === "file" ? "file" as const : "text" as const,
+      materialText: form.get("materialText"),
+      materialFile: materialFileEntry instanceof File ? materialFileEntry : null,
+      termsAgreed: form.get("termsAgreed") === "true",
+    };
+  }
+
+  const body = (await request.json()) as Record<string, unknown>;
+  return {
+    anonymousId: body.anonymousId,
+    jobPostingId: body.jobPostingId,
+    manualCompanyName: body.manualCompanyName,
+    manualPositionName: body.manualPositionName,
+    jobDuty: body.jobDuty,
+    materialInputType: body.materialInputType === "file" ? "file" as const : "text" as const,
+    materialText: body.materialText,
+    materialFile: null,
+    termsAgreed: body.termsAgreed === true,
+  };
 }
 
 function readString(value: unknown) {

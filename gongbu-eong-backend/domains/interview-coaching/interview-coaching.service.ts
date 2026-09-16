@@ -1,5 +1,6 @@
 import { createOpenAiJsonResponse, getOpenAiModel } from "@/lib/openai";
 import type { JobPostingDetailRow } from "@/domains/jobs/jobs.repository";
+import { extractResumeDocumentText } from "@/domains/resumes/resumes.ai";
 import {
   addInterviewMessage,
   claimAnonymousInterviewSessions,
@@ -16,6 +17,7 @@ import type {
   InterviewAnswerFeedback,
   InterviewCoachingJobDto,
   InterviewCoachingResult,
+  InterviewMaterialInputType,
   InterviewQuestion,
   InterviewQuestionReview,
   NcsAreaName,
@@ -53,6 +55,10 @@ export type StartInterviewCoachingArgs = {
   manualCompanyName?: string | null;
   manualPositionName?: string | null;
   jobDuty?: string | null;
+  materialInputType?: InterviewMaterialInputType | null;
+  materialText?: string | null;
+  materialFile?: { name: string; type: string; buffer: Buffer } | null;
+  termsAgreed?: boolean;
   ipAddress?: string | null;
   userAgent?: string | null;
   traceId?: string | null;
@@ -162,6 +168,7 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
   const startedAt = Date.now();
   const traceId = args.traceId || undefined;
   const { job, companyName, positionName, dutyText } = resolveInterviewInput(args);
+  const preparedMaterial = await prepareInterviewMaterial(args);
 
   if (!companyName && !positionName && !dutyText) {
     throw new Error("지원 공고를 연결하거나 직무명을 입력해 주세요.");
@@ -183,6 +190,10 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     companyName: companyName || "기업 미정",
     positionName: positionName || "직무 미정",
     dutyText: dutyText || positionName || "직무 미정",
+    materialInputType: preparedMaterial.inputType,
+    materialText: preparedMaterial.text ? preparedMaterial.text.slice(0, 12000) : null,
+    materialFilename: preparedMaterial.filename,
+    termsAgreedAt: args.termsAgreed ? new Date().toISOString() : null,
     ipAddress: args.ipAddress,
     userAgent: args.userAgent,
   });
@@ -191,7 +202,10 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
     elapsedMs: Date.now() - startedAt,
   });
 
-  const jobContext = args.posting ? buildPostingContext(args.posting) : "";
+  const jobContext = appendInterviewMaterialContext(
+    args.posting ? buildPostingContext(args.posting) : "",
+    preparedMaterial,
+  );
   const fallbackProfile = {
     companyName: companyName || "기업 미정",
     positionName: positionName || "직무 미정",
@@ -302,6 +316,10 @@ export async function createInterviewCoachingDraft(args: StartInterviewCoachingA
     companyName: companyName || "기업 미정",
     positionName: positionName || "직무 미정",
     dutyText: dutyText || positionName || "직무 미정",
+    materialInputType: args.materialInputType || null,
+    materialText: cleanText(args.materialText).slice(0, 12000) || null,
+    materialFilename: args.materialFile?.name || null,
+    termsAgreedAt: args.termsAgreed ? new Date().toISOString() : null,
     ipAddress: args.ipAddress,
     userAgent: args.userAgent,
   });
@@ -313,6 +331,40 @@ export async function createInterviewCoachingDraft(args: StartInterviewCoachingA
   });
   if (!session) throw new Error("AI NCS 면접 코칭 세션을 생성하지 못했습니다.");
   return session;
+}
+
+async function prepareInterviewMaterial(args: StartInterviewCoachingArgs) {
+  const inputType: InterviewMaterialInputType = args.materialInputType === "file" ? "file" : "text";
+  if (inputType === "file" && args.materialFile) {
+    const extractedText = await extractResumeDocumentText(
+      args.materialFile.name,
+      args.materialFile.buffer,
+    ).catch(() => "");
+    return {
+      inputType,
+      filename: args.materialFile.name,
+      text: cleanText(extractedText).slice(0, 12000),
+    };
+  }
+
+  return {
+    inputType,
+    filename: null,
+    text: cleanText(args.materialText).slice(0, 12000),
+  };
+}
+
+function appendInterviewMaterialContext(
+  jobContext: string,
+  material: Awaited<ReturnType<typeof prepareInterviewMaterial>>,
+) {
+  const materialText = material.text
+    ? `\n\n[사용자 면접 자료]\n${material.text}`
+    : material.filename
+      ? `\n\n[사용자 면접 자료]\n첨부 파일명: ${material.filename}\n파일에서 텍스트를 추출하지 못했습니다. 공고와 입력 직무를 우선 기준으로 질문을 생성하세요.`
+      : "";
+
+  return `${jobContext || ""}${materialText}`.trim().slice(0, 12000);
 }
 
 export async function generateInterviewCoachingQuestions(args: {

@@ -332,6 +332,16 @@
   white-space: nowrap;
 }
 
+.fileDownloadFrame {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .actionBar {
   position: fixed;
   bottom: 0;

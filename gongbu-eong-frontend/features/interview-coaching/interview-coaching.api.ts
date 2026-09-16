@@ -11,17 +11,28 @@ export async function startInterviewCoaching(args: {
   manualCompanyName?: string | null;
   manualPositionName?: string | null;
   jobDuty?: string | null;
+  materialInputType?: "file" | "text";
+  materialText?: string | null;
+  materialFile?: File | null;
+  termsAgreed?: boolean;
   anonymousId?: string | null;
 }) {
+  const form = new FormData();
+  form.set("anonymousId", args.anonymousId || getAnonymousId());
+  if (args.jobPostingId) form.set("jobPostingId", args.jobPostingId);
+  if (args.manualCompanyName) form.set("manualCompanyName", args.manualCompanyName);
+  if (args.manualPositionName) form.set("manualPositionName", args.manualPositionName);
+  if (args.jobDuty) form.set("jobDuty", args.jobDuty);
+  form.set("materialInputType", args.materialInputType || "text");
+  if (args.materialText) form.set("materialText", args.materialText);
+  if (args.materialFile) form.set("materialFile", args.materialFile);
+  if (args.termsAgreed) form.set("termsAgreed", "true");
+
   const response = await fetch(`${backendUrl}/api/interview-coaching`, {
     method: "POST",
     credentials: "include",
     cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...args,
-      anonymousId: args.anonymousId || getAnonymousId(),
-    }),
+    body: form,
   });
   const body = await readJsonResponse(response) as {
     ok: boolean;

@@ -15,6 +15,8 @@ export type InterviewCoachingJobDto = {
   isManual?: boolean;
 };
 
+export type InterviewMaterialInputType = "file" | "text";
+
 export type InterviewJobProfile = {
   companyName: string;
   positionName: string;
@@ -105,6 +107,10 @@ export type InterviewCoachingSessionDto = {
   companyName: string;
   positionName: string;
   dutyText: string;
+  materialInputType?: InterviewMaterialInputType | null;
+  materialText?: string | null;
+  materialFilename?: string | null;
+  termsAgreedAt?: string | null;
   job: InterviewCoachingJobDto | null;
   analysis: InterviewAnalysis;
   questions: InterviewQuestion[];

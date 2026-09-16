@@ -3,6 +3,7 @@ import type {
   InterviewAnalysis,
   InterviewAnswerFeedback,
   InterviewCoachingJobDto,
+  InterviewMaterialInputType,
   InterviewCoachingResult,
   InterviewCoachingSessionDto,
   InterviewCoachingStatus,
@@ -21,6 +22,10 @@ type SessionRow = {
   company_name: string | null;
   position_name: string | null;
   duty_text: string | null;
+  material_input_type: InterviewMaterialInputType | null;
+  material_text: string | null;
+  material_filename: string | null;
+  terms_agreed_at: string | null;
   job_snapshot: InterviewCoachingJobDto | null;
   analysis: InterviewAnalysis | null;
   questions: InterviewQuestion[] | null;
@@ -47,6 +52,10 @@ export async function createInterviewSession(args: {
   companyName: string;
   positionName: string;
   dutyText: string;
+  materialInputType?: InterviewMaterialInputType | null;
+  materialText?: string | null;
+  materialFilename?: string | null;
+  termsAgreedAt?: string | null;
   analysis?: InterviewAnalysis | null;
   questions?: InterviewQuestion[] | null;
   ipAddress?: string | null;
@@ -65,11 +74,15 @@ export async function createInterviewSession(args: {
         company_name,
         position_name,
         duty_text,
+        material_input_type,
+        material_text,
+        material_filename,
+        terms_agreed_at,
         job_snapshot,
         analysis,
         questions
       )
-      VALUES ($1, $2, $3, 'ai_tools', $4, $5, 'draft', $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb)
+      VALUES ($1, $2, $3, 'ai_tools', $4, $5, 'draft', $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15::jsonb)
       RETURNING id
     `,
     [
@@ -81,6 +94,10 @@ export async function createInterviewSession(args: {
       args.companyName,
       args.positionName,
       args.dutyText,
+      args.materialInputType || null,
+      args.materialText || null,
+      args.materialFilename || null,
+      args.termsAgreedAt || null,
       JSON.stringify(args.jobSnapshot || {}),
       JSON.stringify(args.analysis || {}),
       JSON.stringify(args.questions || []),
@@ -155,6 +172,10 @@ export async function findInterviewSessionForViewer(args: {
         company_name,
         position_name,
         duty_text,
+        material_input_type,
+        material_text,
+        material_filename,
+        terms_agreed_at,
         job_snapshot,
         analysis,
         questions,
@@ -195,6 +216,10 @@ export async function listInterviewHistory(userId: string) {
         company_name,
         position_name,
         duty_text,
+        material_input_type,
+        material_text,
+        material_filename,
+        terms_agreed_at,
         job_snapshot,
         analysis,
         questions,
@@ -339,6 +364,10 @@ function mapSession(
     companyName: row.company_name || "",
     positionName: row.position_name || "",
     dutyText: row.duty_text || "",
+    materialInputType: row.material_input_type || null,
+    materialText: row.material_text || null,
+    materialFilename: row.material_filename || null,
+    termsAgreedAt: row.terms_agreed_at || null,
     job: row.job_snapshot?.id ? row.job_snapshot : null,
     analysis: normalizeAnalysis(row),
     questions: Array.isArray(row.questions) ? row.questions : [],

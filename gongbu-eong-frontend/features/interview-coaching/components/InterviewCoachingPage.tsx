@@ -28,6 +28,11 @@ type ConnectedJob = InterviewCoachingJob & { duty: string };
 
 const MAX_ANSWER_LENGTH = 4000;
 const MAX_FOLLOW_UPS_PER_QUESTION = 3;
+const MAX_INTERVIEW_MATERIAL_LENGTH = 10000;
+const ALLOWED_INTERVIEW_FILE_EXTENSIONS = ["hwp", "hwpx", "pdf", "doc", "docx", "rtf"] as const;
+const INTERVIEW_FILE_ACCEPT =
+  ".hwp,.hwpx,.pdf,.doc,.docx,.rtf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx";
+const INTERVIEW_FILE_GUIDE = "HWP · HWPX · PDF · DOC/DOCX · RTF (최대 10MB)";
 const NCS_AREA_NAMES: NcsAreaName[] = [
   "의사소통능력",
   "수리능력",
@@ -49,6 +54,10 @@ export function InterviewCoachingPage({
 } = {}) {
   const router = useRouter();
   const jobSearchSeqRef = useRef(0);
+  const materialFileInputRef = useRef<HTMLInputElement | null>(null);
+  const materialFileDropRef = useRef<HTMLButtonElement | null>(null);
+  const materialTextRef = useRef<HTMLTextAreaElement | null>(null);
+  const termsButtonRef = useRef<HTMLButtonElement | null>(null);
   const answerRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const alertFocusRef = useRef<HTMLElement | null>(null);
   const [connectedJob, setConnectedJob] = useState<ConnectedJob | null>(null);
@@ -61,6 +70,13 @@ export function InterviewCoachingPage({
   const [manualCompanyName, setManualCompanyName] = useState("");
   const [manualPositionName, setManualPositionName] = useState("");
   const [manualDuty, setManualDuty] = useState("");
+  const [inputMode, setInputMode] = useState<"job" | "manual">("job");
+  const [materialInputType, setMaterialInputType] = useState<"file" | "text">("file");
+  const [materialText, setMaterialText] = useState("");
+  const [materialFile, setMaterialFile] = useState<File | null>(null);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [termsConfirmed, setTermsConfirmed] = useState(false);
   const [session, setSession] = useState<InterviewCoachingSession | null>(null);
   const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(null);
@@ -72,12 +88,12 @@ export function InterviewCoachingPage({
   const [alertMessage, setAlertMessage] = useState("");
   const [completeConfirmOpen, setCompleteConfirmOpen] = useState(false);
 
-  useBodyScrollLock(Boolean(jobPickerOpen || dutySheetJob || alertMessage || completeConfirmOpen || busyQuestionId));
+  useBodyScrollLock(Boolean(jobPickerOpen || dutySheetJob || termsOpen || alertMessage || completeConfirmOpen || busyQuestionId));
 
   useEffect(() => {
-    if (!jobPickerOpen && !dutySheetJob && !alertMessage && !completeConfirmOpen && !busyQuestionId) return;
+    if (!jobPickerOpen && !dutySheetJob && !termsOpen && !alertMessage && !completeConfirmOpen && !busyQuestionId) return;
     return watchMobileKeyboardInset();
-  }, [jobPickerOpen, dutySheetJob, alertMessage, completeConfirmOpen, busyQuestionId]);
+  }, [jobPickerOpen, dutySheetJob, termsOpen, alertMessage, completeConfirmOpen, busyQuestionId]);
 
   useEffect(() => {
     if (!initialSessionId) return;
@@ -161,6 +177,21 @@ export function InterviewCoachingPage({
     setAlertMessage(message);
   };
 
+  const handleMaterialFile = (nextFile: File | null) => {
+    if (!nextFile) return;
+    if (nextFile.size > 10 * 1024 * 1024) {
+      showAlert("10MB 이하 파일만 업로드할 수 있습니다.", materialFileDropRef.current);
+      return;
+    }
+    const extension = nextFile.name.split(".").pop()?.toLowerCase() || "";
+    if (!ALLOWED_INTERVIEW_FILE_EXTENSIONS.includes(extension as typeof ALLOWED_INTERVIEW_FILE_EXTENSIONS[number])) {
+      showAlert("HWP, HWPX, PDF, DOC/DOCX, RTF 파일만 첨부할 수 있습니다.", materialFileDropRef.current);
+      return;
+    }
+    setError("");
+    setMaterialFile(nextFile);
+  };
+
   const start = async () => {
     const anonymousId = getAnonymousId();
     const companyName = connectedJob && !connectedJob.isManual
@@ -169,8 +200,32 @@ export function InterviewCoachingPage({
     const positionName = connectedJob ? connectedJob.title : manualPositionName;
     const dutyText = connectedJob?.duty || manualDuty;
 
+    if (inputMode === "job" && !connectedJob) {
+      showAlert("지원 공고를 연결해 주세요.");
+      return;
+    }
+    if (inputMode === "manual" && !companyName.trim()) {
+      showAlert("기업명을 입력해 주세요.");
+      return;
+    }
+    if (inputMode === "manual" && !positionName.trim()) {
+      showAlert("지원 직무를 입력해 주세요.");
+      return;
+    }
     if (!connectedJob && !positionName.trim() && !dutyText.trim()) {
       showAlert("지원 공고를 연결하거나 직무명을 입력해 주세요.");
+      return;
+    }
+    if (materialInputType === "file" && !materialFile) {
+      showAlert("면접 자료 파일을 첨부해 주세요.", materialFileDropRef.current);
+      return;
+    }
+    if (materialInputType === "text" && !materialText.trim()) {
+      showAlert("면접 자료를 입력해 주세요.", materialTextRef.current);
+      return;
+    }
+    if (!termsConfirmed) {
+      showAlert("AI NCS 면접 약관동의를 완료해 주세요.", termsButtonRef.current);
       return;
     }
 
@@ -183,6 +238,10 @@ export function InterviewCoachingPage({
         manualCompanyName: companyName || null,
         manualPositionName: positionName || connectedJob?.title || null,
         jobDuty: dutyText || null,
+        materialInputType,
+        materialText: materialInputType === "text" ? materialText : null,
+        materialFile: materialInputType === "file" ? materialFile : null,
+        termsAgreed: termsConfirmed,
       });
       setSession(result.session);
       setActiveQuestionId(result.session.questions[0]?.id || null);
@@ -284,63 +343,163 @@ export function InterviewCoachingPage({
 
         {busy === "load" ? null : !session ? (
           <>
-            {connectedJob ? (
-              <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} />
-            ) : (
-              <>
-                <button className={styles.jobConnect} type="button" onClick={openJobPicker}>
-                  + 지원 공고 연결하기 (선택)
-                </button>
-                <p className={styles.helper}>
-                  공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.
-                  <br />
-                  연결하지 않아도 직무명만으로 AI NCS 면접 코칭을 받을 수 있어요.
-                </p>
-              </>
-            )}
+            <div className={styles.interviewTabs} role="tablist" aria-label="면접 기업 정보 입력 방식">
+              <button
+                type="button"
+                className={inputMode === "job" ? styles.interviewTabActive : ""}
+                onClick={() => setInputMode("job")}
+              >
+                공고로 연결하기
+              </button>
+              <button
+                type="button"
+                className={inputMode === "manual" ? styles.interviewTabActive : ""}
+                onClick={() => setInputMode("manual")}
+              >
+                직접 입력
+              </button>
+            </div>
 
-            {!connectedJob ? (
-              <section className={styles.manualCard}>
-                <div className={styles.field}>
-                  <span>기업명</span>
-                  <input
-                    value={manualCompanyName}
-                    onChange={(event) => setManualCompanyName(event.target.value)}
-                    onFocus={(event) => focusField(event.currentTarget)}
-                    placeholder="예: 한국전력공사"
-                  />
+            <section className={styles.interviewInputSection}>
+              <h2>면접 기업 정보</h2>
+              {inputMode === "job" ? (
+                connectedJob ? (
+                  <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} />
+                ) : (
+                  <>
+                    <button className={styles.jobConnect} type="button" onClick={openJobPicker}>
+                      + 지원 공고 연결하기 (선택)
+                    </button>
+                    <p className={styles.helperBox}>
+                      공고를 연결하면 해당 공고의 자격요건, 우대사항, 전형 정보를 함께 반영해 더 정확한 질문을 만들 수 있어요.
+                    </p>
+                  </>
+                )
+              ) : (
+                <div className={styles.directInputFields}>
+                  <label>
+                    <span>기업명</span>
+                    <input
+                      value={manualCompanyName}
+                      onChange={(event) => setManualCompanyName(event.target.value)}
+                      onFocus={(event) => focusField(event.currentTarget)}
+                      placeholder="예 : 한국전력공사"
+                    />
+                  </label>
+                  <label>
+                    <span>지원 직무</span>
+                    <input
+                      value={manualPositionName}
+                      onChange={(event) => setManualPositionName(event.target.value)}
+                      onFocus={(event) => focusField(event.currentTarget)}
+                      placeholder="예 : 사무행정, 전기, 토목"
+                    />
+                  </label>
+                  <p className={styles.helperBox}>
+                    직접 입력 시에는 실제 채용공고의 자격요건, 우대사항, 전형 정보가 반영되지 않고 입력한 기업명과 직무 내용을 기준으로 질문이 생성됩니다. 더 정확한 코칭을 원하면 지원 공고를 연결해 주세요.
+                  </p>
                 </div>
-                <div className={styles.field}>
-                  <span>지원 직무</span>
-                  <input
-                    value={manualPositionName}
-                    onChange={(event) => setManualPositionName(event.target.value)}
-                    onFocus={(event) => focusField(event.currentTarget)}
-                    placeholder="예: 사무행정, 전기, 토목"
-                  />
+              )}
+            </section>
+
+            <section className={styles.interviewInputSection}>
+              <h2>면접 자료</h2>
+              <div className={styles.materialPanel}>
+                <div className={styles.materialTabs}>
+                  <button
+                    type="button"
+                    className={materialInputType === "file" ? styles.materialTabActive : ""}
+                    onClick={() => setMaterialInputType("file")}
+                  >
+                    파일 첨부
+                  </button>
+                  <button
+                    type="button"
+                    className={materialInputType === "text" ? styles.materialTabActive : ""}
+                    onClick={() => setMaterialInputType("text")}
+                  >
+                    직접 입력하기
+                  </button>
                 </div>
-                <div className={styles.field}>
-                  <span>직무</span>
-                  <textarea
-                    value={manualDuty}
-                    onChange={(event) => setManualDuty(event.target.value)}
+                {materialInputType === "file" ? (
+                  <button
+                    ref={materialFileDropRef}
+                    type="button"
+                    className={`${styles.materialDrop} ${isDragActive ? styles.materialDropActive : ""}`}
+                    onClick={() => materialFileInputRef.current?.click()}
                     onFocus={(event) => focusField(event.currentTarget)}
-                    placeholder="예: 민원 응대, 예산 정산, 자료 검토, 보고서 작성 등 실제 수행할 업무를 입력해 주세요."
-                  />
-                </div>
-                <p className={styles.manualNotice}>
-                  직접 입력 시에는 실제 채용공고의 자격요건, 우대사항, 전형 정보가 반영되지 않고 입력한 기업명과 직무 내용을 기준으로 질문이 생성됩니다. 더 정확한 코칭을 원하면 지원 공고를 연결해 주세요.
-                </p>
-              </section>
-            ) : null}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      setIsDragActive(true);
+                    }}
+                    onDragLeave={() => setIsDragActive(false)}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      setIsDragActive(false);
+                      handleMaterialFile(event.dataTransfer.files?.[0] || null);
+                    }}
+                  >
+                    <input
+                      ref={materialFileInputRef}
+                      type="file"
+                      accept={INTERVIEW_FILE_ACCEPT}
+                      onChange={(event) => handleMaterialFile(event.target.files?.[0] || null)}
+                    />
+                    {materialFile ? (
+                      <strong>{materialFile.name}</strong>
+                    ) : (
+                      <>
+                        <span className={styles.materialDropIcon}>+</span>
+                        <strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong>
+                        <small>{INTERVIEW_FILE_GUIDE}</small>
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <>
+                    <textarea
+                      ref={materialTextRef}
+                      value={materialText}
+                      maxLength={MAX_INTERVIEW_MATERIAL_LENGTH}
+                      onFocus={(event) => focusField(event.currentTarget)}
+                      onChange={(event) => setMaterialText(event.target.value)}
+                      placeholder="면접 자료를 텍스트로 입력해주세요."
+                    />
+                    <span className={styles.materialCounter}>{materialText.length.toLocaleString("ko-KR")}자</span>
+                  </>
+                )}
+              </div>
+              {materialInputType === "file" && materialFile ? (
+                <button
+                  type="button"
+                  className={styles.fileRemoveButton}
+                  onClick={() => {
+                    setMaterialFile(null);
+                    if (materialFileInputRef.current) materialFileInputRef.current.value = "";
+                  }}
+                >
+                  첨부 파일 제거 ×
+                </button>
+              ) : null}
+            </section>
+            <button
+              ref={termsButtonRef}
+              type="button"
+              className={styles.termsCheck}
+              aria-pressed={termsConfirmed}
+              onClick={() => setTermsOpen(true)}
+            >
+              <span>{termsConfirmed ? "✓" : ""}</span>
+              AI NCS 면접 약관동의를 해주세요.
+            </button>
             {error ? <p className={styles.error}>{error}</p> : null}
             <button
               className={styles.primaryButton}
               type="button"
               onClick={start}
-              disabled={busy !== null}
+              disabled={busy !== null || !termsConfirmed}
             >
-              AI 면접 질문 만들기
+              AI NCS 면접 질문 만들기
             </button>
           </>
         ) : (
@@ -415,6 +574,15 @@ export function InterviewCoachingPage({
         )}
       </main>
       <AppFooter active="ai" />
+      {termsOpen ? (
+        <InterviewTermsSheet
+          onClose={() => setTermsOpen(false)}
+          onConfirm={() => {
+            setTermsConfirmed(true);
+            setTermsOpen(false);
+          }}
+        />
+      ) : null}
       {jobPickerOpen ? (
         <JobPicker
           query={query}
@@ -475,6 +643,61 @@ export function InterviewCoachingPage({
       ) : null}
       {busyQuestionId ? <AnswerLoadingOverlay /> : null}
     </div>
+  );
+}
+
+function InterviewTermsSheet({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className={styles.overlay}>
+      <section className={`${styles.modal} ${styles.termsSheet}`}>
+        <div className={styles.sheetHandle} />
+        <header>
+          <h2>약관동의</h2>
+          <button type="button" onClick={onClose} aria-label="약관 닫기">×</button>
+        </header>
+        <div className={styles.termsScroll}>
+          <TermsArticle title="제1조 (목적)">
+            본 약관은 커리어넷(이하 &quot;회사&quot;)이 공부엉이 서비스를 통해 제공하는 AI NCS 면접 코칭 서비스(이하 &quot;서비스&quot;)의 이용조건 및 절차, 회사와 이용자의 권리·의무 및 책임사항을 정함을 목적으로 합니다.
+          </TermsArticle>
+          <TermsArticle title="제2조 (용어의 정의)">
+            &quot;서비스&quot;란 이용자가 입력한 기업명·지원 직무 또는 연결한 채용공고 정보를 바탕으로 인공지능(AI)이 NCS 직무역량과 연계한 면접 질문 및 꼬리질문을 생성하고 답변 연습·피드백을 제공하는 것을 말합니다.
+          </TermsArticle>
+          <TermsArticle title="제3조 (서비스의 내용)">
+            회사는 이용자가 입력하거나 업로드한 면접 자료, 기업명, 지원 직무, 채용공고 정보를 바탕으로 면접 질문과 꼬리질문을 생성합니다. 공고를 연결하지 않은 경우 입력 정보만 기준으로 질문이 생성됩니다.
+          </TermsArticle>
+          <TermsArticle title="제4조 (AI 코칭 결과의 성격 및 한계)">
+            코칭 결과는 AI가 자동으로 생성한 참고용 자료이며 실제 면접 질문·평가 기준과 일치함을 보장하지 않습니다. 이용자는 결과를 최종적으로 검토·판단하여 활용해야 합니다.
+          </TermsArticle>
+          <TermsArticle title="제5조 (입력 정보 및 데이터 처리)">
+            이용자가 입력한 기업명, 지원 직무, 첨부 파일, 답변 내용 등은 AI 코칭 결과 생성 및 서비스 제공을 위해 처리됩니다. 개인정보의 수집·이용·보관 및 파기는 개인정보 처리방침을 따릅니다.
+          </TermsArticle>
+          <TermsArticle title="제6조 (이용자의 의무)">
+            이용자는 타인의 개인정보, 기업의 비밀정보, 허위 정보 또는 권리를 침해할 수 있는 정보를 입력하지 않아야 하며, 생성된 콘텐츠를 회사의 동의 없이 상업적으로 이용할 수 없습니다.
+          </TermsArticle>
+          <TermsArticle title="제7조 (책임의 제한)">
+            서비스는 면접 준비를 돕기 위한 보조 도구이며, 회사는 이용자의 취업·합격 등 특정 결과를 보장하지 않습니다.
+          </TermsArticle>
+        </div>
+        <button className={styles.primaryButton} type="button" onClick={onConfirm}>
+          약관 확인하기
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function TermsArticle({ title, children }: { title: string; children: string }) {
+  return (
+    <article className={styles.termsArticle}>
+      <h3>{title}</h3>
+      <p>{children}</p>
+    </article>
   );
 }
 
