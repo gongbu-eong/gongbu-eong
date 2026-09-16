@@ -40,7 +40,7 @@ export async function GET(
     headers.set("Content-Disposition", makeContentDisposition(file.filename));
     headers.set("Cache-Control", "no-store");
 
-    return new Response(file.data, { status: 200, headers });
+    return new Response(Uint8Array.from(file.data), { status: 200, headers });
   } catch (error) {
     return jsonWithCors(
       request,
