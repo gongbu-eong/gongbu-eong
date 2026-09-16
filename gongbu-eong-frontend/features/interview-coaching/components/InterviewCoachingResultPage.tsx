@@ -47,7 +47,6 @@ export function InterviewCoachingResultPage({
     <div className={styles.page}>
       <AppHeader />
       <main className={styles.frame}>
-        <Link href="/ai-tools/interview-coaching" className={styles.lead}>‹ 다시 AI NCS 면접 코칭하기</Link>
         <h1>AI NCS 면접 코칭 결과</h1>
         {error ? <p className={styles.error}>{error}</p> : null}
         {!session && !error ? <p className={styles.lead}>결과를 불러오고 있어요.</p> : null}
@@ -135,8 +134,11 @@ function ResultView({
 
       <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
 
+      <button type="button" className={styles.resultDownloadButton} onClick={() => window.print()}>
+        NCS 면접 코칭 다운받기
+      </button>
       <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
-        다시 코칭받기
+        NCS 면접 코칭 다시하기
       </Link>
     </>
   );

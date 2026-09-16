@@ -3,10 +3,22 @@ import { randomUUID } from "node:crypto";
 import { getSessionUser } from "@/domains/auth/session";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
 import { startInterviewCoaching } from "@/domains/interview-coaching/interview-coaching.service";
-import { validateResumeFile } from "@/domains/resumes/resume-file-storage";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
 
 export const runtime = "nodejs";
+
+const ACCEPTED_INTERVIEW_MATERIAL_EXTENSIONS = new Set([
+  "hwp",
+  "hwpx",
+  "pdf",
+  "docx",
+  "jpg",
+  "jpeg",
+  "png",
+]);
+
+const INTERVIEW_MATERIAL_EXTENSION_ERROR =
+  "HWP, HWPX, PDF, DOCX, JPG, PNG 파일만 첨부할 수 있습니다.";
 
 export async function OPTIONS(request: NextRequest) {
   return new Response(null, {
@@ -69,7 +81,7 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-      const validationMessage = validateResumeFile(payload.materialFile);
+      const validationMessage = validateInterviewMaterialFile(payload.materialFile);
       if (validationMessage) {
         return jsonWithCors(request, { ok: false, message: validationMessage }, { status: 400 });
       }
@@ -173,6 +185,13 @@ async function readInterviewStartPayload(request: NextRequest) {
     materialFile: null,
     termsAgreed: body.termsAgreed === true,
   };
+}
+
+function validateInterviewMaterialFile(file: File) {
+  const extension = file.name.split(".").pop()?.toLowerCase() || "";
+  return ACCEPTED_INTERVIEW_MATERIAL_EXTENSIONS.has(extension)
+    ? null
+    : INTERVIEW_MATERIAL_EXTENSION_ERROR;
 }
 
 function readString(value: unknown) {
