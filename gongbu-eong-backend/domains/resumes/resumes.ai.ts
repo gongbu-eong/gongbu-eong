@@ -861,6 +861,9 @@ async function extractOfficeDocument(filename: string, buffer: Buffer): Promise<
     ]);
     return { text, tables };
   }
+  if (lower.endsWith(".pptx") || lower.endsWith(".pptm") || lower.endsWith(".potx") || lower.endsWith(".potm")) {
+    return { text: await extractPptxText(buffer), tables: [] };
+  }
   if (lower.endsWith(".hwpx") || lower.endsWith(".hml")) {
     return extractHwpxDocument(buffer);
   }
@@ -874,6 +877,28 @@ async function extractOfficeDocument(filename: string, buffer: Buffer): Promise<
     };
   }
   return { text: EMPTY, tables: [] };
+}
+
+async function extractPptxText(buffer: Buffer) {
+  const zip = await JSZip.loadAsync(buffer);
+  const slideFiles = Object.keys(zip.files)
+    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/i.test(name))
+    .sort((left, right) => {
+      const leftIndex = Number(left.match(/slide(\d+)\.xml/i)?.[1] || 0);
+      const rightIndex = Number(right.match(/slide(\d+)\.xml/i)?.[1] || 0);
+      return leftIndex - rightIndex;
+    });
+  const slideTexts = await Promise.all(
+    slideFiles.map(async (name) => extractPptxSlideText(await zip.files[name].async("string"))),
+  );
+  return normalizeExtractedText(slideTexts.filter(Boolean).join("\n"));
+}
+
+function extractPptxSlideText(xml: string) {
+  const texts = Array.from(xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g))
+    .map((match) => decodeXmlText(match[1]))
+    .filter(Boolean);
+  return texts.join(" ");
 }
 
 export async function extractResumeDocumentText(filename: string, buffer: Buffer) {

@@ -29,10 +29,10 @@ type ConnectedJob = InterviewCoachingJob & { duty: string };
 const MAX_ANSWER_LENGTH = 4000;
 const MAX_FOLLOW_UPS_PER_QUESTION = 3;
 const MAX_INTERVIEW_MATERIAL_LENGTH = 10000;
-const ALLOWED_INTERVIEW_FILE_EXTENSIONS = ["hwp", "hwpx", "pdf", "docx", "jpg", "jpeg", "png"] as const;
+const ALLOWED_INTERVIEW_FILE_EXTENSIONS = ["hwp", "hwpx", "pdf", "docx", "ppt", "pptx"] as const;
 const INTERVIEW_FILE_ACCEPT =
-  ".hwp,.hwpx,.pdf,.docx,.jpg,.jpeg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx,image/jpeg,image/png";
-const INTERVIEW_FILE_GUIDE = "HWP · HWPX · PDF · DOCX · JPG · PNG (최대 10MB)";
+  ".hwp,.hwpx,.pdf,.docx,.ppt,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx";
+const INTERVIEW_FILE_GUIDE = "HWP · HWPX · PDF · DOCX · PPT · PPTX (최대 10MB)";
 const INTERVIEW_TERMS = [
   {
     title: "제1조 (목적)",
@@ -283,7 +283,7 @@ export function InterviewCoachingPage({
     }
     const extension = nextFile.name.split(".").pop()?.toLowerCase() || "";
     if (!ALLOWED_INTERVIEW_FILE_EXTENSIONS.includes(extension as typeof ALLOWED_INTERVIEW_FILE_EXTENSIONS[number])) {
-      showAlert("HWP, HWPX, PDF, DOCX, JPG, PNG 파일만 첨부할 수 있습니다.", materialFileDropRef.current);
+      showAlert("HWP, HWPX, PDF, DOCX, PPT, PPTX 파일만 첨부할 수 있습니다.", materialFileDropRef.current);
       return;
     }
     setError("");
@@ -614,7 +614,7 @@ export function InterviewCoachingPage({
           </>
         ) : (
           <>
-            <InterviewAnalysisView session={session} />
+            <InterviewAnalysisView session={session} mode="profile" />
             <section className={styles.sectionTitle}>
               <h2>AI 면접</h2>
               <small>문항별 꼬리질문 최대 3개</small>
@@ -657,7 +657,6 @@ export function InterviewCoachingPage({
                         : "최종 결과가 생성된 면접 코칭입니다. 답변을 추가하거나 수정할 수 없습니다."
                     }
                     canSubmitAnswer={Boolean(answer.trim()) && !busyQuestionId && busy !== "complete" && !readonly}
-                    followUpCount={followUpCount}
                     answerRef={(element) => {
                       answerRefs.current[question.id] = element;
                     }}
@@ -1095,7 +1094,6 @@ function InterviewQuestionPanel({
   readonly,
   readonlyReason,
   canSubmitAnswer,
-  followUpCount,
   answerRef,
   onAnswerChange,
   onSubmitAnswer,
@@ -1109,7 +1107,6 @@ function InterviewQuestionPanel({
   readonly: boolean;
   readonlyReason: string;
   canSubmitAnswer: boolean;
-  followUpCount: number;
   answerRef: (element: HTMLTextAreaElement | null) => void;
   onAnswerChange: (value: string) => void;
   onSubmitAnswer: () => void;
@@ -1119,9 +1116,6 @@ function InterviewQuestionPanel({
   const visibleMessages = messages.filter((item) => item.role === "answer" || item.role === "follow_up");
   const latestMessage = [...visibleMessages].reverse()[0];
   const isAnsweringFollowUp = latestMessage?.role === "follow_up";
-  const answerTargetLabel = isAnsweringFollowUp
-    ? `꼬리질문 ${latestMessage.followUpIndex || followUpCount} 답변`
-    : "답변 작성";
   const answerPlaceholder = isAnsweringFollowUp
     ? "위 꼬리질문에 대해 면접장에서 말하듯 답변해 보세요."
     : "면접장에서 말하듯 답변을 적어보세요.";
@@ -1130,7 +1124,6 @@ function InterviewQuestionPanel({
       <article className={styles.questionCard}>
         <div className={styles.questionMeta}>
           <span>질문 {index + 1} · {question.difficulty} · {formatQuestionType(question.type)}</span>
-          <span>꼬리질문 {followUpCount}/3</span>
         </div>
         <h2>{prompt}</h2>
         <p>{intent}</p>
@@ -1145,6 +1138,7 @@ function InterviewQuestionPanel({
               key={message.id}
               message={message}
               ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(visibleMessages, messageIndex) : []}
+              followUpTotal={MAX_FOLLOW_UPS_PER_QUESTION}
               showFeedback={false}
             />
           ))}
@@ -1157,7 +1151,7 @@ function InterviewQuestionPanel({
       ) : (
         <div className={styles.answerBox}>
           <div className={styles.answerPrompt}>
-            <strong>{answerTargetLabel}</strong>
+            <strong>내 답변</strong>
           </div>
           <textarea
             ref={answerRef}
@@ -1182,21 +1176,28 @@ function InterviewQuestionPanel({
 function ChatMessage({
   message,
   ncsAreas = [],
+  followUpTotal,
   showFeedback = true,
 }: {
   message: InterviewMessage;
   ncsAreas?: InterviewQuestion["ncsAreas"];
+  followUpTotal?: number;
   showFeedback?: boolean;
 }) {
   const content = cleanDisplayText(message.content) || message.content;
   const label = message.role === "answer"
     ? "내 답변"
     : message.role === "follow_up"
-      ? `면접관 꼬리질문 ${message.followUpIndex || ""}`
+      ? "면접관 꼬리질문"
       : "AI 질문";
   return (
     <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""}`}>
-      <strong>{label}</strong>
+      <strong>
+        <span>{label}</span>
+        {message.role === "follow_up" && message.followUpIndex ? (
+          <em>꼬리질문 {message.followUpIndex}/{followUpTotal || MAX_FOLLOW_UPS_PER_QUESTION}</em>
+        ) : null}
+      </strong>
       {message.role === "answer" ? (
         <textarea
           className={styles.savedAnswer}

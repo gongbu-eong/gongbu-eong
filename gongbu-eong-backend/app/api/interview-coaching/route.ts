@@ -12,13 +12,12 @@ const ACCEPTED_INTERVIEW_MATERIAL_EXTENSIONS = new Set([
   "hwpx",
   "pdf",
   "docx",
-  "jpg",
-  "jpeg",
-  "png",
+  "ppt",
+  "pptx",
 ]);
 
 const INTERVIEW_MATERIAL_EXTENSION_ERROR =
-  "HWP, HWPX, PDF, DOCX, JPG, PNG 파일만 첨부할 수 있습니다.";
+  "HWP, HWPX, PDF, DOCX, PPT, PPTX 파일만 첨부할 수 있습니다.";
 
 export async function OPTIONS(request: NextRequest) {
   return new Response(null, {

@@ -177,11 +177,9 @@
 .inputFrame h1{margin:0 0 18px;color:#1a2233;font-size:23px;font-weight:800;line-height:1;letter-spacing:0}
 .inputFrame .lead{margin:0 0 18px;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;letter-spacing:0}
 .inputFrame .lead::before{content:"Ai가 모의면접을 만들고 코칭해드려요";display:block;margin-bottom:8px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
-.interviewTabs{display:grid;grid-template-columns:1fr 1fr;margin:18px 0 20px;border-bottom:1px solid #5a6580}
-.interviewTabs button{height:46px;border:0;border-right:1px solid #5a6580;background:#f5f7fa;color:#1a2233;font:inherit;font-size:17px;font-weight:400}
-.interviewTabs button:first-child{border-left:0}
-.interviewTabs button:last-child{border-right:1px solid #5a6580}
-.interviewTabs .interviewTabActive{position:relative;top:1px;border:1px solid #5a6580;border-bottom-color:#fff;background:#fff}
+.interviewTabs{display:grid;grid-template-columns:1fr 1fr;height:46px;margin:18px 0 24px;border:0}
+.interviewTabs button{box-sizing:border-box;height:46px;border:0;border-bottom:1px solid #5a6580;border-radius:0;background:#f5f7fa;color:#1a2233;font:inherit;font-size:17px;font-weight:400;line-height:1}
+.interviewTabs .interviewTabActive{border:1px solid #5a6580;border-bottom:0;background:#fff}
 .interviewInputSection{margin-top:24px}
 .interviewInputSection h2{margin:0 0 18px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
 .inputFrame .jobConnect{height:52px;border:1px dashed #2f7ff0;border-radius:12px;background:#fff;color:#2f7ff0;font-size:16px;font-weight:800;line-height:1}
@@ -208,11 +206,11 @@
 .materialPanel textarea::placeholder{color:#9aa4b8}
 .materialCounter{display:block;margin-top:8px;color:#5a6580;font-size:14px;text-align:right}
 .fileRemoveButton{margin:8px 0 0;border:0;background:transparent;color:#e8544d;font-size:13px;font-weight:700}
-.termsCheck{display:flex;align-items:center;gap:8px;width:100%;margin:16px 0 0;border:0;background:transparent;padding:0;color:#9aa4b8;font-size:15px;font-weight:500;text-align:left}
-.termsCheck span{position:relative;display:grid;place-items:center;width:24px;height:24px;border:1px solid #e4e8ef;border-radius:999px;color:transparent;font-size:0;flex:0 0 auto}
+.termsCheck{display:flex;align-items:center;gap:8px;width:100%;min-height:24px;margin:16px 0 0;border:0;background:transparent;padding:0;color:#9aa4b8;font-size:15px;font-weight:500;line-height:1;text-align:left}
+.termsCheck span{position:relative;display:block;width:24px;min-width:24px;height:24px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:50%;background:#fff;color:transparent;font-size:0;line-height:0;flex:0 0 24px;overflow:hidden}
 .termsCheck[aria-pressed="true"]{color:#5a6580}
 .termsCheck[aria-pressed="true"] span{border-color:#2f7ff0;background:#fff}
-.termsCheck[aria-pressed="true"] span::after{content:"";width:14px;height:14px;border-radius:999px;background:#2f7ff0}
+.termsCheck[aria-pressed="true"] span::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:50%;background:#2f7ff0;transform:translate(-50%,-50%)}
 .inputFrame>.primaryButton{height:52px;margin-top:16px;border-radius:12px;font-size:16px;font-weight:800}
 .inputFrame>.primaryButton:disabled{background:#9aa4b8}
 .termsSheet{display:flex;flex-direction:column;height:min(84vh,760px);max-height:min(84vh,760px);min-height:auto;padding:0 16px 16px;border-radius:15px 15px 0 0}
@@ -289,4 +287,103 @@
 @media (max-width:37.4375rem){
   .termsSheet,.jobPickerSheet{height:min(700px,calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px));max-height:calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px)}
   .materialPanel textarea,.directInputFields input,.jobPickerSheet .search input,.jobDutyInput{font-size:16px;scroll-margin-bottom:calc(140px + var(--mobile-keyboard-inset,0px))}
+}
+
+/* Figma 2529 question/result strict pass */
+.page{background:#fff;font-family:Pretendard,"Noto Sans KR",system-ui,sans-serif;color:#1a2233}
+.frame:not(.inputFrame){width:100%;max-width:600px;box-sizing:border-box;margin:0 auto;padding:64px 16px 108px;background:#fff}
+.frame:not(.inputFrame)>h1{margin:0 0 34px;color:#1a2233;font-size:23px;font-weight:800;line-height:1;letter-spacing:0}
+.frame:not(.inputFrame) .sectionTitle{margin:24px 0 0}
+.frame:not(.inputFrame) .sectionTitle h2{color:#1a2233;font-size:20px;font-weight:700;line-height:1}
+.frame:not(.inputFrame) .sectionTitle small{color:#9aa4b8;font-size:17px;font-weight:400}
+.profileCard{display:block;margin:0;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
+.profileHeader span{display:block;margin:0 0 17px;color:#5a6580!important;font-size:18px!important;font-weight:700!important;line-height:1!important}
+.profileHeader strong{display:block;margin:0 0 8px;color:#1a2233;font-size:18px;font-weight:700;line-height:1.12;word-break:keep-all}
+.profileHeader p{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;word-break:keep-all}
+.keywordList{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+.keywordList span,.badgeList span{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:555px;background:#f5f7fa;color:#5a6580;font-size:14px;font-weight:600;line-height:1}
+.profileGrid{display:grid!important;grid-template-columns:1fr!important;gap:16px;margin:16px 0 0}
+.profileGrid article{box-sizing:border-box;width:100%;padding:16px;border-radius:5px;background:#f5f7fa}
+.profileGrid h3{margin:0 0 14px;color:#1a2233;font-size:18px;font-weight:700;line-height:1}
+.profileGrid ul{display:grid;gap:16px;margin:0;padding:0;list-style:none;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35}
+.profileGrid li+li{margin-top:0}
+.questionTabsAnchor{height:0}
+.questionTabsShell{position:sticky;top:48px;z-index:40;display:block;box-sizing:border-box;width:calc(100% + 32px);height:68px;margin:32px -16px 24px;padding:16px 36px;border:0;border-bottom:1px solid #e4e8ef;background:rgba(255,255,255,.96);box-shadow:none}
+.questionTabsFixed{position:sticky;top:48px;left:auto;width:calc(100% + 32px);margin:32px -16px 24px;transform:none}
+.questionTabs{display:flex;gap:14px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
+.questionTabs::-webkit-scrollbar{display:none}
+.questionTabsControl{display:none}
+.questionTabs button,.resultQuestionTabs button{flex:0 0 auto;min-width:52px;height:36px;border:1px solid #e4e8ef;border-radius:555px;background:#fff;color:#5a6580;font-size:14px;font-weight:800;line-height:1}
+.questionTabs button.questionTabActive,.resultQuestionTabs button.questionTabActive{border-color:#2f7ff0;background:#2f7ff0;color:#fff}
+.questionTabs button.questionTabAnswered:not(.questionTabActive),.resultQuestionTabs button.questionTabAnswered:not(.questionTabActive){border-color:#2f7ff0;background:#e8f1ff;color:#2f7ff0}
+.questionList{display:block}
+.interviewPanel{display:grid;gap:24px;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
+.interviewPanel .questionCard,.resultQuestionDetail .questionCard{padding:0 0 20px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:#fff}
+.questionMeta{display:flex;align-items:center;justify-content:space-between;color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
+.questionMeta span:last-child{color:#9aa4b8;font-size:16px;font-weight:400}
+.questionCard h2{margin:18px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;word-break:keep-all}
+.interviewPanel .questionCard p{display:none}
+.resultQuestionDetail .questionCard p{display:block;margin:16px 0 0;color:#9aa4b8;font-size:16px;font-weight:400;line-height:1.35}
+.questionCard .badgeList{margin:16px 0 0}
+.chatList{display:grid;gap:24px}
+.chatBubble{padding:0 0 20px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:#fff}
+.chatBubble strong{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
+.chatBubble strong em{font-style:normal;color:#1fb573;font-size:18px;font-weight:700}
+.chatBubble p{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;white-space:pre-wrap;word-break:keep-all}
+.chatAnswer{background:#fff;border-color:#e4e8ef}
+.chatFollow{background:#fff;border-color:#e4e8ef}
+.chatFollow strong{color:#1fb573}
+.chatFollow p{font-weight:400;color:#5a6580}
+.chatBubble .badgeList{margin-top:16px}
+.savedAnswer{display:block;width:100%;height:120px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px;color:#5a6580;font:inherit;font-size:17px;font-weight:400;line-height:1.35;resize:none}
+.answerBox{display:grid;gap:10px}
+.answerPrompt{color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
+.answerBox textarea{height:120px;min-height:120px;border:1px solid #e4e8ef;border-radius:10px;background:#fff;padding:16px;color:#1a2233;font-size:17px;line-height:1.35;resize:none}
+.answerBox textarea::placeholder{color:#9aa4b8}
+.answerFooter{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.answerFooter span{color:#9aa4b8;font-size:17px;font-weight:400}
+.answerFooter button{flex:0 0 126px;height:46px;border:0;border-radius:10px;background:#2f7ff0;color:#fff;font-size:15px;font-weight:800}
+.answerFooter button:disabled{background:#9aa4b8}
+.answerLockedBox{border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;color:#5a6580;font-size:17px;font-weight:400}
+.singleBottomAction{margin-top:24px}
+.singleBottomAction .primaryButton,.resultBackButton,.resultDownloadButton{height:52px;border-radius:12px;font-size:16px;font-weight:800}
+.resultCapture{background:#fff}
+.resultSection{margin:0 0 24px;padding:0;border:0;background:#fff;box-shadow:none}
+.resultSection h2{margin:0 0 20px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
+.resultQuestionTabs{position:sticky;top:48px;z-index:40;display:flex;gap:14px;box-sizing:border-box;width:calc(100% + 32px);height:68px;margin:0 -16px 24px;padding:16px 36px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:rgba(255,255,255,.96);box-shadow:none;overflow-x:auto;scrollbar-width:none}
+.resultQuestionTabs::-webkit-scrollbar{display:none}
+.resultQuestionDetail{display:grid;gap:24px}
+.answerScoreBadge{display:flex;align-items:center;justify-content:space-between;height:46px;box-sizing:border-box;margin:0 0 16px;padding:0 16px;border:1px solid currentColor;border-radius:10px;background:#fff;color:#2f7ff0}
+.chatFollow + .chatAnswer .answerScoreBadge{color:#1fb573}
+.answerScoreBadge span{color:#1a2233;font-size:16px;font-weight:700}
+.answerScoreBadge b{color:currentColor;font-size:16px;font-weight:700}
+.answerScoreBadge small{color:#1a2233;font-size:16px;font-weight:700}
+.feedback{margin:16px 0 0;padding:0;border:0}
+.feedback b{display:block;margin:0 0 10px;color:#1a2233;font-size:18px;font-weight:700;line-height:1.35}
+.feedback p,.feedback ul{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;word-break:keep-all}
+.feedback ul{display:grid;gap:10px;padding:0;list-style:none}
+.reviewCard{padding:0;border:0;border-radius:0;background:#fff}
+.reviewCard strong{display:block;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
+.reviewCard strong b{display:block;margin-top:12px;color:#2f7ff0;font-size:52px;font-weight:800;line-height:1}
+.reviewCard p{margin:16px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45}
+.resultHero{margin:24px 0;border:0;border-radius:0;background:#fff;padding:0;text-align:left;box-shadow:none}
+.resultHero h2{margin:0 0 16px;color:#1a2233;font-size:20px;font-weight:700}
+.resultHero span{background:#e8f1ff;color:#2f7ff0;font-size:14px;font-weight:700}
+.resultHero strong{margin:16px 0 8px;color:#1a2233;font-size:52px;font-weight:800}
+.resultHero p{max-width:none;margin:0;color:#5a6580;font-size:17px;line-height:1.45}
+.resultSection ul{display:grid;gap:16px;margin:0;padding:0;list-style:none;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45}
+.ncsPanel{display:grid;gap:24px;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
+.ncsItem strong{font-size:18px;font-weight:700}
+.ncsItem strong b{color:#2f7ff0;font-size:18px;font-weight:700}
+.ncsItem p{margin:8px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35}
+.track{height:12px;margin:8px 0;border-radius:55px;background:#e4e8ef}
+.track span{background:#2f7ff0}
+.resultDownloadButton{margin-top:24px;border:1px solid #2f7ff0;background:#fff;color:#2f7ff0}
+.resultBackButton{margin-top:8px;background:#2f7ff0;color:#fff}
+@media (min-width:37.5rem){
+  .frame:not(.inputFrame){padding-left:16px;padding-right:16px}
+  .profileGrid{grid-template-columns:1fr!important}
+}
+@media (max-width:37.4375rem){
+  .frame:not(.inputFrame){max-width:none;padding-left:16px;padding-right:16px}
 }

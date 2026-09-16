@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { downloadInterviewMaterialFile, getInterviewCoachingSession } from "../interview-coaching.api";
+import { getInterviewCoachingSession } from "../interview-coaching.api";
 import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
 import { InterviewAnalysisView } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
@@ -50,7 +50,7 @@ export function InterviewCoachingResultPage({
         <h1>AI NCS 면접 코칭 결과</h1>
         {error ? <p className={styles.error}>{error}</p> : null}
         {!session && !error ? <p className={styles.lead}>결과를 불러오고 있어요.</p> : null}
-        {session?.result ? <ResultView session={session} anonymousId={anonymousId} /> : null}
+        {session?.result ? <ResultView session={session} /> : null}
         {session && !session.result ? (
           <p className={styles.lead}>아직 최종 결과가 생성되지 않았습니다. AI NCS 면접 코칭 화면에서 결과를 먼저 생성해 주세요.</p>
         ) : null}
@@ -62,12 +62,11 @@ export function InterviewCoachingResultPage({
 
 function ResultView({
   session,
-  anonymousId,
 }: {
   session: InterviewCoachingSession;
-  anonymousId?: string | null;
 }) {
   const result = session.result;
+  const resultCaptureRef = useRef<HTMLDivElement | null>(null);
   const firstAnsweredQuestionId =
     session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
     session.questions[0]?.id ||
@@ -90,13 +89,30 @@ function ResultView({
   const selectedReview = selectedQuestion
     ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
     : null;
-  const canDownloadMaterialFile =
-    session.materialInputType === "file" &&
-    Boolean(session.materialFilename) &&
-    Boolean(session.materialFileAvailable);
+  const downloadResultImage = async () => {
+    const target = resultCaptureRef.current;
+    if (!target) return;
+    try {
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(target, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+      });
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `ncs-interview-coaching-${session.id}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (caught) {
+      alert(caught instanceof Error ? caught.message : "AI NCS 면접 코칭 결과를 다운로드하지 못했습니다.");
+    }
+  };
 
   return (
     <>
+      <div ref={resultCaptureRef} className={styles.resultCapture}>
       <section className={styles.resultSection}>
         <h2>문항별 답변 코칭</h2>
         <ResultQuestionTabs
@@ -140,23 +156,10 @@ function ResultView({
 
       <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
 
-      {canDownloadMaterialFile ? (
-        <button
-          type="button"
-          className={styles.resultDownloadButton}
-          onClick={() => {
-            downloadInterviewMaterialFile({
-              sessionId: session.id,
-              filename: session.materialFilename,
-              anonymousId,
-            }).catch((caught) => {
-              alert(caught instanceof Error ? caught.message : "면접 자료 파일을 다운로드하지 못했습니다.");
-            });
-          }}
-        >
-          NCS 면접 코칭 다운받기
-        </button>
-      ) : null}
+      </div>
+      <button type="button" className={styles.resultDownloadButton} onClick={downloadResultImage}>
+        NCS 면접 코칭 결과 다운받기
+      </button>
       <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
         NCS 면접 코칭 다시하기
       </Link>
@@ -225,17 +228,6 @@ function ResultQuestionDetail({
         </div>
       </article>
 
-      {review ? (
-        <QuestionScoreBreakdown review={review} />
-      ) : null}
-
-      {review ? (
-        <article className={styles.reviewCard}>
-          <strong>최종 문항 평가<b>{review.score}점</b></strong>
-          <p>{cleanDisplayText(review.summary) || review.summary}</p>
-        </article>
-      ) : null}
-
       {messages.length ? (
         <div className={styles.chatList}>
           {messages.map((message, messageIndex) => {
@@ -246,6 +238,7 @@ function ResultQuestionDetail({
                 ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(messages, messageIndex) : []}
                 scoreLabel={answerScore?.label}
                 score={answerScore?.score}
+                followUpTotal={3}
                 key={message.id}
               />
             );
@@ -254,31 +247,14 @@ function ResultQuestionDetail({
       ) : (
         <p className={styles.lead}>이 문항에는 제출한 답변이 없습니다.</p>
       )}
-    </div>
-  );
-}
 
-function QuestionScoreBreakdown({ review }: { review: InterviewQuestionReview }) {
-  const answerScore = typeof review.answerScore === "number" ? review.answerScore : review.score;
-  const followUpScores = Array.isArray(review.followUpScores) ? review.followUpScores : [];
-  return (
-    <article className={styles.scoreBreakdown}>
-      <div>
-        <span>질문 답변 점수</span>
-        <strong>{answerScore}<small>/100점</small></strong>
-      </div>
-      {followUpScores.length ? (
-        followUpScores.map((item) => (
-          <div key={item.followUpIndex}>
-            <span>꼬리질문 {item.followUpIndex} 답변 점수</span>
-            <strong>{item.score}<small>/100점</small></strong>
-            {item.summary ? <p>{cleanDisplayText(item.summary) || item.summary}</p> : null}
-          </div>
-        ))
-      ) : (
-        <p>답변한 꼬리질문이 없어서 꼬리질문 점수는 아직 없습니다.</p>
-      )}
-    </article>
+      {review ? (
+        <article className={styles.reviewCard}>
+          <strong>점수(토탈)<b>{review.score}점</b></strong>
+          <p>{cleanDisplayText(review.summary) || review.summary}</p>
+        </article>
+      ) : null}
+    </div>
   );
 }
 
@@ -287,22 +263,29 @@ function ResultConversationMessage({
   ncsAreas = [],
   scoreLabel,
   score,
+  followUpTotal,
 }: {
   message: InterviewMessage;
   ncsAreas?: InterviewQuestion["ncsAreas"];
   scoreLabel?: string;
   score?: number;
+  followUpTotal?: number;
 }) {
   const content = cleanDisplayText(message.content) || message.content;
   const label = message.role === "answer"
     ? "내 답변"
     : message.role === "follow_up"
-      ? `면접관 꼬리질문 ${message.followUpIndex || ""}`
+      ? "면접관 꼬리질문"
       : "AI 질문";
 
   return (
     <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""}`}>
-      <strong>{label}</strong>
+      <strong>
+        <span>{label}</span>
+        {message.role === "follow_up" && message.followUpIndex ? (
+          <em>꼬리질문 {message.followUpIndex}/{followUpTotal || 3}</em>
+        ) : null}
+      </strong>
       {message.role === "answer" && typeof score === "number" ? (
         <div className={styles.answerScoreBadge}>
           <span>{scoreLabel || "답변 점수"}</span>
