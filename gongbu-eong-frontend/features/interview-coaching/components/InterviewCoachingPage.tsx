@@ -157,6 +157,7 @@ export function InterviewCoachingPage({
   const [jobPickerOpen, setJobPickerOpen] = useState(false);
   const [dutySheetJob, setDutySheetJob] = useState<InterviewCoachingJob | null>(null);
   const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
   const [jobs, setJobs] = useState<InterviewCoachingJob[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasSearchedJobs, setHasSearchedJobs] = useState(false);
@@ -221,10 +222,12 @@ export function InterviewCoachingPage({
     const searchTerm = nextQuery.trim();
     if (!searchTerm) {
       setJobs([]);
+      setSubmittedQuery("");
       setHasSearchedJobs(false);
       setSearching(false);
       return;
     }
+    setSubmittedQuery(searchTerm);
     setHasSearchedJobs(true);
     setSearching(true);
     try {
@@ -249,6 +252,7 @@ export function InterviewCoachingPage({
 
   const openJobPicker = () => {
     setQuery("");
+    setSubmittedQuery("");
     setJobs([]);
     setHasSearchedJobs(false);
     setJobPickerOpen(true);
@@ -258,6 +262,7 @@ export function InterviewCoachingPage({
     jobSearchSeqRef.current += 1;
     setSearching(false);
     setQuery("");
+    setSubmittedQuery("");
     setJobs([]);
     setHasSearchedJobs(false);
     setJobPickerOpen(false);
@@ -691,6 +696,7 @@ export function InterviewCoachingPage({
       {jobPickerOpen ? (
         <JobPicker
           query={query}
+          submittedQuery={submittedQuery}
           setQuery={setQuery}
           jobs={jobs}
           searching={searching}
@@ -1250,6 +1256,7 @@ function ConnectedJobCard({ job, onRemove }: { job: ConnectedJob; onRemove: () =
 
 function JobPicker({
   query,
+  submittedQuery,
   setQuery,
   jobs,
   searching,
@@ -1259,6 +1266,7 @@ function JobPicker({
   onClose,
 }: {
   query: string;
+  submittedQuery: string;
   setQuery: (value: string) => void;
   jobs: InterviewCoachingJob[];
   searching: boolean;
@@ -1267,7 +1275,7 @@ function JobPicker({
   onPick: (job: InterviewCoachingJob) => void;
   onClose: () => void;
 }) {
-  const searchLabel = query.trim() || "입력한 검색어";
+  const searchLabel = submittedQuery.trim() || "입력한 검색어";
   return (
     <div className={styles.overlay}>
       <section data-keyboard-sheet="true" className={`${styles.modal} ${styles.jobPickerSheet}`}>
