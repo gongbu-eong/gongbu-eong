@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getInterviewCoachingSession } from "../interview-coaching.api";
 import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
-import { InterviewAnalysisView } from "./InterviewCoachingPage";
+import { InterviewAnalysisView, QuestionTabs } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
 
 type InterviewQuestionReview = NonNullable<InterviewCoachingSession["result"]>["questionReviews"][number];
@@ -66,7 +66,7 @@ function ResultView({
   session: InterviewCoachingSession;
 }) {
   const result = session.result;
-  const resultCaptureRef = useRef<HTMLDivElement | null>(null);
+  const pdfCaptureRef = useRef<HTMLDivElement | null>(null);
   const firstAnsweredQuestionId =
     session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
     session.questions[0]?.id ||
@@ -77,6 +77,7 @@ function ResultView({
   const strengths = cleanDisplayList(result.strengths);
   const improvements = cleanDisplayList(result.improvements);
   const futurePracticeQuestions = cleanDisplayList(result.futurePracticeQuestions);
+  const answeredQuestions = session.questions.filter((question) => hasQuestionAnswer(session.messages, question.id));
   const selectedQuestion =
     session.questions.find((question) => question.id === activeQuestionId) ||
     session.questions[0] ||
@@ -89,22 +90,37 @@ function ResultView({
   const selectedReview = selectedQuestion
     ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
     : null;
-  const downloadResultImage = async () => {
-    const target = resultCaptureRef.current;
+  const downloadResultPdf = async () => {
+    const target = pdfCaptureRef.current;
     if (!target) return;
     try {
       const { toPng } = await import("html-to-image");
+      const { jsPDF } = await import("jspdf");
       const dataUrl = await toPng(target, {
         cacheBust: true,
         pixelRatio: 2,
         backgroundColor: "#ffffff",
       });
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `ncs-interview-coaching-${session.id}.png`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      const image = new window.Image();
+      image.src = dataUrl;
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("PDF 이미지를 생성하지 못했습니다."));
+      });
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 12;
+      const contentWidth = pageWidth - margin * 2;
+      const imageHeight = (image.height * contentWidth) / image.width;
+      const pageContentHeight = pageHeight - margin * 2;
+      let offset = 0;
+      while (offset < imageHeight) {
+        if (offset > 0) pdf.addPage();
+        pdf.addImage(dataUrl, "PNG", margin, margin - offset, contentWidth, imageHeight);
+        offset += pageContentHeight;
+      }
+      pdf.save(`ncs-interview-coaching-${session.id}.pdf`);
     } catch (caught) {
       alert(caught instanceof Error ? caught.message : "AI NCS 면접 코칭 결과를 다운로드하지 못했습니다.");
     }
@@ -112,10 +128,9 @@ function ResultView({
 
   return (
     <>
-      <div ref={resultCaptureRef} className={styles.resultCapture}>
       <section className={styles.resultSection}>
         <h2>문항별 답변 코칭</h2>
-        <ResultQuestionTabs
+        <QuestionTabs
           questions={session.questions}
           messages={session.messages}
           activeQuestionId={activeQuestionId}
@@ -123,6 +138,7 @@ function ResultView({
         />
         {selectedQuestion ? (
           <ResultQuestionDetail
+            questionIndex={session.questions.findIndex((question) => question.id === selectedQuestion.id)}
             question={selectedQuestion}
             messages={selectedMessages}
             review={selectedReview}
@@ -131,33 +147,42 @@ function ResultView({
       </section>
 
       <section className={styles.resultHero}>
-        <h2>점수(토탈)</h2>
+        <h2>최종평가</h2>
         <span>{session.companyName} · {displayPositionName}</span>
         <strong>{result.score}<small>/100점</small></strong>
-        <p>{cleanDisplayText(result.summary) || result.summary}</p>
+        <p>{formatReadableText(result.summary)}</p>
       </section>
 
       <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
 
       <section className={styles.resultSection}>
         <h2>잘한 점</h2>
-        <ul>{strengths.map((item) => <li key={item}>{item}</li>)}</ul>
+        <ul>{strengths.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
       </section>
 
       <section className={styles.resultSection}>
         <h2>보완할 점</h2>
-        <ul>{improvements.map((item) => <li key={item}>{item}</li>)}</ul>
+        <ul>{improvements.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
       </section>
 
       <section className={styles.resultSection}>
         <h2>추가 연습 질문</h2>
-        <ul>{futurePracticeQuestions.map((item) => <li key={item}>{item}</li>)}</ul>
+        <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
       </section>
 
       <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
 
+      <div ref={pdfCaptureRef} className={styles.pdfCapture} aria-hidden="true">
+        <ResultPdfDocument
+          session={session}
+          result={result}
+          strengths={strengths}
+          improvements={improvements}
+          futurePracticeQuestions={futurePracticeQuestions}
+          answeredQuestions={answeredQuestions.length ? answeredQuestions : session.questions.slice(0, 1)}
+        />
       </div>
-      <button type="button" className={styles.resultDownloadButton} onClick={downloadResultImage}>
+      <button type="button" className={styles.resultDownloadButton} onClick={downloadResultPdf}>
         NCS 면접 코칭 결과 다운받기
       </button>
       <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
@@ -167,47 +192,13 @@ function ResultView({
   );
 }
 
-function ResultQuestionTabs({
-  questions,
-  messages,
-  activeQuestionId,
-  onSelect,
-}: {
-  questions: InterviewQuestion[];
-  messages: InterviewMessage[];
-  activeQuestionId: string;
-  onSelect: (questionId: string) => void;
-}) {
-  const answered = new Set(
-    messages.filter((message) => message.role === "answer").map((message) => message.questionId),
-  );
-
-  return (
-    <nav className={styles.resultQuestionTabs} aria-label="결과 문항 선택">
-      {questions.map((question, index) => {
-        const isActive = question.id === activeQuestionId;
-        const isAnswered = answered.has(question.id);
-        return (
-          <button
-            type="button"
-            key={question.id}
-            className={`${isActive ? styles.questionTabActive : ""} ${isAnswered ? styles.questionTabAnswered : ""}`}
-            onClick={() => onSelect(question.id)}
-            aria-current={isActive ? "true" : undefined}
-          >
-            Q{index + 1}
-          </button>
-        );
-      })}
-    </nav>
-  );
-}
-
 function ResultQuestionDetail({
+  questionIndex,
   question,
   messages,
   review,
 }: {
+  questionIndex: number;
   question: InterviewQuestion;
   messages: InterviewMessage[];
   review: InterviewQuestionReview | null | undefined;
@@ -217,15 +208,14 @@ function ResultQuestionDetail({
   return (
     <div className={styles.resultQuestionDetail}>
       <article className={styles.questionCard}>
+        <div className={styles.resultSkillList}>
+          {ncsAreas.map((area) => <span key={area}>{formatNcsArea(area)}</span>)}
+        </div>
         <div className={styles.questionMeta}>
-          <span>{question.difficulty} · {formatQuestionType(question.type)}</span>
-          {review ? <span>{review.score}점</span> : null}
+          <span>질문 {questionIndex + 1} · {question.difficulty} · {formatQuestionType(question.type)}</span>
         </div>
-        <h2>{cleanDisplayText(question.question) || question.question}</h2>
-        <p>{cleanDisplayText(question.intent) || question.intent}</p>
-        <div className={styles.badgeList}>
-          {ncsAreas.map((area) => <span key={area}>{area}</span>)}
-        </div>
+        <h2>{formatReadableText(question.question)}</h2>
+        <p>{formatReadableText(question.intent)}</p>
       </article>
 
       {messages.length ? (
@@ -236,6 +226,7 @@ function ResultQuestionDetail({
               <ResultConversationMessage
                 message={message}
                 ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(messages, messageIndex) : []}
+                guide={message.role === "follow_up" ? getFollowUpGuide(messages, messageIndex) : ""}
                 scoreLabel={answerScore?.label}
                 score={answerScore?.score}
                 followUpTotal={3}
@@ -250,8 +241,8 @@ function ResultQuestionDetail({
 
       {review ? (
         <article className={styles.reviewCard}>
-          <strong>점수(토탈)<b>{review.score}점</b></strong>
-          <p>{cleanDisplayText(review.summary) || review.summary}</p>
+          <strong>문항 종합 코칭</strong>
+          <p>{formatReadableText(review.summary)}</p>
         </article>
       ) : null}
     </div>
@@ -261,17 +252,19 @@ function ResultQuestionDetail({
 function ResultConversationMessage({
   message,
   ncsAreas = [],
+  guide,
   scoreLabel,
   score,
   followUpTotal,
 }: {
   message: InterviewMessage;
   ncsAreas?: InterviewQuestion["ncsAreas"];
+  guide?: string;
   scoreLabel?: string;
   score?: number;
   followUpTotal?: number;
 }) {
-  const content = cleanDisplayText(message.content) || message.content;
+  const content = formatReadableText(message.content);
   const label = message.role === "answer"
     ? "내 답변"
     : message.role === "follow_up"
@@ -280,6 +273,11 @@ function ResultConversationMessage({
 
   return (
     <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""}`}>
+      {message.role === "follow_up" && ncsAreas.length ? (
+        <div className={styles.resultSkillList}>
+          {ncsAreas.map((area) => <span key={area}>{formatNcsArea(area)}</span>)}
+        </div>
+      ) : null}
       <strong>
         <span>{label}</span>
         {message.role === "follow_up" && message.followUpIndex ? (
@@ -293,25 +291,18 @@ function ResultConversationMessage({
         </div>
       ) : null}
       {message.role === "answer" ? (
-        <textarea
-          className={styles.savedAnswer}
-          value={content}
-          readOnly
-          aria-label="제출한 답변"
-        />
+        <p className={styles.savedAnswerText}>{content}</p>
       ) : (
         <p>{content}</p>
       )}
-      {message.role === "follow_up" && ncsAreas.length ? (
-        <div className={styles.badgeList}>
-          {ncsAreas.map((area) => <span key={area}>{area}</span>)}
-        </div>
+      {message.role === "follow_up" && guide ? (
+        <p className={styles.promptGuide}>{formatReadableText(guide)}</p>
       ) : null}
       {message.feedback ? (
         <div className={styles.feedback}>
-          <b>{cleanDisplayText(message.feedback.summary) || message.feedback.summary}</b>
+          <b>{formatReadableText(message.feedback.summary)}</b>
           {message.feedback.nextAnswerGuide ? (
-            <p>{cleanDisplayText(message.feedback.nextAnswerGuide) || message.feedback.nextAnswerGuide}</p>
+            <p>{formatReadableText(message.feedback.nextAnswerGuide)}</p>
           ) : null}
           <ul>
             {cleanDisplayList(message.feedback.strengths).slice(0, 2).map((item) => <li key={`s-${item}`}>{item}</li>)}
@@ -323,6 +314,69 @@ function ResultConversationMessage({
   );
 }
 
+function ResultPdfDocument({
+  session,
+  result,
+  strengths,
+  improvements,
+  futurePracticeQuestions,
+  answeredQuestions,
+}: {
+  session: InterviewCoachingSession;
+  result: NonNullable<InterviewCoachingSession["result"]>;
+  strengths: string[];
+  improvements: string[];
+  futurePracticeQuestions: string[];
+  answeredQuestions: InterviewQuestion[];
+}) {
+  const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
+  return (
+    <div className={styles.pdfDocument}>
+      <h1>AI NCS 면접 코칭 결과</h1>
+      <section className={styles.resultSection}>
+        <h2>문항별 답변 코칭</h2>
+        {answeredQuestions.map((question) => {
+          const questionIndex = session.questions.findIndex((item) => item.id === question.id);
+          const messages = filterAnsweredConversation(
+            session.messages.filter((message) => message.questionId === question.id),
+          );
+          const review = result.questionReviews.find((item) => item.questionId === question.id);
+          return (
+            <article className={styles.pdfQuestionBlock} key={question.id}>
+              <ResultQuestionDetail
+                questionIndex={questionIndex}
+                question={question}
+                messages={messages}
+                review={review}
+              />
+            </article>
+          );
+        })}
+      </section>
+      <section className={styles.resultHero}>
+        <h2>최종평가</h2>
+        <span>{session.companyName} · {displayPositionName}</span>
+        <strong>{result.score}<small>/100점</small></strong>
+        <p>{formatReadableText(result.summary)}</p>
+      </section>
+      <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
+      <section className={styles.resultSection}>
+        <h2>잘한 점</h2>
+        <ul>{strengths.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+      </section>
+      <section className={styles.resultSection}>
+        <h2>보완할 점</h2>
+        <ul>{improvements.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+      </section>
+      <section className={styles.resultSection}>
+        <h2>추가 연습 질문</h2>
+        <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+      </section>
+      <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
+    </div>
+  );
+}
+
 function getFollowUpNcsAreas(messages: InterviewMessage[], messageIndex: number) {
   for (let index = messageIndex - 1; index >= 0; index -= 1) {
     const message = messages[index];
@@ -331,6 +385,16 @@ function getFollowUpNcsAreas(messages: InterviewMessage[], messageIndex: number)
     }
   }
   return [];
+}
+
+function getFollowUpGuide(messages: InterviewMessage[], messageIndex: number) {
+  for (let index = messageIndex - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.role === "answer") {
+      return message.feedback?.nextAnswerGuide || "";
+    }
+  }
+  return "";
 }
 
 function getAnswerMessageScore(
@@ -363,6 +427,10 @@ function findPreviousPromptMessage(messages: InterviewMessage[], answerIndex: nu
     if (message.role === "answer") return null;
   }
   return null;
+}
+
+function formatNcsArea(value: string) {
+  return value.replace("능력", " 능력");
 }
 
 function filterAnsweredConversation(messages: InterviewMessage[]) {
@@ -411,6 +479,15 @@ function cleanDisplayText(value?: string | null) {
     .replace(/\s*\/\s*/g, " / ")
     .replace(/\s*\|\s*/g, " / ")
     .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function formatReadableText(value?: string | null) {
+  const cleaned = cleanDisplayText(value);
+  return cleaned
+    .replace(/\s+(?=[①②③④⑤⑥⑦⑧⑨⑩])/g, "\n")
+    .replace(/\s+(?=\d+\))/g, "\n")
+    .replace(/([.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금))/g, "$1\n\n")
     .trim();
 }
 

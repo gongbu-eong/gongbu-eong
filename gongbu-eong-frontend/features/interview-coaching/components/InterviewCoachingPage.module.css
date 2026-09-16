@@ -309,7 +309,7 @@
 .profileGrid li+li{margin-top:0}
 .questionTabsAnchor{height:0}
 .questionTabsShell{position:sticky;top:48px;z-index:40;display:block;box-sizing:border-box;width:calc(100% + 32px);height:68px;margin:32px -16px 24px;padding:16px 36px;border:0;border-bottom:1px solid #e4e8ef;background:rgba(255,255,255,.96);box-shadow:none}
-.questionTabsFixed{position:sticky;top:48px;left:auto;width:calc(100% + 32px);margin:32px -16px 24px;transform:none}
+.questionTabsFixed{position:fixed;top:48px;left:50%;width:min(600px,100vw);margin:0;transform:translateX(-50%);box-shadow:0 10px 20px rgba(26,34,51,.04)}
 .questionTabs{display:flex;gap:14px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
 .questionTabs::-webkit-scrollbar{display:none}
 .questionTabsControl{display:none}
@@ -338,6 +338,8 @@
 .savedAnswer{display:block;width:100%;height:120px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px;color:#5a6580;font:inherit;font-size:17px;font-weight:400;line-height:1.35;resize:none}
 .answerBox{display:grid;gap:10px}
 .answerPrompt{color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
+.followAnswerBox .answerPrompt{color:#1fb573}
+.followAnswerBox .answerFooter button{background:#1fb573}
 .answerBox textarea{height:120px;min-height:120px;border:1px solid #e4e8ef;border-radius:10px;background:#fff;padding:16px;color:#1a2233;font-size:17px;line-height:1.35;resize:none}
 .answerBox textarea::placeholder{color:#9aa4b8}
 .answerFooter{display:flex;align-items:center;justify-content:space-between;gap:12px}
@@ -350,28 +352,32 @@
 .resultCapture{background:#fff}
 .resultSection{margin:0 0 24px;padding:0;border:0;background:#fff;box-shadow:none}
 .resultSection h2{margin:0 0 20px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
-.resultQuestionTabs{position:sticky;top:48px;z-index:40;display:flex;gap:14px;box-sizing:border-box;width:calc(100% + 32px);height:68px;margin:0 -16px 24px;padding:16px 36px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:rgba(255,255,255,.96);box-shadow:none;overflow-x:auto;scrollbar-width:none}
-.resultQuestionTabs::-webkit-scrollbar{display:none}
 .resultQuestionDetail{display:grid;gap:24px}
+.resultQuestionDetail .questionCard h2{margin:12px 0 0;color:#1a2233;font-size:18px;font-weight:700;line-height:1.2;word-break:keep-all;white-space:pre-line}
+.resultQuestionDetail .questionCard p{display:block;margin:16px 0 0;color:#9aa4b8;font-size:16px;font-weight:400;line-height:1.35;white-space:pre-line}
+.resultSkillList{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.resultSkillList span{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:555px;background:#5a6580;color:#fff;font-size:14px;font-weight:600;line-height:1}
 .answerScoreBadge{display:flex;align-items:center;justify-content:space-between;height:46px;box-sizing:border-box;margin:0 0 16px;padding:0 16px;border:1px solid currentColor;border-radius:10px;background:#fff;color:#2f7ff0}
 .chatFollow + .chatAnswer .answerScoreBadge{color:#1fb573}
+.chatFollow + .chatAnswer strong{color:#1fb573}
 .answerScoreBadge span{color:#1a2233;font-size:16px;font-weight:700}
 .answerScoreBadge b{color:currentColor;font-size:16px;font-weight:700}
 .answerScoreBadge small{color:#1a2233;font-size:16px;font-weight:700}
+.savedAnswerText{box-sizing:border-box;width:100%;min-height:120px;margin:0;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px;color:#5a6580!important;font-size:17px!important;font-weight:400!important;line-height:1.35!important;white-space:pre-line;word-break:keep-all}
+.promptGuide{margin:16px 0 0!important;color:#9aa4b8!important;font-size:16px!important;line-height:1.35!important;white-space:pre-line}
 .feedback{margin:16px 0 0;padding:0;border:0}
-.feedback b{display:block;margin:0 0 10px;color:#1a2233;font-size:18px;font-weight:700;line-height:1.35}
-.feedback p,.feedback ul{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;word-break:keep-all}
+.feedback b{display:block;margin:0 0 10px;color:#1a2233;font-size:18px;font-weight:700;line-height:1.35;white-space:pre-line}
+.feedback p,.feedback ul{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;word-break:keep-all;white-space:pre-line}
 .feedback ul{display:grid;gap:10px;padding:0;list-style:none}
 .reviewCard{padding:0;border:0;border-radius:0;background:#fff}
-.reviewCard strong{display:block;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
-.reviewCard strong b{display:block;margin-top:12px;color:#2f7ff0;font-size:52px;font-weight:800;line-height:1}
+.reviewCard strong{display:block;color:#1a2233;font-size:18px;font-weight:700;line-height:1.35}
 .reviewCard p{margin:16px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45}
-.resultHero{margin:24px 0;border:0;border-radius:0;background:#fff;padding:0;text-align:left;box-shadow:none}
+.resultHero{margin:24px 0;border:0;border-radius:0;background:#fff;padding:0;text-align:center;box-shadow:none}
 .resultHero h2{margin:0 0 16px;color:#1a2233;font-size:20px;font-weight:700}
-.resultHero span{background:#e8f1ff;color:#2f7ff0;font-size:14px;font-weight:700}
-.resultHero strong{margin:16px 0 8px;color:#1a2233;font-size:52px;font-weight:800}
+.resultHero span{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:555px;background:#e8f1ff;color:#2f7ff0;font-size:14px;font-weight:700}
+.resultHero strong{display:block;margin:16px 0 8px;color:#1a2233;font-size:52px;font-weight:800;line-height:1}
 .resultHero p{max-width:none;margin:0;color:#5a6580;font-size:17px;line-height:1.45}
-.resultSection ul{display:grid;gap:16px;margin:0;padding:0;list-style:none;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45}
+.resultSection ul{display:grid;gap:16px;margin:0;padding:0;list-style:none;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line}
 .ncsPanel{display:grid;gap:24px;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
 .ncsItem strong{font-size:18px;font-weight:700}
 .ncsItem strong b{color:#2f7ff0;font-size:18px;font-weight:700}
@@ -380,6 +386,13 @@
 .track span{background:#2f7ff0}
 .resultDownloadButton{margin-top:24px;border:1px solid #2f7ff0;background:#fff;color:#2f7ff0}
 .resultBackButton{margin-top:8px;background:#2f7ff0;color:#fff}
+.pdfCapture{position:fixed;left:-10000px;top:0;width:600px;background:#fff;pointer-events:none}
+.pdfDocument{box-sizing:border-box;width:600px;padding:32px 48px 48px;background:#fff;color:#1a2233}
+.pdfDocument h1{margin:0 0 32px;color:#1a2233;font-size:23px;font-weight:800;line-height:1.2}
+.pdfDocument .resultSection{margin-bottom:36px}
+.pdfDocument .pdfQuestionBlock{margin:0 0 36px;break-inside:avoid}
+.pdfDocument .questionTabsAnchor,.pdfDocument .questionTabsShell{display:none}
+.pdfDocument .resultHero{break-inside:avoid}
 @media (min-width:37.5rem){
   .frame:not(.inputFrame){padding-left:16px;padding-right:16px}
   .profileGrid{grid-template-columns:1fr!important}

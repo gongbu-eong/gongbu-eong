@@ -639,14 +639,12 @@ export function InterviewCoachingPage({
                   followUpCount >= MAX_FOLLOW_UPS_PER_QUESTION &&
                   latestMessage?.role === "answer";
                 const answer = answerDrafts[question.id] || "";
-                const mappedAreas = getQuestionBadgeAreas(question, session.analysis.ncsMappings, index);
                 const readonly = Boolean(session.completedAt || session.result || isQuestionCompleted);
                 return (
                   <InterviewQuestionPanel
                     key={question.id}
                     index={index}
                     question={question}
-                    mappedAreas={mappedAreas}
                     messages={messages}
                     answer={answer}
                     busy={busyQuestionId === question.id}
@@ -886,22 +884,7 @@ function getVisibleNcsMappings(mappings: InterviewNcsMapping[]) {
   return [...mappings].sort((left, right) => right.relevance - left.relevance);
 }
 
-function getQuestionBadgeAreas(
-  question: InterviewQuestion,
-  mappings: InterviewNcsMapping[],
-  index: number,
-) {
-  const visibleMappings = getVisibleNcsMappings(mappings);
-  const visibleNames = new Set(visibleMappings.map((item) => item.name));
-  const matched = question.ncsAreas.filter((area) => visibleNames.has(area));
-  return matched.length
-    ? matched
-    : visibleMappings[index % Math.max(visibleMappings.length, 1)]
-      ? [visibleMappings[index % Math.max(visibleMappings.length, 1)].name]
-      : [];
-}
-
-function QuestionTabs({
+export function QuestionTabs({
   questions,
   messages,
   activeQuestionId,
@@ -1087,7 +1070,6 @@ function ProfileList({ title, items }: { title: string; items: string[] }) {
 function InterviewQuestionPanel({
   index,
   question,
-  mappedAreas,
   messages,
   answer,
   busy,
@@ -1100,7 +1082,6 @@ function InterviewQuestionPanel({
 }: {
   index: number;
   question: InterviewQuestion;
-  mappedAreas: InterviewQuestion["ncsAreas"];
   messages: InterviewMessage[];
   answer: string;
   busy: boolean;
@@ -1127,9 +1108,6 @@ function InterviewQuestionPanel({
         </div>
         <h2>{prompt}</h2>
         <p>{intent}</p>
-        <div className={styles.badgeList}>
-          {mappedAreas.map((area) => <span key={area}>{area}</span>)}
-        </div>
       </article>
       {visibleMessages.length ? (
         <div className={styles.chatList}>
@@ -1149,7 +1127,7 @@ function InterviewQuestionPanel({
           {readonlyReason}
         </div>
       ) : (
-        <div className={styles.answerBox}>
+        <div className={`${styles.answerBox} ${isAnsweringFollowUp ? styles.followAnswerBox : ""}`}>
           <div className={styles.answerPrompt}>
             <strong>내 답변</strong>
           </div>
