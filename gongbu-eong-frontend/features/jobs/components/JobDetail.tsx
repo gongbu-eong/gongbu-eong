@@ -22,9 +22,6 @@ import { makeLoginHref } from "@/shared/navigation/login";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import styles from "./JobDetail.module.css";
 
-const backendUrl =
-  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
-
 type JobDetailBannerVariant = {
   key: string;
   name: string;
@@ -431,7 +428,12 @@ export function JobDetail({
                 <DetailSection title="첨부파일" icon="attachment">
                   <div className={styles.files}>
                     {job.files.map((file) => (
-                      <a key={file.id} href={`${backendUrl}/api/jobs/files/${file.id}`}>
+                      <a
+                        key={file.id}
+                        href={file.fileUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         <span className={styles.fileBadge}>{getFileBadge(file.fileType, file.fileName)}</span>
                         <span>{file.fileName}</span>
                         <DownloadIcon />
