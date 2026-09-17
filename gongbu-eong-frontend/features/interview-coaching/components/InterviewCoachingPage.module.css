@@ -390,7 +390,7 @@
 .track span{background:#2f7ff0}
 .resultDownloadButton{margin-top:24px;border:1px solid #2f7ff0;background:#fff;color:#2f7ff0}
 .resultBackButton{margin-top:8px;background:#2f7ff0;color:#fff}
-.pdfCapture{position:fixed;left:-10000px;top:0;width:600px;background:#fff;pointer-events:none}
+.pdfCapture{position:fixed;left:0;top:0;z-index:-1;width:600px;background:#fff;pointer-events:none}
 .pdfDocument{box-sizing:border-box;width:600px;padding:32px 48px 48px;background:#fff;color:#1a2233}
 .pdfDocument h1{margin:0 0 32px;color:#1a2233;font-size:23px;font-weight:800;line-height:1.2}
 .pdfDocument .resultSection{margin-bottom:36px}

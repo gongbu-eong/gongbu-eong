@@ -93,13 +93,35 @@ function ResultView({
   const downloadResultPdf = async () => {
     const target = pdfCaptureRef.current;
     if (!target) return;
+    const previousStyle = target.getAttribute("style");
     try {
       const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
+      target.style.position = "fixed";
+      target.style.left = "0";
+      target.style.top = "0";
+      target.style.zIndex = "-1";
+      target.style.width = "600px";
+      target.style.background = "#ffffff";
+      target.style.visibility = "visible";
+      target.style.pointerEvents = "none";
+      await document.fonts?.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      const captureWidth = target.scrollWidth || 600;
+      const captureHeight = target.scrollHeight;
+      if (!captureHeight) {
+        throw new Error("PDF로 변환할 결과 영역을 찾지 못했습니다.");
+      }
       const dataUrl = await toPng(target, {
         cacheBust: true,
         pixelRatio: 2,
         backgroundColor: "#ffffff",
+        width: captureWidth,
+        height: captureHeight,
+        style: {
+          margin: "0",
+          transform: "none",
+        },
       });
       const image = new window.Image();
       image.src = dataUrl;
@@ -123,6 +145,12 @@ function ResultView({
       pdf.save(`ncs-interview-coaching-${session.id}.pdf`);
     } catch (caught) {
       alert(caught instanceof Error ? caught.message : "AI NCS 면접 코칭 결과를 다운로드하지 못했습니다.");
+    } finally {
+      if (previousStyle === null) {
+        target.removeAttribute("style");
+      } else {
+        target.setAttribute("style", previousStyle);
+      }
     }
   };
 
