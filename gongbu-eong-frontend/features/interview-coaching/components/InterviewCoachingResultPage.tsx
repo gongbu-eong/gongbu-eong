@@ -233,6 +233,7 @@ function ResultQuestionDetail({
           <span>질문 {questionIndex + 1} · {question.difficulty} · {formatQuestionType(question.type)}</span>
         </div>
         <h2>{formatReadableText(question.question)}</h2>
+        <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDim}`}>질문 의도</span>
         <p>{formatReadableText(question.intent)}</p>
       </article>
 
@@ -320,18 +321,28 @@ function ResultConversationMessage({
         <p>{content}</p>
       )}
       {message.role === "follow_up" && guide ? (
-        <p className={styles.promptGuide}>{formatReadableText(guide)}</p>
+        <>
+          <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDim}`}>질문 의도</span>
+          <p className={styles.promptGuide}>{formatReadableText(guide)}</p>
+        </>
       ) : null}
       {message.feedback ? (
         <div className={styles.feedback}>
+          <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDark}`}>평가 요약</span>
           <b>{formatReadableText(message.feedback.summary)}</b>
-          {message.feedback.nextAnswerGuide ? (
-            <p>{formatReadableText(message.feedback.nextAnswerGuide)}</p>
+          {message.feedback.nextAnswerGuide || message.feedback.improvements.length ? (
+            <>
+              <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDim}`}>보완점</span>
+              {message.feedback.nextAnswerGuide ? (
+                <p>{formatReadableText(message.feedback.nextAnswerGuide)}</p>
+              ) : null}
+              {message.feedback.improvements.length ? (
+                <ul>
+                  {cleanDisplayList(message.feedback.improvements).slice(0, 3).map((item) => <li key={`i-${item}`}>{item}</li>)}
+                </ul>
+              ) : null}
+            </>
           ) : null}
-          <ul>
-            {cleanDisplayList(message.feedback.strengths).slice(0, 2).map((item) => <li key={`s-${item}`}>{item}</li>)}
-            {cleanDisplayList(message.feedback.improvements).slice(0, 2).map((item) => <li key={`i-${item}`}>{item}</li>)}
-          </ul>
         </div>
       ) : null}
     </article>
@@ -423,6 +434,7 @@ function ResultPdfListSection({ title, items }: { title: string; items: string[]
 function ResultPdfProfileAnalysis({ session }: { session: InterviewCoachingSession }) {
   const profile = session.analysis.profile;
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
+  const displayPostingTitle = cleanDisplayText(session.job?.title) || displayPositionName;
   const displayDutyText = cleanDisplayText(session.dutyText) || session.dutyText;
   const displayKeywords = compactPdfKeywords(profile.keywords, [
     session.companyName,
@@ -439,7 +451,7 @@ function ResultPdfProfileAnalysis({ session }: { session: InterviewCoachingSessi
     <section className={styles.profileCard}>
       <div className={styles.profileHeader} data-pdf-block>
         <span>직무내역 분석</span>
-        <strong>{session.companyName} · {displayPositionName}</strong>
+        <strong>{displayPostingTitle}</strong>
         <p>{displayDutyText}</p>
         {displayKeywords.length ? (
           <div className={styles.keywordList}>
@@ -484,6 +496,7 @@ function ResultPdfQuestionDetail({
           <span>질문 {questionIndex + 1} · {question.difficulty} · {formatQuestionType(question.type)}</span>
         </div>
         <h2>{formatReadableText(question.question)}</h2>
+        <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDim}`}>질문 의도</span>
         <p>{formatReadableText(question.intent)}</p>
       </article>
 
@@ -535,12 +548,10 @@ function ResultPdfConversationMessage({
 }) {
   const chunks = splitPdfText(formatReadableText(message.content));
   const guideChunks = splitPdfText(formatReadableText(guide));
-  const feedbackChunks = message.feedback
+  const improvementChunks = message.feedback
     ? [
-      ...splitPdfText(formatReadableText(message.feedback.summary)),
       ...splitPdfText(formatReadableText(message.feedback.nextAnswerGuide)),
-      ...cleanDisplayList(message.feedback.strengths).slice(0, 2).map((item) => `잘한 점: ${item}`),
-      ...cleanDisplayList(message.feedback.improvements).slice(0, 2).map((item) => `보완할 점: ${item}`),
+      ...cleanDisplayList(message.feedback.improvements).slice(0, 3),
     ].filter(Boolean)
     : [];
   const label = message.role === "answer"
@@ -581,15 +592,35 @@ function ResultPdfConversationMessage({
         </p>
       ))}
       {guideChunks.map((chunk, index) => (
-        <p className={styles.pdfGuideChunk} data-pdf-block key={`${message.id}-guide-${index}`}>
-          {chunk}
-        </p>
+        index === 0 ? (
+          <div data-pdf-block key={`${message.id}-guide-${index}`}>
+            <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDim}`}>질문 의도</span>
+            <p className={styles.pdfGuideChunk}>{chunk}</p>
+          </div>
+        ) : (
+          <p className={styles.pdfGuideChunk} data-pdf-block key={`${message.id}-guide-${index}`}>
+            {chunk}
+          </p>
+        )
       ))}
-      {feedbackChunks.map((chunk, index) => (
-        <p className={styles.pdfFeedbackChunk} data-pdf-block key={`${message.id}-feedback-${index}`}>
-          {chunk}
-        </p>
-      ))}
+      {message.feedback ? (
+        <>
+          <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDark}`} data-pdf-block>평가 요약</span>
+          {splitPdfText(formatReadableText(message.feedback.summary)).map((chunk, index) => (
+            <p className={styles.pdfFeedbackChunk} data-pdf-block key={`${message.id}-summary-${index}`}>
+              {chunk}
+            </p>
+          ))}
+          {improvementChunks.length ? (
+            <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDim}`} data-pdf-block>보완점</span>
+          ) : null}
+          {improvementChunks.map((chunk, index) => (
+            <p className={styles.pdfFeedbackChunk} data-pdf-block key={`${message.id}-feedback-${index}`}>
+              {chunk}
+            </p>
+          ))}
+        </>
+      ) : null}
     </article>
   );
 }

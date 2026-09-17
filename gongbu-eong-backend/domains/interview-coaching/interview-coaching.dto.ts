@@ -12,7 +12,6 @@ export type InterviewCoachingJobDto = {
   institutionName: string;
   title: string;
   applicationEndAt: string | null;
-  isManual?: boolean;
 };
 
 export type InterviewMaterialInputType = "file" | "text";

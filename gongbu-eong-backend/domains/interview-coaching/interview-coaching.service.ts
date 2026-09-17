@@ -53,8 +53,6 @@ export type StartInterviewCoachingArgs = {
   userId?: string | null;
   anonymousId?: string | null;
   posting?: JobPostingDetailRow | null;
-  manualCompanyName?: string | null;
-  manualPositionName?: string | null;
   jobDuty?: string | null;
   materialInputType?: InterviewMaterialInputType | null;
   materialText?: string | null;
@@ -67,8 +65,6 @@ export type StartInterviewCoachingArgs = {
 
 function resolveInterviewInput(args: StartInterviewCoachingArgs) {
   const job = args.posting ? makeJobSnapshot(args.posting) : null;
-  const manualCompanyName = cleanText(args.manualCompanyName).slice(0, 100);
-  const manualPositionName = cleanJobLabel(args.manualPositionName).slice(0, 100);
   const submittedDutyText = cleanText(args.jobDuty);
   const meaningfulDutyText = isMeaningfulDutyText(submittedDutyText)
     ? cleanJobLabel(submittedDutyText).slice(0, 400)
@@ -98,13 +94,13 @@ function resolveInterviewInput(args: StartInterviewCoachingArgs) {
 
   return {
     job,
-    companyName: job?.institutionName || manualCompanyName,
+    companyName: job?.institutionName || "",
     positionName: args.posting
-      ? meaningfulDutyText || postingPositionName || manualPositionName
-      : meaningfulDutyText || manualPositionName,
+      ? meaningfulDutyText || postingPositionName
+      : "",
     dutyText: args.posting
-      ? meaningfulDutyText || postingDutyText || postingPositionName || manualPositionName
-      : meaningfulDutyText || manualPositionName,
+      ? meaningfulDutyText || postingDutyText || postingPositionName
+      : "",
   };
 }
 
@@ -171,8 +167,8 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
   const { job, companyName, positionName, dutyText } = resolveInterviewInput(args);
   const preparedMaterial = await prepareInterviewMaterial(args);
 
-  if (!companyName && !positionName && !dutyText) {
-    throw new Error("지원 공고를 연결하거나 직무명을 입력해 주세요.");
+  if (!args.posting || !job) {
+    throw new Error("지원 공고를 연결해 주세요.");
   }
 
   logInterviewStage(traceId, "service:start", {
@@ -307,8 +303,8 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
 export async function createInterviewCoachingDraft(args: StartInterviewCoachingArgs) {
   const { job, companyName, positionName, dutyText } = resolveInterviewInput(args);
 
-  if (!companyName && !positionName && !dutyText) {
-    throw new Error("지원 공고를 연결하거나 직무명을 입력해 주세요.");
+  if (!args.posting || !job) {
+    throw new Error("지원 공고를 연결해 주세요.");
   }
 
   const sessionId = await createInterviewSession({
@@ -376,9 +372,9 @@ function appendInterviewMaterialContext(
   material: Awaited<ReturnType<typeof prepareInterviewMaterial>>,
 ) {
   const materialText = material.text
-    ? `\n\n[사용자 면접 자료]\n${material.text}`
+      ? `\n\n[사용자 면접 자료]\n${material.text}`
     : material.filename
-      ? `\n\n[사용자 면접 자료]\n첨부 파일명: ${material.filename}\n파일에서 텍스트를 추출하지 못했습니다. 공고와 입력 직무를 우선 기준으로 질문을 생성하세요.`
+      ? `\n\n[사용자 면접 자료]\n첨부 파일명: ${material.filename}\n파일에서 텍스트를 추출하지 못했습니다. 연결된 공고 내용을 우선 기준으로 질문을 생성하세요.`
       : "";
 
   return `${jobContext || ""}${materialText}`.trim().slice(0, 12000);
@@ -592,10 +588,10 @@ async function requestStartPayload(input: InterviewStartInput) {
 
 기업명: ${input.companyName}
 지원 직무: ${input.positionName}
-사용자 입력 직무 내용: ${input.dutyText}
+연결 공고의 직무 요약: ${input.dutyText}
 
 공고에서 참고할 내용:
-${input.jobContext || "연결된 공고 본문이 없습니다. 기업명과 직무명만 기준으로 분석하세요."}
+${input.jobContext || "연결된 공고 본문을 불러오지 못했습니다. 연결 공고의 기업명, 공고명, 직무 요약을 기준으로 분석하세요."}
 
 NCS 7개 후보:
 ${NCS_AREAS.map((area, index) => `${index + 1}. ${area.name}: ${area.description}`).join("\n")}
@@ -645,10 +641,10 @@ async function requestStartSupplementPayload(
 
 기업명: ${input.companyName}
 지원 직무: ${input.positionName}
-사용자 입력 직무 내용: ${input.dutyText}
+연결 공고의 직무 요약: ${input.dutyText}
 
 공고에서 참고할 내용:
-${input.jobContext || "연결된 공고 본문이 없습니다. 기업명과 직무명만 기준으로 분석하세요."}
+${input.jobContext || "연결된 공고 본문을 불러오지 못했습니다. 연결 공고의 기업명, 공고명, 직무 요약을 기준으로 분석하세요."}
 
 NCS 7개 후보:
 ${NCS_AREAS.map((area, index) => `${index + 1}. ${area.name}: ${area.description}`).join("\n")}

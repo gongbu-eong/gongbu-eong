@@ -66,7 +66,7 @@ const INTERVIEW_TERMS = [
       "이용자가 입력한 기업명·지원 직무를 NCS 직무역량과 연계하여 AI 면접 질문 및 꼬리질문을 생성합니다.",
       "이용자는 생성된 질문에 답변을 작성·연습할 수 있으며, AI가 답변에 대한 피드백을 제공합니다.",
       "이용자가 실제 채용공고를 연결한 경우, 해당 공고의 자격요건·우대사항·전형 정보를 반영하여 보다 정확한 코칭을 제공합니다.",
-      "공고를 연결하지 않은 경우, 이용자가 직접 입력한 기업명·직무 내용만을 기준으로 질문이 생성되며, 실제 채용공고의 자격요건·전형 정보는 반영되지 않습니다.",
+      "공고를 연결한 경우, 해당 공고의 자격요건·우대사항·전형 정보와 이용자가 첨부 또는 입력한 면접 자료를 함께 반영하여 코칭을 제공합니다.",
     ],
   },
   {
@@ -151,10 +151,6 @@ export function InterviewCoachingPage({
   const [jobs, setJobs] = useState<InterviewCoachingJob[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasSearchedJobs, setHasSearchedJobs] = useState(false);
-  const [manualCompanyName, setManualCompanyName] = useState("");
-  const [manualPositionName, setManualPositionName] = useState("");
-  const [manualDuty, setManualDuty] = useState("");
-  const [inputMode, setInputMode] = useState<"job" | "manual">("job");
   const [materialInputType, setMaterialInputType] = useState<"file" | "text">("file");
   const [materialText, setMaterialText] = useState("");
   const [materialFile, setMaterialFile] = useState<File | null>(null);
@@ -282,26 +278,10 @@ export function InterviewCoachingPage({
 
   const start = async () => {
     const anonymousId = getAnonymousId();
-    const companyName = connectedJob && !connectedJob.isManual
-      ? connectedJob.institutionName
-      : manualCompanyName;
-    const positionName = connectedJob ? connectedJob.title : manualPositionName;
-    const dutyText = connectedJob?.duty || manualDuty;
+    const dutyText = connectedJob?.duty || "";
 
-    if (inputMode === "job" && !connectedJob) {
+    if (!connectedJob) {
       showAlert("지원 공고를 연결해 주세요.");
-      return;
-    }
-    if (inputMode === "manual" && !companyName.trim()) {
-      showAlert("기업명을 입력해 주세요.");
-      return;
-    }
-    if (inputMode === "manual" && !positionName.trim()) {
-      showAlert("지원 직무를 입력해 주세요.");
-      return;
-    }
-    if (!connectedJob && !positionName.trim() && !dutyText.trim()) {
-      showAlert("지원 공고를 연결하거나 직무명을 입력해 주세요.");
       return;
     }
     if (materialInputType === "file" && !materialFile) {
@@ -322,9 +302,7 @@ export function InterviewCoachingPage({
     try {
       const result = await startInterviewCoaching({
         anonymousId,
-        jobPostingId: connectedJob?.isManual ? null : connectedJob?.id,
-        manualCompanyName: companyName || null,
-        manualPositionName: positionName || connectedJob?.title || null,
+        jobPostingId: connectedJob.id,
         jobDuty: dutyText || null,
         materialInputType,
         materialText: materialInputType === "text" ? materialText : null,
@@ -433,62 +411,19 @@ export function InterviewCoachingPage({
 
         {busy === "load" ? null : !session ? (
           <>
-            <div className={styles.interviewTabs} role="tablist" aria-label="면접 기업 정보 입력 방식">
-              <button
-                type="button"
-                className={inputMode === "job" ? styles.interviewTabActive : ""}
-                onClick={() => setInputMode("job")}
-              >
-                공고로 연결하기
-              </button>
-              <button
-                type="button"
-                className={inputMode === "manual" ? styles.interviewTabActive : ""}
-                onClick={() => setInputMode("manual")}
-              >
-                직접 입력
-              </button>
-            </div>
-
             <section className={styles.interviewInputSection}>
               <h2>면접 기업 정보</h2>
-              {inputMode === "job" ? (
-                connectedJob ? (
-                  <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} />
-                ) : (
-                  <>
-                    <button className={styles.jobConnect} type="button" onClick={openJobPicker}>
-                      + 지원 공고 연결하기 (선택)
-                    </button>
-                    <p className={styles.helperBox}>
-                      직접 입력 시에는 실제 채용공고의 자격요건, 우대사항, 전형 정보가 반영되지 않고 입력한 기업명과 직무 내용을 기준으로 질문이 생성됩니다. 더 정확한 코칭을 원하면 지원 공고를 연결해 주세요.
-                    </p>
-                  </>
-                )
+              {connectedJob ? (
+                <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} />
               ) : (
-                <div className={styles.directInputFields}>
-                  <label>
-                    <span>기업명</span>
-                    <input
-                      value={manualCompanyName}
-                      onChange={(event) => setManualCompanyName(event.target.value)}
-                      onFocus={(event) => focusField(event.currentTarget)}
-                      placeholder="예 : 한국전력공사"
-                    />
-                  </label>
-                  <label>
-                    <span>지원 직무</span>
-                    <input
-                      value={manualPositionName}
-                      onChange={(event) => setManualPositionName(event.target.value)}
-                      onFocus={(event) => focusField(event.currentTarget)}
-                      placeholder="예 : 사무행정, 전기, 토목"
-                    />
-                  </label>
+                <>
+                  <button className={styles.jobConnect} type="button" onClick={openJobPicker}>
+                    + 지원 공고 연결하기 (선택)
+                  </button>
                   <p className={styles.helperBox}>
                     직접 입력 시에는 실제 채용공고의 자격요건, 우대사항, 전형 정보가 반영되지 않고 입력한 기업명과 직무 내용을 기준으로 질문이 생성됩니다. 더 정확한 코칭을 원하면 지원 공고를 연결해 주세요.
                   </p>
-                </div>
+                </>
               )}
             </section>
 
@@ -719,9 +654,6 @@ export function InterviewCoachingPage({
           }}
           onConfirm={(duty) => {
             setConnectedJob({ ...dutySheetJob, duty });
-            setManualCompanyName("");
-            setManualPositionName("");
-            setManualDuty("");
             setDutySheetJob(null);
             closeJobPicker();
           }}
@@ -831,6 +763,7 @@ export function InterviewAnalysisView({
   const profile = session.analysis.profile;
   const visibleMappings = getVisibleNcsMappings(session.analysis.ncsMappings);
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
+  const displayPostingTitle = cleanDisplayText(session.job?.title) || displayPositionName;
   const displayDutyText = cleanDisplayText(session.dutyText) || session.dutyText;
   const displayKeywords = compactDisplayKeywords(profile.keywords, [
     session.companyName,
@@ -847,7 +780,7 @@ export function InterviewAnalysisView({
       {mode !== "ncs" ? <section className={styles.profileCard}>
         <div className={styles.profileHeader}>
           <span>{profileTitle}</span>
-          <strong>{session.companyName} · {displayPositionName}</strong>
+          <strong>{displayPostingTitle}</strong>
           <p>{displayDutyText}</p>
         </div>
         {displayKeywords.length ? (
@@ -1308,7 +1241,7 @@ function JobDutySheet({
           <button type="button" onClick={onClose}>×</button>
         </header>
         <div className={styles.jobDutySelected}>
-          <span>{job.isManual ? "직접 입력한 공고" : job.institutionName}</span>
+          <span>{job.institutionName}</span>
           <strong>{formatConnectedJobTitle(job)}</strong>
         </div>
         <label className={styles.jobDutyLabel}>지원 직무</label>
@@ -1400,7 +1333,7 @@ function hasAnsweredAnyQuestion(session: InterviewCoachingSession) {
 }
 
 function formatConnectedJobTitle(job: InterviewCoachingJob) {
-  return job.isManual ? job.title : `[${job.institutionName}] ${job.title}`;
+  return `[${job.institutionName}] ${job.title}`;
 }
 
 function cleanDisplayText(value?: string | null) {

@@ -12,7 +12,6 @@ export type InterviewCoachingJob = {
   institutionName: string;
   title: string;
   applicationEndAt: string | null;
-  isManual?: boolean;
 };
 
 export type InterviewJobProfile = {

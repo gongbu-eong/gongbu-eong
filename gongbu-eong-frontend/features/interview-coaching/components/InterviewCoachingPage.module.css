@@ -177,18 +177,10 @@
 .inputFrame h1{margin:0 0 18px;color:#1a2233;font-size:23px;font-weight:800;line-height:1;letter-spacing:0}
 .inputFrame .lead{margin:0 0 18px;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;letter-spacing:0}
 .inputFrame .lead::before{content:"Ai가 모의면접을 만들고 코칭해드려요";display:block;margin-bottom:8px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
-.interviewTabs{display:grid;grid-template-columns:1fr 1fr;height:46px;margin:18px 0 24px;border:0}
-.interviewTabs button{box-sizing:border-box;height:46px;border:0;border-bottom:1px solid #5a6580;border-radius:0;background:#f5f7fa;color:#1a2233;font:inherit;font-size:17px;font-weight:400;line-height:1}
-.interviewTabs .interviewTabActive{border:1px solid #5a6580;border-bottom:0;background:#fff}
 .interviewInputSection{margin-top:24px}
 .interviewInputSection h2{margin:0 0 18px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
 .inputFrame .jobConnect{height:52px;border:1px dashed #2f7ff0;border-radius:12px;background:#fff;color:#2f7ff0;font-size:16px;font-weight:800;line-height:1}
-.helperBox{box-sizing:border-box;min-height:108px;margin:16px 0 0;padding:16px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px;font-weight:700;line-height:1.45;word-break:keep-all}
-.directInputFields{display:grid;gap:16px}
-.directInputFields label{display:grid;gap:10px}
-.directInputFields span{color:#1a2233;font-size:18px;font-weight:700;line-height:1}
-.directInputFields input{width:100%;height:46px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:5px;background:#fff;padding:0 16px;color:#1a2233;font:inherit;font-size:16px}
-.directInputFields input::placeholder{color:#9aa4b8}
+.helperBox{box-sizing:border-box;min-height:100px;margin:16px 0 0;padding:16px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px;font-weight:400;line-height:1.35;word-break:keep-all}
 .materialPanel{box-sizing:border-box;padding:8px;border-radius:5px;background:#f5f7fa}
 .materialTabs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
 .materialTabs button{height:46px;border:0;border-radius:10px;background:#f5f7fa;color:#5a6580;font:inherit;font-size:17px;font-weight:400}
@@ -289,7 +281,7 @@
 
 @media (max-width:37.4375rem){
   .termsSheet,.jobPickerSheet{height:min(700px,calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px));max-height:calc(100dvh - var(--mobile-keyboard-inset,0px) - 24px)}
-  .materialPanel textarea,.directInputFields input,.jobPickerSheet .search input,.jobDutyInput{font-size:16px;scroll-margin-bottom:calc(140px + var(--mobile-keyboard-inset,0px))}
+  .materialPanel textarea,.jobPickerSheet .search input,.jobDutyInput{font-size:16px;scroll-margin-bottom:calc(140px + var(--mobile-keyboard-inset,0px))}
 }
 
 /* Figma 2529 question/result strict pass */
@@ -345,6 +337,7 @@
 .chatFollow strong{color:#1fb573}
 .chatFollow p{font-weight:400;color:#5a6580}
 .chatBubble .badgeList{margin-top:16px}
+.chatBubble>.resultInfoPill{margin:16px 0 8px}
 .savedAnswer{display:block;width:100%;height:120px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px;color:#5a6580;font:inherit;font-size:17px;font-weight:400;line-height:1.35;resize:none}
 .answerBox{display:grid;gap:10px}
 .answerPrompt{color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
@@ -365,8 +358,13 @@
 .resultQuestionDetail{display:grid;gap:24px}
 .resultQuestionDetail .questionCard h2{margin:12px 0 0;color:#1a2233;font-size:18px;font-weight:700;line-height:1.2;word-break:keep-all;white-space:pre-line}
 .resultQuestionDetail .questionCard p{display:block;margin:16px 0 0;color:#9aa4b8;font-size:16px;font-weight:400;line-height:1.35;white-space:pre-line}
+.resultQuestionDetail .questionCard .resultInfoPill{margin-top:16px}
+.resultQuestionDetail .questionCard .resultInfoPill+p{margin-top:8px}
 .resultSkillList{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
 .resultSkillList span{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:555px;background:#5a6580;color:#fff;font-size:14px;font-weight:600;line-height:1}
+.resultInfoPill{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-width:88px;height:32px;padding:0 18px;border:1px solid currentColor;border-radius:888px;background:#fff;font-size:14px;font-weight:700;line-height:1}
+.resultInfoPillDark{color:#1a2233}
+.resultInfoPillDim{color:#5a6580}
 .answerScoreBadge{display:flex;align-items:center;justify-content:space-between;height:46px;box-sizing:border-box;margin:0 0 16px;padding:0 16px;border:1px solid currentColor;border-radius:10px;background:#fff;color:#2f7ff0}
 .chatFollow + .chatAnswer .answerScoreBadge{color:#1fb573}
 .chatFollow + .chatAnswer strong{color:#1fb573}
@@ -376,9 +374,11 @@
 .answerScoreBadge b{color:currentColor;font-size:16px;font-weight:700}
 .answerScoreBadge small{color:#1a2233;font-size:16px;font-weight:700}
 .savedAnswerText{box-sizing:border-box;width:100%;min-height:120px;margin:0;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px;color:#5a6580!important;font-size:17px!important;font-weight:400!important;line-height:1.35!important;white-space:pre-line;word-break:keep-all}
-.promptGuide{margin:16px 0 0!important;color:#9aa4b8!important;font-size:16px!important;line-height:1.35!important;white-space:pre-line}
+.promptGuide{margin:0!important;color:#9aa4b8!important;font-size:16px!important;line-height:1.35!important;white-space:pre-line}
 .feedback{margin:16px 0 0;padding:0;border:0}
-.feedback b{display:block;margin:0 0 10px;color:#1a2233;font-size:18px;font-weight:700;line-height:1.35;white-space:pre-line}
+.feedback .resultInfoPill{margin:0 0 8px}
+.feedback .resultInfoPill:not(:first-child){margin-top:24px}
+.feedback b{display:block;margin:0;color:#1a2233;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
 .feedback p,.feedback ul{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;word-break:keep-all;white-space:pre-line}
 .feedback ul{display:grid;gap:10px;padding:0;list-style:none}
 .reviewCard{padding:0;border:0;border-radius:0;background:#fff}

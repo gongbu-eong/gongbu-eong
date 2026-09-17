@@ -45,8 +45,6 @@ export async function POST(request: NextRequest) {
     console.info(`[InterviewCoaching:${requestId}] request:parsed`, {
       hasAnonymousId: Boolean(anonymousId),
       hasJobPostingId: Boolean(readString(payload.jobPostingId)),
-      hasManualCompanyName: Boolean(readString(payload.manualCompanyName)),
-      hasManualPositionName: Boolean(readString(payload.manualPositionName)),
       hasJobDuty: Boolean(readString(payload.jobDuty)),
       materialInputType: payload.materialInputType,
       hasMaterialFile: Boolean(payload.materialFile),
@@ -87,12 +85,17 @@ export async function POST(request: NextRequest) {
     }
 
     const jobPostingId = readString(payload.jobPostingId);
+    if (!jobPostingId) {
+      return jsonWithCors(
+        request,
+        { ok: false, message: "지원 공고를 연결해 주세요." },
+        { status: 400 },
+      );
+    }
     console.info(`[InterviewCoaching:${requestId}] job:lookup:start`, {
       jobPostingId: jobPostingId || null,
     });
-    const posting = jobPostingId
-      ? await findJobPostingById(jobPostingId, user?.id)
-      : null;
+    const posting = await findJobPostingById(jobPostingId, user?.id);
     console.info(`[InterviewCoaching:${requestId}] job:lookup:done`, {
       hasPosting: Boolean(posting),
       elapsedMs: Date.now() - startedAt,
@@ -110,8 +113,6 @@ export async function POST(request: NextRequest) {
       userId: user?.id || null,
       anonymousId,
       posting,
-      manualCompanyName: readString(payload.manualCompanyName),
-      manualPositionName: readString(payload.manualPositionName),
       jobDuty: readString(payload.jobDuty),
       materialInputType: payload.materialInputType,
       materialText: readString(payload.materialText),
@@ -162,8 +163,6 @@ async function readInterviewStartPayload(request: NextRequest) {
     return {
       anonymousId: form.get("anonymousId"),
       jobPostingId: form.get("jobPostingId"),
-      manualCompanyName: form.get("manualCompanyName"),
-      manualPositionName: form.get("manualPositionName"),
       jobDuty: form.get("jobDuty"),
       materialInputType: form.get("materialInputType") === "file" ? "file" as const : "text" as const,
       materialText: form.get("materialText"),
@@ -176,8 +175,6 @@ async function readInterviewStartPayload(request: NextRequest) {
   return {
     anonymousId: body.anonymousId,
     jobPostingId: body.jobPostingId,
-    manualCompanyName: body.manualCompanyName,
-    manualPositionName: body.manualPositionName,
     jobDuty: body.jobDuty,
     materialInputType: body.materialInputType === "file" ? "file" as const : "text" as const,
     materialText: body.materialText,
