@@ -503,9 +503,9 @@
 .questionRow textarea::placeholder{color:#9aa4b8;font-size:16px;font-weight:400}
 .questionLimitRow{gap:8px}
 .questionLimitRow label{color:#5a6580;font-size:17px;font-weight:400;line-height:normal}
-.questionLimitRow input{width:80px;height:46px;color:#5a6580;font-size:16px;font-weight:400}
+.questionLimitRow input{width:112px;height:46px;color:#5a6580;font-size:16px;font-weight:400}
 .questionLimitRow input::placeholder{font-size:16px;font-weight:400}
-.questionDelete{width:52px;height:46px;border-radius:10px;font-size:17px;font-weight:400}
+.questionDelete{width:74px;height:46px;border:0;border-radius:10px;background:#9aa4b8;color:#fff;font-size:17px;font-weight:400}
 .connectedJobCard{min-height:168px;padding:16px;border:1px solid #e4e8ef;border-radius:5px;background:#fff;grid-template-columns:minmax(0,1fr) 24px;gap:10px}
 .connectedJobCard>button{grid-column:2;grid-row:1;justify-self:end}
 .connectedJobCard span,.connectedJobCard em{display:block;height:auto;padding:0;background:transparent;color:#1a2233;font-size:18px;font-weight:700;line-height:normal}
@@ -528,9 +528,11 @@
 .newCoachingFrame .fileDrop>span:not(.fileSheetIcon){font-size:14px;line-height:normal}
 .termsConsentRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
 .termsConsentRow .termsCheck{flex:1;min-width:0;margin-top:0;color:#9aa4b8;font-size:15px;font-weight:500;line-height:normal}
-.termsCheck span{width:24px;height:24px;font-size:14px}
+.termsCheck span{position:relative;width:24px;height:24px;border-color:#e4e8ef;background:#fff;color:transparent;font-size:0}
+.termsCheck[aria-pressed="true"] span{border-color:#e4e8ef;background:#fff}
+.termsCheck[aria-pressed="true"] span::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;border-radius:50%;background:#2f7ff0;transform:translate(-50%,-50%)}
 .termsOpenButton{flex:0 0 auto;border:0;background:transparent;color:#9aa4b8;font-size:15px;font-weight:500;line-height:normal}
-.coachingPrivacyNotice{display:flex;align-items:center;min-height:52px;box-sizing:border-box;margin:16px 0 0;padding:0 16px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px;font-weight:700;line-height:20px;word-break:keep-all}
+.coachingPrivacyNotice{display:flex;align-items:center;min-height:52px;box-sizing:border-box;margin:16px 0 0;padding:0 22px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px;font-weight:700;line-height:normal;word-break:keep-all}
 .coachingSubmitButton{margin-top:16px}
 .termsSheet{height:min(84vh,729px);max-height:min(84vh,729px);padding:0 16px 16px;border-radius:15px 15px 0 0}
 .termsSheet .sheetHandle{margin:8px auto 18px}
@@ -584,7 +586,11 @@
 .figmaResultScreen .metaReviewGrid h3{font-size:18px}
 .figmaResultScreen .metaReviewGrid p{font-size:17px;line-height:24px}
 .figmaScoreNotice{font-size:16px;line-height:23px}
+.figmaQuestionArea .overallAssessment,.figmaQuestionArea .figmaScoreNotice,.figmaQuestionArea .resultActions{position:relative;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;background:#fff}
+.figmaQuestionArea .overallAssessment{margin-top:24px;padding-top:24px}
+.figmaQuestionArea .figmaScoreNotice{box-sizing:border-box;margin-top:0;padding-top:16px;padding-bottom:16px}
 @media (min-width:37.5rem){
   .newCoachingFrame{padding-left:32px;padding-right:32px}
   .termsSheet{border-radius:16px;max-width:600px}
+  .figmaQuestionArea .overallAssessment,.figmaQuestionArea .figmaScoreNotice,.figmaQuestionArea .resultActions{margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px}
 }

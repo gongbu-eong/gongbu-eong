@@ -111,47 +111,49 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
         </div>
       </section>
 
-      {selectedQuestion ? <section className={styles.figmaQuestionArea}>
-        <h2>{effectiveQuestionIndex + 1}. {selectedQuestion.tabTitle || makeTabTitle(selectedQuestion.question)}</h2>
-        <article className={styles.figmaQuestionCard}>
-          <div className={styles.figmaQuestionMark}>Q{effectiveQuestionIndex + 1}</div>
-          <strong>{selectedQuestion.question}</strong>
-          <div>
-            {getNcsBadges(selectedQuestion).map((badge) => <span key={badge}>{badge}</span>)}
+      {selectedQuestion ? <>
+        <section className={styles.figmaQuestionArea}>
+          <h2>{effectiveQuestionIndex + 1}. {selectedQuestion.tabTitle || makeTabTitle(selectedQuestion.question)}</h2>
+          <article className={styles.figmaQuestionCard}>
+            <div className={styles.figmaQuestionMark}>Q{effectiveQuestionIndex + 1}</div>
+            <strong>{selectedQuestion.question}</strong>
+            <div>
+              {getNcsBadges(selectedQuestion).map((badge) => <span key={badge}>{badge}</span>)}
+            </div>
+          </article>
+          <div className={styles.figmaDetailCard}>
+            <NcsEvaluation question={selectedQuestion} locked={isLocked} />
+            {isLocked ? <LockedResultGate resultId={item.id} anonymousId={item.anonymousId} /> : <>
+              <CoachingPoints question={selectedQuestion} />
+              <StructureChecks question={selectedQuestion} />
+              <section className={styles.revisionSection}>
+                <h2>AI 첨삭 제안</h2>
+                <p>핵심 메시지는 유지하고, 문항 의도와 NCS 기준에 맞춰 표현을 정리했어요.</p>
+                <p className={styles.figmaRevisionNote}>새로운 경험·수치·성과는 임의로 추가하지 않았습니다.</p>
+                <div className={styles.revisionTabs}>
+                  <button type="button" className={revisionMode === "original" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("original")}>원문</button>
+                  <button type="button" className={revisionMode === "compare" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("compare")}>비교</button>
+                </div>
+                {revisionMode === "original" ? (
+                  <OriginalTextPanel
+                    text={selectedQuestion.answer}
+                    compareOriginals={getComparisonItems(selectedQuestion).map((entry) => entry.original)}
+                    expanded={originalExpanded}
+                    onToggle={() => setOriginalExpanded((value) => !value)}
+                  />
+                ) : <ComparisonList question={selectedQuestion} />}
+                <MetaReview question={selectedQuestion} />
+              </section>
+            </>}
           </div>
-        </article>
-        <div className={styles.figmaDetailCard}>
-          <NcsEvaluation question={selectedQuestion} locked={isLocked} />
-          {isLocked ? <LockedResultGate resultId={item.id} anonymousId={item.anonymousId} /> : <>
-            <CoachingPoints question={selectedQuestion} />
-            <StructureChecks question={selectedQuestion} />
-            <section className={styles.revisionSection}>
-              <h2>AI 첨삭 제안</h2>
-              <p>핵심 메시지는 유지하고, 문항 의도와 NCS 기준에 맞춰 표현을 정리했어요.</p>
-              <p className={styles.figmaRevisionNote}>새로운 경험·수치·성과는 임의로 추가하지 않았습니다.</p>
-              <div className={styles.revisionTabs}>
-                <button type="button" className={revisionMode === "original" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("original")}>원문</button>
-                <button type="button" className={revisionMode === "compare" ? styles.revisionTabActive : ""} onClick={() => setRevisionMode("compare")}>비교</button>
-              </div>
-              {revisionMode === "original" ? (
-                <OriginalTextPanel
-                  text={selectedQuestion.answer}
-                  compareOriginals={getComparisonItems(selectedQuestion).map((entry) => entry.original)}
-                  expanded={originalExpanded}
-                  onToggle={() => setOriginalExpanded((value) => !value)}
-                />
-              ) : <ComparisonList question={selectedQuestion} />}
-              <MetaReview question={selectedQuestion} />
-            </section>
-          </>}
-        </div>
+        </section>
         {!isLocked ? <>
           <OverallAssessment assessment={review.overallAssessment} />
           <section className={styles.figmaScoreNotice}>
             ※ 점수는 공식 NCS 채점 점수가 아니라, 2026 NCS 직업공통능력을 참고해 자기소개서 표현 수준을 분석한 서비스용 AI 참고 점수입니다.
           </section>
         </> : null}
-      </section> : null}
+      </> : null}
 
       {!isLocked ? <div className={styles.resultActions}>
         <button type="button" onClick={() => router.push("/ai-tools/coaching")}>다시 코칭받기</button>

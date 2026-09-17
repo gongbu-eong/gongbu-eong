@@ -315,10 +315,10 @@ export function CoachingPage() {
       </section>
       {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
       <div className={styles.termsConsentRow}>
-        <button ref={termsButtonRef} type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsConfirmed((value) => !value)}><span>{termsConfirmed ? "✓" : ""}</span>자소서 약관동의를 해주세요.</button>
+        <button ref={termsButtonRef} type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsConfirmed((value) => !value)}><span>{termsConfirmed ? "선택됨" : ""}</span>AI NCS 자소서 약관동의를 해주세요.</button>
         <button type="button" className={styles.termsOpenButton} onClick={() => setTermsOpen(true)}>보기 →</button>
       </div>
-      <p className={styles.coachingPrivacyNotice}>첨부 및 입력한 자소서는 코칭 제공 목적으로만 사용합니다.</p>
+      <p className={styles.coachingPrivacyNotice}>첨부 및 입력한 자소서는 코칭 제공 목적으로만 사용됩니다.</p>
       {error ? <p className={styles.error}>{error}</p> : null}
       <button className={`${styles.primaryButton} ${styles.coachingSubmitButton}`} type="button" onClick={submit} disabled={!canRequestCoaching}>{/* <Image src="/layout/header-ticket.png" alt="" width={23} height={12} className={styles.coachingSubmitIcon} /> */}AI NCS 자소서 코칭 받기</button>
     </main>
