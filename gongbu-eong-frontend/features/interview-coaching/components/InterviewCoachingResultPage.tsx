@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getInterviewCoachingSession } from "../interview-coaching.api";
 import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
-import { AnswerLoadingOverlay, InterviewAnalysisView, QuestionTabs } from "./InterviewCoachingPage";
+import { AnswerLoadingOverlay, formatNcsReasonParagraphs, InterviewAnalysisView, QuestionTabs } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
 
 type InterviewQuestionReview = NonNullable<InterviewCoachingSession["result"]>["questionReviews"][number];
@@ -171,7 +171,9 @@ function ResultView({
         <span>{session.companyName} · {displayPositionName}</span>
         <strong>{result.score}<small>/100점</small></strong>
         <em className={styles.scoreBasis}>답변한 원 질문/꼬리질문 {scoredAnswerCount}개 점수를 100점 만점 기준으로 평균 환산</em>
-        <p>{formatReadableText(result.summary)}</p>
+        {formatResultSummaryParagraphs(result.summary).map((paragraph, index) => (
+          <p key={`summary-${index}`}>{paragraph}</p>
+        ))}
       </section>
 
       <section className={styles.resultSection}>
@@ -406,7 +408,7 @@ function ResultPdfDocument({
           <strong>{result.score}<small>/100점</small></strong>
           <em className={styles.scoreBasis}>답변한 원 질문/꼬리질문 {scoredAnswerCount}개 점수를 100점 만점 기준으로 평균 환산</em>
         </div>
-        {splitPdfText(result.summary).map((chunk, index) => (
+        {formatResultSummaryParagraphs(result.summary).flatMap((paragraph) => splitPdfText(paragraph)).map((chunk, index) => (
           <p className={styles.pdfTextChunk} data-pdf-block key={`summary-${index}`}>{chunk}</p>
         ))}
       </section>
@@ -645,7 +647,7 @@ function ResultPdfNcsAnalysis({ session }: { session: InterviewCoachingSession }
               <strong>{formatNcsArea(item.name)}<b>{item.relevance}%</b></strong>
               <div className={styles.track} aria-hidden="true"><span style={{ width: `${item.relevance}%` }} /></div>
             </div>
-            {splitPdfText(formatReadableText(item.reason)).map((chunk, index) => (
+            {formatNcsReasonParagraphs(item.reason).flatMap((paragraph) => splitPdfText(paragraph)).map((chunk, index) => (
               <p data-pdf-block key={`${item.name}-${index}`}>{chunk}</p>
             ))}
           </article>
@@ -791,6 +793,34 @@ function formatReadableText(value?: string | null) {
     .replace(/([^0-9.!?][.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function formatResultSummaryParagraphs(value?: string | null) {
+  const text = formatReadableText(value);
+  if (!text) return [];
+
+  return text
+    .split(/\n{2,}/)
+    .flatMap((paragraph) => splitReadableSentences(paragraph))
+    .reduce<string[]>((paragraphs, sentence) => {
+      const previous = paragraphs[paragraphs.length - 1];
+      if (!previous || previous.length + sentence.length > 150) {
+        paragraphs.push(sentence);
+        return paragraphs;
+      }
+      paragraphs[paragraphs.length - 1] = `${previous} ${sentence}`;
+      return paragraphs;
+    }, []);
+}
+
+function splitReadableSentences(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/([^0-9])([.!?])\s+(?=[가-힣A-Za-z])/g, "$1$2\n")
+    .replace(/(습니다|합니다|됩니다|입니다|있습니다|없습니다|필요합니다|요인입니다|보입니다)\s+(?=[가-힣A-Za-z])/g, "$1\n")
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function cleanDisplayList(items: string[]) {

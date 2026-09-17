@@ -802,7 +802,9 @@ export function InterviewAnalysisView({
           <article className={styles.ncsItem} key={item.name}>
             <strong>{formatNcsAreaLabel(item.name)}<b>{item.relevance}%</b></strong>
             <div className={styles.track} aria-hidden="true"><span style={{ width: `${item.relevance}%` }} /></div>
-            <p>{formatReadableText(item.reason)}</p>
+            {formatNcsReasonParagraphs(item.reason).map((paragraph, index) => (
+              <p key={`${item.name}-${index}`}>{paragraph}</p>
+            ))}
           </article>
         ))}
         {!visibleMappings.length ? (
@@ -1371,6 +1373,34 @@ function formatReadableText(value?: string | null) {
     .replace(/([^0-9.!?][.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+export function formatNcsReasonParagraphs(value?: string | null) {
+  const text = formatReadableText(value);
+  if (!text) return [];
+
+  return text
+    .split(/\n{2,}/)
+    .flatMap((paragraph) => splitNcsReasonSentences(paragraph))
+    .reduce<string[]>((paragraphs, sentence) => {
+      const previous = paragraphs[paragraphs.length - 1];
+      if (!previous || previous.length + sentence.length > 170) {
+        paragraphs.push(sentence);
+        return paragraphs;
+      }
+      paragraphs[paragraphs.length - 1] = `${previous} ${sentence}`;
+      return paragraphs;
+    }, []);
+}
+
+function splitNcsReasonSentences(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/([^0-9])([.!?])\s+(?=[가-힣A-Za-z])/g, "$1$2\n")
+    .replace(/(습니다|합니다|됩니다|입니다|있습니다|없습니다|요구됩니다|핵심입니다|필요합니다)\s+(?=[가-힣A-Za-z])/g, "$1\n")
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function formatNcsAreaLabel(value: string) {
