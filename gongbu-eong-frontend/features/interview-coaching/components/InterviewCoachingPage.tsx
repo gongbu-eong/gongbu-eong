@@ -582,16 +582,26 @@ export function InterviewCoachingPage({
                 </button>
               ) : null}
             </section>
-            <button
-              ref={termsButtonRef}
-              type="button"
-              className={styles.termsCheck}
-              aria-pressed={termsConfirmed}
-              onClick={() => setTermsOpen(true)}
-            >
-              <span>{termsConfirmed ? "✓" : ""}</span>
-              AI NCS 면접 약관동의를 해주세요.
-            </button>
+            <div className={styles.termsRow}>
+              <button
+                ref={termsButtonRef}
+                type="button"
+                className={styles.termsCheck}
+                aria-pressed={termsConfirmed}
+                onClick={() => setTermsConfirmed((confirmed) => !confirmed)}
+              >
+                <span>{termsConfirmed ? "✓" : ""}</span>
+                AI NCS 면접 약관동의를 해주세요.
+              </button>
+              <button
+                type="button"
+                className={styles.termsViewButton}
+                onClick={() => setTermsOpen(true)}
+              >
+                보기 →
+              </button>
+            </div>
+            <p className={styles.materialPrivacyNotice}>첨부 및 입력한 자소서는 코칭 제공 목적으로만 사용됩니다.</p>
             {error ? <p className={styles.error}>{error}</p> : null}
             <button
               className={styles.primaryButton}

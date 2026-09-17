@@ -482,7 +482,14 @@ function formatNcsArea(value: string) {
 }
 
 function filterAnsweredConversation(messages: InterviewMessage[]) {
-  return messages.filter((item) => item.role === "answer" || item.role === "follow_up");
+  const relevantMessages = messages.filter((item) => item.role === "answer" || item.role === "follow_up");
+  return relevantMessages.filter((message, index) => {
+    if (message.role === "answer") return true;
+    const nextMessage = relevantMessages
+      .slice(index + 1)
+      .find((item) => item.role === "answer" || item.role === "follow_up");
+    return nextMessage?.role === "answer";
+  });
 }
 
 function uniqueNcsAreas(values: string[]) {

@@ -206,11 +206,14 @@
 .materialPanel textarea::placeholder{color:#9aa4b8}
 .materialCounter{display:block;margin-top:8px;color:#5a6580;font-size:14px;text-align:right}
 .fileRemoveButton{margin:8px 0 0;border:0;background:transparent;color:#e8544d;font-size:13px;font-weight:700}
-.termsCheck{display:flex;align-items:center;gap:8px;width:100%;min-height:24px;margin:16px 0 0;border:0;background:transparent;padding:0;color:#9aa4b8;font-size:15px;font-weight:500;line-height:1;text-align:left}
+.termsRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 0}
+.termsCheck{display:flex;align-items:center;gap:8px;min-width:0;min-height:24px;border:0;background:transparent;padding:0;color:#9aa4b8;font-size:15px;font-weight:500;line-height:1;text-align:left}
 .termsCheck span{position:relative;display:block;width:24px;min-width:24px;height:24px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:50%;background:#fff;color:transparent;font-size:0;line-height:0;flex:0 0 24px;overflow:hidden}
 .termsCheck[aria-pressed="true"]{color:#5a6580}
 .termsCheck[aria-pressed="true"] span{border-color:#2f7ff0;background:#fff}
 .termsCheck[aria-pressed="true"] span::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:50%;background:#2f7ff0;transform:translate(-50%,-50%)}
+.termsViewButton{flex:0 0 auto;border:0;background:transparent;padding:0;color:#9aa4b8;font-size:15px;font-weight:500;line-height:1}
+.materialPrivacyNotice{box-sizing:border-box;margin:16px 0 0;padding:18px 22px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px!important;font-weight:700!important;line-height:1!important}
 .inputFrame>.primaryButton{height:52px;margin-top:16px;border-radius:12px;font-size:16px;font-weight:800}
 .inputFrame>.primaryButton:disabled{background:#9aa4b8}
 .termsSheet{display:flex;flex-direction:column;height:min(84vh,760px);max-height:min(84vh,760px);min-height:auto;padding:0 16px 16px;border-radius:15px 15px 0 0}
@@ -293,7 +296,7 @@
 .page{background:#fff;font-family:Pretendard,"Noto Sans KR",system-ui,sans-serif;color:#1a2233}
 .frame:not(.inputFrame){width:100%;max-width:600px;box-sizing:border-box;margin:0 auto;padding:64px 16px 108px;background:#fff}
 .frame:not(.inputFrame)>h1{margin:0 0 34px;color:#1a2233;font-size:23px;font-weight:800;line-height:1;letter-spacing:0}
-.frame:not(.inputFrame) .sectionTitle{margin:24px 0 0}
+.frame:not(.inputFrame) .sectionTitle{margin:24px 0 28px}
 .frame:not(.inputFrame) .sectionTitle h2{color:#1a2233;font-size:20px;font-weight:700;line-height:1}
 .frame:not(.inputFrame) .sectionTitle small{color:#9aa4b8;font-size:17px;font-weight:400}
 .frame:not(.inputFrame) .ncsSectionTitle small{color:#1a2233}
@@ -337,6 +340,7 @@
 .chatBubble p{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;white-space:pre-wrap;word-break:keep-all}
 .chatAnswer{background:#fff;border-color:#e4e8ef}
 .interviewPanel .chatAnswer{border-bottom:0;padding-bottom:0}
+.chatAnswer + .chatFollow{margin-top:16px}
 .chatFollow{background:#fff;border-color:#e4e8ef}
 .chatFollow strong{color:#1fb573}
 .chatFollow p{font-weight:400;color:#5a6580}
