@@ -410,10 +410,16 @@
 .pdfDocument h1{margin:0 0 32px;color:#1a2233;font-size:23px;font-weight:800;line-height:1.2}
 .pdfDocument .resultSection{margin-bottom:36px}
 .pdfDocument .pdfQuestionBlock{margin:0 0 36px;break-inside:avoid}
+.pdfDocument .resultQuestionDetail{display:grid;gap:24px}
+.pdfDocument .questionCard{padding:0 0 22px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:#fff}
+.pdfDocument .questionCard h2{margin:12px 0 0;color:#1a2233;font-size:18px;font-weight:700;line-height:1.32;white-space:pre-line;word-break:keep-all}
+.pdfDocument .questionCard p{margin:10px 0 0;color:#9aa4b8;font-size:16px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
+.pdfDocument .resultInfoPill{display:inline-block;box-sizing:border-box;width:auto;min-width:88px;max-width:none;height:32px;margin:18px 0 10px;padding:0 18px;border:1px solid currentColor;border-radius:888px;background:#fff;font-size:14px;font-weight:700;line-height:30px;text-align:center;white-space:nowrap;word-break:keep-all;overflow:visible}
+.pdfDocument .questionCard .resultInfoPill{margin-top:20px}
 .pdfQuestionLabel{display:flex;align-items:center;gap:10px;margin:0 0 18px;padding:10px 0 14px;border-bottom:1px solid #e4e8ef;background:#fff}
 .pdfQuestionLabel strong{display:inline-flex;align-items:center;justify-content:center;width:52px;height:36px;border-radius:555px;background:#2f7ff0;color:#fff;font-size:14px;font-weight:800;line-height:1}
 .pdfQuestionLabel span{color:#2f7ff0;font-size:18px;font-weight:700;line-height:1.2}
-.pdfMessage{margin:0 0 24px}
+.pdfMessage{margin:0 0 28px}
 .pdfMessageHeader{padding:0 0 12px;background:#fff}
 .pdfMessageHeader strong{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
 .pdfMessageHeader strong em{font-style:normal;color:#1fb573;font-size:18px;font-weight:700}
@@ -423,6 +429,8 @@
 .pdfAnswerChunk{min-height:0;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px}
 .pdfGuideChunk{color:#9aa4b8}
 .pdfFeedbackChunk{color:#5a6580}
+.pdfDocument .resultInfoPill+.pdfGuideChunk,.pdfDocument .resultInfoPill+.pdfFeedbackChunk{margin-top:0}
+.pdfDocument .pdfAnswerChunk+.resultInfoPill,.pdfDocument .pdfTextChunk+.resultInfoPill{margin-top:20px}
 .pdfList{display:grid;gap:10px;margin:0;padding:0;list-style:none}
 .pdfList li{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
 .pdfNcsHeader{padding:0 0 10px;background:#fff}
