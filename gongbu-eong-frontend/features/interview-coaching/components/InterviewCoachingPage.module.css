@@ -339,7 +339,7 @@
 .chatFollow strong{color:#1fb573}
 .chatFollow p{font-weight:400;color:#5a6580}
 .chatBubble .badgeList{margin-top:16px}
-.chatBubble>.resultInfoPill{margin:16px 0 8px}
+.chatBubble>.resultInfoPill{margin:24px 0 8px}
 .savedAnswer{display:block;width:100%;height:120px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px;color:#5a6580;font:inherit;font-size:17px;font-weight:400;line-height:1.35;resize:none}
 .answerBox{display:grid;gap:10px}
 .answerPrompt{color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
@@ -358,9 +358,9 @@
 .resultSection{margin:0 0 24px;padding:0;border:0;background:#fff;box-shadow:none}
 .resultSection h2{margin:0 0 20px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
 .resultQuestionDetail{display:grid;gap:24px}
-.resultQuestionDetail .questionCard h2{margin:12px 0 0;color:#1a2233;font-size:18px;font-weight:700;line-height:1.2;word-break:keep-all;white-space:pre-line}
-.resultQuestionDetail .questionCard p{display:block;margin:16px 0 0;color:#9aa4b8;font-size:16px;font-weight:400;line-height:1.35;white-space:pre-line}
-.resultQuestionDetail .questionCard .resultInfoPill{margin-top:16px}
+.resultQuestionDetail .questionCard h2{margin:12px 0 0;color:#1a2233;font-size:17px;font-weight:400;line-height:1.35;word-break:keep-all;white-space:pre-line}
+.resultQuestionDetail .questionCard p{display:block;margin:16px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;white-space:pre-line;word-break:keep-all}
+.resultQuestionDetail .questionCard .resultInfoPill{margin-top:24px}
 .resultQuestionDetail .questionCard .resultInfoPill+p{margin-top:8px}
 .resultSkillList{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
 .resultSkillList span{display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:555px;background:#5a6580;color:#fff;font-size:14px;font-weight:600;line-height:1}
@@ -376,8 +376,8 @@
 .answerScoreBadge b{color:currentColor;font-size:16px;font-weight:700}
 .answerScoreBadge small{color:#1a2233;font-size:16px;font-weight:700}
 .savedAnswerText{box-sizing:border-box;width:100%;min-height:120px;margin:0;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px;color:#5a6580!important;font-size:17px!important;font-weight:400!important;line-height:1.35!important;white-space:pre-line;word-break:keep-all}
-.promptGuide{margin:0!important;color:#9aa4b8!important;font-size:16px!important;line-height:1.35!important;white-space:pre-line}
-.feedback{margin:16px 0 0;padding:0;border:0}
+.promptGuide{margin:0!important;color:#5a6580!important;font-size:17px!important;font-weight:400!important;line-height:1.35!important;white-space:pre-line;word-break:keep-all}
+.feedback{margin:24px 0 0;padding:0;border:0}
 .feedback .resultInfoPill{margin:0 0 8px}
 .feedback .resultInfoPill:not(:first-child){margin-top:24px}
 .feedback b{display:block;margin:0;color:#1a2233;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
@@ -412,8 +412,8 @@
 .pdfDocument .pdfQuestionBlock{margin:0 0 36px;break-inside:avoid}
 .pdfDocument .resultQuestionDetail{display:grid;gap:24px}
 .pdfDocument .questionCard{padding:0 0 22px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:#fff}
-.pdfDocument .questionCard h2{margin:12px 0 0;color:#1a2233;font-size:18px;font-weight:700;line-height:1.32;white-space:pre-line;word-break:keep-all}
-.pdfDocument .questionCard p{margin:10px 0 0;color:#9aa4b8;font-size:16px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
+.pdfDocument .questionCard h2{margin:12px 0 0;color:#1a2233;font-size:17px;font-weight:400;line-height:1.35;white-space:pre-line;word-break:keep-all}
+.pdfDocument .questionCard p{margin:10px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;white-space:pre-line;word-break:keep-all}
 .pdfDocument .resultInfoPill{display:inline-block;box-sizing:border-box;width:auto;min-width:88px;max-width:none;height:32px;margin:18px 0 10px;padding:0 18px;border:1px solid currentColor;border-radius:888px;background:#fff;font-size:14px;font-weight:700;line-height:30px;text-align:center;white-space:nowrap;word-break:keep-all;overflow:visible}
 .pdfDocument .questionCard .resultInfoPill{margin-top:20px}
 .pdfQuestionLabel{display:flex;align-items:center;gap:10px;margin:0 0 18px;padding:10px 0 14px;border-bottom:1px solid #e4e8ef;background:#fff}
@@ -427,7 +427,7 @@
 .pdfFollowAnswer .answerScoreBadge{color:#1fb573}
 .pdfTextChunk,.pdfAnswerChunk,.pdfGuideChunk,.pdfFeedbackChunk{box-sizing:border-box;margin:0 0 8px;background:#fff;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
 .pdfAnswerChunk{min-height:0;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px}
-.pdfGuideChunk{color:#9aa4b8}
+.pdfGuideChunk{color:#5a6580}
 .pdfFeedbackChunk{color:#5a6580}
 .pdfDocument .resultInfoPill+.pdfGuideChunk,.pdfDocument .resultInfoPill+.pdfFeedbackChunk{margin-top:0}
 .pdfDocument .pdfAnswerChunk+.resultInfoPill,.pdfDocument .pdfTextChunk+.resultInfoPill{margin-top:20px}
