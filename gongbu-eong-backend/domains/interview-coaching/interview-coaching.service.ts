@@ -482,6 +482,7 @@ export async function answerInterviewQuestion(args: {
     questionId: question.id,
     role: "answer",
     content: answer,
+    followUpIndex: followUpCount > 0 ? followUpCount : undefined,
   });
 
   let feedback: InterviewAnswerFeedback;

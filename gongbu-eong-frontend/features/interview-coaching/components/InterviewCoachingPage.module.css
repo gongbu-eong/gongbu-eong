@@ -297,6 +297,9 @@
 .frame:not(.inputFrame) .sectionTitle h2{color:#1a2233;font-size:20px;font-weight:700;line-height:1}
 .frame:not(.inputFrame) .sectionTitle small{color:#9aa4b8;font-size:17px;font-weight:400}
 .frame:not(.inputFrame) .ncsSectionTitle small{color:#1a2233}
+.frame:not(.inputFrame) .ncsSectionTitle{margin:40px 0 24px}
+.frame:not(.inputFrame) .ncsSectionTitle h2{font-size:26px;font-weight:800;line-height:1.15}
+.frame:not(.inputFrame) .ncsSectionTitle small{font-size:20px;line-height:1.15}
 .profileCard{display:block;margin:0;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
 .profileHeader span{display:block;margin:0 0 17px;color:#5a6580!important;font-size:18px!important;font-weight:700!important;line-height:1!important}
 .profileHeader strong{display:block;margin:0 0 8px;color:#1a2233;font-size:18px;font-weight:700;line-height:1.12;word-break:keep-all}
@@ -363,6 +366,8 @@
 .answerScoreBadge{display:flex;align-items:center;justify-content:space-between;height:46px;box-sizing:border-box;margin:0 0 16px;padding:0 16px;border:1px solid currentColor;border-radius:10px;background:#fff;color:#2f7ff0}
 .chatFollow + .chatAnswer .answerScoreBadge{color:#1fb573}
 .chatFollow + .chatAnswer strong{color:#1fb573}
+.chatFollowAnswer strong{color:#1fb573}
+.chatFollowAnswer .answerScoreBadge{color:#1fb573}
 .answerScoreBadge span{color:#1a2233;font-size:16px;font-weight:700}
 .answerScoreBadge b{color:currentColor;font-size:16px;font-weight:700}
 .answerScoreBadge small{color:#1a2233;font-size:16px;font-weight:700}
@@ -381,12 +386,12 @@
 .resultHero strong{display:block;margin:16px 0 8px;color:#1a2233;font-size:52px;font-weight:800;line-height:1;text-align:center}
 .resultHero p{max-width:none;margin:0;color:#5a6580;font-size:17px;line-height:1.45;white-space:pre-line;word-break:keep-all}
 .resultSection ul{display:grid;gap:16px;margin:0;padding:0;list-style:none;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line}
-.ncsPanel{display:grid;gap:24px;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
-.ncsItem strong{font-size:18px;font-weight:700}
-.ncsItem strong b{color:#2f7ff0;font-size:18px;font-weight:700}
-.ncsItem p{margin:8px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;white-space:pre-line;word-break:keep-all}
+.ncsPanel{display:grid;gap:36px;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
+.ncsItem strong{font-size:22px;font-weight:800;line-height:1.15}
+.ncsItem strong b{color:#2f7ff0;font-size:22px;font-weight:800}
+.ncsItem p{margin:18px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
 .resultSection + .profileCard{margin-top:40px;border-top:1px solid #e4e8ef;padding-top:40px}
-.track{height:12px;margin:8px 0;border-radius:55px;background:#e4e8ef}
+.track{height:12px;margin:12px 0 0;border-radius:55px;background:#e4e8ef}
 .track span{background:#2f7ff0}
 .resultDownloadButton{margin-top:24px;border:1px solid #2f7ff0;background:#fff;color:#2f7ff0}
 .resultBackButton{margin-top:8px;background:#2f7ff0;color:#fff}

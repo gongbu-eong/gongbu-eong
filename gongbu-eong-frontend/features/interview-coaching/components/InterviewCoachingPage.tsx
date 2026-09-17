@@ -857,7 +857,7 @@ export function InterviewAnalysisView({
       {mode !== "profile" ? <section className={styles.ncsPanel}>
         {visibleMappings.map((item) => (
           <article className={styles.ncsItem} key={item.name}>
-            <strong>{item.name}<b>{item.relevance}%</b></strong>
+            <strong>{formatNcsAreaLabel(item.name)}<b>{item.relevance}%</b></strong>
             <div className={styles.track} aria-hidden="true"><span style={{ width: `${item.relevance}%` }} /></div>
             <p>{formatReadableText(item.reason)}</p>
           </article>
@@ -1410,6 +1410,17 @@ function formatReadableText(value?: string | null) {
     .replace(/([.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function formatNcsAreaLabel(value: string) {
+  return value
+    .replace("문제해결능력", "문제 해결 능력")
+    .replace("의사소통능력", "의사 소통 능력")
+    .replace("자기개발능력", "자기 개발 능력")
+    .replace("대인관계능력", "대인 관계 능력")
+    .replace("정보능력", "정보 능력")
+    .replace("수리능력", "수리 능력")
+    .replace("직업윤리", "직업 윤리");
 }
 
 function cleanDisplayList(items: string[]) {

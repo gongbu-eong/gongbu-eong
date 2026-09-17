@@ -9,6 +9,7 @@ import { InterviewAnalysisView, QuestionTabs } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
 
 type InterviewQuestionReview = NonNullable<InterviewCoachingSession["result"]>["questionReviews"][number];
+type ResultAnswerTone = "main" | "follow_up";
 const NCS_AREA_NAMES: NcsAreaName[] = [
   "의사소통능력",
   "수리능력",
@@ -250,9 +251,13 @@ function ResultQuestionDetail({
         <div className={styles.chatList}>
           {messages.map((message, messageIndex) => {
             const answerScore = getAnswerMessageScore(message, messages, messageIndex, review);
+            const answerTone: ResultAnswerTone = getAnswerFollowUpIndex(message, messages, messageIndex)
+              ? "follow_up"
+              : "main";
             return (
               <ResultConversationMessage
                 message={message}
+                answerTone={answerTone}
                 ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(messages, messageIndex) : []}
                 guide={message.role === "follow_up" ? getFollowUpGuide(messages, messageIndex) : ""}
                 scoreLabel={answerScore?.label}
@@ -279,6 +284,7 @@ function ResultQuestionDetail({
 
 function ResultConversationMessage({
   message,
+  answerTone,
   ncsAreas = [],
   guide,
   scoreLabel,
@@ -286,6 +292,7 @@ function ResultConversationMessage({
   followUpTotal,
 }: {
   message: InterviewMessage;
+  answerTone?: ResultAnswerTone;
   ncsAreas?: InterviewQuestion["ncsAreas"];
   guide?: string;
   scoreLabel?: string;
@@ -300,7 +307,7 @@ function ResultConversationMessage({
       : "AI 질문";
 
   return (
-    <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""}`}>
+    <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""} ${message.role === "answer" && answerTone === "follow_up" ? styles.chatFollowAnswer : ""}`}>
       {message.role === "follow_up" && ncsAreas.length ? (
         <div className={styles.resultSkillList}>
           {ncsAreas.map((area) => <span key={area}>{formatNcsArea(area)}</span>)}
@@ -432,13 +439,13 @@ function getAnswerMessageScore(
   review: InterviewQuestionReview | null | undefined,
 ) {
   if (message.role !== "answer") return null;
-  const previousPrompt = findPreviousPromptMessage(messages, messageIndex);
-  if (previousPrompt?.role === "follow_up" && previousPrompt.followUpIndex) {
+  const followUpIndex = getAnswerFollowUpIndex(message, messages, messageIndex);
+  if (followUpIndex) {
     const followUpScore = review?.followUpScores?.find(
-      (item) => item.followUpIndex === previousPrompt.followUpIndex,
+      (item) => item.followUpIndex === followUpIndex,
     );
     return {
-      label: `꼬리질문 ${previousPrompt.followUpIndex} 답변 점수`,
+      label: `꼬리질문 ${followUpIndex} 답변 점수`,
       score: followUpScore?.score ?? message.feedback?.score,
     };
   }
@@ -446,6 +453,19 @@ function getAnswerMessageScore(
     label: "질문 답변 점수",
     score: review?.answerScore ?? message.feedback?.score,
   };
+}
+
+function getAnswerFollowUpIndex(
+  message: InterviewMessage,
+  messages: InterviewMessage[],
+  messageIndex: number,
+) {
+  if (message.role !== "answer") return null;
+  if (message.followUpIndex) return message.followUpIndex;
+  const previousPrompt = findPreviousPromptMessage(messages, messageIndex);
+  return previousPrompt?.role === "follow_up" && previousPrompt.followUpIndex
+    ? previousPrompt.followUpIndex
+    : null;
 }
 
 function findPreviousPromptMessage(messages: InterviewMessage[], answerIndex: number) {
