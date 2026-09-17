@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getInterviewCoachingSession } from "../interview-coaching.api";
 import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
-import { InterviewAnalysisView, QuestionTabs } from "./InterviewCoachingPage";
+import { AnswerLoadingOverlay, InterviewAnalysisView, QuestionTabs } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
 
 type InterviewQuestionReview = NonNullable<InterviewCoachingSession["result"]>["questionReviews"][number];
@@ -68,6 +68,7 @@ function ResultView({
 }) {
   const result = session.result;
   const pdfCaptureRef = useRef<HTMLDivElement | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const firstAnsweredQuestionId =
     session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
     session.questions[0]?.id ||
@@ -94,9 +95,11 @@ function ResultView({
     : null;
   const scoredAnswerCount = getScoredAnswerCount(result);
   const downloadResultPdf = async () => {
+    if (isDownloading) return;
     const target = pdfCaptureRef.current;
     if (!target) return;
     const previousStyle = target.getAttribute("style");
+    setIsDownloading(true);
     try {
       const { toJpeg } = await import("html-to-image");
       target.style.position = "fixed";
@@ -138,6 +141,7 @@ function ResultView({
       } else {
         target.setAttribute("style", previousStyle);
       }
+      setIsDownloading(false);
     }
   };
 
@@ -200,8 +204,9 @@ function ResultView({
           scoredAnswerCount={scoredAnswerCount}
         />
       </div>
-      <button type="button" className={styles.resultDownloadButton} onClick={downloadResultPdf}>
-        NCS 면접 코칭 결과 다운받기
+      {isDownloading ? <AnswerLoadingOverlay text="AI NCS 면접 코칭 결과 파일을 만들고 있어요." /> : null}
+      <button type="button" className={styles.resultDownloadButton} onClick={downloadResultPdf} disabled={isDownloading}>
+        {isDownloading ? "결과 파일 생성 중" : "NCS 면접 코칭 결과 다운받기"}
       </button>
       <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
         NCS 면접 코칭 다시하기
@@ -783,7 +788,7 @@ function formatReadableText(value?: string | null) {
   return cleaned
     .replace(/(^|\s+)(?=(?:\d+[.)]\s|[①②③④⑤⑥⑦⑧⑨⑩]\s))/g, "\n\n")
     .replace(/\n{3,}/g, "\n\n")
-    .replace(/([.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
+    .replace(/([^0-9.!?][.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }

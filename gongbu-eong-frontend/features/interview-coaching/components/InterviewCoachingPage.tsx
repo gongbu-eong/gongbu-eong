@@ -884,6 +884,19 @@ export function QuestionTabs({
     });
   };
 
+  const scrollToQuestionArea = () => {
+    const target = anchorRef.current || shellRef.current;
+    if (!target) return;
+    window.requestAnimationFrame(() => {
+      const headerOffset = 56;
+      const top = target.getBoundingClientRect().top + window.scrollY - headerOffset;
+      window.scrollTo({
+        top: Math.max(0, top),
+        behavior: "smooth",
+      });
+    });
+  };
+
   const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
     const list = tabListRef.current;
     if (!list) return;
@@ -968,6 +981,7 @@ export function QuestionTabs({
               onClick={(event) => {
                 event.preventDefault();
                 onSelect(question.id);
+                scrollToQuestionArea();
               }}
               aria-current={isActive ? "true" : undefined}
               title={`질문 ${label.replace(/^Q/i, "")}`}
@@ -1319,11 +1333,11 @@ function InterviewLoadingScreen({ mode }: { mode: "start" | "complete" }) {
   );
 }
 
-function AnswerLoadingOverlay() {
+export function AnswerLoadingOverlay({ text = "답변을 분석하고 꼬리질문을 만들고 있어요." }: { text?: string }) {
   return (
     <div className={styles.answerLoadingOverlay} role="status" aria-live="polite">
       <span className={styles.answerLoadingSpinner} aria-hidden="true" />
-      <p className={styles.answerLoadingText}>답변을 분석하고 꼬리질문을 만들고 있어요.</p>
+      <p className={styles.answerLoadingText}>{text}</p>
     </div>
   );
 }
@@ -1353,7 +1367,7 @@ function formatReadableText(value?: string | null) {
   return cleaned
     .replace(/(^|\s+)(?=(?:\d+[.)]\s|[①②③④⑤⑥⑦⑧⑨⑩]\s))/g, "\n\n")
     .replace(/\n{3,}/g, "\n\n")
-    .replace(/([.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
+    .replace(/([^0-9.!?][.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
