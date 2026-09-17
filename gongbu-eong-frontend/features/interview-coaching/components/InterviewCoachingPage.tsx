@@ -20,7 +20,6 @@ import type {
   InterviewMessage,
   InterviewNcsMapping,
   InterviewQuestion,
-  NcsAreaName,
 } from "../interview-coaching.dto";
 import styles from "./InterviewCoachingPage.module.css";
 
@@ -126,15 +125,6 @@ const INTERVIEW_TERMS = [
   },
 ] as const;
 const CIRCLED_NUMBERS = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩"];
-const NCS_AREA_NAMES: NcsAreaName[] = [
-  "의사소통능력",
-  "수리능력",
-  "문제해결능력",
-  "자기개발능력",
-  "대인관계능력",
-  "정보능력",
-  "직업윤리",
-];
 
 export function InterviewCoachingPage({
   initialSessionId,
@@ -615,16 +605,16 @@ export function InterviewCoachingPage({
         ) : (
           <>
             <InterviewAnalysisView session={session} mode="profile" />
-            <section className={styles.sectionTitle}>
-              <h2>AI 면접</h2>
-              <small>문항별 꼬리질문 최대 3개</small>
-            </section>
             <QuestionTabs
               questions={session.questions}
               messages={session.messages}
               activeQuestionId={selectedQuestionId}
               onSelect={setActiveQuestionId}
             />
+            <section className={styles.sectionTitle}>
+              <h2>AI 면접</h2>
+              <small>문항별 꼬리질문 최대 3개</small>
+            </section>
             <div className={styles.questionList}>
               {session.questions
                 .filter((question) => question.id === selectedQuestionId)
@@ -1092,14 +1082,14 @@ function InterviewQuestionPanel({
   onAnswerChange: (value: string) => void;
   onSubmitAnswer: () => void;
 }) {
-  const prompt = cleanDisplayText(question.question) || question.question;
+  const prompt = formatReadableText(question.question);
   const intent = cleanDisplayText(question.intent) || question.intent;
   const visibleMessages = messages.filter((item) => item.role === "answer" || item.role === "follow_up");
   const latestMessage = [...visibleMessages].reverse()[0];
   const isAnsweringFollowUp = latestMessage?.role === "follow_up";
   const answerPlaceholder = isAnsweringFollowUp
-    ? "위 꼬리질문에 대해 면접장에서 말하듯 답변해 보세요."
-    : "면접장에서 말하듯 답변을 적어보세요.";
+    ? "위 질문에 대해 면접장에서 말하듯 답변해 보세요."
+    : "위 질문에 대해 면접장에서 말하듯 답변해 보세요.";
   return (
     <section className={styles.interviewPanel}>
       <article className={styles.questionCard}>
@@ -1111,11 +1101,10 @@ function InterviewQuestionPanel({
       </article>
       {visibleMessages.length ? (
         <div className={styles.chatList}>
-          {visibleMessages.map((message, messageIndex) => (
+          {visibleMessages.map((message) => (
             <ChatMessage
               key={message.id}
               message={message}
-              ncsAreas={message.role === "follow_up" ? getFollowUpNcsAreas(visibleMessages, messageIndex) : []}
               followUpTotal={MAX_FOLLOW_UPS_PER_QUESTION}
               showFeedback={false}
             />
@@ -1153,16 +1142,14 @@ function InterviewQuestionPanel({
 
 function ChatMessage({
   message,
-  ncsAreas = [],
   followUpTotal,
   showFeedback = true,
 }: {
   message: InterviewMessage;
-  ncsAreas?: InterviewQuestion["ncsAreas"];
   followUpTotal?: number;
   showFeedback?: boolean;
 }) {
-  const content = cleanDisplayText(message.content) || message.content;
+  const content = formatReadableText(message.content);
   const label = message.role === "answer"
     ? "내 답변"
     : message.role === "follow_up"
@@ -1186,14 +1173,9 @@ function ChatMessage({
       ) : (
         <p>{content}</p>
       )}
-      {message.role === "follow_up" && ncsAreas.length ? (
-        <div className={styles.badgeList}>
-          {ncsAreas.map((area) => <span key={area}>{area}</span>)}
-        </div>
-      ) : null}
       {showFeedback && message.feedback ? (
         <div className={styles.feedback}>
-          <b>{cleanDisplayText(message.feedback.summary) || message.feedback.summary}</b>
+          <b>{formatReadableText(message.feedback.summary)}</b>
           <ul>
             {cleanDisplayList(message.feedback.strengths).slice(0, 2).map((item) => <li key={`s-${item}`}>{item}</li>)}
             {cleanDisplayList(message.feedback.improvements).slice(0, 2).map((item) => <li key={`i-${item}`}>{item}</li>)}
@@ -1202,21 +1184,6 @@ function ChatMessage({
       ) : null}
     </article>
   );
-}
-
-function getFollowUpNcsAreas(messages: InterviewMessage[], messageIndex: number) {
-  for (let index = messageIndex - 1; index >= 0; index -= 1) {
-    const message = messages[index];
-    if (message.role === "answer") {
-      return uniqueNcsAreas(message.feedback?.followUpNcsAreas || []);
-    }
-  }
-  return [];
-}
-
-function uniqueNcsAreas(values: string[]) {
-  const validNames = new Set(NCS_AREA_NAMES);
-  return Array.from(new Set(values.filter((value): value is NcsAreaName => validNames.has(value as NcsAreaName))));
 }
 
 function ConnectedJobCard({ job, onRemove }: { job: ConnectedJob; onRemove: () => void }) {
@@ -1432,6 +1399,16 @@ function cleanDisplayText(value?: string | null) {
     .replace(/\s*\/\s*/g, " / ")
     .replace(/\s*\|\s*/g, " / ")
     .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function formatReadableText(value?: string | null) {
+  const cleaned = cleanDisplayText(value);
+  return cleaned
+    .replace(/\s*(?=(?:\d+[\).]|[①②③④⑤⑥⑦⑧⑨⑩]))/g, "\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/([.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 

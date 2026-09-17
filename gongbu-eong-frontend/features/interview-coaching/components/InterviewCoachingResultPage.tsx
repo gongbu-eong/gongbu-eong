@@ -147,13 +147,11 @@ function ResultView({
       </section>
 
       <section className={styles.resultHero}>
-        <h2>최종평가</h2>
+        <h2>최종 평가</h2>
         <span>{session.companyName} · {displayPositionName}</span>
         <strong>{result.score}<small>/100점</small></strong>
         <p>{formatReadableText(result.summary)}</p>
       </section>
-
-      <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
 
       <section className={styles.resultSection}>
         <h2>잘한 점</h2>
@@ -169,6 +167,8 @@ function ResultView({
         <h2>추가 연습 질문</h2>
         <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
       </section>
+
+      <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
 
       <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
 
@@ -354,12 +354,11 @@ function ResultPdfDocument({
         })}
       </section>
       <section className={styles.resultHero}>
-        <h2>최종평가</h2>
+        <h2>최종 평가</h2>
         <span>{session.companyName} · {displayPositionName}</span>
         <strong>{result.score}<small>/100점</small></strong>
         <p>{formatReadableText(result.summary)}</p>
       </section>
-      <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
       <section className={styles.resultSection}>
         <h2>잘한 점</h2>
         <ul>{strengths.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
@@ -372,6 +371,7 @@ function ResultPdfDocument({
         <h2>추가 연습 질문</h2>
         <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
       </section>
+      <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
       <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
     </div>
   );
@@ -485,9 +485,10 @@ function cleanDisplayText(value?: string | null) {
 function formatReadableText(value?: string | null) {
   const cleaned = cleanDisplayText(value);
   return cleaned
-    .replace(/\s+(?=[①②③④⑤⑥⑦⑧⑨⑩])/g, "\n")
-    .replace(/\s+(?=\d+\))/g, "\n")
-    .replace(/([.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금))/g, "$1\n\n")
+    .replace(/\s*(?=(?:\d+[\).]|[①②③④⑤⑥⑦⑧⑨⑩]))/g, "\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/([.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
