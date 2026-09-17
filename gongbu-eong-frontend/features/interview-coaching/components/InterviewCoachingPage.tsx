@@ -959,6 +959,7 @@ export function QuestionTabs({
       <nav
         ref={tabListRef}
         className={styles.questionTabs}
+        data-tab-count={Math.min(questions.length, 5)}
         aria-label="면접 질문 선택"
         onWheel={handleWheel}
         onPointerDown={handlePointerDown}

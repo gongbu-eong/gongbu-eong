@@ -310,7 +310,8 @@
 .questionTabsAnchor{height:0}
 .questionTabsShell{position:sticky;top:48px;z-index:40;display:block;box-sizing:border-box;width:calc(100% + 32px);height:68px;margin:32px -16px 24px;padding:16px 36px;border:0;border-bottom:1px solid #e4e8ef;background:rgba(255,255,255,.96);box-shadow:none}
 .questionTabsFixed{position:fixed;top:48px;left:50%;width:min(600px,100vw);margin:0;transform:translateX(-50%);box-shadow:0 10px 20px rgba(26,34,51,.04)}
-.questionTabs{display:flex;gap:15px;justify-content:center;width:100%;min-width:0;overflow:visible;scrollbar-width:none}
+.questionTabs{--question-tab-size:52px;--question-tab-gap:clamp(18px,calc((min(100vw,600px) - 332px) / 4),67px);display:flex;gap:var(--question-tab-gap);justify-content:center;width:100%;min-width:0;overflow:visible;scrollbar-width:none}
+.questionTabs[data-tab-count="5"]{gap:0;justify-content:space-between}
 .questionTabs::-webkit-scrollbar{display:none}
 .questionTabsControl{display:none}
 .questionTabs button,.resultQuestionTabs button{flex:0 0 52px;min-width:52px;height:36px;border:1px solid #e4e8ef;border-radius:555px;background:#fff;color:#5a6580;font-size:14px;font-weight:800;line-height:1}
