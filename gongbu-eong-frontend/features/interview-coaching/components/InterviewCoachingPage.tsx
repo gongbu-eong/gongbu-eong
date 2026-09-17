@@ -850,7 +850,7 @@ export function InterviewAnalysisView({
           <ProfileList title="필요 지식/경험" items={displayKnowledge} />
         </div>
       </section> : null}
-      {mode !== "profile" ? <section className={styles.sectionTitle}>
+      {mode !== "profile" ? <section className={`${styles.sectionTitle} ${styles.ncsSectionTitle}`}>
         <h2>{ncsTitle}</h2>
         <small>{visibleMappings.length}개 매칭</small>
       </section> : null}
@@ -859,7 +859,7 @@ export function InterviewAnalysisView({
           <article className={styles.ncsItem} key={item.name}>
             <strong>{item.name}<b>{item.relevance}%</b></strong>
             <div className={styles.track} aria-hidden="true"><span style={{ width: `${item.relevance}%` }} /></div>
-            <p>{cleanDisplayText(item.reason) || item.reason}</p>
+            <p>{formatReadableText(item.reason)}</p>
           </article>
         ))}
         {!visibleMappings.length ? (

@@ -296,6 +296,7 @@
 .frame:not(.inputFrame) .sectionTitle{margin:24px 0 0}
 .frame:not(.inputFrame) .sectionTitle h2{color:#1a2233;font-size:20px;font-weight:700;line-height:1}
 .frame:not(.inputFrame) .sectionTitle small{color:#9aa4b8;font-size:17px;font-weight:400}
+.frame:not(.inputFrame) .ncsSectionTitle small{color:#1a2233}
 .profileCard{display:block;margin:0;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
 .profileHeader span{display:block;margin:0 0 17px;color:#5a6580!important;font-size:18px!important;font-weight:700!important;line-height:1!important}
 .profileHeader strong{display:block;margin:0 0 8px;color:#1a2233;font-size:18px;font-weight:700;line-height:1.12;word-break:keep-all}
@@ -310,16 +311,17 @@
 .questionTabsAnchor{height:0}
 .questionTabsShell{position:sticky;top:48px;z-index:40;display:block;box-sizing:border-box;width:calc(100% + 32px);height:68px;margin:32px -16px 24px;padding:16px 36px;border:0;border-bottom:1px solid #e4e8ef;background:rgba(255,255,255,.96);box-shadow:none}
 .questionTabsFixed{position:fixed;top:48px;left:50%;width:min(600px,100vw);margin:0;transform:translateX(-50%);box-shadow:0 10px 20px rgba(26,34,51,.04)}
-.questionTabs{display:flex;gap:14px;justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
+.questionTabs{display:flex;gap:0;justify-content:space-between;width:100%;min-width:0;overflow:visible;scrollbar-width:none}
 .questionTabs::-webkit-scrollbar{display:none}
 .questionTabsControl{display:none}
-.questionTabs button,.resultQuestionTabs button{flex:0 0 auto;min-width:52px;height:36px;border:1px solid #e4e8ef;border-radius:555px;background:#fff;color:#5a6580;font-size:14px;font-weight:800;line-height:1}
+.questionTabs button,.resultQuestionTabs button{flex:0 0 52px;min-width:52px;height:36px;border:1px solid #e4e8ef;border-radius:555px;background:#fff;color:#5a6580;font-size:14px;font-weight:800;line-height:1}
 .questionTabs button.questionTabActive,.resultQuestionTabs button.questionTabActive{border-color:#2f7ff0;background:#2f7ff0;color:#fff}
 .questionTabs button.questionTabAnswered:not(.questionTabActive),.resultQuestionTabs button.questionTabAnswered:not(.questionTabActive){border-color:#2f7ff0;background:#e8f1ff;color:#2f7ff0}
 .questionList{display:block}
 .interviewPanel{display:grid;gap:24px;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
 .interviewPanel .questionCard,.resultQuestionDetail .questionCard{padding:0 0 20px;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:#fff}
 .questionMeta{display:flex;align-items:center;justify-content:space-between;color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
+.questionMeta span:only-child{color:#2f7ff0!important;font-size:18px!important;font-weight:700!important}
 .questionMeta span + span{color:#9aa4b8;font-size:16px;font-weight:400}
 .questionCard h2{margin:18px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;word-break:keep-all;white-space:pre-line}
 .interviewPanel .questionCard p{display:none}
@@ -375,14 +377,15 @@
 .reviewCard p{margin:16px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45}
 .resultHero{margin:24px 0;border:0;border-bottom:1px solid #e4e8ef;border-radius:0;background:#fff;padding:0 0 40px;text-align:left;box-shadow:none}
 .resultHero h2{margin:0 0 16px;color:#1a2233;font-size:20px;font-weight:700}
-.resultHero span{display:inline-flex;align-items:center;min-height:28px;padding:0 10px;border-radius:555px;background:#e8f1ff;color:#2f7ff0;font-size:14px;font-weight:700}
-.resultHero strong{display:block;margin:16px 0 8px;color:#1a2233;font-size:52px;font-weight:800;line-height:1}
+.resultHero span{display:flex;align-items:center;width:max-content;min-height:28px;margin:0 auto;padding:0 10px;border-radius:555px;background:#e8f1ff;color:#2f7ff0;font-size:14px;font-weight:700;text-align:center}
+.resultHero strong{display:block;margin:16px 0 8px;color:#1a2233;font-size:52px;font-weight:800;line-height:1;text-align:center}
 .resultHero p{max-width:none;margin:0;color:#5a6580;font-size:17px;line-height:1.45;white-space:pre-line;word-break:keep-all}
 .resultSection ul{display:grid;gap:16px;margin:0;padding:0;list-style:none;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line}
 .ncsPanel{display:grid;gap:24px;border:0;border-radius:0;background:#fff;padding:0;box-shadow:none}
 .ncsItem strong{font-size:18px;font-weight:700}
 .ncsItem strong b{color:#2f7ff0;font-size:18px;font-weight:700}
-.ncsItem p{margin:8px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35}
+.ncsItem p{margin:8px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;white-space:pre-line;word-break:keep-all}
+.resultSection + .profileCard{margin-top:40px;border-top:1px solid #e4e8ef;padding-top:40px}
 .track{height:12px;margin:8px 0;border-radius:55px;background:#e4e8ef}
 .track span{background:#2f7ff0}
 .resultDownloadButton{margin-top:24px;border:1px solid #2f7ff0;background:#fff;color:#2f7ff0}
