@@ -889,11 +889,13 @@ export function QuestionTabs({
   messages,
   activeQuestionId,
   onSelect,
+  getQuestionLabel,
 }: {
   questions: InterviewQuestion[];
   messages: InterviewMessage[];
   activeQuestionId: string;
   onSelect: (questionId: string) => void;
+  getQuestionLabel?: (question: InterviewQuestion, index: number) => string;
 }) {
   const anchorRef = useRef<HTMLDivElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
@@ -1022,6 +1024,7 @@ export function QuestionTabs({
         {questions.map((question, index) => {
           const isActive = question.id === activeQuestionId;
           const isAnswered = answered.has(question.id);
+          const label = getQuestionLabel?.(question, index) || `Q${index + 1}`;
           return (
             <button
               key={question.id}
@@ -1034,9 +1037,9 @@ export function QuestionTabs({
                 onSelect(question.id);
               }}
               aria-current={isActive ? "true" : undefined}
-              title={`질문 ${index + 1}`}
+              title={`질문 ${label.replace(/^Q/i, "")}`}
             >
-              Q{index + 1}
+              {label}
             </button>
           );
         })}
@@ -1415,7 +1418,7 @@ function cleanDisplayText(value?: string | null) {
 function formatReadableText(value?: string | null) {
   const cleaned = cleanDisplayText(value);
   return cleaned
-    .replace(/\s*(?=(?:\d+[\).]|[①②③④⑤⑥⑦⑧⑨⑩]))/g, "\n\n")
+    .replace(/(^|\s+)(?=(?:\d+[.)]\s|[①②③④⑤⑥⑦⑧⑨⑩]\s))/g, "\n\n")
     .replace(/\n{3,}/g, "\n\n")
     .replace(/([.!?])\s+(?=(실제|우선|예를|다음|전기|면접|질문|응답|이후|첫|둘|셋|넷|다섯|마지막|특히|다만|현재|지금|방금|최종|각|그|이|저))/g, "$1\n\n")
     .replace(/\n{3,}/g, "\n\n")

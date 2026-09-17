@@ -585,6 +585,10 @@ async function requestStartPayload(input: InterviewStartInput) {
         text: `한국어 AI NCS 면접 코치입니다.
 지원 공고와 직무를 분석해 NCS 7개 후보 중 실제로 연관된 영역만 추출하고, 실제 면접 연습 질문을 생성하세요.
 모든 분석과 질문은 기업명, 지원 직무, 공고 내용에서 확인되는 업무/자격/우대사항을 근거로 작성하세요.
+목록형 문장을 작성할 때는 한 줄에 하나씩 "1. 내용", "2. 내용" 형식으로 작성하세요.
+"(1)", "1)", "①" 같은 번호 표기는 사용하지 말고, 한 문장 안에 여러 번호를 붙여 나열하지 마세요.
+모바일 화면에서 사람이 부담 없이 읽을 수 있도록 각 질문의 intent는 1~2문장, ncsMappings.reason은 2~4문장 안에서 핵심 근거만 작성하세요.
+모든 분석 문장은 답변자가 30초~1분 안에 훑을 수 있는 분량을 목표로 하되, 항목별 길이를 기계적으로 똑같이 맞추지 말고 근거의 중요도에 따라 자연스럽게 조절하세요.
 
 기업명: ${input.companyName}
 지원 직무: ${input.positionName}
@@ -636,6 +640,8 @@ async function requestStartSupplementPayload(
         text: `한국어 AI NCS 면접 코치입니다.
 앞선 AI 응답에서 NCS 매핑 또는 면접 질문 수가 부족했습니다.
 서버에서 임의 질문을 만들지 않도록, 아래 공고/직무 정보를 다시 분석해 최종 사용 가능한 JSON을 완성하세요.
+목록형 문장을 작성할 때는 한 줄에 하나씩 "1. 내용", "2. 내용" 형식으로 작성하세요.
+"(1)", "1)", "①" 같은 번호 표기는 사용하지 말고, 한 문장 안에 여러 번호를 붙여 나열하지 마세요.
 
 기업명: ${input.companyName}
 지원 직무: ${input.positionName}
@@ -655,6 +661,8 @@ ${partial.questions.map((item, index) => `${index + 1}. ${item.question} (${item
 
 요구사항:
 - profile.mainTasks, profile.requiredKnowledge, profile.preferredExperience, profile.keywords는 공고와 직무를 분석해 빈 배열 없이 채우세요.
+- 질문 intent는 1~2문장, ncsMappings.reason은 2~4문장으로 제한해 모바일에서 30초~1분 안에 읽을 수 있는 밀도로 작성하세요.
+- 항목별 설명 길이는 중요도에 따라 자연스럽게 조절하되, 특정 항목만 과도하게 길어지지 않게 균형을 맞추세요.
 - ncsMappings에는 위 7개 후보 중 "${input.companyName}"의 "${input.positionName}" 직무 면접에서 실제 평가축으로 직접 사용할 핵심 NCS만 넣으세요.
 - ncsMappings는 최소 1개 이상이어야 합니다.
 - 직무 정보가 넓거나 근거가 부족하면 여러 개를 억지로 넣지 말고 가장 가까운 핵심 NCS 1개만 반환하세요.
@@ -719,6 +727,12 @@ ${questionMessages.map((item) => `${item.role}${item.followUpIndex ? ` ${item.fo
 ${answer}
 
 정답/오답 판정이 아니라 면접 답변 코칭 관점으로 설명하세요.
+summary와 nextAnswerGuide에서 목록화가 필요하면 반드시 한 줄에 하나씩 "1. 내용", "2. 내용" 형식으로 작성하세요.
+"(1)", "1)", "①" 같은 번호 표기는 사용하지 말고, 한 문장 안에 여러 번호를 붙여 나열하지 마세요.
+목록 앞뒤로 불필요한 괄호를 단독으로 남기지 말고, 문단과 목록 사이에는 자연스럽게 줄바꿈하세요.
+summary는 2~3문장, nextAnswerGuide는 2~4문장 또는 최대 3개 항목으로 작성하세요.
+strengths와 improvements는 각각 2~4개 이내로, 각 항목은 1문장만 작성하세요.
+전체 피드백은 모바일에서 30초~1분 안에 읽을 수 있는 분량으로 압축하되, 장점과 보완점 중 한쪽만 길어지지 않게 균형 있게 작성하세요.
 score에는 이번 답변 하나에 대한 점수를 100점 만점 정수로 넣으세요. 0~10점 척도를 쓰지 마세요.
 아래 구간의 시작점이나 중간값으로 고정하지 말고, 답변의 관련성·성실성·구체성·직무 연관성·본인 역할·판단 근거·결과 수준을 종합해 각 구간 안에서 차등 평가하세요.
 질문과 무관한 답변, 장난성 답변, 의미 없는 단답은 5~29점 범위에서 차등 평가하세요.
@@ -754,6 +768,12 @@ async function requestFinalResult(
       {
         type: "input_text",
         text: `한국어 AI NCS 면접 코치입니다. 면접 연습 전체를 종합해 최종 결과를 작성하세요.
+summary, questionReviews.summary, followUpScores.summary, strengths, improvements, futurePracticeQuestions에서 목록화가 필요하면 반드시 한 줄에 하나씩 "1. 내용", "2. 내용" 형식으로 작성하세요.
+"(1)", "1)", "①" 같은 번호 표기는 사용하지 말고, 한 문장 안에 여러 번호를 붙여 나열하지 마세요.
+목록 앞뒤로 불필요한 괄호를 단독으로 남기지 말고, 문단과 목록 사이에는 자연스럽게 줄바꿈하세요.
+summary는 3~5문장 이내, questionReviews.summary와 followUpScores.summary는 각각 2~3문장 이내로 작성하세요.
+strengths, improvements, futurePracticeQuestions는 각각 3~5개 이내로 작성하고, 각 항목은 1~2문장만 사용하세요.
+전체 결과는 모바일에서 사용자가 30초~1분 정도 집중해서 읽을 수 있는 분량을 목표로 하며, 문항별 중요도에 따라 길이를 자연스럽게 조절하되 특정 문항이나 섹션에 과도하게 치우치지 마세요.
 
 기업/직무: ${session.companyName} / ${session.positionName}
 NCS 매핑: ${session.analysis.ncsMappings.map((item) => `${item.name} ${item.relevance}% - ${item.reason}`).join("\n")}
