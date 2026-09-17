@@ -408,6 +408,19 @@
 .pdfQuestionLabel{display:flex;align-items:center;gap:10px;margin:0 0 18px;padding:10px 0 14px;border-bottom:1px solid #e4e8ef;background:#fff}
 .pdfQuestionLabel strong{display:inline-flex;align-items:center;justify-content:center;width:52px;height:36px;border-radius:555px;background:#2f7ff0;color:#fff;font-size:14px;font-weight:800;line-height:1}
 .pdfQuestionLabel span{color:#2f7ff0;font-size:18px;font-weight:700;line-height:1.2}
+.pdfMessage{margin:0 0 24px}
+.pdfMessageHeader{padding:0 0 12px;background:#fff}
+.pdfMessageHeader strong{display:flex;align-items:center;justify-content:space-between;margin:0 0 14px;color:#2f7ff0;font-size:18px;font-weight:700;line-height:1}
+.pdfMessageHeader strong em{font-style:normal;color:#1fb573;font-size:18px;font-weight:700}
+.pdfFollowMessage .pdfMessageHeader strong,.pdfFollowAnswer .pdfMessageHeader strong{color:#1fb573}
+.pdfFollowAnswer .answerScoreBadge{color:#1fb573}
+.pdfTextChunk,.pdfAnswerChunk,.pdfGuideChunk,.pdfFeedbackChunk{box-sizing:border-box;margin:0 0 8px;background:#fff;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
+.pdfAnswerChunk{min-height:0;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa;padding:16px}
+.pdfGuideChunk{color:#9aa4b8}
+.pdfFeedbackChunk{color:#5a6580}
+.pdfList{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.pdfList li{margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line;word-break:keep-all}
+.pdfNcsHeader{padding:0 0 10px;background:#fff}
 .pdfDocument .questionTabsAnchor,.pdfDocument .questionTabsShell{display:none}
 .pdfDocument .resultHero{break-inside:avoid}
 @media (min-width:37.5rem){
