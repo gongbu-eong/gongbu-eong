@@ -66,7 +66,7 @@ const INTERVIEW_TERMS = [
       "이용자가 입력한 기업명·지원 직무를 NCS 직무역량과 연계하여 AI 면접 질문 및 꼬리질문을 생성합니다.",
       "이용자는 생성된 질문에 답변을 작성·연습할 수 있으며, AI가 답변에 대한 피드백을 제공합니다.",
       "이용자가 실제 채용공고를 연결한 경우, 해당 공고의 자격요건·우대사항·전형 정보를 반영하여 보다 정확한 코칭을 제공합니다.",
-      "공고를 연결한 경우, 해당 공고의 자격요건·우대사항·전형 정보와 이용자가 첨부 또는 입력한 면접 자료를 함께 반영하여 코칭을 제공합니다.",
+      "공고를 연결한 경우, 해당 공고의 자격요건·우대사항·전형 정보와 이용자가 첨부 또는 입력한 면접 자료 or 자소서를 함께 반영하여 코칭을 제공합니다.",
     ],
   },
   {
@@ -285,11 +285,11 @@ export function InterviewCoachingPage({
       return;
     }
     if (materialInputType === "file" && !materialFile) {
-      showAlert("면접 자료 파일을 첨부해 주세요.", materialFileDropRef.current);
+      showAlert("면접 자료 or 자소서 파일을 첨부해 주세요.", materialFileDropRef.current);
       return;
     }
     if (materialInputType === "text" && !materialText.trim()) {
-      showAlert("면접 자료를 입력해 주세요.", materialTextRef.current);
+      showAlert("면접 자료 or 자소서를 입력해 주세요.", materialTextRef.current);
       return;
     }
     if (!termsConfirmed) {
@@ -428,7 +428,7 @@ export function InterviewCoachingPage({
             </section>
 
             <section className={styles.interviewInputSection}>
-              <h2>면접 자료</h2>
+              <h2>면접 자료 or 자소서</h2>
               <div className={styles.materialPanel}>
                 <div className={styles.materialTabs}>
                   <button
@@ -448,7 +448,7 @@ export function InterviewCoachingPage({
                 </div>
                 {materialInputType === "file" ? (
                   <div className={styles.materialFileArea}>
-                    <p>파일로 면접 자료 업로드</p>
+                    <p>파일로 면접 자료 or 자소서 업로드</p>
                     <button
                       ref={materialFileDropRef}
                       type="button"
@@ -498,7 +498,7 @@ export function InterviewCoachingPage({
                       maxLength={MAX_INTERVIEW_MATERIAL_LENGTH}
                       onFocus={(event) => focusField(event.currentTarget)}
                       onChange={(event) => setMaterialText(event.target.value)}
-                      placeholder="면접 자료를 텍스트로 입력해주세요."
+                      placeholder="면접 자료 or 자소서를 텍스트로 입력해주세요."
                     />
                     <span className={styles.materialCounter}>{materialText.length.toLocaleString("ko-KR")}자</span>
                   </>
