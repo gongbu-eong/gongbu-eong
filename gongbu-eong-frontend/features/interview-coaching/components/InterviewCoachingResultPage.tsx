@@ -91,6 +91,7 @@ function ResultView({
   const selectedReview = selectedQuestion
     ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
     : null;
+  const scoredAnswerCount = getScoredAnswerCount(result);
   const downloadResultPdf = async () => {
     const target = pdfCaptureRef.current;
     if (!target) return;
@@ -108,40 +109,52 @@ function ResultView({
       target.style.pointerEvents = "none";
       await document.fonts?.ready;
       await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-      const captureWidth = target.scrollWidth || 600;
-      const captureHeight = target.scrollHeight;
-      if (!captureHeight) {
+      const blocks = Array.from(target.querySelectorAll<HTMLElement>("[data-pdf-block]"));
+      if (!blocks.length) {
         throw new Error("PDF로 변환할 결과 영역을 찾지 못했습니다.");
       }
-      const dataUrl = await toPng(target, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: "#ffffff",
-        width: captureWidth,
-        height: captureHeight,
-        style: {
-          margin: "0",
-          transform: "none",
-        },
-      });
-      const image = new window.Image();
-      image.src = dataUrl;
-      await new Promise<void>((resolve, reject) => {
-        image.onload = () => resolve();
-        image.onerror = () => reject(new Error("PDF 이미지를 생성하지 못했습니다."));
-      });
       const pdf = new jsPDF("p", "mm", "a4");
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 12;
       const contentWidth = pageWidth - margin * 2;
-      const imageHeight = (image.height * contentWidth) / image.width;
       const pageContentHeight = pageHeight - margin * 2;
-      let offset = 0;
-      while (offset < imageHeight) {
-        if (offset > 0) pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", margin, margin - offset, contentWidth, imageHeight);
-        offset += pageContentHeight;
+      const blockGap = 4;
+      let cursorY = margin;
+
+      for (const block of blocks) {
+        const blockWidth = block.scrollWidth || block.offsetWidth || 600;
+        const blockHeight = block.scrollHeight || block.offsetHeight;
+        if (!blockHeight) continue;
+        const dataUrl = await toPng(block, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: "#ffffff",
+          width: blockWidth,
+          height: blockHeight,
+          style: {
+            margin: "0",
+            transform: "none",
+          },
+        });
+        const image = await loadImage(dataUrl);
+        const imageHeight = (image.height * contentWidth) / image.width;
+
+        if (cursorY > margin && cursorY + imageHeight > pageHeight - margin) {
+          pdf.addPage();
+          cursorY = margin;
+        }
+
+        if (imageHeight > pageContentHeight) {
+          const scale = pageContentHeight / imageHeight;
+          const fitWidth = contentWidth * scale;
+          const fitX = margin + (contentWidth - fitWidth) / 2;
+          pdf.addImage(dataUrl, "PNG", fitX, cursorY, fitWidth, pageContentHeight);
+          cursorY = pageHeight - margin;
+        } else {
+          pdf.addImage(dataUrl, "PNG", margin, cursorY, contentWidth, imageHeight);
+          cursorY += imageHeight + blockGap;
+        }
       }
       pdf.save(`ncs-interview-coaching-${session.id}.pdf`);
     } catch (caught) {
@@ -179,6 +192,7 @@ function ResultView({
         <h2>최종 평가</h2>
         <span>{session.companyName} · {displayPositionName}</span>
         <strong>{result.score}<small>/100점</small></strong>
+        <em className={styles.scoreBasis}>답변한 원 질문/꼬리질문 {scoredAnswerCount}개 점수를 100점 만점 기준으로 평균 환산</em>
         <p>{formatReadableText(result.summary)}</p>
       </section>
 
@@ -207,9 +221,10 @@ function ResultView({
           result={result}
           strengths={strengths}
           improvements={improvements}
-          futurePracticeQuestions={futurePracticeQuestions}
-          answeredQuestions={answeredQuestions.length ? answeredQuestions : session.questions.slice(0, 1)}
-        />
+        futurePracticeQuestions={futurePracticeQuestions}
+        answeredQuestions={answeredQuestions.length ? answeredQuestions : session.questions.slice(0, 1)}
+        scoredAnswerCount={scoredAnswerCount}
+      />
       </div>
       <button type="button" className={styles.resultDownloadButton} onClick={downloadResultPdf}>
         NCS 면접 코칭 결과 다운받기
@@ -236,7 +251,7 @@ function ResultQuestionDetail({
 
   return (
     <div className={styles.resultQuestionDetail}>
-      <article className={styles.questionCard}>
+      <article className={styles.questionCard} data-pdf-block>
         <div className={styles.resultSkillList}>
           {ncsAreas.map((area) => <span key={area}>{formatNcsArea(area)}</span>)}
         </div>
@@ -307,7 +322,7 @@ function ResultConversationMessage({
       : "AI 질문";
 
   return (
-    <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""} ${message.role === "answer" && answerTone === "follow_up" ? styles.chatFollowAnswer : ""}`}>
+    <article className={`${styles.chatBubble} ${message.role === "answer" ? styles.chatAnswer : ""} ${message.role === "follow_up" ? styles.chatFollow : ""} ${message.role === "answer" && answerTone === "follow_up" ? styles.chatFollowAnswer : ""}`} data-pdf-block>
       {message.role === "follow_up" && ncsAreas.length ? (
         <div className={styles.resultSkillList}>
           {ncsAreas.map((area) => <span key={area}>{formatNcsArea(area)}</span>)}
@@ -356,6 +371,7 @@ function ResultPdfDocument({
   improvements,
   futurePracticeQuestions,
   answeredQuestions,
+  scoredAnswerCount,
 }: {
   session: InterviewCoachingSession;
   result: NonNullable<InterviewCoachingSession["result"]>;
@@ -363,13 +379,14 @@ function ResultPdfDocument({
   improvements: string[];
   futurePracticeQuestions: string[];
   answeredQuestions: InterviewQuestion[];
+  scoredAnswerCount: number;
 }) {
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
   return (
     <div className={styles.pdfDocument}>
-      <h1>AI NCS 면접 코칭 결과</h1>
+      <h1 data-pdf-block>AI NCS 면접 코칭 결과</h1>
       <section className={styles.resultSection}>
-        <h2>문항별 답변 코칭</h2>
+        <h2 data-pdf-block>문항별 답변 코칭</h2>
         {answeredQuestions.map((question) => {
           const questionIndex = session.questions.findIndex((item) => item.id === question.id);
           const messages = filterAnsweredConversation(
@@ -378,6 +395,10 @@ function ResultPdfDocument({
           const review = result.questionReviews.find((item) => item.questionId === question.id);
           return (
             <article className={styles.pdfQuestionBlock} key={question.id}>
+              <div className={styles.pdfQuestionLabel} data-pdf-block>
+                <strong>Q{questionIndex + 1}</strong>
+                <span>질문 {questionIndex + 1} · {question.difficulty} · {formatQuestionType(question.type)}</span>
+              </div>
               <ResultQuestionDetail
                 questionIndex={questionIndex}
                 question={question}
@@ -388,26 +409,31 @@ function ResultPdfDocument({
           );
         })}
       </section>
-      <section className={styles.resultHero}>
+      <section className={styles.resultHero} data-pdf-block>
         <h2>최종 평가</h2>
         <span>{session.companyName} · {displayPositionName}</span>
         <strong>{result.score}<small>/100점</small></strong>
+        <em className={styles.scoreBasis}>답변한 원 질문/꼬리질문 {scoredAnswerCount}개 점수를 100점 만점 기준으로 평균 환산</em>
         <p>{formatReadableText(result.summary)}</p>
       </section>
-      <section className={styles.resultSection}>
+      <section className={styles.resultSection} data-pdf-block>
         <h2>잘한 점</h2>
         <ul>{strengths.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
       </section>
-      <section className={styles.resultSection}>
+      <section className={styles.resultSection} data-pdf-block>
         <h2>보완할 점</h2>
         <ul>{improvements.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
       </section>
-      <section className={styles.resultSection}>
+      <section className={styles.resultSection} data-pdf-block>
         <h2>추가 연습 질문</h2>
         <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
       </section>
-      <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
-      <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
+      <div data-pdf-block>
+        <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
+      </div>
+      <div data-pdf-block>
+        <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 관련 영역 매핑" />
+      </div>
     </div>
   );
 }
@@ -499,6 +525,22 @@ function uniqueNcsAreas(values: string[]) {
 
 function hasQuestionAnswer(messages: InterviewMessage[], questionId: string) {
   return messages.some((message) => message.questionId === questionId && message.role === "answer");
+}
+
+function getScoredAnswerCount(result: NonNullable<InterviewCoachingSession["result"]>) {
+  return result.questionReviews.reduce(
+    (count, review) => count + 1 + review.followUpScores.length,
+    0,
+  );
+}
+
+function loadImage(src: string) {
+  const image = new window.Image();
+  image.src = src;
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("PDF 이미지를 생성하지 못했습니다."));
+  });
 }
 
 function formatQuestionType(type: InterviewQuestion["type"]) {
