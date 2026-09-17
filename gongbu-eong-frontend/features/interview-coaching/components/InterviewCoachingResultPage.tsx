@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getInterviewCoachingSession } from "../interview-coaching.api";
-import type { InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
+import type { InterviewAnswerFeedback, InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
 import { AnswerLoadingOverlay, formatNcsReasonParagraphs, InterviewAnalysisView, QuestionTabs } from "./InterviewCoachingPage";
 import styles from "./InterviewCoachingPage.module.css";
 
@@ -51,7 +51,7 @@ export function InterviewCoachingResultPage({
         <h1>AI NCS 면접 코칭 결과</h1>
         {error ? <p className={styles.error}>{error}</p> : null}
         {!session && !error ? <p className={styles.lead}>결과를 불러오고 있어요.</p> : null}
-        {session?.result ? <ResultView session={session} /> : null}
+        {session?.result ? <ResultView session={session} anonymousId={anonymousId} /> : null}
         {session && !session.result ? (
           <p className={styles.lead}>아직 최종 결과가 생성되지 않았습니다. AI NCS 면접 코칭 화면에서 결과를 먼저 생성해 주세요.</p>
         ) : null}
@@ -63,12 +63,15 @@ export function InterviewCoachingResultPage({
 
 function ResultView({
   session,
+  anonymousId,
 }: {
   session: InterviewCoachingSession;
+  anonymousId?: string | null;
 }) {
   const result = session.result;
   const pdfCaptureRef = useRef<HTMLDivElement | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const isLocked = session.isAnonymous;
   const firstAnsweredQuestionId =
     session.questions.find((question) => hasQuestionAnswer(session.messages, question.id))?.id ||
     session.questions[0]?.id ||
@@ -80,7 +83,7 @@ function ResultView({
   const improvements = cleanDisplayList(result.improvements);
   const futurePracticeQuestions = cleanDisplayList(result.futurePracticeQuestions);
   const answeredQuestions = session.questions.filter((question) => hasQuestionAnswer(session.messages, question.id));
-  const resultQuestions = answeredQuestions;
+  const resultQuestions = isLocked ? answeredQuestions.slice(0, 1) : answeredQuestions;
   const selectedQuestion =
     resultQuestions.find((question) => question.id === activeQuestionId) ||
     resultQuestions[0] ||
@@ -90,6 +93,7 @@ function ResultView({
       session.messages.filter((message) => message.questionId === selectedQuestion.id),
     )
     : [];
+  const visibleMessages = isLocked ? getLockedPreviewMessages(selectedMessages) : selectedMessages;
   const selectedReview = selectedQuestion
     ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
     : null;
@@ -160,59 +164,66 @@ function ResultView({
           <ResultQuestionDetail
             questionIndex={session.questions.findIndex((question) => question.id === selectedQuestion.id)}
             question={selectedQuestion}
-            messages={selectedMessages}
+            messages={visibleMessages}
             review={selectedReview}
+            locked={isLocked}
+            sessionId={session.id}
+            anonymousId={anonymousId}
           />
         ) : null}
       </section>
 
-      <section className={styles.resultHero}>
-        <h2>최종 평가</h2>
-        <span>{session.companyName} · {displayPositionName}</span>
-        <strong>{result.score}<small>/100점</small></strong>
-        <em className={styles.scoreBasis}>답변한 원 질문/꼬리질문 {scoredAnswerCount}개 점수를 100점 만점 기준으로 평균 환산</em>
-        {formatResultSummaryParagraphs(result.summary).map((paragraph, index) => (
-          <p key={`summary-${index}`}>{paragraph}</p>
-        ))}
-      </section>
+      {!isLocked ? (
+        <>
+          <section className={styles.resultHero}>
+            <h2>최종 평가</h2>
+            <span>{session.companyName} · {displayPositionName}</span>
+            <strong>{result.score}<small>/100점</small></strong>
+            <em className={styles.scoreBasis}>답변한 원 질문/꼬리질문 {scoredAnswerCount}개 점수를 100점 만점 기준으로 평균 환산</em>
+            {formatResultSummaryParagraphs(result.summary).map((paragraph, index) => (
+              <p key={`summary-${index}`}>{paragraph}</p>
+            ))}
+          </section>
 
-      <section className={styles.resultSection}>
-        <h2>잘한 점</h2>
-        <ul>{strengths.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
-      </section>
+          <section className={styles.resultSection}>
+            <h2>잘한 점</h2>
+            <ul>{strengths.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+          </section>
 
-      <section className={styles.resultSection}>
-        <h2>보완할 점</h2>
-        <ul>{improvements.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
-      </section>
+          <section className={styles.resultSection}>
+            <h2>보완할 점</h2>
+            <ul>{improvements.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+          </section>
 
-      <section className={styles.resultSection}>
-        <h2>추가 연습 질문</h2>
-        <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
-      </section>
+          <section className={styles.resultSection}>
+            <h2>추가 연습 질문</h2>
+            <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+          </section>
 
-      <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
+          <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
 
-      <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 직무/관련 영역 매핑" />
+          <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 직무/관련 영역 매핑" />
 
-      <div ref={pdfCaptureRef} className={styles.pdfCapture} aria-hidden="true">
-        <ResultPdfDocument
-          session={session}
-          result={result}
-          strengths={strengths}
-          improvements={improvements}
-          futurePracticeQuestions={futurePracticeQuestions}
-          answeredQuestions={resultQuestions}
-          scoredAnswerCount={scoredAnswerCount}
-        />
-      </div>
-      {isDownloading ? <AnswerLoadingOverlay text="AI NCS 면접 코칭 결과 파일을 만들고 있어요." /> : null}
-      <button type="button" className={styles.resultDownloadButton} onClick={downloadResultPdf} disabled={isDownloading}>
-        {isDownloading ? "결과 파일 생성 중" : "NCS 면접 코칭 결과 다운받기"}
-      </button>
-      <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
-        NCS 면접 코칭 다시하기
-      </Link>
+          <div ref={pdfCaptureRef} className={styles.pdfCapture} aria-hidden="true">
+            <ResultPdfDocument
+              session={session}
+              result={result}
+              strengths={strengths}
+              improvements={improvements}
+              futurePracticeQuestions={futurePracticeQuestions}
+              answeredQuestions={resultQuestions}
+              scoredAnswerCount={scoredAnswerCount}
+            />
+          </div>
+          {isDownloading ? <AnswerLoadingOverlay text="AI NCS 면접 코칭 결과 파일을 만들고 있어요." /> : null}
+          <button type="button" className={styles.resultDownloadButton} onClick={downloadResultPdf} disabled={isDownloading}>
+            {isDownloading ? "결과 파일 생성 중" : "NCS 면접 코칭 결과 다운받기"}
+          </button>
+          <Link href="/ai-tools/interview-coaching" className={styles.resultBackButton}>
+            NCS 면접 코칭 다시하기
+          </Link>
+        </>
+      ) : null}
     </>
   );
 }
@@ -222,11 +233,17 @@ function ResultQuestionDetail({
   question,
   messages,
   review,
+  locked = false,
+  sessionId,
+  anonymousId,
 }: {
   questionIndex: number;
   question: InterviewQuestion;
   messages: InterviewMessage[];
   review: InterviewQuestionReview | null | undefined;
+  locked?: boolean;
+  sessionId?: string;
+  anonymousId?: string | null;
 }) {
   const ncsAreas = review?.ncsAreas?.length ? review.ncsAreas : question.ncsAreas;
 
@@ -260,6 +277,9 @@ function ResultQuestionDetail({
                 scoreLabel={answerScore?.label}
                 score={answerScore?.score}
                 followUpTotal={3}
+                locked={locked && message.role === "answer" && messageIndex === 0}
+                sessionId={sessionId}
+                anonymousId={anonymousId}
                 key={message.id}
               />
             );
@@ -269,7 +289,7 @@ function ResultQuestionDetail({
         <p className={styles.lead}>이 문항에는 제출한 답변이 없습니다.</p>
       )}
 
-      {review ? (
+      {!locked && review ? (
         <article className={styles.reviewCard}>
           <strong>문항 종합 코칭</strong>
           <p>{formatReadableText(review.summary)}</p>
@@ -287,6 +307,9 @@ function ResultConversationMessage({
   scoreLabel,
   score,
   followUpTotal,
+  locked = false,
+  sessionId,
+  anonymousId,
 }: {
   message: InterviewMessage;
   answerTone?: ResultAnswerTone;
@@ -295,6 +318,9 @@ function ResultConversationMessage({
   scoreLabel?: string;
   score?: number;
   followUpTotal?: number;
+  locked?: boolean;
+  sessionId?: string;
+  anonymousId?: string | null;
 }) {
   const content = formatReadableText(message.content);
   const label = message.role === "answer"
@@ -337,22 +363,46 @@ function ResultConversationMessage({
         <div className={styles.feedback}>
           <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDark}`}>평가 요약</span>
           <b>{formatReadableText(message.feedback.summary)}</b>
-          {message.feedback.nextAnswerGuide || message.feedback.improvements.length ? (
+          {locked || message.feedback.nextAnswerGuide || message.feedback.improvements.length ? (
             <>
               <span className={`${styles.resultInfoPill} ${styles.resultInfoPillDim}`}>보완점</span>
-              {message.feedback.nextAnswerGuide ? (
-                <p>{formatReadableText(message.feedback.nextAnswerGuide)}</p>
-              ) : null}
-              {message.feedback.improvements.length ? (
-                <ul>
-                  {cleanDisplayList(message.feedback.improvements).slice(0, 3).map((item) => <li key={`i-${item}`}>{item}</li>)}
-                </ul>
-              ) : null}
+              {locked ? (
+                <>
+                  <p className={styles.lockedFeedbackPreview}>{getLockedImprovementPreview(message.feedback)}</p>
+                  <LockedInterviewResultGate sessionId={sessionId} anonymousId={anonymousId} />
+                </>
+              ) : (
+                <>
+                  {message.feedback.nextAnswerGuide ? (
+                    <p>{formatReadableText(message.feedback.nextAnswerGuide)}</p>
+                  ) : null}
+                  {message.feedback.improvements.length ? (
+                    <ul>
+                      {cleanDisplayList(message.feedback.improvements).slice(0, 3).map((item) => <li key={`i-${item}`}>{item}</li>)}
+                    </ul>
+                  ) : null}
+                </>
+              )}
             </>
           ) : null}
         </div>
       ) : null}
     </article>
+  );
+}
+
+function LockedInterviewResultGate({
+  sessionId,
+  anonymousId,
+}: {
+  sessionId?: string;
+  anonymousId?: string | null;
+}) {
+  return (
+    <section className={styles.lockedInterviewGate}>
+      <strong>회원가입하고<br />AI NCS 면접 코칭 결과를<br />끝까지 확인하세요.</strong>
+      <a href={makeSignupGateUrl(sessionId, anonymousId)}>10초 만에 회원가입하기</a>
+    </section>
   );
 }
 
@@ -738,6 +788,35 @@ function filterAnsweredConversation(messages: InterviewMessage[]) {
       .find((item) => item.role === "answer" || item.role === "follow_up");
     return nextMessage?.role === "answer";
   });
+}
+
+function getLockedPreviewMessages(messages: InterviewMessage[]) {
+  const firstAnswer = messages.find((message) => message.role === "answer");
+  return firstAnswer ? [firstAnswer] : [];
+}
+
+function getLockedImprovementPreview(feedback: InterviewAnswerFeedback) {
+  const text = [
+    feedback.nextAnswerGuide,
+    ...cleanDisplayList(feedback.improvements),
+  ]
+    .map(formatReadableText)
+    .filter(Boolean)
+    .join("\n\n");
+
+  return text || "답변을 더 구체적으로 보완하면 면접관에게 전달되는 설득력이 높아집니다.";
+}
+
+function makeSignupGateUrl(sessionId?: string, anonymousId?: string | null) {
+  const returnTo = sessionId
+    ? `/ai-tools/interview-coaching/result/${sessionId}`
+    : "/ai-tools/interview-coaching";
+  const params = new URLSearchParams({
+    returnTo,
+    entrySource: "ai_tools",
+  });
+  if (anonymousId) params.set("anonymousId", anonymousId);
+  return `/login?${params.toString()}`;
 }
 
 function uniqueNcsAreas(values: string[]) {

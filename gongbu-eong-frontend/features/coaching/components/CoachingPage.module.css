@@ -485,3 +485,106 @@
   .jobDutyInput{scroll-margin-bottom:calc(180px + var(--mobile-keyboard-inset,0px))}
   .newCoachingFrame{padding-bottom:calc(132px + env(safe-area-inset-bottom))}
 }
+
+/* Figma 2571 AI NCS resume coaching pass */
+.newCoachingFrame{max-width:37.5rem;padding:64px 16px 108px;color:#1a2233}
+.newCoachingFrame h1{margin:0 0 26px;font-size:23px;font-weight:800;line-height:normal}
+.newCoachingFrame .intro{margin:0 0 24px}
+.newCoachingFrame .intro strong{font-size:20px;font-weight:700;line-height:normal}
+.newCoachingFrame .intro p{margin:12px 0 0;color:#5a6580;font-size:16px;font-weight:400;line-height:22px}
+.newCoachingFrame .jobConnect{height:52px;border-radius:12px;font-size:16px;font-weight:800}
+.newCoachingFrame .helper{margin:16px 0 36px;color:#5a6580;font-size:16px;font-weight:400;line-height:23px}
+.questionSection{margin-top:36px}
+.newCoachingFrame .sectionHeading{margin-bottom:16px}
+.newCoachingFrame .sectionHeading h2,.newCoachingFrame .writeSection h2{font-size:20px;font-weight:700;line-height:normal}
+.newCoachingFrame .questionSection .sectionHeading button{height:36px;min-width:61px;padding:0 16px;font-size:14px;font-weight:800}
+.questionRow{gap:8px;margin-top:16px}
+.questionRow textarea{height:100px;padding:16px;color:#5a6580;font-size:16px;font-weight:400;line-height:22px}
+.questionRow textarea::placeholder{color:#9aa4b8;font-size:16px;font-weight:400}
+.questionLimitRow{gap:8px}
+.questionLimitRow label{color:#5a6580;font-size:17px;font-weight:400;line-height:normal}
+.questionLimitRow input{width:80px;height:46px;color:#5a6580;font-size:16px;font-weight:400}
+.questionLimitRow input::placeholder{font-size:16px;font-weight:400}
+.questionDelete{width:52px;height:46px;border-radius:10px;font-size:17px;font-weight:400}
+.connectedJobCard{min-height:168px;padding:16px;border:1px solid #e4e8ef;border-radius:5px;background:#fff;grid-template-columns:minmax(0,1fr) 24px;gap:10px}
+.connectedJobCard>button{grid-column:2;grid-row:1;justify-self:end}
+.connectedJobCard span,.connectedJobCard em{display:block;height:auto;padding:0;background:transparent;color:#1a2233;font-size:18px;font-weight:700;line-height:normal}
+.connectedJobCard strong{grid-column:1 / -1;grid-row:2;margin:0;color:#5a6580;font-size:17px;font-weight:400;line-height:23px}
+.connectedJobCard em{grid-column:1 / -1;grid-row:3;margin-top:10px}
+.connectedJobCard p{grid-column:1 / -1;grid-row:4;color:#5a6580;font-size:17px;font-weight:400;line-height:23px}
+.jobFitNotice{margin:10px 0 36px;color:#1fb573;font-size:15px;line-height:normal}
+.newCoachingFrame .writeSection{margin-top:36px}
+.newCoachingFrame .writeSection h2{margin-bottom:16px}
+.newCoachingFrame .writePanel{min-height:303px;padding:8px;border-radius:5px;background:#f5f7fa}
+.newCoachingFrame .writePanelFile{min-height:269px}
+.newCoachingFrame .tabs{gap:8px;margin-bottom:16px}
+.newCoachingFrame .tabs button{height:46px;border-radius:10px;color:#5a6580;font-size:17px;font-weight:400}
+.newCoachingFrame .tabs .tabActive{color:#2f7ff0;font-weight:400}
+.newCoachingFrame .writePanel>textarea{height:200px;padding:16px;color:#5a6580;font-size:16px;font-weight:400;line-height:22px}
+.newCoachingFrame .writePanel>textarea::placeholder{font-size:16px;color:#9aa4b8}
+.newCoachingFrame .counter{margin-top:8px;color:#5a6580;font-size:14px;font-weight:400}
+.newCoachingFrame .fileUploadLabel{margin:0 8px 11px;color:#1a2233;font-size:14px;font-weight:400}
+.newCoachingFrame .fileDrop strong{font-size:17px;line-height:23px}
+.newCoachingFrame .fileDrop>span:not(.fileSheetIcon){font-size:14px;line-height:normal}
+.termsConsentRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
+.termsConsentRow .termsCheck{flex:1;min-width:0;margin-top:0;color:#9aa4b8;font-size:15px;font-weight:500;line-height:normal}
+.termsCheck span{width:24px;height:24px;font-size:14px}
+.termsOpenButton{flex:0 0 auto;border:0;background:transparent;color:#9aa4b8;font-size:15px;font-weight:500;line-height:normal}
+.coachingPrivacyNotice{display:flex;align-items:center;min-height:52px;box-sizing:border-box;margin:16px 0 0;padding:0 16px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px;font-weight:700;line-height:20px;word-break:keep-all}
+.coachingSubmitButton{margin-top:16px}
+.termsSheet{height:min(84vh,729px);max-height:min(84vh,729px);padding:0 16px 16px;border-radius:15px 15px 0 0}
+.termsSheet .sheetHandle{margin:8px auto 18px}
+.termsSheet header{height:42px;border-bottom:0}
+.termsSheet header h2{font-size:18px;font-weight:700}
+.termsScroll{padding:18px 0 12px;color:#5a6580;font-size:16px;font-weight:400;line-height:23px}
+.termsScroll h3{margin:0 0 16px;color:#1a2233;font-size:18px;font-weight:700;line-height:normal}
+.termsIntro{margin-bottom:18px!important;line-height:23px!important}
+.termsMethod{grid-template-columns:58px minmax(0,1fr);gap:10px;padding:16px 0}
+.termsMethod strong{margin:3px 0 10px;color:#5a6580;font-size:17px;font-weight:400;line-height:normal}
+.termsMethod p{font-size:16px;line-height:23px}
+.termsNote{margin:18px 0 30px;padding:16px;font-size:16px;line-height:23px}
+.termsReferenceItem strong{margin-bottom:14px;color:#1a2233;font-size:16px;font-weight:400;line-height:normal}
+.termsReferenceItem p{font-size:16px;line-height:23px}
+.figmaResultScreen h1{font-size:23px}
+.figmaResultSubtitle{font-size:20px}
+.figmaResultScreen .resultScoreSummary span{height:36px;font-size:14px;font-weight:800}
+.figmaResultScreen .resultScoreSummary strong{font-size:52px}
+.figmaResultScreen .resultScoreSummary small{font-size:17px}
+.figmaResultScreen .resultScoreSummary b{font-size:20px}
+.figmaResultScreen .resultScoreSummary p{font-size:17px;line-height:24px}
+.figmaResultScreen .insightGrid strong{font-size:18px}
+.figmaResultScreen .insightGrid span{font-size:17px}
+.figmaResultScreen .resultEvaluation h2,.figmaResultScreen .overallAssessment h2{font-size:20px;font-weight:700}
+.figmaResultScreen .evaluationItem strong,.figmaResultScreen .evaluationItem strong b{font-size:17px}
+.figmaQuestionArea>h2{font-size:20px;font-weight:700}
+.figmaQuestionCard{min-height:190px;padding:24px 16px 18px}
+.figmaQuestionMark{left:16px;top:24px;width:32px;height:32px}
+.figmaQuestionCard strong{margin:56px 0 12px;color:#1a2233;font-size:18px;font-weight:700;line-height:24px;word-break:keep-all}
+.figmaQuestionCard div:last-child{margin-left:0}
+.figmaQuestionCard span{height:22px;font-size:14px}
+.figmaDetailCard h2{font-size:18px;font-weight:700}
+.figmaResultScreen .ncsEvaluationBlock strong{font-size:17px;font-weight:400;color:#e8544d}
+.figmaResultScreen .ncsEvaluationBlock span{height:26px;margin-top:10px;font-size:16px}
+.figmaResultScreen .ncsEvaluationBlock p{margin-top:8px;font-size:17px;line-height:24px}
+.figmaResultScreen .coachingPointBlock strong,.figmaResultScreen .overallAssessment strong{font-size:18px}
+.figmaResultScreen .coachingPointBlock p,.figmaResultScreen .overallAssessment p{font-size:17px;line-height:24px}
+.figmaResultScreen .structureBlock article>b{width:64px;height:74px;font-size:30px}
+.figmaResultScreen .structureBlock strong{font-size:17px}
+.figmaResultScreen .structureGood,.figmaResultScreen .structureNeeds{height:26px;font-size:16px}
+.figmaResultScreen .structureBlock p{font-size:17px;line-height:24px}
+.figmaResultScreen .revisionSection h2{height:33px;font-size:16px}
+.figmaResultScreen .revisionSection>p{font-size:18px;line-height:25px}
+.figmaRevisionNote{font-size:16px!important;line-height:23px!important}
+.figmaResultScreen .revisionTabs{height:62px;padding:8px}
+.figmaResultScreen .revisionTabs button{height:46px;font-size:17px}
+.figmaResultScreen .originalTextPanel{font-size:16px;line-height:26px}
+.figmaResultScreen .comparisonList article>strong{font-size:18px;line-height:25px}
+.figmaResultScreen .comparisonList span{height:26px;font-size:16px}
+.figmaResultScreen .comparisonList p{font-size:17px;line-height:24px}
+.figmaResultScreen .metaReviewGrid h3{font-size:18px}
+.figmaResultScreen .metaReviewGrid p{font-size:17px;line-height:24px}
+.figmaScoreNotice{font-size:16px;line-height:23px}
+@media (min-width:37.5rem){
+  .newCoachingFrame{padding-left:32px;padding-right:32px}
+  .termsSheet{border-radius:16px;max-width:600px}
+}
