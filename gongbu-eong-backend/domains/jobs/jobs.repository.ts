@@ -73,6 +73,68 @@ function buildAnyTextFilter(column: string, value: string | undefined, values: u
   return `AND (${conditions.join(" OR ")})`;
 }
 
+function compactSearchText(value: string) {
+  return value.replace(/\s+/g, "").trim();
+}
+
+function escapePostgresRegex(value: string) {
+  return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
+}
+
+function buildLooseSequencePattern(value: string) {
+  const compact = compactSearchText(value);
+  if (compact.length < 4) return "";
+  return compact.split("").map(escapePostgresRegex).join(".*");
+}
+
+function splitJobSearchTokens(value: string) {
+  const normalized = value.trim().replace(/\s+/g, " ");
+  const compact = compactSearchText(normalized);
+  const spacedTerms = normalized.split(" ").filter((item) => item.length >= 2);
+  const compactPairs = compact.length >= 4
+    ? compact.match(/.{1,2}/g)?.filter((item) => item.length >= 2) || []
+    : [];
+  return Array.from(new Set([...spacedTerms, ...compactPairs]));
+}
+
+function buildJobSearchFilter(value: string | undefined, values: unknown[]) {
+  const normalized = value?.trim().replace(/\s+/g, " ");
+  if (!normalized) return "";
+
+  const compact = compactSearchText(normalized);
+  const sequencePattern = buildLooseSequencePattern(normalized);
+  const tokens = splitJobSearchTokens(normalized);
+  const searchText = `
+    concat_ws(
+      ' ',
+      COALESCE(postings.title, ''),
+      COALESCE(institutions.name, ''),
+      COALESCE(postings.ncs_category, ''),
+      COALESCE(postings.work_region, ''),
+      COALESCE(postings.employment_type, '')
+    )
+  `;
+  const compactSearchTextSql = `regexp_replace(${searchText}, '[[:space:]]+', '', 'g')`;
+  const fullParam = `$${values.push(`%${normalized}%`)}`;
+  const compactParam = `$${values.push(`%${compact}%`)}`;
+  const sequenceCondition = sequencePattern
+    ? `OR ${compactSearchTextSql} ~* $${values.push(sequencePattern)}`
+    : "";
+  const tokenCondition = tokens.length
+    ? `OR (${tokens.map((token) => {
+        const tokenParam = `$${values.push(`%${compactSearchText(token)}%`)}`;
+        return `${compactSearchTextSql} ILIKE ${tokenParam}`;
+      }).join(" AND ")})`
+    : "";
+
+  return `AND (
+    ${searchText} ILIKE ${fullParam}
+    OR ${compactSearchTextSql} ILIKE ${compactParam}
+    ${sequenceCondition}
+    ${tokenCondition}
+  )`;
+}
+
 function buildEmploymentTypeFilter(value: string | undefined, values: unknown[]) {
   const filters = splitMultiFilter(value);
   if (!filters.length) return "";
@@ -442,12 +504,7 @@ export async function findJobPostings(args: {
           AND filter_bookmarks.job_posting_id = postings.id
       )`
     : "";
-  const queryFilter = args.query
-    ? `AND (
-        postings.title ILIKE $${values.push(`%${args.query}%`)}
-        OR COALESCE(institutions.name, '') ILIKE $${values.length}
-      )`
-    : "";
+  const queryFilter = buildJobSearchFilter(args.query, values);
   const ncsFilter = buildAnyTextFilter("postings.ncs_category", args.ncsCategory, values);
   const regionFilter = buildAnyTextFilter("postings.work_region", args.region, values);
   const employmentFilter = buildEmploymentTypeFilter(args.employmentType, values);
