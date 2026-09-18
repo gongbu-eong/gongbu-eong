@@ -74,13 +74,13 @@ export function trackProductEvent(args: {
   diagnosisRunId?: string | null;
   diagnosisResultId?: string | null;
   properties?: Record<string, unknown>;
-}) {
+}): Promise<void> {
   const path = `${window.location.pathname}${window.location.search}`;
   const previousPath = getStoredPreviousPath();
   const externalReferrer = getExternalReferrer();
   const screen = getScreenBucket(path);
 
-  fetch(`${backendUrl}/api/product-events`, {
+  return fetch(`${backendUrl}/api/product-events`, {
     method: "POST",
     keepalive: true,
     credentials: "include",
@@ -107,8 +107,9 @@ export function trackProductEvent(args: {
         ...(args.properties || {}),
       },
     }),
-  }).catch(() => {
+  }).then(() => undefined).catch(() => {
     // Product event logging must never block the user flow.
+    return undefined;
   });
 }
 

@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   getDiagnosisQuestions,
-  getDiagnosisStats,
   submitDiagnosis,
 } from "../diagnosis.api";
 import { getCurrentUser } from "@/features/home/home.api";
@@ -37,7 +36,6 @@ const mainAppUrl =
   "http://localhost:3000";
 
 type FlowState =
-  | { status: "intro" }
   | { status: "loading" }
   | { status: "survey"; questions: DiagnosisQuestionDto[]; index: number }
   | { status: "submitting"; questions: DiagnosisQuestionDto[]; index: number }
@@ -164,13 +162,12 @@ const POINT_CARD_TITLES: Record<
 };
 
 export function DiagnosisFlow() {
-  const [state, setState] = useState<FlowState>({ status: "intro" });
+  const [state, setState] = useState<FlowState>({ status: "loading" });
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [participantCount, setParticipantCount] = useState<number | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<CurrentUserDto | null>(null);
   const isSubmittingRef = useRef(false);
+  const hasTrackedStartRef = useRef(false);
 
   useEffect(() => {
     let ignore = false;
@@ -181,31 +178,19 @@ export function DiagnosisFlow() {
 
         if (response.authenticated && response.user) {
           setIsAuthenticated(true);
-          setCurrentUser(response.user);
           setIsCheckingSession(false);
+          void startSurvey();
         } else {
           setIsAuthenticated(false);
-          setCurrentUser(null);
           setIsCheckingSession(false);
+          void startSurvey();
         }
       })
       .catch(() => {
         if (!ignore) {
           setIsAuthenticated(false);
-          setCurrentUser(null);
           setIsCheckingSession(false);
-        }
-      });
-
-    getDiagnosisStats()
-      .then((stats) => {
-        if (!ignore) {
-          setParticipantCount(stats.participantCount);
-        }
-      })
-      .catch(() => {
-        if (!ignore) {
-          setParticipantCount(0);
+          void startSurvey();
         }
       });
 
@@ -218,15 +203,21 @@ export function DiagnosisFlow() {
     isSubmittingRef.current = false;
     setAnswers({});
     setState({ status: "loading" });
-    trackProductEvent({
-      eventType: "diagnosis_start",
-      properties: {
-        action: "start_button_click",
-      },
-    });
 
     try {
       const response = await getDiagnosisQuestions();
+
+      if (!hasTrackedStartRef.current) {
+        hasTrackedStartRef.current = true;
+        trackProductEvent({
+          eventType: "diagnosis_start",
+          properties: {
+            action: "question_1_view",
+            question_no: 1,
+          },
+        });
+      }
+
       setState({ status: "survey", questions: response.questions, index: 0 });
     } catch (error) {
       setState({
@@ -367,26 +358,6 @@ export function DiagnosisFlow() {
 
   if (isCheckingSession) {
     return null;
-  }
-
-  if (state.status === "intro") {
-    const intro = (
-      <DiagnosisIntro
-        isEmbedded={isAuthenticated}
-        participantCount={participantCount}
-        onStart={startSurvey}
-      />
-    );
-
-    if (isAuthenticated) {
-      return (
-        <AuthenticatedIntroShell user={currentUser}>
-          {intro}
-        </AuthenticatedIntroShell>
-      );
-    }
-
-    return intro;
   }
 
   if (state.status === "loading") {
