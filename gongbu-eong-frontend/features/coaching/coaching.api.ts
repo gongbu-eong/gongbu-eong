@@ -28,6 +28,17 @@ export async function coachResume(args: { inputType: "text" | "file"; inputText:
     throw new Error(body.message || "코칭에 실패했습니다.");
   }
   void trackProductEvent({
+    eventType: "coaching_start",
+    properties: {
+      result_id: body.resultId,
+      request_id: body.requestId,
+      input_type: args.inputType,
+      has_file: Boolean(args.file),
+      has_job_posting: Boolean(args.jobPostingId),
+      question_count: args.questions?.length || 0,
+    },
+  });
+  void trackProductEvent({
     eventType: "coaching_complete",
     diagnosisResultId: null,
     properties: {
