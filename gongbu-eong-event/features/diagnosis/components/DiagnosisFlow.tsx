@@ -294,6 +294,17 @@ export function DiagnosisFlow() {
   }
 
   function trackDiagnosisComplete(result: DiagnosisResultResponseDto) {
+    trackProductEvent({
+      eventType: "diagnosis_complete",
+      diagnosisRunId: result.runId,
+      diagnosisResultId: result.resultId,
+      properties: {
+        diagnosis_type: result.typeCode,
+        diagnosis_type_name: result.typeName,
+        attempt_no: result.attemptNo ?? null,
+      },
+    });
+
     try {
       window.gtag?.("event", "diagnosis_complete", {
         event_category: "diagnosis",

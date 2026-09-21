@@ -1,4 +1,5 @@
 import { getAnonymousId } from "@/shared/session/anonymous-id";
+import { trackApiRequest, trackProductEvent } from "@/features/analytics/analytics.api";
 import type {
   InterviewAnswerFeedback,
   InterviewCoachingSession,
@@ -30,6 +31,7 @@ export async function startInterviewCoaching(args: {
     cache: "no-store",
     body: form,
   });
+  trackApiRequest({ path: "/api/interview-coaching", method: "POST", status: response.status, success: response.ok });
   const body = await readJsonResponse(response) as {
     ok: boolean;
     session: InterviewCoachingSession;
@@ -45,6 +47,15 @@ export async function startInterviewCoaching(args: {
     });
     throw new Error(body.message || "AI NCS 면접 코칭을 시작하지 못했습니다.");
   }
+  void trackProductEvent({
+    eventType: "interview_coaching_start",
+    properties: {
+      session_id: body.session.id,
+      job_posting_id: args.jobPostingId || null,
+      material_input_type: args.materialInputType || "text",
+      has_file: Boolean(args.materialFile),
+    },
+  });
   return body;
 }
 
@@ -68,6 +79,7 @@ export async function answerInterviewQuestion(args: {
       }),
     },
   );
+  trackApiRequest({ path: `/api/interview-coaching/${encodeURIComponent(args.sessionId)}/answer`, method: "POST", status: response.status, success: response.ok });
   const body = await readJsonResponse(response) as {
     ok: boolean;
     session: InterviewCoachingSession;
@@ -76,6 +88,15 @@ export async function answerInterviewQuestion(args: {
     message?: string;
   };
   if (!response.ok || !body.ok) throw new Error(body.message || "답변 코칭에 실패했습니다.");
+  void trackProductEvent({
+    eventType: "interview_coaching_answer",
+    properties: {
+      session_id: args.sessionId,
+      question_id: args.questionId,
+      answer_length: args.answer.trim().length,
+      has_follow_up_question: Boolean(body.followUpQuestion),
+    },
+  });
   return body;
 }
 
@@ -93,12 +114,20 @@ export async function completeInterviewCoaching(args: {
       body: JSON.stringify({ anonymousId: args.anonymousId || getAnonymousId() }),
     },
   );
+  trackApiRequest({ path: `/api/interview-coaching/${encodeURIComponent(args.sessionId)}/complete`, method: "POST", status: response.status, success: response.ok });
   const body = await readJsonResponse(response) as {
     ok: boolean;
     session: InterviewCoachingSession;
     message?: string;
   };
   if (!response.ok || !body.ok) throw new Error(body.message || "면접 결과 생성에 실패했습니다.");
+  void trackProductEvent({
+    eventType: "interview_coaching_complete",
+    properties: {
+      session_id: body.session.id,
+      answered_question_count: body.session.messages.filter((item) => item.role === "answer").length,
+    },
+  });
   return body;
 }
 
@@ -113,6 +142,7 @@ export async function getInterviewCoachingSession(
     `${backendUrl}/api/interview-coaching/${encodeURIComponent(sessionId)}${query}`,
     { credentials: "include", cache: "no-store" },
   );
+  trackApiRequest({ path: `/api/interview-coaching/${encodeURIComponent(sessionId)}${query}`, status: response.status, success: response.ok });
   const body = await readJsonResponse(response) as {
     ok: boolean;
     session: InterviewCoachingSession;
@@ -134,6 +164,7 @@ export async function downloadInterviewMaterialFile(args: {
     `${backendUrl}/api/interview-coaching/${encodeURIComponent(args.sessionId)}/material-file${query}`,
     { credentials: "include", cache: "no-store" },
   );
+  trackApiRequest({ path: `/api/interview-coaching/${encodeURIComponent(args.sessionId)}/material-file${query}`, status: response.status, success: response.ok });
 
   if (!response.ok) {
     const body = await readJsonResponse(response).catch(() => null) as { message?: string } | null;
@@ -159,6 +190,7 @@ export async function listInterviewCoachingHistory(anonymousId?: string | null) 
     `${backendUrl}/api/interview-coaching/history${query}`,
     { credentials: "include", cache: "no-store" },
   );
+  trackApiRequest({ path: `/api/interview-coaching/history${query}`, status: response.status, success: response.ok });
   const body = await readJsonResponse(response) as {
     ok: boolean;
     items: InterviewCoachingSession[];

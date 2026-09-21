@@ -1,3 +1,5 @@
+import { trackApiRequest } from "@/features/analytics/analytics.api";
+
 const backendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
@@ -5,6 +7,7 @@ export async function apiClient<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  const method = (init?.method || "GET").toUpperCase();
   const response = await fetch(`${backendUrl}${path}`, {
     ...init,
     cache: "no-store",
@@ -15,18 +18,20 @@ export async function apiClient<T>(
     },
   });
 
+  const body = await response.json().catch(() => null) as { message?: string } | T | null;
+  trackApiRequest({ path, method, status: response.status, success: response.ok });
+
   if (!response.ok) {
-    let message = `Backend request failed: ${response.status}`;
-
-    try {
-      const body = (await response.json()) as { message?: string };
-      message = body.message || message;
-    } catch {
-      // Keep the fallback HTTP status message when the response is not JSON.
-    }
-
+    const message =
+      body && typeof body === "object" && "message" in body && body.message
+        ? body.message
+        : `Backend request failed: ${response.status}`;
     throw new Error(message);
   }
 
-  return response.json() as Promise<T>;
+  if (body === null) {
+    throw new Error("Backend response was empty.");
+  }
+
+  return body as T;
 }

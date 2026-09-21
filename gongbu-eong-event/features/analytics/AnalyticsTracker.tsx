@@ -5,6 +5,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { logPageView } from "@/features/access/access.api";
 import { getCurrentUser } from "@/features/home/home.api";
 import {
+  getScreenBucket,
   getStoredAttributionContext,
   saveStoredAttribution,
   syncAttribution,
@@ -43,6 +44,7 @@ export function AnalyticsTracker() {
     const explicitAttribution = captureAttribution(searchParams, path);
     const current = explicitAttribution || captureCurrentSession(path);
     const { first, last } = getStoredAttributionContext();
+    const screen = getScreenBucket(path);
 
     logPageView({
       path,
@@ -53,6 +55,7 @@ export function AnalyticsTracker() {
           last: summarizeAttribution(last),
           current: summarizeAttribution(current),
         },
+        screen,
       },
     });
 
@@ -82,7 +85,7 @@ export function AnalyticsTracker() {
       );
       if (!clickable) return;
 
-      const screen = getScreenClickBucket(window.location.pathname);
+      const screen = getScreenBucket(window.location.pathname);
       trackProductEvent({
         eventType: "screen_click",
         properties: {
@@ -98,38 +101,61 @@ export function AnalyticsTracker() {
       });
     };
 
+    const handleChange = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
+        return;
+      }
+
+      const screen = getScreenBucket(window.location.pathname);
+      trackProductEvent({
+        eventType: "screen_change",
+        properties: {
+          screen_key: screen.key,
+          screen_name: screen.name,
+          element_tag: target.tagName.toLowerCase(),
+          element_type: target instanceof HTMLInputElement ? target.type : null,
+          element_name: target.getAttribute("name"),
+          element_id: target.id || null,
+          has_value: target instanceof HTMLInputElement &&
+            (target.type === "checkbox" || target.type === "radio")
+            ? target.checked
+            : Boolean(target.value),
+          file_count: target instanceof HTMLInputElement && target.type === "file"
+            ? target.files?.length || 0
+            : null,
+        },
+      });
+    };
+
+    const handleSubmit = (event: SubmitEvent) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+
+      const screen = getScreenBucket(window.location.pathname);
+      trackProductEvent({
+        eventType: "screen_submit",
+        properties: {
+          screen_key: screen.key,
+          screen_name: screen.name,
+          form_id: form.id || null,
+          form_name: form.getAttribute("name"),
+          action: form.getAttribute("action"),
+        },
+      });
+    };
+
     document.addEventListener("click", handleClick, { capture: true });
-    return () => document.removeEventListener("click", handleClick, true);
+    document.addEventListener("change", handleChange, { capture: true });
+    document.addEventListener("submit", handleSubmit, { capture: true });
+    return () => {
+      document.removeEventListener("click", handleClick, true);
+      document.removeEventListener("change", handleChange, true);
+      document.removeEventListener("submit", handleSubmit, true);
+    };
   }, []);
 
   return null;
-}
-
-function getScreenClickBucket(pathname: string) {
-  if (pathname === "/") return { key: "home", name: "홈" };
-  if (/^\/jobs\/[^/]+/.test(pathname)) {
-    return { key: "job_detail", name: "공고상세" };
-  }
-  if (
-    pathname.startsWith("/ai-tools/diagnosis") ||
-    pathname.startsWith("/events/diagnosis")
-  ) {
-    return { key: "diagnosis", name: "강약점" };
-  }
-  if (pathname.startsWith("/community")) {
-    return { key: "community", name: "커뮤니티" };
-  }
-  if (pathname.startsWith("/my")) {
-    return { key: "my", name: "마이페이지" };
-  }
-  if (pathname.startsWith("/calendar")) {
-    return { key: "calendar", name: "캘린더" };
-  }
-  if (pathname.startsWith("/login")) {
-    return { key: "login", name: "로그인" };
-  }
-
-  return { key: "other", name: "기타" };
 }
 
 function getElementText(element: Element) {

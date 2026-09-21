@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import {
   AuthAccountStatusError,
+  claimAnonymousDiagnosisResults,
   findUserBySessionTokenHash,
   OAuthProfile,
   upsertOAuthUser,
 } from "./auth.repository";
 import { claimAnonymousCoachingResults } from "@/domains/coaching/coaching.service";
 import { claimAnonymousInterviewSessions } from "@/domains/interview-coaching/interview-coaching.service";
+import { claimAnonymousAnalyticsData } from "@/domains/analytics/analytics.repository";
 
 type OAuthProvider = "kakao" | "naver";
 type EntrySource =
@@ -220,7 +222,17 @@ export async function handleOAuthCallback(provider: OAuthProvider, request: Next
       ipAddress,
       userAgent: request.headers.get("user-agent") || undefined,
     });
-    await claimCoachingResultsAfterLogin(authResult.userId, oauthAnonymousId);
+    await claimCoachingResultsAfterLogin(
+      authResult.userId,
+      oauthAnonymousId,
+      provider,
+      normalizeEntrySource(
+        request.cookies.get("oauth_entry_source")?.value ||
+          statePayload?.entrySource,
+      ),
+      ipAddress,
+      request.headers.get("user-agent") || undefined,
+    );
 
     console.info(`[OAuth:${provider}] user upserted`, {
       userId: authResult.userId,
@@ -509,14 +521,37 @@ function shouldRedirectToDiagnosisResult(pathname: string) {
   );
 }
 
-async function claimCoachingResultsAfterLogin(userId: string, anonymousId?: string) {
+async function claimCoachingResultsAfterLogin(
+  userId: string,
+  anonymousId: string | undefined,
+  provider: OAuthProvider,
+  entrySource: string,
+  ipAddress?: string,
+  userAgent?: string,
+) {
   if (!anonymousId) return;
-  try {
-    await claimAnonymousCoachingResults(userId, anonymousId);
-    await claimAnonymousInterviewSessions(userId, anonymousId);
-  } catch (error) {
-    console.error("[OAuth] anonymous coaching result claim failed", error);
-  }
+  const claims = [
+    [
+      "diagnosis",
+      () =>
+        claimAnonymousDiagnosisResults(userId, anonymousId, {
+          provider,
+          entrySource,
+          ipAddress,
+          userAgent,
+        }),
+    ],
+    ["coaching", () => claimAnonymousCoachingResults(userId, anonymousId)],
+    ["interview", () => claimAnonymousInterviewSessions(userId, anonymousId)],
+    ["analytics", () => claimAnonymousAnalyticsData(userId, anonymousId)],
+  ] as const;
+
+  const results = await Promise.allSettled(claims.map(([, claim]) => claim()));
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.error(`[OAuth] anonymous ${claims[index][0]} claim failed`, result.reason);
+    }
+  });
 }
 
 function isAllowedOAuthReturnOrigin(url: URL) {
@@ -587,6 +622,20 @@ async function redirectExistingSession(
 
   if (!user) {
     return null;
+  }
+
+  const anonymousId = validUuidOrUndefined(
+    request.cookies.get("oauth_anonymous_id")?.value,
+  );
+  if (anonymousId) {
+    await claimCoachingResultsAfterLogin(
+      user.id,
+      anonymousId,
+      provider,
+      normalizeEntrySource(request.cookies.get("oauth_entry_source")?.value),
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim(),
+      request.headers.get("user-agent") || undefined,
+    );
   }
 
   const storedReturnTo = normalizeOAuthReturnTo(

@@ -109,8 +109,58 @@ export function AnalyticsTracker() {
       });
     };
 
+    const handleChange = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
+        return;
+      }
+
+      const screen = getScreenBucket(window.location.pathname);
+      trackProductEvent({
+        eventType: "screen_change",
+        properties: {
+          screen_key: screen.key,
+          screen_name: screen.name,
+          element_tag: target.tagName.toLowerCase(),
+          element_type: target instanceof HTMLInputElement ? target.type : null,
+          element_name: target.getAttribute("name"),
+          element_id: target.id || null,
+          has_value: target instanceof HTMLInputElement &&
+            (target.type === "checkbox" || target.type === "radio")
+            ? target.checked
+            : Boolean(target.value),
+          file_count: target instanceof HTMLInputElement && target.type === "file"
+            ? target.files?.length || 0
+            : null,
+        },
+      });
+    };
+
+    const handleSubmit = (event: SubmitEvent) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) return;
+
+      const screen = getScreenBucket(window.location.pathname);
+      trackProductEvent({
+        eventType: "screen_submit",
+        properties: {
+          screen_key: screen.key,
+          screen_name: screen.name,
+          form_id: form.id || null,
+          form_name: form.getAttribute("name"),
+          action: form.getAttribute("action"),
+        },
+      });
+    };
+
     document.addEventListener("click", handleClick, { capture: true });
-    return () => document.removeEventListener("click", handleClick, true);
+    document.addEventListener("change", handleChange, { capture: true });
+    document.addEventListener("submit", handleSubmit, { capture: true });
+    return () => {
+      document.removeEventListener("click", handleClick, true);
+      document.removeEventListener("change", handleChange, true);
+      document.removeEventListener("submit", handleSubmit, true);
+    };
   }, []);
 
   return null;

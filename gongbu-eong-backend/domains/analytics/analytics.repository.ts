@@ -6,6 +6,47 @@ import type {
   SaveAttributionRequestDto,
 } from "./analytics.dto";
 
+export async function claimAnonymousAnalyticsData(
+  userId: string,
+  anonymousId: string,
+) {
+  const [accessLogs, productEvents, attributionEvents] = await Promise.all([
+    query(
+      `
+        UPDATE public.access_logs
+        SET user_id = $1
+        WHERE user_id IS NULL
+          AND anonymous_id = $2::uuid
+      `,
+      [userId, anonymousId],
+    ),
+    query(
+      `
+        UPDATE public.product_events
+        SET user_id = $1
+        WHERE user_id IS NULL
+          AND anonymous_id = $2::uuid
+      `,
+      [userId, anonymousId],
+    ),
+    query(
+      `
+        UPDATE public.attribution_events
+        SET user_id = $1
+        WHERE user_id IS NULL
+          AND anonymous_id = $2::uuid
+      `,
+      [userId, anonymousId],
+    ),
+  ]);
+
+  return {
+    accessLogs: accessLogs.rowCount || 0,
+    productEvents: productEvents.rowCount || 0,
+    attributionEvents: attributionEvents.rowCount || 0,
+  };
+}
+
 type AttributionSnapshot = {
   source: string | null;
   medium: string | null;

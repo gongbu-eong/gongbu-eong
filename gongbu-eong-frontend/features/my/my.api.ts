@@ -1,4 +1,5 @@
 import { apiClient } from "@/shared/api/client";
+import { trackApiRequest } from "@/features/analytics/analytics.api";
 import type {
   ResumeListResponseDto,
   ResumePayloadDto,
@@ -94,6 +95,8 @@ export async function uploadResumeFile(file: File) {
     body: formData,
   });
 
+  trackApiRequest({ path: "/api/resumes/upload", method: "POST", status: response.status, success: response.ok });
+
   if (!response.ok) {
     let message = `Backend request failed: ${response.status}`;
 
@@ -133,6 +136,8 @@ async function saveResume(
     credentials: "include",
     body: formData,
   });
+
+  trackApiRequest({ path, method, status: response.status, success: response.ok });
 
   if (!response.ok) {
     let message = `Backend request failed: ${response.status}`;

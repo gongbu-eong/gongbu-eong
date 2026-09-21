@@ -113,6 +113,35 @@ export function trackProductEvent(args: {
   });
 }
 
+export function trackApiRequest(args: {
+  path: string;
+  method?: string;
+  status?: number;
+  success: boolean;
+}) {
+  if (typeof window === "undefined") return;
+
+  const method = (args.method || "GET").toUpperCase();
+  const path = args.path.split("#")[0];
+  if (
+    path.startsWith("/api/access-logs") ||
+    path.startsWith("/api/product-events") ||
+    path.startsWith("/api/analytics/")
+  ) {
+    return;
+  }
+
+  trackProductEvent({
+    eventType: method === "GET" ? "api_data_view" : "api_action",
+    properties: {
+      api_path: path,
+      api_method: method,
+      api_status: args.status || null,
+      api_success: args.success,
+    },
+  });
+}
+
 function readAttribution(key: string): AttributionSnapshot | null {
   try {
     const raw = window.localStorage.getItem(key);
@@ -243,6 +272,24 @@ export function getScreenBucket(path: string) {
   }
   if (pathname.startsWith("/login") || pathname.startsWith("/auth")) {
     return { key: "login", name: "로그인", canonicalPath: "/login" };
+  }
+  if (pathname.startsWith("/signup")) {
+    return { key: "signup", name: "회원가입", canonicalPath: "/signup" };
+  }
+  if (pathname.startsWith("/notifications")) {
+    return { key: "notifications", name: "알림", canonicalPath: "/notifications" };
+  }
+  if (pathname.startsWith("/study-items")) {
+    return { key: "study_items", name: "학습", canonicalPath: "/study-items" };
+  }
+  if (pathname.startsWith("/s/")) {
+    return { key: "share", name: "공유", canonicalPath: "/s/[code]" };
+  }
+  if (pathname.startsWith("/test")) {
+    return { key: "test", name: "테스트", canonicalPath: "/test" };
+  }
+  if (pathname.startsWith("/health")) {
+    return { key: "health", name: "상태 확인", canonicalPath: "/health" };
   }
 
   return { key: "other", name: "기타", canonicalPath: pathname || "/" };

@@ -576,6 +576,130 @@ async function ensureOAuthLoginAllowed(
   }
 }
 
+export async function claimAnonymousDiagnosisResults(
+  userId: string,
+  anonymousId: string,
+  options?: {
+    provider?: OAuthProvider;
+    entrySource?: string;
+    ipAddress?: string;
+    userAgent?: string;
+  },
+) {
+  const client = await db.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    await client.query(
+      `
+        UPDATE public.diagnosis_runs runs
+        SET user_id = $1
+        WHERE runs.user_id IS NULL
+          AND runs.anonymous_id = $2::uuid
+          AND (
+            runs.completed_at IS NOT NULL
+            OR EXISTS (
+              SELECT 1
+              FROM public.diagnosis_results results
+              WHERE results.diagnosis_run_id = runs.id
+            )
+          )
+      `,
+      [userId, anonymousId],
+    );
+
+    await client.query(
+      `
+        UPDATE public.diagnosis_results results
+        SET user_id = $1
+        FROM public.diagnosis_runs runs
+        WHERE results.diagnosis_run_id = runs.id
+          AND runs.user_id = $1
+          AND runs.anonymous_id = $2::uuid
+          AND results.user_id IS NULL
+      `,
+      [userId, anonymousId],
+    );
+
+    if (options?.provider) {
+      await client.query(
+        `
+          INSERT INTO public.diagnosis_login_conversions (
+            diagnosis_run_id,
+            diagnosis_result_id,
+            user_id,
+            provider,
+            anonymous_id,
+            entry_source,
+            ip_address,
+            user_agent
+          )
+          SELECT
+            runs.id,
+            results.id,
+            $1,
+            $3::public.oauth_provider,
+            $2::uuid,
+            $4::public.entry_source,
+            $5,
+            $6
+          FROM public.diagnosis_runs runs
+          JOIN public.diagnosis_results results
+            ON results.diagnosis_run_id = runs.id
+          WHERE runs.user_id = $1
+            AND runs.anonymous_id = $2::uuid
+          ON CONFLICT (diagnosis_run_id, user_id, provider) DO NOTHING
+        `,
+        [
+          userId,
+          anonymousId,
+          options.provider,
+          options.entrySource || "unknown",
+          options.ipAddress || null,
+          options.userAgent || null,
+        ],
+      );
+    }
+
+    const latestResult = await client.query<{ id: string }>(
+      `
+        SELECT results.id
+        FROM public.diagnosis_results results
+        JOIN public.diagnosis_runs runs
+          ON runs.id = results.diagnosis_run_id
+        WHERE runs.user_id = $1
+          AND runs.anonymous_id = $2::uuid
+        ORDER BY results.created_at DESC
+        LIMIT 1
+      `,
+      [userId, anonymousId],
+    );
+
+    if (latestResult.rows[0]?.id) {
+      await client.query(
+        `
+          UPDATE public.users
+          SET selected_diagnosis_result_id = COALESCE(
+            selected_diagnosis_result_id,
+            $2::uuid
+          ), updated_at = NOW()
+          WHERE id = $1
+        `,
+        [userId, latestResult.rows[0].id],
+      );
+    }
+
+    await client.query("COMMIT");
+    return { diagnosisResultId: latestResult.rows[0]?.id || null };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 function toDate(value: Date | string | null | undefined) {
   if (!value) {
     return null;

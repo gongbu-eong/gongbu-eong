@@ -1,5 +1,6 @@
 import type { CoachingFeedback, CoachingHistoryItem, CoachingJob, CoachingQuestionInput } from "./coaching.dto";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
+import { trackApiRequest, trackProductEvent } from "@/features/analytics/analytics.api";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
@@ -15,6 +16,7 @@ export async function coachResume(args: { inputType: "text" | "file"; inputText:
   if (args.questions?.length) form.set("questions", JSON.stringify(args.questions));
   if (args.file) form.set("file", args.file);
   const response = await fetch(`${backendUrl}/api/coaching`, { method: "POST", body: form, credentials: "include", cache: "no-store" });
+  trackApiRequest({ path: "/api/coaching", method: "POST", status: response.status, success: response.ok });
   const body = await readJsonResponse(response) as { ok: boolean; message?: string; resultId: string; requestId: string; feedback: CoachingFeedback; sourceFile?: { id: string; originalFilename: string } };
   if (!response.ok || !body.ok) {
     // 진단권 잔액 동기화 로직 비활성화.
@@ -25,10 +27,23 @@ export async function coachResume(args: { inputType: "text" | "file"; inputText:
     // }
     throw new Error(body.message || "코칭에 실패했습니다.");
   }
+  void trackProductEvent({
+    eventType: "coaching_complete",
+    diagnosisResultId: null,
+    properties: {
+      result_id: body.resultId,
+      request_id: body.requestId,
+      input_type: args.inputType,
+      has_file: Boolean(args.file),
+      has_job_posting: Boolean(args.jobPostingId),
+      question_count: args.questions?.length || 0,
+    },
+  });
   return body;
 }
 export async function listCoachingHistory() {
   const response = await fetch(`${backendUrl}/api/coaching/history`, { credentials: "include", cache: "no-store" });
+  trackApiRequest({ path: "/api/coaching/history", status: response.status, success: response.ok });
   const body = await response.json() as { ok: boolean; items: CoachingHistoryItem[]; message?: string };
   if (!response.ok || !body.ok) throw new Error(body.message || "기록을 불러오지 못했습니다.");
   return body;
@@ -38,6 +53,7 @@ export async function getCoachingResult(resultId: string, anonymousId?: string |
   if (anonymousId) searchParams.set("anonymousId", anonymousId);
   const query = searchParams.size ? `?${searchParams.toString()}` : "";
   const response = await fetch(`${backendUrl}/api/coaching/history/${encodeURIComponent(resultId)}${query}`, { credentials: "include", cache: "no-store" });
+  trackApiRequest({ path: `/api/coaching/history/${encodeURIComponent(resultId)}${query}`, status: response.status, success: response.ok });
   const body = await response.json() as { ok: boolean; item: CoachingHistoryItem; message?: string };
   if (!response.ok || !body.ok) throw new Error(body.message || "결과를 불러오지 못했습니다.");
   return body;

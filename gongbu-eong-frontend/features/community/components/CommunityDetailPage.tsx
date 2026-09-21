@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
+import { trackProductEvent } from "@/features/analytics/analytics.api";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { loadKakaoSdk } from "@/shared/kakao-share";
 import { focusMobileInput } from "@/shared/mobile-focus";
@@ -112,6 +113,15 @@ export function CommunityDetailPage({
     requestedPostIdsRef.current.add(postId);
     getCommunityPost(postId, { incrementView: initialPostIdRef.current !== postId })
       .then((response) => {
+        trackProductEvent({
+          eventType: "community_post_view",
+          properties: {
+            post_id: response.post.id,
+            post_title: response.post.title,
+            category: response.post.category,
+            view_incremented: initialPostIdRef.current !== postId,
+          },
+        });
         setPost(response.post);
         setBoardPage(response.boardPage || 1);
         setExpandedReplyIds([]);
