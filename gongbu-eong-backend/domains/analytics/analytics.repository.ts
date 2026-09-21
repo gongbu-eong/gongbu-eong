@@ -1,4 +1,5 @@
 import { query } from "@/lib/db";
+import { wakeAnalyticsFactWorker } from "@/lib/analytics-fact-worker";
 import type {
   AttributionSnapshotDto,
   ProductEventAttributionContextDto,
@@ -277,6 +278,7 @@ export async function recordDiagnosisCompleteEvent(args: {
     ],
   );
 
+  void wakeAnalyticsFactWorker();
   return { attemptNo: result.rows[0]?.attempt_no ?? null };
 }
 

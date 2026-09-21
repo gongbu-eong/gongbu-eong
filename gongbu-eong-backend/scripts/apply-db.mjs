@@ -27,7 +27,11 @@ const databaseUrl =
 
 async function main() {
   const client = new Client({ connectionString: databaseUrl });
-  const files = ["schema_full.sql"];
+  const files = [
+    "schema_full.sql",
+    "20260921_add_dashboard_analytics_indexes.sql",
+    "20260921_add_analytics_fact_queue.sql",
+  ];
 
   await client.connect();
 

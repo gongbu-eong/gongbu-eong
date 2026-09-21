@@ -1,7 +1,8 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
 import { createAccessLog } from "@/domains/access/access.repository";
 import { getSessionUser } from "@/domains/auth/session";
 import { jsonWithCors } from "@/lib/cors";
+import { wakeAnalyticsFactWorker } from "@/lib/analytics-fact-worker";
 
 export const runtime = "nodejs";
 
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
       ipAddress,
       userAgent: request.headers.get("user-agent") || undefined,
     });
+    after(wakeAnalyticsFactWorker);
 
     return jsonWithCors(request, { ok: true }, { status: 201 });
   } catch (error) {
