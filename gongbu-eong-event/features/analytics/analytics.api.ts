@@ -90,6 +90,7 @@ export function trackProductEvent(args: {
       diagnosisResultId: args.diagnosisResultId || null,
       attribution: getStoredAttributionContext(),
       properties: {
+        client_occurred_at: new Date().toISOString(),
         path,
         title: document.title,
         referrer: document.referrer || null,
@@ -110,27 +111,9 @@ export function trackApiRequest(args: {
   status?: number;
   success: boolean;
 }) {
-  if (typeof window === "undefined") return;
-
-  const method = (args.method || "GET").toUpperCase();
-  const path = args.path.split("#")[0];
-  if (
-    path.startsWith("/api/access-logs") ||
-    path.startsWith("/api/product-events") ||
-    path.startsWith("/api/analytics/")
-  ) {
-    return;
-  }
-
-  trackProductEvent({
-    eventType: method === "GET" ? "api_data_view" : "api_action",
-    properties: {
-      api_path: path,
-      api_method: method,
-      api_status: args.status || null,
-      api_success: args.success,
-    },
-  });
+  // API responses are implementation details, not user behavior. The global
+  // interaction tracker and semantic product events record the actual action.
+  void args;
 }
 
 export function getScreenBucket(path: string) {

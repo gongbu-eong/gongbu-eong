@@ -75,11 +75,13 @@ export function AnalyticsTracker() {
       current,
     });
 
-    syncAttribution({
-      first: storedFirst,
-      last: storedLast,
-      current,
-    });
+    if (shouldSyncAttribution(current)) {
+      syncAttribution({
+        first: storedFirst,
+        last: storedLast,
+        current,
+      });
+    }
     rememberCurrentPath(path);
   }, [pathname, searchParams]);
 
@@ -164,6 +166,23 @@ export function AnalyticsTracker() {
   }, []);
 
   return null;
+}
+
+function shouldSyncAttribution(current: AttributionSnapshot | null) {
+  const signature = JSON.stringify(current && {
+    source: current.utm_source || null,
+    medium: current.utm_medium || null,
+    campaign: current.utm_campaign || null,
+    content: current.utm_content || null,
+    term: current.utm_term || null,
+    gclid: current.gclid || null,
+    fbclid: current.fbclid || null,
+    referrer: current.referrer || null,
+  });
+  const key = "gongbu-eong-last-attribution-sync";
+  if (window.sessionStorage.getItem(key) === signature) return false;
+  window.sessionStorage.setItem(key, signature);
+  return true;
 }
 
 function getElementText(element: Element) {
