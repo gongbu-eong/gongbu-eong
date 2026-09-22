@@ -4,7 +4,7 @@ import { generateUniqueCommunityNickname } from "./community-nickname";
 import { encryptOAuthToken } from "./oauth-token-crypto";
 
 type OAuthProvider = "kakao" | "naver";
-type UserStatus = "active" | "blocked" | "withdrawn" | "pending_signup";
+type UserStatus = "active" | "blocked" | "withdrawn" | "forced_withdrawn" | "pending_signup";
 
 type LoginGuardUserRow = {
   id: string;
@@ -62,7 +62,7 @@ export async function upsertOAuthUser(args: {
             ELSE users.blocked_until
           END AS blocked_until,
           CASE
-            WHEN restrictions.status = 'withdrawn' THEN restrictions.restricted_until
+            WHEN restrictions.status IN ('withdrawn', 'forced_withdrawn') THEN restrictions.restricted_until
             ELSE users.rejoin_blocked_until
           END AS rejoin_blocked_until
         FROM public.oauth_login_restrictions restrictions
@@ -141,7 +141,7 @@ export async function upsertOAuthUser(args: {
             SELECT id, status, blocked_until, rejoin_blocked_until
             FROM public.users
             WHERE email = $1
-              AND status IN ('blocked', 'withdrawn')
+              AND status IN ('blocked', 'withdrawn', 'forced_withdrawn')
             LIMIT 1
             FOR UPDATE
           `,
@@ -513,7 +513,8 @@ async function ensureOAuthLoginAllowed(
         `
           UPDATE public.users
           SET
-            status = 'active'::public.user_status,
+            status = COALESCE(status_before_sanction, 'active'::public.user_status),
+            status_before_sanction = NULL,
             blocked_until = NULL,
             sanction_reason = NULL,
             sanction_updated_at = NOW(),
@@ -540,21 +541,22 @@ async function ensureOAuthLoginAllowed(
     );
   }
 
-  if (user.status === "withdrawn") {
+  if (user.status === "withdrawn" || user.status === "forced_withdrawn") {
     const rejoinBlockedUntil = toDate(user.rejoin_blocked_until);
     if (rejoinBlockedUntil && rejoinBlockedUntil.getTime() <= Date.now()) {
       await client.query(
         `
           UPDATE public.users
           SET
-            status = 'active'::public.user_status,
+            status = COALESCE(status_before_sanction, 'active'::public.user_status),
+            status_before_sanction = NULL,
             withdrawn_at = NULL,
             rejoin_blocked_until = NULL,
             sanction_reason = NULL,
             sanction_updated_at = NOW(),
             updated_at = NOW()
           WHERE id = $1::uuid
-            AND status = 'withdrawn'
+            AND status IN ('withdrawn', 'forced_withdrawn')
         `,
         [user.id],
       );
@@ -562,7 +564,7 @@ async function ensureOAuthLoginAllowed(
         `
           DELETE FROM public.oauth_login_restrictions
           WHERE user_id = $1::uuid
-            AND status = 'withdrawn'
+            AND status IN ('withdrawn', 'forced_withdrawn')
         `,
         [user.id],
       );
