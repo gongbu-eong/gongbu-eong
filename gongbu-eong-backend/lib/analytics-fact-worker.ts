@@ -13,10 +13,10 @@ export async function wakeAnalyticsFactWorker() {
     await new Promise<void>((resolve) => setTimeout(resolve, 3_500));
     // One user action can enqueue multiple scopes. Drain a full bounded batch
     // so initial backlog does not persist one three-item wake-up at a time.
-    await fetch(`${baseUrl}/api/internal/analytics/facts/process?limit=20`, {
+    await fetch(`${baseUrl}/api/internal/analytics/facts/process?limit=50`, {
       method: "POST",
       headers: { "x-analytics-fact-worker-key": key },
-      signal: AbortSignal.timeout(20_000),
+      signal: AbortSignal.timeout(30_000),
     });
   } catch {
     // The next event or manual worker call will claim the durable queue row.
