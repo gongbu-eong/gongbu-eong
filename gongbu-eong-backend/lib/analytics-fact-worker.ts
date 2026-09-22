@@ -11,7 +11,9 @@ export async function wakeAnalyticsFactWorker() {
   try {
     // Raw-event triggers coalesce a short burst before the day is eligible.
     await new Promise<void>((resolve) => setTimeout(resolve, 3_500));
-    await fetch(`${baseUrl}/api/internal/analytics/facts/process?limit=3`, {
+    // One user action can enqueue multiple scopes. Drain a full bounded batch
+    // so initial backlog does not persist one three-item wake-up at a time.
+    await fetch(`${baseUrl}/api/internal/analytics/facts/process?limit=20`, {
       method: "POST",
       headers: { "x-analytics-fact-worker-key": key },
       signal: AbortSignal.timeout(20_000),
