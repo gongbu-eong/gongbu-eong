@@ -120,7 +120,7 @@
 /* Keep the Figma artwork at its native 393px coordinate system, then scale
    that complete frame inside a centered responsive viewport. */
 .canvasFrame{position:relative;width:min(600px,100vw);aspect-ratio:393 / 6395;margin:0 auto;overflow:visible}
-.canvas{width:393px;height:6395px;zoom:1;transform:scale(min(1.526718,calc(100vw / 393px)));transform-origin:top left}
+.canvas{width:393px;height:6395px;margin:0;zoom:1;transform:scale(min(1.526718,calc(100vw / 393px)));transform-origin:top left}
 .hero{top:0;height:752px}
 .resultPanel{top:547px;height:1259px}
 .resultScreenPanel{top:1806px;height:1032px}
