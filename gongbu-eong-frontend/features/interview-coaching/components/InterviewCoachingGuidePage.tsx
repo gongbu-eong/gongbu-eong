@@ -11,8 +11,8 @@ const scores = [
 ] as const;
 
 const steps = [
-  ["01", "공고 선택", "공고를 선택하고 직무를\n입력하면 끝!"],
   ["02", "자소서 문항 입력", "지원서에 있는 질문을 그대로\n붙여넣어 주세요."],
+  ["01", "공고 선택", "공고를 선택하고 직무를\n입력하면 끝!"],
   ["03", "내가 쓴 답변 붙여넣기", "완성본이 아니어도 괜찮아요.\n초안부터 코칭할 수 있어요."],
   ["04", "AI NCS 코칭 확인", "문항별 평가, 코칭 포인트, 수정\n우선순위를 확인하세요."],
 ] as const;
@@ -27,9 +27,9 @@ const checks = [
 
 const people = [
   ["people-1.png", "문항 적합성·구체성 확인", "써놓긴 했는데\n잘 쓴 건지 모르겠어요"],
-  ["people-2.png", "초안 단계에서도 사용 가능", "완성본 전에 초안부터\n봐줬으면 좋겠어요"],
-  ["people-3.png", "행동·근거 중심으로 점검", "자소서가 자꾸\n두루뭉술해져요"],
-  ["people-4.png", "역량 표현과 구조 확인", "NCS 기준으로\n어떻게 써야 할지 모르겠어요"],
+  ["people-3.png", "초안 단계에서도 사용 가능", "완성본 전에 초안부터\n봐줬으면 좋겠어요"],
+  ["people-4.png", "행동·근거 중심으로 점검", "자소서가 자꾸\n두루뭉술해져요"],
+  ["people-2.png", "역량 표현과 구조 확인", "NCS 기준으로\n어떻게 써야 할지 모르겠어요"],
 ] as const;
 
 export function InterviewCoachingGuidePage() {
@@ -80,7 +80,7 @@ export function InterviewCoachingGuidePage() {
 
         <section className={`${styles.panel} ${styles.peoplePanel}`}>
           <SectionTitle number="5" title={<>이런 분에게<br /><mark>특히 좋아요!</mark></>} />
-          <div className={styles.peopleList}>{people.map(([image, title, description]) => <article key={title}><Image src={`/interview-coaching/figma/${image}`} alt="" width={104} height={110} /><div><h3>{title}</h3><p>{description}</p></div></article>)}</div>
+          <div className={styles.peopleList}>{people.map(([image, title, description]) => <article key={title}><Image src={`/interview-coaching/figma/${image}`} alt="" width={104} height={110} /><div><h3>{description}</h3><p>{title}</p></div></article>)}</div>
         </section>
 
         <section className={`${styles.panel} ${styles.finalPanel}`}>
@@ -88,7 +88,11 @@ export function InterviewCoachingGuidePage() {
           <div className={styles.finalCopy}><h3>공부엉이 코칭은 합격 여부를<br />예측하는 서비스가 아닙니다</h3><p>기관의 실제 채점표는 공개되지 않은 경우가 많기 때문에,<br />점수 자체보다 문항 의도에 맞는지, 근거가 충분한지,<br />어떤 부분을 고칠 수 있는지를 확인하는 용도로 봐주세요.</p></div>
           <Image className={styles.finalImage} src="/interview-coaching/figma/final.png" alt="자소서를 코칭하는 공부엉이" width={931} height={1234} />
         </section>
-        <div className={styles.finalCta}><p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.<br />완성본이 아니어도 괜찮아요.</p><Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link></div>
+        <div className={styles.finalCta}>
+          <h2>완성본이 아니어도 괜찮아요.</h2>
+          <p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.</p>
+          <Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link>
+        </div>
       </div>
     </main>
   );

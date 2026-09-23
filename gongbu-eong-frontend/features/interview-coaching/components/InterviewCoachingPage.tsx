@@ -424,7 +424,7 @@ export function InterviewCoachingPage({
               }}
             >
               <span>
-                <strong>AI NCS 면접 코칭이 처음이라면?</strong>
+                <strong>혹시 AI NCS 자소서 코칭이 처음이라면?</strong>
                 <small>사용 방법과 준비할 내용을 한눈에 확인해 보세요.</small>
               </span>
               <b aria-hidden="true">›</b>
