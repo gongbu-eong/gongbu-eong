@@ -128,3 +128,35 @@
 .checkPanel{top:3653px;height:965px}
 .peoplePanel{top:4618px;height:933px}
 .finalPanel{top:5551px;height:652px}
+
+/* Figma 2585:10833-10836: each hero line has its own fixed coordinate. */
+.hero h1{top:104px;height:192px;line-height:54px}
+.hero h1>span,.hero h1>mark{position:absolute;left:0;display:block;width:100%;height:54px;margin:0;padding:0;line-height:54px}
+.hero h1>span:first-child{top:0}
+.hero h1>mark{top:60px;left:24px;width:345px;height:74px;padding:10px 0;box-sizing:border-box}
+.hero h1>span:last-child{top:138px}
+.heroCopy{top:312px}
+.pills{top:366px}
+.heroImage{top:478px;left:52px;width:275px;height:288px}
+
+/* Figma 2585:10877-10881: keep the score in one bounded row so it cannot
+   overlap the summary copy when the 393px artwork is scaled. */
+.analysisCard .total{position:absolute;top:84px;left:0;display:flex;width:100%;height:52px;align-items:flex-end;justify-content:center;margin:0;line-height:1}
+.analysisCard .total b{position:static;margin:0;color:#1a2233;font-size:52px;font-weight:800;line-height:52px}
+.analysisCard .total span{position:static;margin:0 0 3px 5px;color:#5a6580;font-size:17px;font-weight:400;line-height:20px}
+.analysisCard h3{top:154px}
+.analysisCard>p{top:210px}
+
+/* Figma 2585:10899: the result preview is three adjoining surfaces. */
+.screenCard{height:669px;overflow:hidden;border:0;background:transparent}
+.screenHeader{height:190px;border:1px solid #e4e8ef;border-radius:10px 10px 0 0;background:#fff}
+.screenEvaluation{position:relative;height:293px;padding:0;border:0;border-right:1px solid #e4e8ef;border-bottom:1px solid #e4e8ef;border-left:1px solid #e4e8ef;background:#fff}
+.screenEvaluation>h3{position:absolute;top:24px;left:16px;margin:0}
+.evaluationRow{position:absolute;left:16px;width:329px;margin:0;border:0}
+.evaluationRow:first-of-type{top:53px;height:98px;border-bottom:1px solid #e4e8ef}
+.evaluationRow:last-of-type{top:167px;height:102px;margin:0}
+.evaluationLabel{top:0;left:0}
+.evaluationRow p,.evaluationRow:last-child p{top:28px;left:0}
+.evaluationScore,.evaluationRow:last-child .evaluationScore{top:56px;right:auto;left:0}
+.evaluationRow:last-child .evaluationScore{top:76px}
+.coachingPoint{height:186px;border:0;border-right:1px solid #e4e8ef;border-bottom:1px solid #e4e8ef;border-left:1px solid #e4e8ef;border-radius:0 0 10px 10px;background:#fff}

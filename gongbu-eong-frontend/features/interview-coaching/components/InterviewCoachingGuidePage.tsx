@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { type ReactNode } from "react";
 import styles from "./InterviewCoachingGuidePage.module.css";
 
 const scores = [
@@ -35,7 +36,16 @@ const people = [
 ] as const;
 
 export function InterviewCoachingGuidePage() {
-  const [showFinalCta, setShowFinalCta] = useState(true);
+  const router = useRouter();
+
+  const closeGuide = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.replace("/ai-tools/interview-coaching");
+  };
 
   return (
     <main className={styles.page}>
@@ -43,7 +53,11 @@ export function InterviewCoachingGuidePage() {
         <div className={styles.canvas}>
         <section className={`${styles.panel} ${styles.hero}`}>
           <span className={styles.eyebrow}>NCS 자소서 코칭이 처음이시라면?</span>
-          <h1>자소서를 썼는데,<br /><mark>어디를 고쳐야 할지</mark><br />모르겠다면?</h1>
+          <h1>
+            <span>자소서를 썼는데,</span>
+            <mark>어디를 고쳐야 할지</mark>
+            <span>모르겠다면?</span>
+          </h1>
           <p className={styles.heroCopy}>공부엉이가 문항 의도, NCS 역량, 구체성, 답변 구조를<br />보고 무엇을 먼저 고치면 좋을지 정리해드려요.</p>
           <div className={styles.pills}><span>NCS 기준 평가</span><span>1문항부터 가능</span><span>문항별 첨삭</span><span>비회원 사용가능</span></div>
           <Image className={styles.heroImage} src="/interview-coaching/figma/hero.png" alt="자소서 코칭을 확인하는 공부엉이" width={1473} height={1185} priority />
@@ -115,16 +129,14 @@ export function InterviewCoachingGuidePage() {
         </section>
         </div>
       </div>
-      {showFinalCta ? (
-        <div className={styles.finalCta}>
-          <button className={styles.finalCtaClose} type="button" aria-label="가이드 하단 안내 닫기" onClick={() => setShowFinalCta(false)}>
-            <span aria-hidden="true">×</span>
-          </button>
-          <h2>완성본이 아니어도 괜찮아요.</h2>
-          <p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.</p>
-          <Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link>
-        </div>
-      ) : null}
+      <div className={styles.finalCta}>
+        <button className={styles.finalCtaClose} type="button" aria-label="가이드 닫고 이전 화면으로 돌아가기" onClick={closeGuide}>
+          <span aria-hidden="true">×</span>
+        </button>
+        <h2>완성본이 아니어도 괜찮아요.</h2>
+        <p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.</p>
+        <Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link>
+      </div>
     </main>
   );
 }
