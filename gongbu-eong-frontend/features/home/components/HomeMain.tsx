@@ -8,7 +8,6 @@ import type { CSSProperties, MouseEvent, PointerEvent } from "react";
 import { AppFooter } from "@/features/layout/components/AppChrome";
 // import { AppFooter, AppTicketStatus } from "@/features/layout/components/AppChrome";
 import { BusinessInfo } from "@/features/layout/components/BusinessInfo";
-import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
 // import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAlert";
 import { getCommunityPosts } from "@/features/community/community.api";
 import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
@@ -49,14 +48,14 @@ const aiTools = [
     imageAlt: "AI NCS 자소서 코칭",
   },
   {
-    href: "#",
-    tag: "준비중",
-    memberTag: "준비중",
+    href: "/ai-tools/interview-coaching",
+    requiresAuth: false,
+    tag: "AI 면접",
+    memberTag: "AI 면접",
     title: "AI NCS 면접 코칭",
     description: "실전처럼 연습하고 면접 울렁증 극복해요.",
     image: "/home/home-tool-interview.png",
     imageAlt: "AI NCS 면접 코칭",
-    comingSoon: true,
   }
 ];
 
@@ -157,7 +156,6 @@ export function HomeMain({
   const [user, setUser] = useState<CurrentUserDto | null>(initialUser);
   const [isLoading, setIsLoading] = useState(!initialUser && !authResolved);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
   // const [ticketRewardMessage, setTicketRewardMessage] = useState(getWelcomeTicketRewardMessage);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [jobs, setJobs] = useState<HomeJobsResponseDto>({
@@ -531,19 +529,6 @@ const ignoreClickAfterDrag = (
               </>
             );
 
-            if (tool.comingSoon) {
-              return (
-                <button
-                  type="button"
-                  key={tool.title}
-                  className={styles.toolCard}
-                  onClick={() => setIsComingSoonOpen(true)}
-                >
-                  {content}
-                </button>
-              );
-            }
-
             return (
               <Link
                 href={!tool.requiresAuth || user ? tool.href : makeLoginHref(tool.href)}
@@ -635,9 +620,6 @@ const ignoreClickAfterDrag = (
           />
         ) : null}
 
-        {isComingSoonOpen ? (
-          <ComingSoonAlert onClose={() => setIsComingSoonOpen(false)} />
-        ) : null}
         {/*
         {ticketRewardMessage ? (
           <TicketRewardAlert

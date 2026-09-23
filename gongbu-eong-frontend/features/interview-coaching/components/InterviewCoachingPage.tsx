@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
+import { trackProductEvent } from "@/features/analytics/analytics.api";
 import { getJobPostings } from "@/features/home/home.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
@@ -411,6 +413,22 @@ export function InterviewCoachingPage({
 
         {busy === "load" ? null : !session ? (
           <>
+            <Link
+              href="/ai-tools/interview-coaching/guide"
+              className={styles.guideBanner}
+              onClick={() => {
+                void trackProductEvent({
+                  eventType: "interview_coaching_guide_click",
+                  properties: { placement: "interview_coaching_top" },
+                });
+              }}
+            >
+              <span>
+                <strong>AI NCS 면접 코칭이 처음이라면?</strong>
+                <small>사용 방법과 준비할 내용을 한눈에 확인해 보세요.</small>
+              </span>
+              <b aria-hidden="true">›</b>
+            </Link>
             <section className={styles.interviewInputSection}>
               <h2>면접 기업 정보</h2>
               {connectedJob ? (
