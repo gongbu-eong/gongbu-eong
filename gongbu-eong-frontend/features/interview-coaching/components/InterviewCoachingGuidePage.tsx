@@ -4,145 +4,96 @@ import type { ReactNode } from "react";
 import styles from "./InterviewCoachingGuidePage.module.css";
 
 const scores = [
-  ["NCS 역량 표현", "답변에서 직무 역량이 드러나는 정도", "82"],
-  ["질문 적합성", "질문 의도에 맞게 답했는지", "88"],
-  ["구체성·근거", "경험과 결과가 구체적인지", "74"],
-  ["논리·가독성", "답변 흐름이 자연스러운지", "86"],
-];
+  ["NCS 역량 표현", "82", 82],
+  ["문항 적합성", "88", 98],
+  ["구체성·근거", "74", 75],
+  ["논리·가독성", "86", 94],
+] as const;
 
-const setupSteps = [
-  ["01", "지원 공고 연결", "지원하려는 공고를 연결하면 직무 정보가 자동으로 반영돼요."],
-  ["02", "면접 자료 입력", "자소서나 경력, 예상 답변을 파일로 올리거나 직접 입력해요."],
-  ["03", "질문에 답하기", "AI가 만든 질문에 답하면서 실제 면접처럼 연습해요."],
-  ["04", "결과 확인", "NCS 역량별 피드백과 다음 연습 방향을 확인해요."],
-];
+const steps = [
+  ["01", "공고 선택", "공고를 선택하고 직무를\n입력하면 끝!"],
+  ["02", "자소서 문항 입력", ""],
+  ["03", "내가 쓴 답변 붙여넣기", "완성본이 아니어도 괜찮아요.\n초안부터 코칭할 수 있어요."],
+  ["04", "AI NCS 코칭 확인", ""],
+] as const;
 
-const checkItems = [
-  "지원 직무에 맞는 NCS 역량을 확인하고 싶을 때",
-  "내 답변의 강점과 보완점을 구체적으로 알고 싶을 때",
-  "면접 질문에 답하는 연습이 막막할 때",
-  "꼬리질문까지 이어지는 모의면접을 해보고 싶을 때",
-];
+const checks = [
+  ["NCS 기준 평가", "역량별 강점과 부족한 부분을 확인"],
+  ["잘한 점 · 보완점", "답변의 좋은 점과 보완할 점을 안내"],
+  ["답변 구조 점검", "STAR · CAR · PAP 구조로 답변 흐름을 확인"],
+  ["AI 첨삭 제안", "사실을 추가하지 않는 범위에서 첨삭본을 제안"],
+  ["주요 수정 3개", "무엇부터 고쳐야 할지 우선순위를 정리"],
+] as const;
+
+const people = [
+  ["asset-01.png", "문항 적합성·구체성 확인", "초안 단계에서도 사용 가능"],
+  ["asset-02.png", "완성본이 아니어도 괜찮아요.", "행동·근거 중심으로 점검"],
+  ["asset-03.png", "역량 표현과 구조 확인", "문항별로 꼼꼼하게 코칭"],
+  ["asset-04.png", "자소서가 막막한 분", "무엇부터 고칠지 함께 확인"],
+] as const;
 
 export function InterviewCoachingGuidePage() {
   return (
     <main className={styles.page}>
-      <div className={styles.guide}>
-        <section className={`${styles.section} ${styles.hero}`}>
-          <span className={styles.eyebrow}>NCS 면접 코칭이 처음이시라면?</span>
-          <h1>
-            면접을 준비했는데,
-            <br />
-            <mark>어디서부터 고쳐야 할지</mark>
-            <br />
-            모르겠다면?
-          </h1>
-          <p>
-            공부엉이가 질문 의도, NCS 역량, 구체성, 답변 구조를
-            <br />
-            보고 무엇을 먼저 고치면 좋을지 정리해드려요.
-          </p>
-          <div className={styles.pillRow}>
-            <span>NCS 기준 평가</span>
-            <span>1문항부터 가능</span>
-            <span>문항별 피드백</span>
-            <span>비회원 사용 가능</span>
-          </div>
-          <div className={styles.heroArt}>
-            <Image
-              src="/jobs/detail/coaching-banner-owl.png"
-              alt="면접 코칭 결과를 살펴보는 공부엉이"
-              width={420}
-              height={420}
-              priority
-            />
-          </div>
+      <div className={styles.canvas}>
+        <section className={`${styles.panel} ${styles.hero}`}>
+          <span className={styles.eyebrow}>NCS 자소서 코칭이 처음이시라면?</span>
+          <h1>자소서를 썼는데,<br /><mark>어디를 고쳐야 할지</mark><br />모르겠다면?</h1>
+          <p className={styles.heroCopy}>공부엉이가 문항 의도, NCS 역량, 구체성, 답변 구조를<br />보고 무엇을 먼저 고치면 좋을지 정리해드려요.</p>
+          <div className={styles.pills}><span>NCS 기준 평가</span><span>1문항부터 가능</span><span>문항별 첨삭</span><span>비회원 사용가능</span></div>
+          <Image className={styles.heroImage} src="/interview-coaching/figma/asset-08.png" alt="자소서 코칭을 확인하는 공부엉이" width={367} height={384} priority />
         </section>
 
-        <section className={`${styles.section} ${styles.resultSection}`}>
-          <SectionHeading number="1" title={<>코칭을 받으면<br />이런 결과를 확인할 수 있어요</>} />
-          <p className={styles.sectionLead}>
-            점수 하나만 보여주는 것이 아니라, 왜 그런 평가를 받았는지와
-            <br />무엇부터 보완할지 함께 안내해요.
-          </p>
-          <div className={styles.scoreCard}>
-            <div className={styles.scoreHeader}>
-              <div>
-                <span className={styles.cardKicker}>AI 종합 분석</span>
-                <strong>현재 답변의 강점과 보완점을 한눈에 확인해요</strong>
-              </div>
-              <div className={styles.totalScore}><b>82</b><span>/100</span></div>
-            </div>
-            <p className={styles.scoreSummary}>
-              지원 직무와 연결되는 경험이 잘 드러나요. 답변의 근거와 결과를 조금 더 구체화하면 좋아요.
-            </p>
-            <div className={styles.scoreList}>
-              {scores.map(([label, description, score]) => (
-                <div className={styles.scoreItem} key={label}>
-                  <div className={styles.scoreItemTop}><b>{label}</b><strong>{score}</strong></div>
-                  <span>{description}</span>
-                  <i><em style={{ width: `${score}%` }} /></i>
-                </div>
-              ))}
-            </div>
-            <div className={styles.insightGrid}>
-              <div><span>가장 잘한 점</span><b>직무 경험과 역량의 연결</b></div>
-              <div><span>먼저 보완할 점</span><b>행동 이후의 결과를 구체화</b></div>
+        <section className={`${styles.panel} ${styles.resultPanel}`}>
+          <SectionTitle number="1" title={<>코칭을 받으면<br />이런 결과를<br />확인할 수 있어요</>} />
+          <p className={styles.panelLead}>단순히 “잘 썼다 / 못 썼다”로 끝내지 않고,<br />이유와 수정 방향까지 보여줍니다.</p>
+          <div className={styles.analysisCard}>
+            <span className={styles.blueButton}>AI 종합 분석</span>
+            <div className={styles.total}><b>82</b><span>/100</span></div>
+            <h3>직무 적합성은 좋고,<br />근거의 구체성을 더 보완해보세요.</h3>
+            <p>NCS 역량과 작성 구조를 분석한 뒤,<br />사실을 추가하지 않는 범위에서 첨삭본을 제안했습니다.</p>
+            <div className={styles.miniCards}><div><b>가장 강한 문항</b><span>3번 · 문제해결</span></div><div><b>우선 보완</b><span>2번 · 경험 근거</span></div></div>
+            <div className={styles.scoreRows}>
+              {scores.map(([label, score, width]) => <div key={label}><b>{label}</b><strong>{score}점</strong><i><em style={{ width: `${width}%` }} /></i></div>)}
             </div>
           </div>
         </section>
 
-        <section className={`${styles.section} ${styles.detailSection}`}>
-          <SectionHeading number="2" title={<>실제 결과 화면은<br />이렇게 보여요</>} dark />
-          <p className={styles.sectionLead}>아래 화면은 실제 공부엉이 면접 코칭 결과 화면의 일부입니다.</p>
-          <div className={styles.questionCard}>
-            <div className={styles.questionTop}>
-              <div className={styles.badges}><span>핵심 NCS · 경력개발능력</span><span>보조 · 직장공동체의식</span><span>추천 · STAR</span></div>
-              <b>Q1</b>
-            </div>
-            <h3>지원 직무에 필요한 역량을 보여준 경험과, 그 경험을 통해 배운 점을 말해주세요.</h3>
-            <div className={styles.evaluationHeader}><span>NCS 기준 평가</span><strong>86<small>점</small></strong></div>
-            <div className={styles.evaluationBar}><i /></div>
-            <div className={styles.evaluationGrid}>
-              <div><b>잘한 점</b><p>문제 상황과 본인의 역할이 자연스럽게 드러나요.</p></div>
-              <div><b>보완할 점</b><p>행동 이후 어떤 결과를 만들었는지 더 구체적으로 적어보세요.</p></div>
-            </div>
-            <div className={styles.guideNote}><span>답변 가이드</span><p>상황·행동·결과 순서로 정리하면 답변의 설득력이 더 높아져요.</p></div>
+        <section className={`${styles.panel} ${styles.resultScreenPanel}`}>
+          <SectionTitle number="2" title={<>실제 결과 화면은<br />이렇게 보여요</>} dark />
+          <p className={styles.panelLead}>아래 화면은 실제 공부엉이 코칭 결과 화면<br />일부입니다.</p>
+          <div className={styles.screenCard}>
+            <div className={styles.screenHeader}><b>Q1</b><strong>지원 동기와 단기·장기 목표</strong><div><span>핵심 NCS · 경력개발능력</span><span>보조 · 직장공동체의식</span><span>추천 · PAP</span></div></div>
+            <div className={styles.screenSection}><div className={styles.screenScore}><b>NCS 기준 평가</b><strong>86<small>점</small></strong></div><h3>경력개발능력</h3><p>지원 동기와 단기·장기 목표가 연결되어 있습니다.</p><div className={styles.greenTag}>잘한 점</div><p>지원 직무와 목표가 자연스럽게 연결돼요.</p><div className={styles.yellowTag}>코칭 포인트</div><p>경험의 근거와 구체적인 행동을 더 보완해보세요.</p></div>
           </div>
         </section>
 
-        <section className={`${styles.section} ${styles.stepsSection}`}>
-          <SectionHeading number="3" title={<>처음 써도<br />4단계면 끝이에요</>} />
-          <div className={styles.stepList}>
-            {setupSteps.map(([number, title, description]) => (
-              <article key={number}><b>{number}</b><div><h3>{title}</h3><p>{description}</p></div></article>
-            ))}
-          </div>
+        <section className={`${styles.panel} ${styles.stepPanel}`}>
+          <SectionTitle number="3" title={<>처음 써도<br /><mark>4단계</mark>면 끝이에요</>} />
+          <div className={styles.stepCards}>{steps.map(([number, title, description]) => <article key={number}><b>{number}</b><div><h3>{title}</h3>{description && <p>{description.split("\n").map((line) => <span key={line}>{line}<br /></span>)}</p>}</div></article>)}</div>
         </section>
 
-        <section className={`${styles.section} ${styles.checkSection}`}>
-          <SectionHeading number="4" title={<>이런 순간에<br /><strong>시작해보세요</strong></>} />
-          <ul>{checkItems.map((item) => <li key={item}>{item}</li>)}</ul>
+        <section className={`${styles.panel} ${styles.checkPanel}`}>
+          <SectionTitle number="4" title={<>문항 하나도<br />이렇게 꼼꼼하고<br />자세히 봐드려요</>} dark />
+          <div className={styles.checkList}>{checks.map(([title, description]) => <article key={title}><Image src="/interview-coaching/figma/check.svg" alt="" width={48} height={48} /><div><h3>{title}</h3><p>{description}</p></div></article>)}</div>
         </section>
 
-        <section className={`${styles.section} ${styles.finalSection}`}>
-          <span className={styles.finalMark}>AI NCS INTERVIEW COACHING</span>
-          <h2>점수만 보고<br />판단하지 마세요</h2>
-          <p>공부엉이의 코칭은 답변을 더 나은 방향으로 고칠 수 있도록 이유와 방법을 함께 알려드려요.</p>
-          <Link className={styles.finalButton} href="/ai-tools/interview-coaching">AI NCS 면접 코칭 시작하기 <span aria-hidden="true">→</span></Link>
+        <section className={`${styles.panel} ${styles.peoplePanel}`}>
+          <SectionTitle number="5" title={<>이런 분에게<br /><mark>특히 좋아요!</mark></>} />
+          <div className={styles.peopleList}>{people.map(([image, title, description]) => <article key={title}><Image src={`/interview-coaching/figma/${image}`} alt="" width={104} height={110} /><div><h3>{title}</h3><p>{description}</p></div></article>)}</div>
         </section>
 
-        <div className={styles.mobileCta}><Link href="/ai-tools/interview-coaching">AI NCS 면접 코칭 시작하기 <span aria-hidden="true">→</span></Link></div>
+        <section className={`${styles.panel} ${styles.finalPanel}`}>
+          <SectionTitle number="6" title={<>점수만 보고<br /><mark>판단하지 마세요</mark></>} />
+          <div className={styles.finalCopy}><h3>공부엉이의 AI NCS 자소서 코칭은</h3><p>문항 의도와 NCS 역량을 기준으로<br />무엇을 먼저 고치면 좋을지 알려드려요.</p></div>
+          <Image className={styles.finalImage} src="/interview-coaching/figma/asset-09.png" alt="자소서를 코칭하는 공부엉이" width={369} height={305} />
+        </section>
+        <div className={styles.finalCta}><p>초안부터 완성본까지<br />공부엉이와 함께 시작해보세요.</p><Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link></div>
       </div>
     </main>
   );
 }
 
-function SectionHeading({ number, title, dark = false }: { number: string; title: ReactNode; dark?: boolean }) {
-  return (
-    <div className={`${styles.sectionHeading} ${dark ? styles.darkHeading : ""}`}>
-      <span className={styles.step}><b>{number}</b></span>
-      <h2>{title}</h2>
-    </div>
-  );
+function SectionTitle({ number, title, dark = false }: { number: string; title: ReactNode; dark?: boolean }) {
+  return <div className={`${styles.sectionTitle} ${dark ? styles.darkTitle : ""}`}><span><b>{number}</b></span><h2>{title}</h2></div>;
 }
