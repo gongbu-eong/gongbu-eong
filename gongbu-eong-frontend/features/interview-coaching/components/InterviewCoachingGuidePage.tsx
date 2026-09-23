@@ -12,24 +12,24 @@ const scores = [
 
 const steps = [
   ["01", "공고 선택", "공고를 선택하고 직무를\n입력하면 끝!"],
-  ["02", "자소서 문항 입력", ""],
+  ["02", "자소서 문항 입력", "지원서에 있는 질문을 그대로\n붙여넣어 주세요."],
   ["03", "내가 쓴 답변 붙여넣기", "완성본이 아니어도 괜찮아요.\n초안부터 코칭할 수 있어요."],
-  ["04", "AI NCS 코칭 확인", ""],
+  ["04", "AI NCS 코칭 확인", "문항별 평가, 코칭 포인트, 수정\n우선순위를 확인하세요."],
 ] as const;
 
 const checks = [
-  ["NCS 기준 평가", "역량별 강점과 부족한 부분을 확인"],
-  ["잘한 점 · 보완점", "답변의 좋은 점과 보완할 점을 안내"],
-  ["답변 구조 점검", "STAR · CAR · PAP 구조로 답변 흐름을 확인"],
-  ["AI 첨삭 제안", "사실을 추가하지 않는 범위에서 첨삭본을 제안"],
-  ["주요 수정 3개", "무엇부터 고쳐야 할지 우선순위를 정리"],
+  ["NCS 기준 평가", "질문이 요구하는 역량과 비교해 답변이\n얼마나 맞는지 확인합니다."],
+  ["잘한 점 · 보완점", "유지할 부분과 고쳐야 할 부분을\n나눠서 보여줍니다."],
+  ["답변 구조 점검", "PREP · CAR · PAP · STAR 구조로\n빠진 정보가 있는지 확인합니다."],
+  ["AI 첨삭 제안", "원문을 살리면서 더 명확하게 표현할 수\n있는 방향을 제안합니다."],
+  ["주요 수정 3개", "무엇부터 고쳐야 할지 헷갈리지 않도록\n우선순위를 정리합니다."],
 ] as const;
 
 const people = [
-  ["asset-01.png", "문항 적합성·구체성 확인", "초안 단계에서도 사용 가능"],
-  ["asset-02.png", "완성본이 아니어도 괜찮아요.", "행동·근거 중심으로 점검"],
-  ["asset-03.png", "역량 표현과 구조 확인", "문항별로 꼼꼼하게 코칭"],
-  ["asset-04.png", "자소서가 막막한 분", "무엇부터 고칠지 함께 확인"],
+  ["people-1.png", "문항 적합성·구체성 확인", "써놓긴 했는데\n잘 쓴 건지 모르겠어요"],
+  ["people-2.png", "초안 단계에서도 사용 가능", "완성본 전에 초안부터\n봐줬으면 좋겠어요"],
+  ["people-3.png", "행동·근거 중심으로 점검", "자소서가 자꾸\n두루뭉술해져요"],
+  ["people-4.png", "역량 표현과 구조 확인", "NCS 기준으로\n어떻게 써야 할지 모르겠어요"],
 ] as const;
 
 export function InterviewCoachingGuidePage() {
@@ -41,7 +41,7 @@ export function InterviewCoachingGuidePage() {
           <h1>자소서를 썼는데,<br /><mark>어디를 고쳐야 할지</mark><br />모르겠다면?</h1>
           <p className={styles.heroCopy}>공부엉이가 문항 의도, NCS 역량, 구체성, 답변 구조를<br />보고 무엇을 먼저 고치면 좋을지 정리해드려요.</p>
           <div className={styles.pills}><span>NCS 기준 평가</span><span>1문항부터 가능</span><span>문항별 첨삭</span><span>비회원 사용가능</span></div>
-          <Image className={styles.heroImage} src="/interview-coaching/figma/asset-08.png" alt="자소서 코칭을 확인하는 공부엉이" width={367} height={384} priority />
+          <Image className={styles.heroImage} src="/interview-coaching/figma/hero.png" alt="자소서 코칭을 확인하는 공부엉이" width={1473} height={1185} priority />
         </section>
 
         <section className={`${styles.panel} ${styles.resultPanel}`}>
@@ -63,8 +63,8 @@ export function InterviewCoachingGuidePage() {
           <SectionTitle number="2" title={<>실제 결과 화면은<br />이렇게 보여요</>} dark />
           <p className={styles.panelLead}>아래 화면은 실제 공부엉이 코칭 결과 화면<br />일부입니다.</p>
           <div className={styles.screenCard}>
-            <div className={styles.screenHeader}><b>Q1</b><strong>지원 동기와 단기·장기 목표</strong><div><span>핵심 NCS · 경력개발능력</span><span>보조 · 직장공동체의식</span><span>추천 · PAP</span></div></div>
-            <div className={styles.screenSection}><div className={styles.screenScore}><b>NCS 기준 평가</b><strong>86<small>점</small></strong></div><h3>경력개발능력</h3><p>지원 동기와 단기·장기 목표가 연결되어 있습니다.</p><div className={styles.greenTag}>잘한 점</div><p>지원 직무와 목표가 자연스럽게 연결돼요.</p><div className={styles.yellowTag}>코칭 포인트</div><p>경험의 근거와 구체적인 행동을 더 보완해보세요.</p></div>
+            <div className={styles.screenHeader}><b>Q1</b><strong>지원 동기와 입사 후 본인의 역량을 바탕으로<br />실현하고자 하는 목표와 비전</strong><div><span>핵심 NCS · 경력개발능력</span><span>보조 · 직장공동체의식</span><span>추천 · PAP</span></div></div>
+            <div className={styles.screenSection}><div className={styles.screenScore}><b>NCS 기준 평가</b><strong>86<small>점</small></strong></div><h3>경력개발능력</h3><p>지원 동기와 단기·장기 목표가 연결되어 있습니다.</p><div className={styles.greenTag}>잘한 점</div><p>지원 동기 → 본인 역량 → 단기·장기 목표의 흐름이 자연스럽습니다.</p><div className={styles.yellowTag}>코칭 포인트</div><p>기관 기여 의지는 좋지만 산업연구원 고유 과제와의 접점은 더 구체화할 수 있습니다.</p></div>
           </div>
         </section>
 
@@ -85,10 +85,10 @@ export function InterviewCoachingGuidePage() {
 
         <section className={`${styles.panel} ${styles.finalPanel}`}>
           <SectionTitle number="6" title={<>점수만 보고<br /><mark>판단하지 마세요</mark></>} />
-          <div className={styles.finalCopy}><h3>공부엉이의 AI NCS 자소서 코칭은</h3><p>문항 의도와 NCS 역량을 기준으로<br />무엇을 먼저 고치면 좋을지 알려드려요.</p></div>
-          <Image className={styles.finalImage} src="/interview-coaching/figma/asset-09.png" alt="자소서를 코칭하는 공부엉이" width={369} height={305} />
+          <div className={styles.finalCopy}><h3>공부엉이 코칭은 합격 여부를<br />예측하는 서비스가 아닙니다</h3><p>기관의 실제 채점표는 공개되지 않은 경우가 많기 때문에,<br />점수 자체보다 문항 의도에 맞는지, 근거가 충분한지,<br />어떤 부분을 고칠 수 있는지를 확인하는 용도로 봐주세요.</p></div>
+          <Image className={styles.finalImage} src="/interview-coaching/figma/final.png" alt="자소서를 코칭하는 공부엉이" width={931} height={1234} />
         </section>
-        <div className={styles.finalCta}><p>초안부터 완성본까지<br />공부엉이와 함께 시작해보세요.</p><Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link></div>
+        <div className={styles.finalCta}><p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.<br />완성본이 아니어도 괜찮아요.</p><Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link></div>
       </div>
     </main>
   );
