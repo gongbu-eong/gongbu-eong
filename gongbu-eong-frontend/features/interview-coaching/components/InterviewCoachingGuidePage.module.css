@@ -114,13 +114,14 @@
 
 /* Keep every Figma coordinate in the original 393px frame, then scale the
    complete frame as one unit. This prevents desktop-only spacing drift. */
-.canvas{width:393px;height:6395px;aspect-ratio:auto;zoom:min(1.526718,calc(100vw / 393px))}
+.canvas{width:393px;height:6203px;aspect-ratio:auto;zoom:min(1.526718,calc(100vw / 393px))}
 .finalCta{width:min(600px,100vw);max-width:600px}
 
 /* Keep the Figma artwork at its native 393px coordinate system, then scale
    that complete frame inside a centered responsive viewport. */
-.canvasFrame{position:relative;width:min(600px,100vw);aspect-ratio:393 / 6395;margin:0 auto;overflow:visible}
-.canvas{width:393px;height:6395px;margin:0;zoom:1;transform:scale(min(1.526718,calc(100vw / 393px)));transform-origin:top left}
+.page{box-sizing:border-box;padding-bottom:192px}
+.canvasFrame{position:relative;width:min(600px,100vw);aspect-ratio:393 / 6203;margin:0 auto;overflow:visible}
+.canvas{width:393px;height:6203px;margin:0;zoom:1;transform:scale(min(1.526718,calc(100vw / 393px)));transform-origin:top left}
 .hero{top:0;height:752px}
 .resultPanel{top:547px;height:1259px}
 .resultScreenPanel{top:1806px;height:1032px}
