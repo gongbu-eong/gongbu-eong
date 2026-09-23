@@ -492,6 +492,13 @@
 .newCoachingFrame .intro{margin:0 0 24px}
 .newCoachingFrame .intro strong{font-size:20px;font-weight:700;line-height:normal}
 .newCoachingFrame .intro p{margin:12px 0 0;color:#5a6580;font-size:16px;font-weight:400;line-height:22px}
+.guideBanner{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;min-height:80px;box-sizing:border-box;margin:0 0 24px;padding:18px 20px;border:0;border-radius:10px;background:#263bd1;color:#fff;text-align:left;cursor:pointer;font:inherit;text-decoration:none;box-shadow:0 8px 18px rgba(38,59,209,.12)}
+.guideBanner span{display:grid;gap:6px;min-width:0}
+.guideBanner strong{font-size:16px;font-weight:800;line-height:1.35;word-break:keep-all}
+.guideBanner small{color:rgba(255,255,255,.82);font-size:13px;font-weight:400;line-height:1.35;word-break:keep-all}
+.guideBanner b{display:grid;width:28px;height:28px;flex:0 0 28px;place-items:center;border:1px solid rgba(255,255,255,.55);border-radius:50%;font-size:24px;font-weight:400;line-height:1}
+.guideBanner:hover{background:#1e32c1}
+.guideBanner:focus-visible{outline:3px solid #9cc2ff;outline-offset:3px}
 .newCoachingFrame .jobConnect{height:52px;border-radius:12px;font-size:16px;font-weight:800}
 .newCoachingFrame .helper{margin:16px 0 36px;color:#5a6580;font-size:16px;font-weight:400;line-height:23px}
 .questionSection{margin-top:36px}

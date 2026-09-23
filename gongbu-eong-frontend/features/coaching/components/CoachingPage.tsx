@@ -1,8 +1,10 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { trackProductEvent } from "@/features/analytics/analytics.api";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getJobPostings } from "@/features/home/home.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
@@ -234,6 +236,22 @@ export function CoachingPage() {
     <main className={`${styles.frame} ${styles.newCoachingFrame}`}>
       <h1>AI NCS 자소서 코칭</h1>
       <section className={styles.intro}><strong>자소서를 AI가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
+      <Link
+        href="/ai-tools/interview-coaching/guide"
+        className={styles.guideBanner}
+        onClick={() => {
+          void trackProductEvent({
+            eventType: "resume_coaching_guide_click",
+            properties: { placement: "resume_coaching_job_connect" },
+          });
+        }}
+      >
+        <span>
+          <strong>혹시 AI NCS 자소서 코칭이 처음이라면?</strong>
+          <small>사용 방법과 준비할 내용을 한눈에 확인해 보세요.</small>
+        </span>
+        <b aria-hidden="true">›</b>
+      </Link>
       {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <><button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button><p className={styles.helper}>공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.<br />연결하지 않아도 일반 AI NCS 자소서 코칭을 받을 수 있어요.</p></>}
 
       <section className={styles.questionSection}>
