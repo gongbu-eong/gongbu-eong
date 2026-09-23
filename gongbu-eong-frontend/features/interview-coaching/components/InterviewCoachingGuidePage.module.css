@@ -111,3 +111,8 @@
 .finalCopy h3{font-family:Pretendard,Arial,sans-serif;font-size:20px;font-weight:700;line-height:normal}
 .finalCopy p{font-family:Pretendard,Arial,sans-serif;font-size:16px;font-weight:400;line-height:normal}
 .finalImage{top:69.325%;object-fit:cover}
+
+/* Keep every Figma coordinate in the original 393px frame, then scale the
+   complete frame as one unit. This prevents desktop-only spacing drift. */
+.canvas{width:393px;height:6395px;aspect-ratio:auto;zoom:min(1.526718,calc(100vw / 393px))}
+.finalCta{width:393px}
