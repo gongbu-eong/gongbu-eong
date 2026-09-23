@@ -39,7 +39,8 @@ export function InterviewCoachingGuidePage() {
 
   return (
     <main className={styles.page}>
-      <div className={styles.canvas}>
+      <div className={styles.canvasFrame}>
+        <div className={styles.canvas}>
         <section className={`${styles.panel} ${styles.hero}`}>
           <span className={styles.eyebrow}>NCS 자소서 코칭이 처음이시라면?</span>
           <h1>자소서를 썼는데,<br /><mark>어디를 고쳐야 할지</mark><br />모르겠다면?</h1>
@@ -112,17 +113,18 @@ export function InterviewCoachingGuidePage() {
           <div className={styles.finalCopy}><h3>공부엉이 코칭은 합격 여부를<br />예측하는 서비스가 아닙니다</h3><p>기관의 실제 채점표는 공개되지 않은 경우가 많기 때문에,<br />점수 자체보다 문항 의도에 맞는지, 근거가 충분한지,<br />어떤 부분을 고칠 수 있는지를 확인하는 용도로 봐주세요.</p></div>
           <Image className={styles.finalImage} src="/interview-coaching/figma/final.png" alt="자소서를 코칭하는 공부엉이" width={931} height={1234} />
         </section>
-        {showFinalCta ? (
-          <div className={styles.finalCta}>
-            <button className={styles.finalCtaClose} type="button" aria-label="가이드 하단 안내 닫기" onClick={() => setShowFinalCta(false)}>
-              <span aria-hidden="true">×</span>
-            </button>
-            <h2>완성본이 아니어도 괜찮아요.</h2>
-            <p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.</p>
-            <Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link>
-          </div>
-        ) : null}
+        </div>
       </div>
+      {showFinalCta ? (
+        <div className={styles.finalCta}>
+          <button className={styles.finalCtaClose} type="button" aria-label="가이드 하단 안내 닫기" onClick={() => setShowFinalCta(false)}>
+            <span aria-hidden="true">×</span>
+          </button>
+          <h2>완성본이 아니어도 괜찮아요.</h2>
+          <p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.</p>
+          <Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link>
+        </div>
+      ) : null}
     </main>
   );
 }

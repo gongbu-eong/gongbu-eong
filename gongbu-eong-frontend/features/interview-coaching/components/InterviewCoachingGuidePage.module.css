@@ -115,4 +115,16 @@
 /* Keep every Figma coordinate in the original 393px frame, then scale the
    complete frame as one unit. This prevents desktop-only spacing drift. */
 .canvas{width:393px;height:6395px;aspect-ratio:auto;zoom:min(1.526718,calc(100vw / 393px))}
-.finalCta{width:393px}
+.finalCta{width:min(600px,100vw);max-width:600px}
+
+/* Keep the Figma artwork at its native 393px coordinate system, then scale
+   that complete frame inside a centered responsive viewport. */
+.canvasFrame{position:relative;width:min(600px,100vw);aspect-ratio:393 / 6395;margin:0 auto;overflow:visible}
+.canvas{width:393px;height:6395px;zoom:1;transform:scale(min(1.526718,calc(100vw / 393px)));transform-origin:top left}
+.hero{top:0;height:752px}
+.resultPanel{top:547px;height:1259px}
+.resultScreenPanel{top:1806px;height:1032px}
+.stepPanel{top:2838px;height:815px}
+.checkPanel{top:3653px;height:965px}
+.peoplePanel{top:4618px;height:933px}
+.finalPanel{top:5551px;height:652px}
