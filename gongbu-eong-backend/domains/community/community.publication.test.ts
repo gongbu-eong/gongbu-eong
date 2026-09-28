@@ -112,6 +112,136 @@ test("public community APIs never expose scheduled content before publication", 
       assert.ok(comments.some((comment) => comment.id === pending));
       assert.equal((await repository.listCommunityPosts({ limit: 20, offset: 0 })).total, 2);
     });
+    await t.test("popular eligibility is shared, while ranking remains period-specific", async (t) => {
+      t.beforeEach(async () => {
+        await database.exec("BEGIN");
+        await database.exec("UPDATE community_posts SET status = 'deleted'");
+      });
+      t.afterEach(async () => {
+        await database.exec("ROLLBACK");
+      });
+      const post = (views = 0, createdAt = "NOW()", status = "active") => id(
+        `INSERT INTO community_posts (user_id, view_count, created_at, status)
+         VALUES ($1, $2, ${createdAt}, $3) RETURNING id`,
+        [user, views, status],
+      );
+      const recommend = (postId: string, count: number, createdAt = "NOW()") => database.query(
+        `WITH voters AS (
+           INSERT INTO users (community_nickname)
+           SELECT 'voter' FROM generate_series(1, $2::integer) RETURNING id
+         )
+         INSERT INTO community_post_reactions (post_id, user_id, reaction_type, created_at)
+         SELECT $1, id, 'recommend', ${createdAt} FROM voters`,
+        [postId, count],
+      );
+      const popularIds = async (period: "today" | "week") =>
+        (await repository.listPopularCommunityPosts(undefined, period)).map((item) => item.id);
+
+      await t.test("new or low-score posts never fill popular slots, but remain in the full list", async () => {
+        const untouched = await post();
+        const lowScore = await post(1);
+        await recommend(lowScore, 1);
+        assert.deepEqual(await popularIds("today"), []);
+        assert.deepEqual(await popularIds("week"), []);
+        for (const sort of ["latest", "popular"] as const) {
+          const list = await repository.listCommunityPosts({ limit: 20, offset: 0, sort });
+          assert.equal(list.total, 2);
+          assert.deepEqual(new Set(list.items.map((item) => item.id)), new Set([untouched, lowScore]));
+        }
+      });
+
+      await t.test("50 raw points qualify in both periods even when the decayed score is below 50", async () => {
+        const eligible = await post();
+        await recommend(eligible, 10);
+        const below = await post();
+        await recommend(below, 9);
+        assert.deepEqual(await popularIds("today"), [eligible]);
+        assert.deepEqual(await popularIds("week"), [eligible]);
+      });
+
+      await t.test("the existing comment, reply and unique-author weights cross the 49/50 boundary", async () => {
+        const candidate = await post();
+        await recommend(candidate, 8);
+        const parent = await id(
+          "INSERT INTO community_comments (post_id, user_id) VALUES ($1, $2) RETURNING id",
+          [candidate, other],
+        );
+        await database.query(
+          `INSERT INTO community_comments (post_id, user_id, parent_comment_id)
+           SELECT $1, $2, $3 FROM generate_series(1, 3)`,
+          [candidate, other, parent],
+        );
+        // 8 * 5 recommendations + 3 root + 3 replies + 3 distinct-author points = 49.
+        assert.deepEqual(await popularIds("today"), []);
+        assert.deepEqual(await popularIds("week"), []);
+        await database.query(
+          "INSERT INTO community_comments (post_id, user_id, parent_comment_id) VALUES ($1, $2, $3)",
+          [candidate, other, parent],
+        );
+        assert.deepEqual(await popularIds("today"), [candidate]);
+        assert.deepEqual(await popularIds("week"), [candidate]);
+      });
+
+      await t.test("the existing logarithmic view score is not rounded up to eligibility", async () => {
+        await post(45);
+        const eligible = await post(46);
+        assert.deepEqual(await popularIds("today"), [eligible]);
+        assert.deepEqual(await popularIds("week"), [eligible]);
+      });
+
+      await t.test("scheduled reactions, deleted comments and replies to scheduled parents do not qualify", async () => {
+        const candidate = await post();
+        await recommend(candidate, 9);
+        await recommend(candidate, 1, "NOW() + interval '1 day'");
+        await database.query(
+          "INSERT INTO community_comments (post_id, user_id, status) VALUES ($1, $2, 'deleted')",
+          [candidate, other],
+        );
+        const pendingParent = await id(
+          `INSERT INTO community_comments (post_id, user_id, created_at)
+           VALUES ($1, $2, NOW() + interval '1 day') RETURNING id`,
+          [candidate, other],
+        );
+        await database.query(
+          `INSERT INTO community_comments (post_id, user_id, parent_comment_id)
+           SELECT $1, $2, $3 FROM generate_series(1, 10)`,
+          [candidate, other, pendingParent],
+        );
+        assert.deepEqual(await popularIds("today"), []);
+        assert.deepEqual(await popularIds("week"), []);
+      });
+
+      await t.test("Korean today and rolling seven-day windows exclude future, old and deleted posts", async () => {
+        const today = await post(50);
+        const yesterday = await post(50, "(date_trunc('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul') - interval '1 second'");
+        await post(1000000, "NOW() + interval '1 second'");
+        await post(1000000, "NOW() - interval '8 days'");
+        await post(1000000, "NOW()", "deleted");
+        assert.deepEqual(await popularIds("today"), [today]);
+        assert.deepEqual(new Set(await popularIds("week")), new Set([today, yesterday]));
+      });
+
+      await t.test("today's winner competes with the entire week rather than receiving a guaranteed slot", async () => {
+        const today = await post(50);
+        const earlier: string[] = [];
+        for (let index = 0; index < 6; index++) {
+          earlier.push(await post(
+            1000000 + index * 100,
+            "(date_trunc('day', NOW() AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'Asia/Seoul') - interval '1 second'",
+          ));
+        }
+        assert.deepEqual(await popularIds("today"), [today]);
+        assert.deepEqual(await popularIds("week"), earlier.reverse().slice(0, 5));
+      });
+
+      await t.test("each period keeps only the five highest existing scores", async () => {
+        const eligible: string[] = [];
+        for (let views = 100; views <= 700; views += 100) eligible.push(await post(views));
+        const expected = eligible.reverse().slice(0, 5);
+        assert.deepEqual(await popularIds("today"), expected);
+        assert.deepEqual(await popularIds("week"), expected);
+      });
+    });
   } finally {
     await database.close();
     globalThis.postgresPool = undefined;

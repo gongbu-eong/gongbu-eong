@@ -10,6 +10,9 @@ import {
   type CommunityReportDto,
 } from "./community.dto";
 
+// Eligibility is shared across periods; time decay only determines ranking.
+const MIN_POPULAR_POST_RAW_SCORE = 50;
+
 type PostRow = {
   id: string;
   category: CommunityCategory;
@@ -151,6 +154,7 @@ export async function listPopularCommunityPosts(
       WHERE posts.status = 'active'
         AND posts.created_at <= NOW()
         ${createdAtFilter}
+        AND ${communityPostRawScoreSql()} >= ${MIN_POPULAR_POST_RAW_SCORE}
       ORDER BY
         ${communityPostHotScoreSql(period)} DESC,
         ${communityPostRawScoreSql()} DESC,
