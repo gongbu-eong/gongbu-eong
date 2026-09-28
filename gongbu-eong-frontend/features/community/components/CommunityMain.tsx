@@ -118,7 +118,7 @@ export function CommunityMain({
             }}
           />
 
-          {!query ? (
+          {!query && visiblePopular.length > 0 ? (
             <section className={styles.popularSection}>
               <div className={styles.sectionHeader}>
                 <h2>전체 인기글</h2>
@@ -129,11 +129,6 @@ export function CommunityMain({
               </div>
               <div className={styles.popularList}>
                 {visiblePopular.map((post, index) => <PostItem key={post.id} post={post} rank={index + 1} />)}
-                {!visiblePopular.length ? (
-                  <p className={styles.emptyKeywords} role="status">
-                    {popularPeriod === "today" ? "오늘은 아직 인기글이 없습니다." : "최근 7일간 인기글이 없습니다."}
-                  </p>
-                ) : null}
               </div>
             </section>
           ) : null}
