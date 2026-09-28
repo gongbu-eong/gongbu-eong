@@ -1510,7 +1510,36 @@
 
 .reportSheet {
   min-height: 29.6875rem;
+  max-height: calc(100dvh - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
+
+.reportDetail {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0 1rem 1rem;
+  color: #5a6580;
+  font-size: 0.875rem;
+}
+
+.reportDetail textarea {
+  width: 100%;
+  min-height: 6rem;
+  padding: 0.75rem;
+  border: 1px solid #dce2eb;
+  border-radius: 8px;
+  color: #172035;
+  background: #fff;
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.reportDetail textarea:focus { outline: 2px solid #2f7ff0; outline-offset: 1px; }
+.reportDetail small { text-align: right; }
+.reportSheet .reportError { color: #c53d36; }
+.reportSheet button:disabled { opacity: 0.5; cursor: default; }
 
 .reportSheet h2 {
   border-bottom: 0;

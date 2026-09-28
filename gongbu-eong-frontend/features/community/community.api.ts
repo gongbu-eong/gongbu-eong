@@ -80,10 +80,10 @@ export function setCommunityScrap(postId: string, enabled: boolean) {
   });
 }
 
-export function reportCommunityPost(postId: string, reasonCode?: string) {
+export function reportCommunityPost(postId: string, reasonCode?: string, reasonDetail?: string) {
   return apiClient<{ ok: true }>(`/api/community/${postId}/report`, {
     method: "POST",
-    body: JSON.stringify({ reasonCode }),
+    body: JSON.stringify({ reasonCode, reasonDetail: reasonCode === "기타" ? reasonDetail : undefined }),
   });
 }
 
@@ -107,10 +107,10 @@ export function updateCommunityComment(commentId: string, content: string) {
   });
 }
 
-export function reportCommunityComment(commentId: string, reasonCode?: string) {
+export function reportCommunityComment(commentId: string, reasonCode?: string, reasonDetail?: string) {
   return apiClient<{ ok: true }>(`/api/community/comments/${commentId}/report`, {
     method: "POST",
-    body: JSON.stringify({ reasonCode }),
+    body: JSON.stringify({ reasonCode, reasonDetail: reasonCode === "기타" ? reasonDetail : undefined }),
   });
 }
 

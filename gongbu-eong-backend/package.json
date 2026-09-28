@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 4000",
     "lint": "eslint",
-    "test:community": "node --import tsx --test domains/community/community.publication.test.ts",
+    "test:community": "node --import tsx --test domains/community/community.publication.test.ts domains/community/community.report.test.ts",
     "test:analytics": "node --import tsx --test domains/analytics/product-activity.test.ts",
     "db:apply": "node scripts/apply-db.mjs",
     "smoke:diagnosis": "node scripts/smoke-diagnosis.mjs"

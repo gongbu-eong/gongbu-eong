@@ -90,6 +90,9 @@ export function CommunityDetailPage({
   const [toastTone, setToastTone] = useState<"default" | "scrap">("default");
   const [modal, setModal] = useState<ModalState>(null);
   const [selectedReason, setSelectedReason] = useState(REPORT_REASONS[0]);
+  const [reportDetail, setReportDetail] = useState("");
+  const [reportError, setReportError] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
   const initialPostIdRef = useRef(initialPost?.id || null);
   const requestedPostIdsRef = useRef<Set<string>>(new Set());
@@ -362,11 +365,17 @@ export function CommunityDetailPage({
 
   const openReportPostModal = async () => {
     if (!(await requireLoginForAction())) return;
+    setSelectedReason(REPORT_REASONS[0]);
+    setReportDetail("");
+    setReportError("");
     setModal({ type: "report-post" });
   };
 
   const openReportCommentModal = async (commentId: string) => {
     if (!(await requireLoginForAction())) return;
+    setSelectedReason(REPORT_REASONS[0]);
+    setReportDetail("");
+    setReportError("");
     setModal({ type: "report-comment", commentId });
   };
 
@@ -415,21 +424,29 @@ export function CommunityDetailPage({
   };
 
   const confirmReport = async () => {
-    if (!post || !modal) return;
-    if (!(await requireLoginForAction())) return;
+    if (!post || !modal || reportSubmitting) return;
+    if (selectedReason === "기타" && !reportDetail.trim()) {
+      setReportError("기타 신고 사유를 입력해 주세요.");
+      return;
+    }
+    setReportSubmitting(true);
+    setReportError("");
     try {
+      if (!(await requireLoginForAction())) return;
       if (modal.type === "report-post") {
-        await reportCommunityPost(post.id, selectedReason);
+        await reportCommunityPost(post.id, selectedReason, reportDetail.trim());
         showToast("신고가 접수되었습니다.");
       }
       if (modal.type === "report-comment") {
-        await reportCommunityComment(modal.commentId, selectedReason);
+        await reportCommunityComment(modal.commentId, selectedReason, reportDetail.trim());
         showToast("댓글 신고가 접수되었습니다.");
       }
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "요청 처리에 실패했습니다.");
-    } finally {
       setModal(null);
+      setReportDetail("");
+    } catch (error) {
+      setReportError(error instanceof Error ? error.message : "요청 처리에 실패했습니다.");
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -598,6 +615,7 @@ export function CommunityDetailPage({
           className={`${styles.modalBackdrop} ${modal.type === "delete-comment" ? "" : styles.sheetBackdrop}`}
           role="dialog"
           aria-modal="true"
+          aria-label={modal.type === "report-post" || modal.type === "report-comment" ? "신고하기" : undefined}
         >
           {modal.type === "delete-comment" ? (
             <DeleteConfirmDialog
@@ -638,15 +656,30 @@ export function CommunityDetailPage({
                       type="radio"
                       name="reportReason"
                       checked={selectedReason === reason}
-                      onChange={() => setSelectedReason(reason)}
+                      disabled={reportSubmitting}
+                      onChange={() => {
+                        setSelectedReason(reason);
+                        setReportDetail("");
+                        setReportError("");
+                      }}
                     />
                     <span>{reason}</span>
                   </label>
                 ))}
               </div>
+              {selectedReason === "기타" ? (
+                <label className={styles.reportDetail}>
+                  <span>상세 사유 <span aria-hidden="true">*</span></span>
+                  <textarea value={reportDetail} onChange={(event) => { setReportDetail(event.target.value); setReportError(""); }}
+                    maxLength={1000} rows={4} required disabled={reportSubmitting}
+                    placeholder="신고 사유를 입력해 주세요." aria-label="기타 신고 상세 사유" />
+                  <small>{reportDetail.length.toLocaleString()} / 1,000자</small>
+                </label>
+              ) : null}
+              {reportError ? <p className={styles.reportError} role="alert">{reportError}</p> : null}
               <div className={styles.sheetActions}>
-                <button type="button" className={styles.sheetCancel} onClick={() => setModal(null)}>취소</button>
-                <button type="button" className={styles.sheetSubmit} onClick={() => void confirmReport()}>신고 제출</button>
+                <button type="button" className={styles.sheetCancel} disabled={reportSubmitting} onClick={() => setModal(null)}>취소</button>
+                <button type="button" className={styles.sheetSubmit} disabled={reportSubmitting || (selectedReason === "기타" && !reportDetail.trim())} onClick={() => void confirmReport()}>{reportSubmitting ? "제출 중" : "신고 제출"}</button>
               </div>
             </section>
           )}

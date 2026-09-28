@@ -4,6 +4,7 @@ import { getSessionUser, requireSessionUser } from "@/domains/auth/session";
 // } from "@/domains/credits/credits.repository";
 import { notifyCommunityComment } from "@/domains/notifications/notifications.repository";
 import type { NextRequest } from "next/server";
+import { parseCommunityReport } from "./community-report";
 import {
   COMMUNITY_CATEGORIES,
   type CommunityCategory,
@@ -37,15 +38,6 @@ const MAX_CONTENT_LENGTH = 5000;
 const MAX_ATTACHMENT_COUNT = 10;
 const MAX_ATTACHMENT_DATA_URL_LENGTH = 14_000_000;
 const MAX_TOTAL_ATTACHMENT_DATA_URL_LENGTH = 14_000_000;
-const REPORT_REASON_CODES = [
-  "스팸·홍보/도배",
-  "욕설·비방·혐오 표현",
-  "음란물·부적절한 콘텐츠",
-  "개인정보 노출",
-  "허위사실·사기",
-  "게시판 성격에 맞지 않음",
-  "기타",
-] as const;
 
 export async function getCommunityPosts(request: NextRequest) {
   const user = await getSessionUser(request);
@@ -297,11 +289,8 @@ export async function reportCommunityTarget(
 ) {
   const user = await requireSessionUser(request);
   const body = await request.json().catch(() => ({}));
-  const reasonCode =
-    typeof body?.reasonCode === "string" && REPORT_REASON_CODES.includes(body.reasonCode as (typeof REPORT_REASON_CODES)[number])
-      ? body.reasonCode
-      : "기타";
-  await createCommunityReport(user.id, targetType, targetId, reasonCode);
+  const { reasonCode, reasonDetail } = parseCommunityReport(body);
+  await createCommunityReport(user.id, targetType, targetId, reasonCode, reasonDetail);
   return { ok: true };
 }
 

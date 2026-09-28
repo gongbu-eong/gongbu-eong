@@ -728,6 +728,7 @@ export async function createCommunityReport(
   targetType: "post" | "comment",
   targetId: string,
   reasonCode: string,
+  reasonDetail: string | null = null,
 ) {
   const snapshot = await getReportTargetSnapshot(targetType, targetId);
   if (!snapshot) {
@@ -744,19 +745,22 @@ export async function createCommunityReport(
         target_id,
         reason,
         reason_code,
+        reason_detail,
         target_snapshot,
         status
       )
-      VALUES ($1, $2, $3, $4, $4, $5::jsonb, 'pending')
+      VALUES ($1, $2, $3, $4, $4, $6, $5::jsonb, 'pending')
       ON CONFLICT (user_id, target_type, target_id)
       DO UPDATE SET
         reason = EXCLUDED.reason,
         reason_code = EXCLUDED.reason_code,
+        reason_detail = EXCLUDED.reason_detail,
         target_snapshot = EXCLUDED.target_snapshot,
         status = 'pending',
         updated_at = NOW()
+      WHERE community_reports.status = 'pending'
     `,
-    [userId, targetType, targetId, reasonCode, JSON.stringify(snapshot)],
+    [userId, targetType, targetId, reasonCode, JSON.stringify(snapshot), reasonCode === "기타" ? reasonDetail?.trim() || null : null],
   );
 }
 
@@ -1184,6 +1188,7 @@ async function getReportTargetSnapshot(targetType: "post" | "comment", targetId:
       SELECT
         comments.id,
         comments.post_id,
+        comments.parent_comment_id,
         comments.content,
         comments.user_id,
         comments.created_at,

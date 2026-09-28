@@ -29,7 +29,7 @@ test("public community APIs never expose scheduled content before publication", 
     CREATE TABLE community_post_attachments (id uuid PRIMARY KEY, post_id uuid, file_name text, mime_type text,
       file_size_bytes integer, file_data_url text, sort_order integer, created_at timestamptz DEFAULT NOW());
     CREATE TABLE community_reports (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid, target_type text,
-      target_id uuid, reason text, reason_code text, target_snapshot jsonb, status text, updated_at timestamptz,
+      target_id uuid, reason text, reason_code text, reason_detail text, target_snapshot jsonb, status text, updated_at timestamptz,
       UNIQUE(user_id,target_type,target_id));
   `);
   const id = async (sql: string, values: unknown[] = []) => (await database.query<{ id: string }>(sql, values)).rows[0].id;
@@ -111,6 +111,23 @@ test("public community APIs never expose scheduled content before publication", 
       const comments = await repository.listCommunityComments(live, user);
       assert.ok(comments.some((comment) => comment.id === pending));
       assert.equal((await repository.listCommunityPosts({ limit: 20, offset: 0 })).total, 2);
+    });
+    await t.test("post and comment reports retain other details, clear stale details and preserve reviewed reports", async () => {
+      for (const [type, target] of [["post", live], ["comment", reply]] as const) {
+        await repository.createCommunityReport(user, type, target, "기타", "  구체적인 신고 내용  ");
+        const getReport = async () => (await database.query<{ reason_detail: string | null; status: string; target_snapshot: { content: string; parent_comment_id?: string } }>(
+          "SELECT reason_detail, status, target_snapshot FROM community_reports WHERE user_id=$1 AND target_type=$2 AND target_id=$3", [user, type, target],
+        )).rows[0];
+        assert.equal((await getReport()).reason_detail, "구체적인 신고 내용");
+        assert.ok((await getReport()).target_snapshot.content);
+        if (type === "comment") assert.equal((await getReport()).target_snapshot.parent_comment_id, root);
+        await repository.createCommunityReport(user, type, target, "스팸·홍보/도배", "남아 있으면 안 되는 내용");
+        assert.equal((await getReport()).reason_detail, null);
+        await database.query("UPDATE community_reports SET status='resolved' WHERE user_id=$1 AND target_type=$2 AND target_id=$3", [user, type, target]);
+        await repository.createCommunityReport(user, type, target, "기타", "다시 신고");
+        assert.equal((await getReport()).status, "resolved");
+        assert.equal((await getReport()).reason_detail, null);
+      }
     });
     await t.test("popular eligibility is shared, while ranking remains period-specific", async (t) => {
       t.beforeEach(async () => {
