@@ -110,6 +110,7 @@ export async function listCommunityPosts(args: ListCommunityPostsInput) {
       `
         ${postSelectSql({ totalCountExpression: "NULL::text" })}
         WHERE posts.status = 'active'
+          AND posts.created_at <= NOW()
           ${filters}
         ORDER BY ${orderBy}
         LIMIT ${limitParam}
@@ -122,6 +123,7 @@ export async function listCommunityPosts(args: ListCommunityPostsInput) {
         SELECT COUNT(*)::text AS total_count
         FROM public.community_posts posts
         WHERE posts.status = 'active'
+          AND posts.created_at <= NOW()
           ${countFilters}
       `,
       countValues,
@@ -147,6 +149,7 @@ export async function listPopularCommunityPosts(
     `
       ${postSelectSql({ totalCountExpression: "NULL::text" })}
       WHERE posts.status = 'active'
+        AND posts.created_at <= NOW()
         ${createdAtFilter}
       ORDER BY
         ${communityPostHotScoreSql(period)} DESC,
@@ -170,6 +173,7 @@ export async function findCommunityPostById(postId: string, userId?: string) {
       ${postSelectSql({ includeAttachments: true, totalCountExpression: "NULL::text" })}
       WHERE posts.id = $2
         AND posts.status = 'active'
+        AND posts.created_at <= NOW()
       LIMIT 1
     `,
     [userId || null, postId],
@@ -195,6 +199,7 @@ export async function getCommunityPostListPage(postId: string, pageSize: number)
           ROW_NUMBER() OVER (ORDER BY posts.created_at DESC, posts.id DESC) AS row_number
         FROM public.community_posts posts
         WHERE posts.status = 'active'
+          AND posts.created_at <= NOW()
       )
       SELECT row_number::text
       FROM ranked_posts
@@ -210,7 +215,8 @@ export async function getCommunityPostListPage(postId: string, pageSize: number)
 
 export async function increaseCommunityPostView(postId: string) {
   await query(
-    `UPDATE public.community_posts SET view_count = view_count + 1 WHERE id = $1`,
+    `UPDATE public.community_posts SET view_count = view_count + 1
+     WHERE id = $1 AND status = 'active' AND created_at <= NOW()`,
     [postId],
   );
 }
@@ -275,6 +281,7 @@ export async function updateCommunityPost(
         WHERE id = $2
           AND user_id = $1
           AND status = 'active'
+          AND created_at <= NOW()
         RETURNING id
       `,
       [userId, postId, input.category, input.title, input.content, input.imageDataUrl || null],
@@ -306,6 +313,7 @@ export async function deleteCommunityPost(userId: string, postId: string) {
       WHERE id = $2
         AND user_id = $1
         AND status = 'active'
+        AND created_at <= NOW()
       RETURNING id
     `,
     [userId, postId],
@@ -328,7 +336,9 @@ export async function setCommunityReaction(
         FROM public.community_posts
         WHERE id = $2
           AND status = 'active'
-        ON CONFLICT (post_id, user_id, reaction_type) DO NOTHING
+          AND created_at <= NOW()
+        ON CONFLICT (post_id, user_id, reaction_type) DO UPDATE
+        SET created_at = LEAST(community_post_reactions.created_at, EXCLUDED.created_at)
       `,
       [userId, postId, reactionType],
     );
@@ -339,6 +349,10 @@ export async function setCommunityReaction(
         WHERE user_id = $1
           AND post_id = $2
           AND reaction_type = $3
+          AND EXISTS (
+            SELECT 1 FROM public.community_posts posts
+            WHERE posts.id = post_id AND posts.status = 'active' AND posts.created_at <= NOW()
+          )
       `,
       [userId, postId, reactionType],
     );
@@ -366,6 +380,7 @@ async function getCommunityReactionState(
           FROM public.community_post_reactions mine
           WHERE mine.post_id = posts.id
             AND mine.user_id = $1
+            AND mine.created_at <= NOW()
             AND mine.reaction_type = 'recommend'
         ) AS is_recommended,
         EXISTS (
@@ -373,13 +388,16 @@ async function getCommunityReactionState(
           FROM public.community_post_reactions mine
           WHERE mine.post_id = posts.id
             AND mine.user_id = $1
+            AND mine.created_at <= NOW()
             AND mine.reaction_type = 'scrap'
         ) AS is_scrapped
       FROM public.community_posts posts
       LEFT JOIN public.community_post_reactions reactions
         ON reactions.post_id = posts.id
+        AND reactions.created_at <= NOW()
       WHERE posts.id = $2
         AND posts.status = 'active'
+        AND posts.created_at <= NOW()
       GROUP BY posts.id
       LIMIT 1
     `,
@@ -432,16 +450,19 @@ export async function listCommunityComments(postId: string, userId?: string) {
           COUNT(*) FILTER (WHERE reaction_type = 'dislike') AS dislike_count
         FROM public.community_comment_reactions
         WHERE comment_id = comments.id
+          AND created_at <= NOW()
       ) comment_reactions ON TRUE
       LEFT JOIN LATERAL (
         SELECT reaction_type
         FROM public.community_comment_reactions
         WHERE comment_id = comments.id
           AND user_id = $2::uuid
+          AND created_at <= NOW()
         LIMIT 1
       ) my_reaction ON $2::uuid IS NOT NULL
       WHERE comments.post_id = $1
         AND comments.status IN ('active', 'deleted')
+        AND ${publishedCommentSql("comments")}
       ORDER BY comments.created_at ASC, comments.id ASC
     `,
     [postId, userId || null],
@@ -465,6 +486,7 @@ export async function createCommunityComment(
         FROM public.community_posts
         WHERE id = $2
           AND status = 'active'
+          AND created_at <= NOW()
       ),
 
       parent_chain AS (
@@ -475,6 +497,7 @@ export async function createCommunityComment(
         WHERE comments.id = $4::uuid
           AND comments.post_id = $2
           AND comments.status IN ('active', 'deleted')
+          AND comments.created_at <= NOW()
 
         UNION ALL
 
@@ -486,6 +509,7 @@ export async function createCommunityComment(
           ON parent.id = child.parent_comment_id
         WHERE parent.post_id = $2
           AND parent.status IN ('active', 'deleted')
+          AND parent.created_at <= NOW()
       ),
 
       root_parent AS (
@@ -541,6 +565,7 @@ export async function updateCommunityComment(
       WHERE id = $2
         AND user_id = $1
         AND status = 'active'
+        AND ${publishedCommentSql("community_comments")}
       RETURNING id, post_id
     `,
     [userId, commentId, content],
@@ -564,6 +589,7 @@ export async function setCommunityCommentReaction(
         FROM public.community_comments
         WHERE id = $1
           AND status = 'active'
+          AND ${publishedCommentSql("community_comments")}
         LIMIT 1
       `,
       [commentId],
@@ -580,6 +606,7 @@ export async function setCommunityCommentReaction(
         FROM public.community_comment_reactions
         WHERE comment_id = $1
           AND user_id = $2
+          AND created_at <= NOW()
         LIMIT 1
       `,
       [commentId, userId],
@@ -606,6 +633,7 @@ export async function setCommunityCommentReaction(
           ON CONFLICT (comment_id, user_id)
           DO UPDATE SET
             reaction_type = EXCLUDED.reaction_type,
+            created_at = LEAST(community_comment_reactions.created_at, EXCLUDED.created_at),
             updated_at = NOW()
         `,
         [commentId, userId, reactionType],
@@ -643,15 +671,18 @@ async function getCommunityCommentReactionState(
       FROM public.community_comments comments
       LEFT JOIN public.community_comment_reactions reactions
         ON reactions.comment_id = comments.id
+        AND reactions.created_at <= NOW()
       LEFT JOIN LATERAL (
         SELECT reaction_type
         FROM public.community_comment_reactions
         WHERE comment_id = comments.id
           AND user_id = $2
+          AND created_at <= NOW()
         LIMIT 1
       ) my_reaction ON TRUE
       WHERE comments.id = $1
         AND comments.status = 'active'
+        AND ${publishedCommentSql("comments")}
       GROUP BY comments.id, my_reaction.reaction_type
       LIMIT 1
     `,
@@ -679,6 +710,7 @@ export async function deleteCommunityComment(userId: string, commentId: string) 
       WHERE id = $2
         AND user_id = $1
         AND status = 'active'
+        AND ${publishedCommentSql("community_comments")}
       RETURNING id, post_id
     `,
     [userId, commentId],
@@ -694,6 +726,11 @@ export async function createCommunityReport(
   reasonCode: string,
 ) {
   const snapshot = await getReportTargetSnapshot(targetType, targetId);
+  if (!snapshot) {
+    const error = new Error("신고할 게시글 또는 댓글을 찾을 수 없습니다.");
+    error.name = "NotFoundError";
+    throw error;
+  }
 
   await query(
     `
@@ -793,6 +830,7 @@ export async function listCommunityActivity(userId: string) {
       ${postSelectSql()}
       WHERE posts.status = 'active'
         AND posts.user_id = $2
+        AND posts.created_at <= NOW()
       ORDER BY posts.created_at DESC
       LIMIT 30
     `,
@@ -825,6 +863,7 @@ export async function listCommunityActivity(userId: string) {
       WHERE comments.user_id = $1
         AND comments.status = 'active'
         AND posts.status = 'active'
+        AND ${publishedCommentSql("comments")}
       ORDER BY comments.created_at DESC
       LIMIT 30
     `,
@@ -837,7 +876,9 @@ export async function listCommunityActivity(userId: string) {
         ON my_scraps.post_id = posts.id
        AND my_scraps.user_id = $2
        AND my_scraps.reaction_type = 'scrap'
+       AND my_scraps.created_at <= NOW()
       WHERE posts.status = 'active'
+        AND posts.created_at <= NOW()
       ORDER BY my_scraps.created_at DESC
       LIMIT 30
     `,
@@ -992,6 +1033,7 @@ function postSelectSql(options: {
           FROM public.community_post_reactions mine
           WHERE mine.post_id = posts.id
             AND mine.user_id = $1::uuid
+            AND mine.created_at <= NOW()
             AND mine.reaction_type = 'recommend'
         )
       ) AS is_recommended,
@@ -1002,6 +1044,7 @@ function postSelectSql(options: {
           FROM public.community_post_reactions mine
           WHERE mine.post_id = posts.id
             AND mine.user_id = $1::uuid
+            AND mine.created_at <= NOW()
             AND mine.reaction_type = 'scrap'
         )
       ) AS is_scrapped
@@ -1015,6 +1058,7 @@ function postSelectSql(options: {
         COUNT(*) FILTER (WHERE reaction_type = 'scrap') AS scrap_count
       FROM public.community_post_reactions
       WHERE post_id = posts.id
+        AND created_at <= NOW()
     ) reactions ON TRUE
     LEFT JOIN LATERAL (
       SELECT
@@ -1025,6 +1069,7 @@ function postSelectSql(options: {
       FROM public.community_comments
       WHERE post_id = posts.id
         AND status = 'active'
+        AND ${publishedCommentSql("community_comments")}
     ) comment_counts ON TRUE
     ${attachmentsJoin}
   `;
@@ -1037,6 +1082,25 @@ function communityPostRawScoreSql() {
     + COALESCE(comment_counts.reply_count::numeric, 0)
     + COALESCE(comment_counts.unique_comment_author_count::numeric, 0) * 3
     + LOG(10, GREATEST(posts.view_count, 0)::numeric + 1) * 30
+  )`;
+}
+
+// Deleted parents remain visible as thread placeholders, but scheduled parents do not.
+function publishedCommentSql(alias: string) {
+  return `(
+    ${alias}.created_at <= NOW()
+    AND EXISTS (
+      SELECT 1 FROM public.community_posts published_post
+      WHERE published_post.id = ${alias}.post_id
+        AND published_post.status = 'active' AND published_post.created_at <= NOW()
+    )
+    AND (${alias}.parent_comment_id IS NULL OR EXISTS (
+      SELECT 1 FROM public.community_comments published_parent
+      WHERE published_parent.id = ${alias}.parent_comment_id
+        AND published_parent.post_id = ${alias}.post_id
+        AND published_parent.status IN ('active', 'deleted')
+        AND published_parent.created_at <= NOW()
+    ))
   )`;
 }
 
@@ -1104,6 +1168,7 @@ async function getReportTargetSnapshot(targetType: "post" | "comment", targetId:
         SELECT id, category, title, content, user_id, created_at
         FROM public.community_posts
         WHERE id = $1
+          AND status = 'active' AND created_at <= NOW()
       `,
       [targetId],
     );
@@ -1122,6 +1187,8 @@ async function getReportTargetSnapshot(targetType: "post" | "comment", targetId:
       FROM public.community_comments comments
       LEFT JOIN public.community_posts posts ON posts.id = comments.post_id
       WHERE comments.id = $1
+        AND comments.status = 'active'
+        AND ${publishedCommentSql("comments")}
     `,
     [targetId],
   );

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { trackProductEvent } from "@/features/analytics/analytics.api";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getInterviewCoachingSession } from "../interview-coaching.api";
 import type { InterviewAnswerFeedback, InterviewCoachingSession, InterviewMessage, InterviewQuestion, NcsAreaName } from "../interview-coaching.dto";
@@ -29,6 +30,13 @@ export function InterviewCoachingResultPage({
 }) {
   const [session, setSession] = useState<InterviewCoachingSession | null>(null);
   const [error, setError] = useState("");
+  const viewedResult = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!session?.result || viewedResult.current === session.id) return;
+    viewedResult.current = session.id;
+    void trackProductEvent({ eventType: "interview_coaching_result_view", properties: { interview_session_id: session.id } });
+  }, [session]);
 
   useEffect(() => {
     let mounted = true;

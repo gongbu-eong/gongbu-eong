@@ -47,15 +47,6 @@ export async function startInterviewCoaching(args: {
     });
     throw new Error(body.message || "AI NCS 면접 코칭을 시작하지 못했습니다.");
   }
-  void trackProductEvent({
-    eventType: "interview_coaching_start",
-    properties: {
-      session_id: body.session.id,
-      job_posting_id: args.jobPostingId || null,
-      material_input_type: args.materialInputType || "text",
-      has_file: Boolean(args.materialFile),
-    },
-  });
   return body;
 }
 
@@ -88,15 +79,6 @@ export async function answerInterviewQuestion(args: {
     message?: string;
   };
   if (!response.ok || !body.ok) throw new Error(body.message || "답변 코칭에 실패했습니다.");
-  void trackProductEvent({
-    eventType: "interview_coaching_answer",
-    properties: {
-      session_id: args.sessionId,
-      question_id: args.questionId,
-      answer_length: args.answer.trim().length,
-      has_follow_up_question: Boolean(body.followUpQuestion),
-    },
-  });
   return body;
 }
 
@@ -121,13 +103,6 @@ export async function completeInterviewCoaching(args: {
     message?: string;
   };
   if (!response.ok || !body.ok) throw new Error(body.message || "면접 결과 생성에 실패했습니다.");
-  void trackProductEvent({
-    eventType: "interview_coaching_complete",
-    properties: {
-      session_id: body.session.id,
-      answered_question_count: body.session.messages.filter((item) => item.role === "answer").length,
-    },
-  });
   return body;
 }
 
@@ -180,6 +155,10 @@ export async function downloadInterviewMaterialFile(args: {
   link.click();
   link.remove();
   URL.revokeObjectURL(objectUrl);
+  void trackProductEvent({
+    eventType: "interview_coaching_material_download",
+    properties: { interview_session_id: args.sessionId },
+  });
 }
 
 export async function listInterviewCoachingHistory(anonymousId?: string | null) {

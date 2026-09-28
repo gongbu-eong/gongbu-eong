@@ -6,7 +6,8 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start -p 3000",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:analytics": "node --test tests/product-analytics.test.cjs"
   },
   "dependencies": {
     "date-fns": "^4.4.0",

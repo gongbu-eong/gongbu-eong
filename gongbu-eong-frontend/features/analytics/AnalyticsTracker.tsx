@@ -95,7 +95,7 @@ export function AnalyticsTracker() {
       );
       if (!clickable) return;
 
-      const screen = getScreenBucket(window.location.pathname);
+      const screen = getScreenBucket(`${window.location.pathname}${window.location.search}`);
       trackProductEvent({
         eventType: "screen_click",
         properties: {
@@ -117,7 +117,7 @@ export function AnalyticsTracker() {
         return;
       }
 
-      const screen = getScreenBucket(window.location.pathname);
+      const screen = getScreenBucket(`${window.location.pathname}${window.location.search}`);
       trackProductEvent({
         eventType: "screen_change",
         properties: {
@@ -142,7 +142,7 @@ export function AnalyticsTracker() {
       const form = event.target;
       if (!(form instanceof HTMLFormElement)) return;
 
-      const screen = getScreenBucket(window.location.pathname);
+      const screen = getScreenBucket(`${window.location.pathname}${window.location.search}`);
       trackProductEvent({
         eventType: "screen_submit",
         properties: {

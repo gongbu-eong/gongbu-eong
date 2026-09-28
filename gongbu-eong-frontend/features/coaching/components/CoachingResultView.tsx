@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import { trackProductEvent } from "@/features/analytics/analytics.api";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import type { CoachingFeedback, CoachingFramework, CoachingHistoryItem, CoachingQuestionReview } from "../coaching.dto";
 import styles from "./CoachingPage.module.css";
@@ -18,6 +19,12 @@ type ResultSource = {
 };
 
 export function CoachingResultView({ item }: { item: ResultSource }) {
+  const viewedResult = useRef<string | null>(null);
+  useEffect(() => {
+    if (!item.id || viewedResult.current === item.id) return;
+    viewedResult.current = item.id;
+    void trackProductEvent({ eventType: "coaching_result_view", properties: { result_id: item.id } });
+  }, [item.id]);
   const router = useRouter();
   const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   const [revisionMode, setRevisionMode] = useState<"original" | "compare">("original");

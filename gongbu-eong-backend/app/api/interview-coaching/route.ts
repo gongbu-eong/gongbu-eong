@@ -1,4 +1,6 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
+import { beginProductActivity } from "@/domains/analytics/product-activity";
+import { wakeAnalyticsFactWorker } from "@/lib/analytics-fact-worker";
 import { randomUUID } from "node:crypto";
 import { getSessionUser } from "@/domains/auth/session";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
@@ -27,6 +29,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let activity: Awaited<ReturnType<typeof beginProductActivity>> | undefined;
   const requestId = randomUUID();
   const startedAt = Date.now();
   const ipAddress = getRequestIp(request);
@@ -109,6 +112,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    activity = await beginProductActivity({
+      request, userId: user?.id, anonymousId, screen: "interview_coaching",
+      startEvent: "interview_coaching_start", completeEvent: "interview_coaching_ready", failureEvent: "interview_coaching_failed",
+      properties: { job_posting_id: jobPostingId, material_input_type: payload.materialInputType, has_file: Boolean(payload.materialFile) },
+    });
+    after(wakeAnalyticsFactWorker);
     const session = await startInterviewCoaching({
       userId: user?.id || null,
       anonymousId,
@@ -133,8 +142,10 @@ export async function POST(request: NextRequest) {
       sessionId: session.id,
       elapsedMs: Date.now() - startedAt,
     });
+    await activity.complete({ interview_session_id: session.id });
     return jsonWithCors(request, { ok: true, session }, { status: 201 });
   } catch (error) {
+    await activity?.fail();
     console.error(`[InterviewCoaching:${requestId}] POST /api/interview-coaching failed`, {
       elapsedMs: Date.now() - startedAt,
       message: error instanceof Error ? error.message : String(error),

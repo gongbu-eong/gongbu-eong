@@ -1,4 +1,6 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
+import { beginProductActivity } from "@/domains/analytics/product-activity";
+import { wakeAnalyticsFactWorker } from "@/lib/analytics-fact-worker";
 import { getSessionUser } from "@/domains/auth/session";
 import { answerInterviewQuestion } from "@/domains/interview-coaching/interview-coaching.service";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
@@ -16,6 +18,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ sessionId: string }> },
 ) {
+  let activity: Awaited<ReturnType<typeof beginProductActivity>> | undefined;
   try {
     const user = await getSessionUser(request);
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
@@ -38,6 +41,12 @@ export async function POST(
       return jsonWithCors(request, { ok: false, message: "답변을 입력해 주세요." }, { status: 400 });
     }
 
+    activity = await beginProductActivity({
+      request, userId: user?.id, anonymousId, screen: "interview_coaching",
+      startEvent: "interview_coaching_answer_submit", completeEvent: "interview_coaching_answer", failureEvent: "interview_coaching_answer_failed",
+      properties: { interview_session_id: sessionId, question_id: questionId },
+    });
+    after(wakeAnalyticsFactWorker);
     const result = await answerInterviewQuestion({
       sessionId,
       questionId,
@@ -46,8 +55,10 @@ export async function POST(
       anonymousId: user ? null : anonymousId,
     });
 
+    await activity.complete({ has_follow_up_question: Boolean(result.followUpQuestion) });
     return jsonWithCors(request, { ok: true, ...result });
   } catch (error) {
+    await activity?.fail();
     return jsonWithCors(
       request,
       {

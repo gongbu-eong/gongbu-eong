@@ -1,4 +1,6 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
+import { beginProductActivity } from "@/domains/analytics/product-activity";
+import { wakeAnalyticsFactWorker } from "@/lib/analytics-fact-worker";
 import { getSessionUser } from "@/domains/auth/session";
 import { completeInterviewCoaching } from "@/domains/interview-coaching/interview-coaching.service";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
@@ -16,6 +18,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ sessionId: string }> },
 ) {
+  let activity: Awaited<ReturnType<typeof beginProductActivity>> | undefined;
   try {
     const user = await getSessionUser(request);
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
@@ -30,14 +33,22 @@ export async function POST(
       );
     }
 
+    activity = await beginProductActivity({
+      request, userId: user?.id, anonymousId, screen: "interview_coaching",
+      startEvent: "interview_coaching_complete_start", completeEvent: "interview_coaching_complete", failureEvent: "interview_coaching_complete_failed",
+      properties: { interview_session_id: sessionId },
+    });
+    after(wakeAnalyticsFactWorker);
     const session = await completeInterviewCoaching({
       sessionId,
       userId: user?.id || null,
       anonymousId: user ? null : anonymousId,
     });
 
+    await activity.complete({ answered_question_count: session.messages.filter((item) => item.role === "answer").length });
     return jsonWithCors(request, { ok: true, session });
   } catch (error) {
+    await activity?.fail();
     return jsonWithCors(
       request,
       {

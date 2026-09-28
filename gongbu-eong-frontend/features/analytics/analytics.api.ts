@@ -69,12 +69,19 @@ export function syncAttribution(args: {
   });
 }
 
-export function trackProductEvent(args: {
+type ProductEvent = {
   eventType: string;
   diagnosisRunId?: string | null;
   diagnosisResultId?: string | null;
   properties?: Record<string, unknown>;
-}): Promise<void> {
+};
+
+export function trackProductEvent(args: ProductEvent): Promise<void> {
+  // Storage and browser APIs may throw before fetch; never interrupt the action.
+  return Promise.resolve().then(() => sendProductEvent(args)).catch(() => undefined);
+}
+
+function sendProductEvent(args: ProductEvent): Promise<void> {
   const path = `${window.location.pathname}${window.location.search}`;
   const previousPath = getStoredPreviousPath();
   const externalReferrer = getExternalReferrer();
@@ -95,7 +102,6 @@ export function trackProductEvent(args: {
       diagnosisResultId: args.diagnosisResultId || null,
       attribution: getStoredAttributionContext(),
       properties: {
-        session_id: getAnalyticsSessionId(),
         client_occurred_at: new Date().toISOString(),
         path,
         title: document.title,
@@ -106,6 +112,7 @@ export function trackProductEvent(args: {
         screen_name: screen.name,
         traffic_channel: classifyTrafficChannel(path, externalReferrer, previousPath),
         ...(args.properties || {}),
+        session_id: getAnalyticsSessionId(),
       },
     }),
   }).then(() => undefined).catch(() => {
@@ -226,7 +233,7 @@ export function getScreenBucket(path: string) {
   }
   if (pathname.startsWith("/ai-tools/coaching")) {
     return {
-      key: "coaching",
+      key: "resume_coaching",
       name: "AI NCS 자소서 코칭",
       canonicalPath: "/ai-tools/coaching",
     };
@@ -241,7 +248,12 @@ export function getScreenBucket(path: string) {
       canonicalPath: "/diagnosis",
     };
   }
-  if (pathname === "/ai-tools" || pathname.startsWith("/ai-tools/job-tools")) {
+  if (pathname.startsWith("/ai-tools/job-tools")) {
+    const value = getQueryValue(path, "tool");
+    const tool: JobToolKey = value && Object.hasOwn(JOB_TOOL_NAMES, value) ? value as JobToolKey : "salary";
+    return { key: `job_tool_${tool}`, name: JOB_TOOL_NAMES[tool], canonicalPath: `/ai-tools/job-tools?tool=${tool}` };
+  }
+  if (pathname === "/ai-tools") {
     return { key: "ai_tools", name: "AI 도구", canonicalPath: "/ai-tools" };
   }
   if (pathname.startsWith("/community")) {
@@ -276,6 +288,28 @@ export function getScreenBucket(path: string) {
   }
 
   return { key: "other", name: "기타", canonicalPath: pathname || "/" };
+}
+
+export const JOB_TOOL_NAMES = {
+  salary: "연봉 계산기",
+  text: "글자수세기",
+  severance: "퇴직금 계산기",
+  vacation: "연차/휴가 계산기",
+  unemployment: "실업급여 계산기",
+  grade: "학점 계산기",
+} as const;
+
+export type JobToolKey = keyof typeof JOB_TOOL_NAMES;
+
+export function trackJobToolEvent(tool: JobToolKey, action: "view" | "use" | "calculate" | "copy") {
+  const path = `/ai-tools/job-tools?tool=${tool}`;
+  return trackProductEvent({
+    eventType: `job_tool_${action}`,
+    properties: {
+      tool_key: tool, tool_name: JOB_TOOL_NAMES[tool], path,
+      canonical_path: path, screen_key: `job_tool_${tool}`, screen_name: JOB_TOOL_NAMES[tool],
+    },
+  });
 }
 
 function getQueryValue(path: string, key: string) {

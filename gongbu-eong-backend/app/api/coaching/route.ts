@@ -1,4 +1,6 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
+import { beginProductActivity } from "@/domains/analytics/product-activity";
+import { wakeAnalyticsFactWorker } from "@/lib/analytics-fact-worker";
 import { getSessionUser } from "@/domains/auth/session";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
 import { createPendingResumeFile, validateResumeFile } from "@/domains/resumes/resume-file-storage";
@@ -27,6 +29,7 @@ export async function OPTIONS(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let activity: Awaited<ReturnType<typeof beginProductActivity>> | undefined;
   try {
     const ipAddress = getRequestIp(request);
     const user = await getSessionUser(request);
@@ -87,6 +90,12 @@ export async function POST(request: NextRequest) {
       ipAddress,
       userAgent: request.headers.get("user-agent") || undefined,
     };
+    activity = await beginProductActivity({
+      request, userId: user?.id, anonymousId, screen: "resume_coaching",
+      startEvent: "coaching_start", completeEvent: "coaching_complete", failureEvent: "coaching_failed",
+      properties: { input_type: inputType, has_file: Boolean(file), has_job_posting: Boolean(posting), question_count: questions.length },
+    });
+    after(wakeAnalyticsFactWorker);
     const preparedSource = await prepareCoachingSource(coachingArgs);
     const savedFile = file && user ? await createPendingResumeFile(user.id, file) : null;
     // 진단권 소모 로직 비활성화: 잔액 확인, 차감, 실패 시 환불을 수행하지 않습니다.
@@ -139,8 +148,10 @@ export async function POST(request: NextRequest) {
     //     { status: 500 },
     //   );
     // }
+    await activity.complete({ result_id: result.resultId, request_id: result.requestId });
     return jsonWithCors(request, { ok: true, ...result, sourceFile: savedFile });
   } catch (error) {
+    await activity?.fail();
     return jsonWithCors(request, { ok: false, message: error instanceof Error ? error.message : "코칭에 실패했습니다." }, { status: 500 });
   }
 }

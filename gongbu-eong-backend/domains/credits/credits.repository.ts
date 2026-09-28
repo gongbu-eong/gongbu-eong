@@ -435,11 +435,13 @@ async function getCommunityActivityCount(userId: string, client: DbClient) {
         FROM public.community_posts
         WHERE user_id = $1
           AND status = 'active'
+          AND created_at <= NOW()
       ) + (
         SELECT COUNT(*)
         FROM public.community_comments
         WHERE user_id = $1
           AND status = 'active'
+          AND created_at <= NOW()
       ) AS count
     `,
     [userId],

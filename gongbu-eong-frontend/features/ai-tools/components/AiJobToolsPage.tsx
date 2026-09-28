@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { trackJobToolEvent } from "@/features/analytics/analytics.api";
 import { createPortal } from "react-dom";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
@@ -70,6 +71,13 @@ export function AiJobToolsPage({
   const [activeTool, setActiveTool] = useState<ToolKey>(parseTool(initialTool));
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
+  const viewedTool = useRef<ToolKey | null>(null);
+
+  useEffect(() => {
+    if (viewedTool.current === activeTool) return;
+    viewedTool.current = activeTool;
+    void trackJobToolEvent(activeTool, "view");
+  }, [activeTool]);
 
   useEffect(() => {
     let mounted = true;
@@ -233,6 +241,7 @@ function SalaryTool() {
       netPay,
     });
     setCalculated(true);
+    void trackJobToolEvent("salary", "calculate");
   };
 
   return (
@@ -318,6 +327,14 @@ function SalaryTool() {
 
 function TextTool() {
   const [text, setText] = useState("");
+  const used = useRef(false);
+  const updateText = (value: string) => {
+    setText(value);
+    if (value && !used.current) {
+      used.current = true;
+      void trackJobToolEvent("text", "use");
+    }
+  };
   const included = text.length;
   const excludedText = text.replace(/\s/g, "");
   const excluded = excludedText.length;
@@ -329,14 +346,17 @@ function TextTool() {
       <textarea
         className={styles.textArea}
         value={text}
-        onChange={(event) => setText(event.target.value)}
+        onChange={(event) => updateText(event.target.value)}
         placeholder="직접 작성하거나 복사하여 붙여 넣으세요."
       />
       <CountRow label="공백포함" count={included} byte={includedByte} />
       <CountRow label="공백제외" count={excluded} byte={excludedByte} />
       <div className={styles.actionGrid}>
         <PrimaryButton tone="secondary" onClick={() => setText("")}>모두 지우기</PrimaryButton>
-        <PrimaryButton onClick={() => navigator.clipboard?.writeText(text)}>전체 복사</PrimaryButton>
+        <PrimaryButton onClick={() => {
+          if (!text) return;
+          void navigator.clipboard?.writeText(text).then(() => trackJobToolEvent("text", "copy")).catch(() => undefined);
+        }}>전체 복사</PrimaryButton>
       </div>
     </ToolPanel>
   );
@@ -460,6 +480,7 @@ function SeveranceTool() {
       severancePay,
     });
     setCalculated(true);
+    void trackJobToolEvent("severance", "calculate");
   };
 
   return (
@@ -573,6 +594,7 @@ function VacationTool() {
     }
 
     setCalculated(true);
+    void trackJobToolEvent("vacation", "calculate");
   };
 
   return (
@@ -727,6 +749,7 @@ function UnemploymentTool() {
       total,
     });
     setCalculated(true);
+    void trackJobToolEvent("unemployment", "calculate");
   };
 
   return (
@@ -785,6 +808,15 @@ function UnemploymentTool() {
 
 function GradeTool() {
   const [score, setScore] = useState("");
+  const used = useRef(false);
+  const updateScore = (value: string) => {
+    const nextScore = onlyDecimal(value);
+    setScore(nextScore);
+    if (nextScore && Number.isFinite(Number(nextScore)) && !used.current) {
+      used.current = true;
+      void trackJobToolEvent("grade", "use");
+    }
+  };
   const [max, setMax] = useState("4.5");
   const base = Math.max(0, number(score));
   const maxScore = number(max) || 4.5;
@@ -797,7 +829,7 @@ function GradeTool() {
     <ToolPanel title="학점 변환기" onReset={() => setScore("")}>
       <NoticeBody>나의 평균평점을 지원하려는 기업의 기준에 맞게 변환합니다.</NoticeBody>
       <div className={styles.gradeInputs}>
-        <input value={score} onChange={(event) => setScore(onlyDecimal(event.target.value))} placeholder="0" inputMode="decimal" />
+        <input value={score} onChange={(event) => updateScore(event.target.value)} placeholder="0" inputMode="decimal" />
         <span>/</span>
         <select value={max} onChange={(event) => setMax(event.target.value)}>
           <option value="4.0">4.0</option>
@@ -808,7 +840,9 @@ function GradeTool() {
           <option value="100">100</option>
         </select>
       </div>
-      <PrimaryButton onClick={() => undefined}>변환하기</PrimaryButton>
+      <PrimaryButton onClick={() => {
+        if (score && Number.isFinite(Number(score))) void trackJobToolEvent("grade", "calculate");
+      }}>변환하기</PrimaryButton>
       <div className={styles.gradeResult}>
         {converted.map((item) => (
           <p key={item.target}>
