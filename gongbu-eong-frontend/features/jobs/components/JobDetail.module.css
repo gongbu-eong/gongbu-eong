@@ -342,6 +342,25 @@
   pointer-events: none;
 }
 
+.bookmarkError {
+  position: fixed;
+  bottom: calc(5rem + env(safe-area-inset-bottom) + 0.5rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 46;
+  width: calc(100% - 2rem);
+  max-width: 35.5rem;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #f1c7c4;
+  border-radius: 8px;
+  background: #fff7f6;
+  color: #b83d36;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .actionBar {
   position: fixed;
   bottom: 0;

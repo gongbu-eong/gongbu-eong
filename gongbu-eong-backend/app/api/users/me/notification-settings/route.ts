@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { normalizePhoneNumber } from "@/domains/profile/phone-number";
 import { requireSessionUser } from "@/domains/auth/session";
 import {
   DEADLINE_NOTIFICATION_OFFSETS,
@@ -89,24 +90,6 @@ function readNotificationPayload(payload: unknown) {
     deadlineOffsets,
     marketingAgreed,
   };
-}
-
-function normalizePhoneNumber(value: unknown) {
-  if (value == null || value === "") return null;
-  if (typeof value !== "string") {
-    throw badRequest("전화번호를 확인해 주세요.");
-  }
-
-  const digits = value.replace(/\D/g, "");
-  if (!/^01[016789]\d{7,8}$/.test(digits)) {
-    throw badRequest("전화번호 형식이 올바르지 않습니다.");
-  }
-
-  if (digits.length === 10) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
 }
 
 function readDeadlineOffsets(value: unknown) {

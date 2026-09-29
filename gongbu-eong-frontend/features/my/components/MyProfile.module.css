@@ -67,8 +67,7 @@
   margin-top: 32px;
 }
 
-.fieldSection h2,
-.choiceSection h2 {
+.fieldSection h2 {
   margin: 0 0 12px;
   color: #5a6580;
   font-size: 14px;
@@ -181,36 +180,30 @@
   font-weight: 400;
 }
 
-.choiceSection {
-  margin-top: 33px;
+.demographics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin: 33px 0 0;
+  padding: 0 0 18px;
+  border-bottom: 1px solid #e4e8ef;
 }
 
-.choiceSection div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.choiceSection button {
-  display: inline-flex;
-  height: 36px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 32px;
-  background: #f5f7fa;
-  color: #9aa4b8;
-  cursor: pointer;
-  font: inherit;
+.demographics dt {
+  margin-bottom: 12px;
+  color: #5a6580;
   font-size: 14px;
   line-height: 1;
-  font-weight: 800;
+  font-weight: 600;
 }
 
-.choiceSection .selectedChip {
-  background: #2f7ff0;
-  color: #ffffff;
+.demographics dd {
+  margin: 0;
+  color: #1a2233;
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .privateNotice {

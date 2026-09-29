@@ -10,6 +10,8 @@ import {
 import { claimAnonymousCoachingResults } from "@/domains/coaching/coaching.service";
 import { claimAnonymousInterviewSessions } from "@/domains/interview-coaching/interview-coaching.service";
 import { claimAnonymousAnalyticsData } from "@/domains/analytics/analytics.repository";
+import { readOAuthPhoneNumber } from "@/domains/profile/phone-number";
+import { normalizeProfileAgeGroup, normalizeProfileGender } from "@/domains/profile/demographics";
 
 type OAuthProvider = "kakao" | "naver";
 type EntrySource =
@@ -377,6 +379,9 @@ async function fetchOAuthProfile(
       provider,
       providerUserId: String(body.id),
       email: body.kakao_account?.email,
+      phoneNumber: readOAuthPhoneNumber(body.kakao_account?.phone_number),
+      gender: normalizeProfileGender(body.kakao_account?.gender),
+      ageGroup: normalizeProfileAgeGroup(body.kakao_account?.age_range),
       nickname: body.kakao_account?.profile?.nickname,
       avatarUrl:
         body.kakao_account?.profile?.profile_image_url ||
@@ -397,6 +402,9 @@ async function fetchOAuthProfile(
     provider,
     providerUserId: body.response.id,
     email: body.response.email,
+    phoneNumber: readOAuthPhoneNumber(body.response.mobile),
+    gender: normalizeProfileGender(body.response.gender),
+    ageGroup: normalizeProfileAgeGroup(body.response.age),
     nickname: body.response.nickname || body.response.name,
     avatarUrl: body.response.profile_image,
   };

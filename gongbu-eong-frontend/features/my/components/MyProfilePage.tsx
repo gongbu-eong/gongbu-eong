@@ -10,7 +10,6 @@ import { getMyProfile, updateMyProfile } from "../my.api";
 import type {
   ProfileAgeGroup,
   ProfileAvatarKey,
-  ProfileGender,
   UserProfileDto,
 } from "../my.dto";
 import styles from "./MyProfile.module.css";
@@ -39,19 +38,24 @@ const BACKGROUND_COLORS = [
   "#c4c6ca",
 ];
 
-const GENDERS: Array<{ value: ProfileGender; label: string }> = [
-  { value: "female", label: "여성" },
-  { value: "male", label: "남성" },
-];
-
-const AGE_GROUPS: Array<{ value: ProfileAgeGroup; label: string }> = [
-  { value: "teens", label: "10대" },
-  { value: "early_20s", label: "20대 초반" },
-  { value: "late_20s", label: "20대 후반" },
-  { value: "early_30s", label: "30대 초반" },
-  { value: "late_30s", label: "30대 후반" },
-  { value: "over_40", label: "40대 이상" },
-];
+const AGE_GROUP_LABELS: Record<ProfileAgeGroup, string> = {
+  "0-9": "10대 미만",
+  "10-19": "10대",
+  "20-29": "20대",
+  "30-39": "30대",
+  "40-49": "40대",
+  "50-59": "50대",
+  "60-69": "60대",
+  "70-79": "70대",
+  "80-89": "80대",
+  "90+": "90대 이상",
+  teens: "10대",
+  early_20s: "20대",
+  late_20s: "20대",
+  early_30s: "30대",
+  late_30s: "30대",
+  over_40: "40대 이상",
+};
 
 export function MyProfilePage() {
   const router = useRouter();
@@ -62,9 +66,8 @@ export function MyProfilePage() {
   const [backgroundColor, setBackgroundColor] = useState("#c4c6ca");
   const [communityNickname, setCommunityNickname] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
-  const [gender, setGender] = useState<ProfileGender | null>(null);
-  const [ageGroup, setAgeGroup] = useState<ProfileAgeGroup | null>(null);
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -88,9 +91,8 @@ export function MyProfilePage() {
         setBackgroundColor(nextProfile.profileBackgroundColor);
         setCommunityNickname(nextProfile.communityNickname || "");
         setStatusMessage(nextProfile.profileStatusMessage || "");
-        setGender(nextProfile.gender);
-        setAgeGroup(nextProfile.ageGroup);
         setEmail(nextProfile.email || "");
+        setPhoneNumber(nextProfile.phoneNumber || "");
       })
       .catch((error) => {
         if (!active) return;
@@ -137,12 +139,11 @@ export function MyProfilePage() {
     try {
       const response = await updateMyProfile({
         email: trimmedEmail,
+        phoneNumber: phoneNumber.trim() || null,
         communityNickname: nickname,
         profileStatusMessage: trimmedStatus || null,
         profileAvatarKey: avatarKey,
         profileBackgroundColor: backgroundColor,
-        gender,
-        ageGroup,
       });
       setProfile(response.profile);
       setMessage("프로필이 저장되었습니다.");
@@ -239,37 +240,16 @@ export function MyProfilePage() {
               <p>프로필과 게시글에 함께 보여요. (선택)</p>
             </section>
 
-            <section className={styles.choiceSection}>
-              <h2>성별</h2>
+            <dl className={styles.demographics}>
               <div>
-                {GENDERS.map((item) => (
-                  <button
-                    type="button"
-                    key={item.value}
-                    className={gender === item.value ? styles.selectedChip : ""}
-                    onClick={() => setGender(item.value)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+                <dt>성별</dt>
+                <dd>{profile?.gender === "female" ? "여성" : profile?.gender === "male" ? "남성" : "없음"}</dd>
               </div>
-            </section>
-
-            <section className={styles.choiceSection}>
-              <h2>연령</h2>
               <div>
-                {AGE_GROUPS.map((item) => (
-                  <button
-                    type="button"
-                    key={item.value}
-                    className={ageGroup === item.value ? styles.selectedChip : ""}
-                    onClick={() => setAgeGroup(item.value)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+                <dt>연령대</dt>
+                <dd>{profile?.ageGroup ? AGE_GROUP_LABELS[profile.ageGroup] || "없음" : "없음"}</dd>
               </div>
-            </section>
+            </dl>
 
             <section className={`${styles.textField} ${styles.emailField}`}>
               <label htmlFor="profileEmail">이메일</label>
@@ -286,8 +266,24 @@ export function MyProfilePage() {
               />
             </section>
 
+            <section className={styles.textField}>
+              <label htmlFor="profilePhoneNumber">휴대폰번호</label>
+              <span>선택</span>
+              <input
+                id="profilePhoneNumber"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phoneNumber}
+                maxLength={30}
+                placeholder="010-1234-5678"
+                disabled={saving}
+                onChange={(event) => setPhoneNumber(event.target.value)}
+              />
+            </section>
+
             <div className={styles.privateNotice}>
-              🔒 성별과 연령은 노출되지 않습니다.
+              🔒 성별·연령·휴대폰번호는 공개되지 않습니다.
               <br />
               성별·연령대는 같은 조건의 인기 글을 추천하는 데만 쓰여요.
             </div>

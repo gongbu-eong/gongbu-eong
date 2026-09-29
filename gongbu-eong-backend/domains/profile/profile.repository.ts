@@ -1,4 +1,10 @@
 import { db } from "@/lib/db";
+import {
+  normalizeProfileAgeGroup,
+  normalizeProfileGender,
+  type ProfileAgeGroup,
+  type ProfileGender,
+} from "./demographics";
 
 export const PROFILE_AVATAR_KEYS = [
   "fox",
@@ -24,23 +30,12 @@ export const PROFILE_BACKGROUND_COLORS = [
   "#c4c6ca",
 ] as const;
 
-export const PROFILE_GENDERS = ["female", "male"] as const;
-export const PROFILE_AGE_GROUPS = [
-  "teens",
-  "early_20s",
-  "late_20s",
-  "early_30s",
-  "late_30s",
-  "over_40",
-] as const;
-
 export type ProfileAvatarKey = (typeof PROFILE_AVATAR_KEYS)[number];
-export type ProfileGender = (typeof PROFILE_GENDERS)[number];
-export type ProfileAgeGroup = (typeof PROFILE_AGE_GROUPS)[number];
 
 export type UserProfile = {
   id: string;
   email: string | null;
+  phoneNumber: string | null;
   nickname: string | null;
   displayName: string | null;
   communityNickname: string | null;
@@ -54,24 +49,24 @@ export type UserProfile = {
 type UserProfileRow = {
   id: string;
   email: string | null;
+  phone: string | null;
   nickname: string | null;
   display_name: string | null;
   community_nickname: string | null;
   profile_status_message: string | null;
   profile_avatar_key: ProfileAvatarKey | null;
   profile_background_color: string | null;
-  gender: ProfileGender | null;
-  age_group: ProfileAgeGroup | null;
+  gender: string | null;
+  age_group: string | null;
 };
 
 export type UpdateUserProfileInput = {
   email: string;
+  phoneNumber?: string | null;
   communityNickname: string;
   profileStatusMessage: string | null;
   profileAvatarKey: ProfileAvatarKey;
   profileBackgroundColor: string;
-  gender: ProfileGender | null;
-  ageGroup: ProfileAgeGroup | null;
 };
 
 export async function findUserProfile(userId: string) {
@@ -80,6 +75,7 @@ export async function findUserProfile(userId: string) {
       SELECT
         id,
         email,
+        phone,
         nickname,
         display_name,
         community_nickname,
@@ -149,14 +145,14 @@ export async function updateUserProfile(
         profile_status_message = $4,
         profile_avatar_key = $5,
         profile_background_color = $6,
-        gender = $7,
-        age_group = $8,
+        phone = CASE WHEN $7::boolean THEN $8::varchar ELSE phone END,
         updated_at = NOW()
       WHERE id = $1
         AND status = 'active'
       RETURNING
         id,
         email,
+        phone,
         nickname,
         display_name,
         community_nickname,
@@ -173,8 +169,8 @@ export async function updateUserProfile(
       input.profileStatusMessage,
       input.profileAvatarKey,
       input.profileBackgroundColor,
-      input.gender,
-      input.ageGroup,
+      input.phoneNumber !== undefined,
+      input.phoneNumber ?? null,
     ],
   );
 
@@ -185,13 +181,14 @@ function toUserProfile(row: UserProfileRow): UserProfile {
   return {
     id: row.id,
     email: row.email,
+    phoneNumber: row.phone,
     nickname: row.nickname,
     displayName: row.display_name,
     communityNickname: row.community_nickname,
     profileStatusMessage: row.profile_status_message,
     profileAvatarKey: row.profile_avatar_key || "fox",
     profileBackgroundColor: row.profile_background_color || "#c4c6ca",
-    gender: row.gender,
-    ageGroup: row.age_group,
+    gender: normalizeProfileGender(row.gender),
+    ageGroup: normalizeProfileAgeGroup(row.age_group),
   };
 }

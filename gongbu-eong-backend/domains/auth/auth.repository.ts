@@ -2,6 +2,13 @@ import { db } from "@/lib/db";
 import { getCommunityActivityRewardProgress } from "@/domains/credits/credits.repository";
 import { generateUniqueCommunityNickname } from "./community-nickname";
 import { encryptOAuthToken } from "./oauth-token-crypto";
+import { readOAuthPhoneNumber } from "@/domains/profile/phone-number";
+import {
+  normalizeProfileAgeGroup,
+  normalizeProfileGender,
+  type ProfileAgeGroup,
+  type ProfileGender,
+} from "@/domains/profile/demographics";
 
 type OAuthProvider = "kakao" | "naver";
 type UserStatus = "active" | "blocked" | "withdrawn" | "forced_withdrawn" | "pending_signup";
@@ -31,6 +38,9 @@ export type OAuthProfile = {
   email?: string;
   nickname?: string;
   avatarUrl?: string;
+  phoneNumber?: string;
+  gender?: ProfileGender | null;
+  ageGroup?: ProfileAgeGroup | null;
 };
 
 export async function upsertOAuthUser(args: {
@@ -47,6 +57,9 @@ export async function upsertOAuthUser(args: {
   ipAddress?: string;
   userAgent?: string;
 }) {
+  const phoneNumber = readOAuthPhoneNumber(args.profile.phoneNumber) || null;
+  const gender = normalizeProfileGender(args.profile.gender);
+  const ageGroup = normalizeProfileAgeGroup(args.profile.ageGroup);
   const client = await db.connect();
 
   try {
@@ -182,6 +195,9 @@ export async function upsertOAuthUser(args: {
               display_name = COALESCE($2, display_name),
               avatar_url = COALESCE($3, avatar_url),
               community_nickname = COALESCE(community_nickname, $4),
+              phone = COALESCE(NULLIF(BTRIM(phone), ''), $5),
+              gender = COALESCE($6, gender),
+              age_group = COALESCE($7, age_group),
               last_login_at = NOW(),
               updated_at = NOW()
             WHERE id = $1
@@ -192,6 +208,9 @@ export async function upsertOAuthUser(args: {
             args.profile.nickname || null,
             args.profile.avatarUrl || null,
             communityNickname,
+            phoneNumber,
+            gender,
+            ageGroup,
           ],
         );
       } else {
@@ -203,10 +222,13 @@ export async function upsertOAuthUser(args: {
               display_name,
               community_nickname,
               avatar_url,
+              phone,
+              gender,
+              age_group,
               status,
               last_login_at
             )
-            VALUES ($1, $2, $2, $3, $4, 'pending_signup'::public.user_status, NOW())
+            VALUES ($1, $2, $2, $3, $4, $5, $6, $7, 'pending_signup'::public.user_status, NOW())
             RETURNING id, TRUE AS inserted
           `,
           [
@@ -214,6 +236,9 @@ export async function upsertOAuthUser(args: {
             args.profile.nickname || null,
             communityNickname,
             args.profile.avatarUrl || null,
+            phoneNumber,
+            gender,
+            ageGroup,
           ],
         );
         userId = user.rows[0].id;
@@ -275,6 +300,9 @@ export async function upsertOAuthUser(args: {
             display_name = COALESCE($2, display_name),
             avatar_url = COALESCE($3, avatar_url),
             community_nickname = COALESCE(community_nickname, $4),
+            phone = COALESCE(NULLIF(BTRIM(phone), ''), $5),
+            gender = COALESCE($6, gender),
+            age_group = COALESCE($7, age_group),
             last_login_at = NOW(),
             updated_at = NOW()
           WHERE id = $1
@@ -285,6 +313,9 @@ export async function upsertOAuthUser(args: {
           args.profile.nickname || null,
           args.profile.avatarUrl || null,
           communityNickname,
+          phoneNumber,
+          gender,
+          ageGroup,
         ],
       );
 
@@ -845,8 +876,8 @@ export async function findUserBySessionTokenHash(
     profileStatusMessage: user.profile_status_message,
     profileAvatarKey: user.profile_avatar_key,
     profileBackgroundColor: user.profile_background_color,
-    gender: user.gender,
-    ageGroup: user.age_group,
+    gender: normalizeProfileGender(user.gender),
+    ageGroup: normalizeProfileAgeGroup(user.age_group),
     provider: user.provider,
     diagnosisTypeCode: user.diagnosis_type_code,
     diagnosisTypeName: user.diagnosis_type_name,

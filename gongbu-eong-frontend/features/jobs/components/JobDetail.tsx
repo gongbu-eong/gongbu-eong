@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   useEffect,
   useRef,
@@ -20,6 +20,12 @@ import type { JobPostingDetailDto } from "@/features/home/home.dto";
 import { AppHeader } from "@/features/layout/components/AppChrome";
 import { makeLoginHref } from "@/shared/navigation/login";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
+import {
+  BOOKMARK_INTENT_PARAM,
+  rememberJobBookmark,
+  readJobBookmarkIntent,
+  completeJobBookmarkIntent,
+} from "../bookmark-intent";
 import styles from "./JobDetail.module.css";
 
 const JOB_FILE_DOWNLOAD_FRAME = "job-file-download-frame";
@@ -91,6 +97,8 @@ export function JobDetail({
   initialJob?: JobPostingDetailDto | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const bookmarkIntentToken = searchParams.get(BOOKMARK_INTENT_PARAM);
   const [job, setJob] = useState<JobPostingDetailDto | null>(initialJob);
   const [authenticated, setAuthenticated] = useState(
     Boolean(initialJob?.isBookmarked),
@@ -110,6 +118,10 @@ export function JobDetail({
   const [selectedBanner, setSelectedBanner] =
     useState<JobDetailBannerVariant | null>(null);
   const bannerImpressionKeyRef = useRef<string | null>(null);
+  const bookmarkResumeRef = useRef<{
+    token: string;
+    request: ReturnType<typeof setJobBookmark>;
+  } | null>(null);
   useBodyScrollLock(bookmarkReadyOpen);
 
   useEffect(() => {
@@ -161,6 +173,54 @@ export function JobDetail({
       mounted = false;
     };
   }, [initialJob, jobId]);
+
+  const loadedJobId = job?.id;
+  useEffect(() => {
+    if (!authenticated || loadedJobId !== jobId) return;
+    const intent = readJobBookmarkIntent(jobId, bookmarkIntentToken);
+    if (!intent) return;
+    let active = true;
+
+    // Restore an explicit add, never a toggle. Reuse in-flight work in Strict Mode.
+    void Promise.resolve().then(async () => {
+      if (!active) return;
+      setBookmarkPending(true);
+      setMessage(null);
+      try {
+        if (bookmarkResumeRef.current?.token !== intent.token) {
+          bookmarkResumeRef.current = {
+            token: intent.token,
+            request: setJobBookmark(jobId, true),
+          };
+        }
+        const result = await bookmarkResumeRef.current.request;
+        if (!active) return;
+        setJob((current) => current?.id === jobId
+          ? { ...current, isBookmarked: result.isBookmarked }
+          : current);
+        setBookmarkPending(false);
+        completeJobBookmarkIntent(jobId, intent.token);
+        trackProductEvent({
+          eventType: "job_detail_bookmark_ready_action",
+          properties: {
+            job_id: jobId,
+            action: "confirm_after_login",
+            next_bookmarked: true,
+          },
+        });
+      } catch (error) {
+        if (!active) return;
+        bookmarkResumeRef.current = null;
+        setBookmarkPending(false);
+        setMessage(error instanceof Error
+          ? error.message
+          : "찜하기를 완료하지 못했습니다. 다시 시도해 주세요.");
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [authenticated, loadedJobId, jobId, bookmarkIntentToken]);
 
   const toggleCoachingBanner = () => {
     const willExpand = !coachingBannerExpanded;
@@ -236,9 +296,13 @@ export function JobDetail({
     if (!job) return false;
 
     setBookmarkPending(true);
+    setMessage(null);
     try {
       const result = await setJobBookmark(job.id, nextBookmarked);
-      setJob({ ...job, isBookmarked: result.isBookmarked });
+      setJob((current) => current?.id === job.id
+        ? { ...current, isBookmarked: result.isBookmarked }
+        : current);
+      if (result.isBookmarked) completeJobBookmarkIntent(job.id, bookmarkIntentToken);
       return true;
     } catch (error) {
       setMessage(
@@ -260,7 +324,16 @@ export function JobDetail({
     });
 
     if (!authenticated) {
-      router.push(makeLoginHref(`/jobs/${job.id}`));
+      const returnTo = rememberJobBookmark(job.id);
+      if (!returnTo) {
+        setMessage("브라우저에서 로그인 전 찜 요청을 보관할 수 없습니다. 로그인 후 다시 찜해 주세요.");
+      }
+      router.push(makeLoginHref(returnTo || `/jobs/${job.id}`));
+      return;
+    }
+
+    if (readJobBookmarkIntent(job.id, bookmarkIntentToken)) {
+      void setBookmarkState(true);
       return;
     }
 
@@ -496,11 +569,15 @@ export function JobDetail({
               </>
             ) : null}
 
+            {message ? (
+              <p className={styles.bookmarkError} role="alert">{message}</p>
+            ) : null}
             <div className={styles.actionBar}>
               <button
                 type="button"
                 className={`${styles.actionStar} ${job.isBookmarked ? styles.bookmarked : ""}`}
                 aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
+                aria-pressed={job.isBookmarked}
                 disabled={bookmarkPending}
                 onClick={toggleBookmark}
               >

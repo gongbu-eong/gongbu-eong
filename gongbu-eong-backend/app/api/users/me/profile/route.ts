@@ -2,16 +2,13 @@ import { NextRequest } from "next/server";
 import { requireSessionUser } from "@/domains/auth/session";
 import {
   findUserProfile,
-  PROFILE_AGE_GROUPS,
   PROFILE_AVATAR_KEYS,
   PROFILE_BACKGROUND_COLORS,
-  PROFILE_GENDERS,
   updateUserProfile,
-  type ProfileAgeGroup,
   type ProfileAvatarKey,
-  type ProfileGender,
 } from "@/domains/profile/profile.repository";
 import { jsonWithCors } from "@/lib/cors";
+import { normalizePhoneNumber } from "@/domains/profile/phone-number";
 
 export const runtime = "nodejs";
 
@@ -65,8 +62,6 @@ function readProfilePayload(payload: unknown) {
   const profileStatusMessage = readTrimmedString(value.profileStatusMessage);
   const profileAvatarKey = readEnum(value.profileAvatarKey, PROFILE_AVATAR_KEYS, "아바타를 선택해 주세요.");
   const profileBackgroundColor = readEnum(value.profileBackgroundColor, PROFILE_BACKGROUND_COLORS, "프로필 배경색을 선택해 주세요.");
-  const gender = readNullableEnum(value.gender, PROFILE_GENDERS, "성별을 확인해 주세요.");
-  const ageGroup = readNullableEnum(value.ageGroup, PROFILE_AGE_GROUPS, "연령대를 확인해 주세요.");
 
   if (!email) {
     throw badRequest("이메일을 입력해 주세요.");
@@ -94,12 +89,13 @@ function readProfilePayload(payload: unknown) {
 
   return {
     email,
+    ...(value.phoneNumber !== undefined
+      ? { phoneNumber: normalizePhoneNumber(value.phoneNumber) }
+      : {}),
     communityNickname,
     profileStatusMessage: profileStatusMessage || null,
     profileAvatarKey: profileAvatarKey as ProfileAvatarKey,
     profileBackgroundColor,
-    gender: gender as ProfileGender | null,
-    ageGroup: ageGroup as ProfileAgeGroup | null,
   };
 }
 
@@ -117,15 +113,6 @@ function readEnum<T extends readonly string[]>(
   }
 
   throw badRequest(message);
-}
-
-function readNullableEnum<T extends readonly string[]>(
-  value: unknown,
-  options: T,
-  message: string,
-) {
-  if (value == null || value === "") return null;
-  return readEnum(value, options, message);
 }
 
 function badRequest(message: string) {

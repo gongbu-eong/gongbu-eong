@@ -124,6 +124,16 @@ export type ProfileAvatarKey =
 export type ProfileGender = "female" | "male";
 
 export type ProfileAgeGroup =
+  | "0-9"
+  | "10-19"
+  | "20-29"
+  | "30-39"
+  | "40-49"
+  | "50-59"
+  | "60-69"
+  | "70-79"
+  | "80-89"
+  | "90+"
   | "teens"
   | "early_20s"
   | "late_20s"
@@ -134,6 +144,7 @@ export type ProfileAgeGroup =
 export type UserProfileDto = {
   id: string;
   email: string | null;
+  phoneNumber: string | null;
   nickname: string | null;
   displayName: string | null;
   communityNickname: string | null;
@@ -146,12 +157,11 @@ export type UserProfileDto = {
 
 export type UserProfilePayloadDto = {
   email: string;
+  phoneNumber: string | null;
   communityNickname: string;
   profileStatusMessage: string | null;
   profileAvatarKey: ProfileAvatarKey;
   profileBackgroundColor: string;
-  gender: ProfileGender | null;
-  ageGroup: ProfileAgeGroup | null;
 };
 
 export type UserProfileResponseDto = {
