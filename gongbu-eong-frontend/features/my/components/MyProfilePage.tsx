@@ -268,7 +268,7 @@ export function MyProfilePage() {
 
             <section className={styles.textField}>
               <label htmlFor="profilePhoneNumber">휴대폰번호</label>
-              <span>선택</span>
+              <span>{phoneNumber.length}/30</span>
               <input
                 id="profilePhoneNumber"
                 type="tel"
