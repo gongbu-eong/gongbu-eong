@@ -3,12 +3,21 @@ import { NextRequest } from "next/server";
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  if (!request.cookies.get("gongbu_eong_session")?.value) {
+    return Response.json(
+      { ok: false, message: "로그인이 필요합니다." },
+      { status: 401 },
+    );
+  }
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
   try {
+    const headers = new Headers({ cookie: request.headers.get("cookie") || "" });
+    const requestContentType = request.headers.get("content-type");
+    if (requestContentType) headers.set("Content-Type", requestContentType);
     const response = await fetch(`${backendUrl}/api/coaching`, {
       method: "POST",
-      headers: { cookie: request.headers.get("cookie") || "" },
-      body: await request.formData(),
+      headers,
+      body: await request.arrayBuffer(),
       cache: "no-store",
     });
     const contentType = response.headers.get("Content-Type") || "";

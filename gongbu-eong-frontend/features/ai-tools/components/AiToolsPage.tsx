@@ -22,7 +22,6 @@ const representativeTools = [
     thumbClass: "toolThumbDiagnosis",
     imageWidth: 86,
     imageHeight: 79,
-    requiresAuth: false,
     comingSoon: false,
   },
   {
@@ -36,7 +35,6 @@ const representativeTools = [
     thumbClass: "toolThumbResume",
     imageWidth: 94,
     imageHeight: 78,
-    requiresAuth: false,
     comingSoon: false,
   },
   {
@@ -50,7 +48,6 @@ const representativeTools = [
     thumbClass: "toolThumbInterview",
     imageWidth: 86,
     imageHeight: 78,
-    requiresAuth: false,
     comingSoon: false,
   },
 ] as const;
@@ -190,7 +187,8 @@ export function AiToolsPage() {
 
               return (
                 <Link
-                  href={tool.requiresAuth && !user ? makeLoginHref(tool.href) : tool.href}
+                  href={tool.href}
+                  prefetch={false}
                   key={tool.title}
                   className={styles.toolCard}
                 >

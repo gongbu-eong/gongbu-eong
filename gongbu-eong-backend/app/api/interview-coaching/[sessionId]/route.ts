@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getSessionUser } from "@/domains/auth/session";
+import { requireSessionUser } from "@/domains/auth/session";
 import { findInterviewSessionForViewer } from "@/domains/interview-coaching/interview-coaching.service";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
 
@@ -17,13 +17,11 @@ export async function GET(
   context: { params: Promise<{ sessionId: string }> },
 ) {
   try {
-    const user = await getSessionUser(request);
-    const anonymousId = readAnonymousId(request.nextUrl.searchParams.get("anonymousId"));
+    const user = await requireSessionUser(request);
     const { sessionId } = await context.params;
     const session = await findInterviewSessionForViewer({
       sessionId,
-      userId: user?.id || null,
-      anonymousId,
+      userId: user.id,
     });
 
     if (!session) {
@@ -36,6 +34,7 @@ export async function GET(
 
     return jsonWithCors(request, { ok: true, session });
   } catch (error) {
+    const status = error instanceof Error && error.name === "UnauthorizedError" ? 401 : 500;
     return jsonWithCors(
       request,
       {
@@ -45,15 +44,7 @@ export async function GET(
             ? error.message
             : "AI NCS 면접 코칭 결과를 불러오지 못했습니다.",
       },
-      { status: 500 },
+      { status },
     );
   }
-}
-
-function readAnonymousId(value: string | null) {
-  if (!value) return null;
-  const text = value.trim();
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)
-    ? text
-    : null;
 }

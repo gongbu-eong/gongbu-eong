@@ -50,7 +50,7 @@ type InterviewSession = NonNullable<Awaited<ReturnType<typeof findInterviewSessi
 type InterviewSessionMessage = InterviewSession["messages"][number];
 
 export type StartInterviewCoachingArgs = {
-  userId?: string | null;
+  userId: string;
   anonymousId?: string | null;
   posting?: JobPostingDetailRow | null;
   jobDuty?: string | null;
@@ -380,13 +380,25 @@ function appendInterviewMaterialContext(
   return `${jobContext || ""}${materialText}`.trim().slice(0, 12000);
 }
 
+async function requireOwnedInterviewSession(args: { sessionId: string; userId: string }) {
+  const session = await findInterviewSessionForViewer({
+    sessionId: args.sessionId,
+    userId: args.userId,
+  });
+  if (!session) {
+    const error = new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
+    error.name = "NotFoundError";
+    throw error;
+  }
+  return session;
+}
+
 export async function generateInterviewCoachingQuestions(args: {
   sessionId: string;
-  userId?: string | null;
+  userId: string;
   anonymousId?: string | null;
 }) {
-  const draft = await findInterviewSessionForViewer(args);
-  if (!draft) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
+  const draft = await requireOwnedInterviewSession(args);
   if (draft.status === "ready" && draft.questions.length) return draft;
 
   try {
@@ -446,11 +458,10 @@ export async function answerInterviewQuestion(args: {
   sessionId: string;
   questionId: string;
   answer: string;
-  userId?: string | null;
+  userId: string;
   anonymousId?: string | null;
 }) {
-  const session = await findInterviewSessionForViewer(args);
-  if (!session) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
+  const session = await requireOwnedInterviewSession(args);
   if (session.completedAt) throw new Error("이미 완료된 AI NCS 면접 코칭입니다.");
 
   const question = session.questions.find((item) => item.id === args.questionId);
@@ -547,11 +558,10 @@ export async function answerInterviewQuestion(args: {
 
 export async function completeInterviewCoaching(args: {
   sessionId: string;
-  userId?: string | null;
+  userId: string;
   anonymousId?: string | null;
 }) {
-  const session = await findInterviewSessionForViewer(args);
-  if (!session) throw new Error("AI NCS 면접 코칭 세션을 찾지 못했습니다.");
+  const session = await requireOwnedInterviewSession(args);
   if (!session.messages.some((item) => item.role === "answer")) {
     throw new Error("면접 답변을 하나 이상 제출하면 결과를 확인할 수 있어요.");
   }

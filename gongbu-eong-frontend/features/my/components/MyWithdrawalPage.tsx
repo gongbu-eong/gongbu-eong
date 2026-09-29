@@ -8,7 +8,7 @@ import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { withdrawCurrentUser } from "@/features/my/my.api";
 import type { WithdrawalReasonCode } from "@/features/my/my.dto";
-import { makeLoginHref } from "@/shared/navigation/login";
+import { MyUserLoadError } from "./MyUserLoadError";
 import styles from "./My.module.css";
 
 const withdrawalReasons: Array<{
@@ -25,7 +25,7 @@ const withdrawalReasons: Array<{
 export function MyWithdrawalPage() {
   const router = useRouter();
   const [user, setUser] = useState<CurrentUserDto | null>(null);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [noticeAgreed, setNoticeAgreed] = useState(false);
   const [reasonCode, setReasonCode] = useState<WithdrawalReasonCode | "">("");
   const [reasonDetail, setReasonDetail] = useState("");
@@ -42,12 +42,12 @@ export function MyWithdrawalPage() {
       if (!alive) return;
 
       if (!response?.authenticated || !response.user) {
-        router.replace(makeLoginHref("/my/withdrawal"));
+        setIsLoading(false);
         return;
       }
 
       setUser(response.user);
-      setIsCheckingAuth(false);
+      setIsLoading(false);
     }
 
     void loadUser();
@@ -55,7 +55,7 @@ export function MyWithdrawalPage() {
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, []);
 
   const nickname = useMemo(
     () => user?.communityNickname || "프로필 닉네임 설정",
@@ -110,9 +110,11 @@ export function MyWithdrawalPage() {
     router.refresh();
   };
 
-  if (isCheckingAuth) {
+  if (isLoading) {
     return null;
   }
+
+  if (!user) return <MyUserLoadError title="탈퇴 안내" />;
 
   return (
     <div className={`${styles.page} ${styles.withdrawalPage}`}>

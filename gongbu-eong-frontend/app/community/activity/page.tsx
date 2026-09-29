@@ -1,9 +1,7 @@
 import { Suspense } from "react";
 import { CommunityActivityPage } from "@/features/community/components/CommunityActivityPage";
-import { requireCommunityAuth } from "../requireCommunityAuth";
 
-export default async function CommunityActivityRoute() {
-  await requireCommunityAuth("/community/activity");
+export default function CommunityActivityRoute() {
   return (
     <Suspense fallback={null}>
       <CommunityActivityPage />

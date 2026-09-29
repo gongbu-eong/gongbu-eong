@@ -171,13 +171,6 @@ export function CoachingPage() {
   };
 
   const submit = async () => {
-    // 비로그인 사용자도 AI NCS 자소서 코칭을 실행할 수 있도록 로그인 선확인을 비활성화합니다.
-    // const user = await getCurrentUser().catch(() => null);
-    // if (!user?.authenticated) {
-    //   router.push("/login");
-    //   return;
-    // }
-
     const validation = validateBeforeSubmit();
     if (validation.message) {
       showAlert(validation.message, validation.target);

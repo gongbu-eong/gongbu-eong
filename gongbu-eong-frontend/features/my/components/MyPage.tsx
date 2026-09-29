@@ -10,8 +10,8 @@ import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { listCoachingHistory } from "@/features/coaching/coaching.api";
 import { listInterviewCoachingHistory } from "@/features/interview-coaching/interview-coaching.api";
-import { makeLoginHref } from "@/shared/navigation/login";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
+import { MyUserLoadError } from "./MyUserLoadError";
 import styles from "./My.module.css";
 
 export function MyPage() {
@@ -21,7 +21,7 @@ export function MyPage() {
   // const [resumeCount, setResumeCount] = useState(0);
   const [diagnosisCount, setDiagnosisCount] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [coverLetterCoachingCount, setCoverLetterCoachingCount] = useState(0);
   const [interviewCoachingCount, setInterviewCoachingCount] = useState(0);
 
@@ -34,7 +34,7 @@ export function MyPage() {
       if (!alive) return;
 
       if (!userResponse?.authenticated || !userResponse.user) {
-        router.replace(makeLoginHref("/my"));
+        setIsLoading(false);
         return;
       }
 
@@ -54,7 +54,7 @@ export function MyPage() {
       setDiagnosisCount(diagnosisResponse?.totalCount ?? 0);
       setCoverLetterCoachingCount(coachingResponse?.items.length ?? 0);
       setInterviewCoachingCount(interviewResponse?.items.length ?? 0);
-      setIsCheckingAuth(false);
+      setIsLoading(false);
     }
 
     void loadMyPage();
@@ -62,7 +62,7 @@ export function MyPage() {
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, []);
 
   const nickname = useMemo(
     () => user?.communityNickname || "프로필 닉네임 설정",
@@ -84,9 +84,11 @@ export function MyPage() {
     }
   };
 
-  if (isCheckingAuth) {
+  if (isLoading) {
     return null;
   }
+
+  if (!user) return <MyUserLoadError title="마이페이지" />;
 
   return (
     <div className={`${styles.page} ${styles.myPage}`}>

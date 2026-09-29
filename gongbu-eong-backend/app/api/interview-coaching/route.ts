@@ -2,7 +2,7 @@ import { after, NextRequest } from "next/server";
 import { beginProductActivity } from "@/domains/analytics/product-activity";
 import { wakeAnalyticsFactWorker } from "@/lib/analytics-fact-worker";
 import { randomUUID } from "node:crypto";
-import { getSessionUser } from "@/domains/auth/session";
+import { requireSessionUser } from "@/domains/auth/session";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
 import { startInterviewCoaching } from "@/domains/interview-coaching/interview-coaching.service";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   try {
     console.info(`[InterviewCoaching:${requestId}] POST /api/interview-coaching start`);
     console.info(`[InterviewCoaching:${requestId}] auth:start`);
-    const user = await getSessionUser(request);
+    const user = await requireSessionUser(request);
     console.info(`[InterviewCoaching:${requestId}] auth:done`, {
       hasUser: Boolean(user),
       elapsedMs: Date.now() - startedAt,
@@ -52,18 +52,6 @@ export async function POST(request: NextRequest) {
       materialInputType: payload.materialInputType,
       hasMaterialFile: Boolean(payload.materialFile),
     });
-
-    if (!user && !anonymousId) {
-      return jsonWithCors(
-        request,
-        {
-          ok: false,
-          message:
-            "익명 사용자 정보를 확인하지 못했습니다. 새로고침 후 다시 시도해 주세요.",
-        },
-        { status: 400 },
-      );
-    }
 
     if (!payload.termsAgreed) {
       return jsonWithCors(
@@ -98,7 +86,7 @@ export async function POST(request: NextRequest) {
     console.info(`[InterviewCoaching:${requestId}] job:lookup:start`, {
       jobPostingId: jobPostingId || null,
     });
-    const posting = await findJobPostingById(jobPostingId, user?.id);
+    const posting = await findJobPostingById(jobPostingId, user.id);
     console.info(`[InterviewCoaching:${requestId}] job:lookup:done`, {
       hasPosting: Boolean(posting),
       elapsedMs: Date.now() - startedAt,
@@ -113,14 +101,14 @@ export async function POST(request: NextRequest) {
     }
 
     activity = await beginProductActivity({
-      request, userId: user?.id, anonymousId, screen: "interview_coaching",
+      request, userId: user.id, anonymousId, screen: "interview_coaching",
       startEvent: "interview_coaching_start", completeEvent: "interview_coaching_ready", failureEvent: "interview_coaching_failed",
       properties: { job_posting_id: jobPostingId, material_input_type: payload.materialInputType, has_file: Boolean(payload.materialFile) },
     });
     after(wakeAnalyticsFactWorker);
     const session = await startInterviewCoaching({
-      userId: user?.id || null,
-      anonymousId,
+      userId: user.id,
+      anonymousId: null,
       posting,
       jobDuty: readString(payload.jobDuty),
       materialInputType: payload.materialInputType,
@@ -146,6 +134,7 @@ export async function POST(request: NextRequest) {
     return jsonWithCors(request, { ok: true, session }, { status: 201 });
   } catch (error) {
     await activity?.fail();
+    const status = error instanceof Error && error.name === "UnauthorizedError" ? 401 : 500;
     console.error(`[InterviewCoaching:${requestId}] POST /api/interview-coaching failed`, {
       elapsedMs: Date.now() - startedAt,
       message: error instanceof Error ? error.message : String(error),
@@ -161,7 +150,7 @@ export async function POST(request: NextRequest) {
             ? error.message
             : "AI NCS 면접 코칭을 시작하지 못했습니다.",
       },
-      { status: 500 },
+      { status },
     );
   }
 }

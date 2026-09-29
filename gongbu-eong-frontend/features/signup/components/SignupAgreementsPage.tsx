@@ -12,7 +12,6 @@ import {
   type PolicyTable,
   type PolicyTextBlock,
 } from "@/features/my/components/MyPolicyDocumentPage";
-import { makeLoginHref } from "@/shared/navigation/login";
 import { completeSignupAgreements } from "../signup.api";
 import styles from "./SignupAgreementsPage.module.css";
 
@@ -36,6 +35,8 @@ export function SignupAgreementsPage() {
   });
   const [openDocument, setOpenDocument] = useState<PolicyDocumentKey | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userLoaded, setUserLoaded] = useState(false);
+  const [userLoadFailed, setUserLoadFailed] = useState(false);
   const requiredAgreed = checked.age && checked.terms && checked.privacy;
   const allAgreed = requiredAgreed && checked.marketing;
 
@@ -50,16 +51,17 @@ export function SignupAgreementsPage() {
     getCurrentUser()
       .then((response) => {
         if (!alive) return;
-        if (!response.authenticated) {
-          router.replace(makeLoginHref(`/signup/agreements?next=${encodeURIComponent(nextPath)}`));
+        if (!response.authenticated || !response.user) {
+          setUserLoadFailed(true);
           return;
         }
+        setUserLoaded(true);
         if (response.user?.status === "active" && response.user.signupCompletedAt) {
           navigateToNext(nextPath, (href) => router.replace(href));
         }
       })
       .catch(() => {
-        if (alive) router.replace(makeLoginHref(`/signup/agreements?next=${encodeURIComponent(nextPath)}`));
+        if (alive) setUserLoadFailed(true);
       });
 
     return () => {
@@ -93,7 +95,7 @@ export function SignupAgreementsPage() {
   };
 
   const handleSubmit = async () => {
-    if (!requiredAgreed || isSubmitting) return;
+    if (!requiredAgreed || isSubmitting || !userLoaded) return;
 
     setIsSubmitting(true);
     try {
@@ -197,14 +199,16 @@ export function SignupAgreementsPage() {
         <button
           type="button"
           className={`${styles.submitButton} ${requiredAgreed ? styles.submitButtonActive : ""}`}
-          disabled={!requiredAgreed || isSubmitting}
+          disabled={!requiredAgreed || isSubmitting || !userLoaded}
           onClick={() => void handleSubmit()}
         >
           {isSubmitting ? "저장 중..." : "동의하고 시작하기"}
         </button>
 
-        <p className={styles.requiredGuide}>
-          필수 항목에 동의해야 서비스를 이용할 수 있습니다.
+        <p className={styles.requiredGuide} role={userLoadFailed ? "alert" : undefined}>
+          {userLoadFailed
+            ? "회원정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요."
+            : "필수 항목에 동의해야 서비스를 이용할 수 있습니다."}
         </p>
       </section>
 

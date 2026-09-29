@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { getSessionUser } from "@/domains/auth/session";
-import { claimAnonymousCoachingResults, findCoachingResultForViewer } from "@/domains/coaching/coaching.service";
+import { requireSessionUser } from "@/domains/auth/session";
+import { findCoachingResult } from "@/domains/coaching/coaching.service";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
 
 export async function OPTIONS(request: NextRequest) {
@@ -12,28 +12,12 @@ export async function OPTIONS(request: NextRequest) {
 
 export async function GET(request: NextRequest, context: { params: Promise<{ resultId: string }> }) {
   try {
-    const user = await getSessionUser(request);
-    const anonymousId = readAnonymousId(request.nextUrl.searchParams.get("anonymousId"));
-    if (user && anonymousId) {
-      await claimAnonymousCoachingResults(user.id, anonymousId);
-    }
-    const item = await findCoachingResultForViewer({
-      resultId: (await context.params).resultId,
-      userId: user?.id || null,
-      anonymousId,
-    });
+    const user = await requireSessionUser(request);
+    const item = await findCoachingResult(user.id, (await context.params).resultId);
     if (!item) return jsonWithCors(request, { ok: false, message: "결과를 찾지 못했습니다." }, { status: 404 });
-    return jsonWithCors(request, { ok: true, item: { ...item, isLocked: !user && item.isAnonymous } });
+    return jsonWithCors(request, { ok: true, item: { ...item, isLocked: false } });
   } catch (error) {
-    return jsonWithCors(request, { ok: false, message: error instanceof Error ? error.message : "결과를 불러오지 못했습니다." }, { status: 500 });
+    const status = error instanceof Error && error.name === "UnauthorizedError" ? 401 : 500;
+    return jsonWithCors(request, { ok: false, message: error instanceof Error ? error.message : "결과를 불러오지 못했습니다." }, { status });
   }
-}
-
-function readAnonymousId(value: string | null) {
-  if (!value || !isUuid(value.trim())) return null;
-  return value.trim();
-}
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }

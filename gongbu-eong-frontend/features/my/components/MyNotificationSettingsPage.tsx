@@ -1,12 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { makeLoginHref } from "@/shared/navigation/login";
+import { MyUserLoadError } from "./MyUserLoadError";
 import {
   getMyNotificationSettings,
   updateMyNotificationSettings,
@@ -27,7 +26,6 @@ const DEADLINE_OPTIONS: {
 ];
 
 export function MyNotificationSettingsPage() {
-  const router = useRouter();
   const phoneInputRef = useRef<HTMLInputElement | null>(null);
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [bookmarkCount, setBookmarkCount] = useState(0);
@@ -48,7 +46,7 @@ export function MyNotificationSettingsPage() {
       if (!alive) return;
 
       if (!userResponse?.authenticated || !userResponse.user) {
-        router.replace(makeLoginHref("/my/notifications"));
+        setIsLoading(false);
         return;
       }
 
@@ -86,7 +84,7 @@ export function MyNotificationSettingsPage() {
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, []);
 
   const saveSettings = async (
     overrides: Partial<NotificationSettingsPayloadDto> = {},
@@ -153,6 +151,8 @@ export function MyNotificationSettingsPage() {
   if (isLoading) {
     return null;
   }
+
+  if (!user) return <MyUserLoadError title="알림 설정" />;
 
   return (
     <div className={styles.page}>

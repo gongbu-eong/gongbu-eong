@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { LoginOAuthAlert } from "./LoginOAuthAlert";
+import { LoginOAuthLink } from "./LoginOAuthLink";
 import styles from "./LoginPage.module.css";
 
 function getOAuthUrl(provider: "kakao" | "naver", params: LoginPageSearchParams) {
@@ -153,14 +154,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </p>
             </>
           ) : null}
-          <a className={styles.kakaoButton} href={getOAuthUrl("kakao", params)}>
+          <LoginOAuthLink className={styles.kakaoButton} href={getOAuthUrl("kakao", params)}>
             <Image src="/login/kakao.png" alt="" width={42} height={42} />
             <span>카카오로 시작하기</span>
-          </a>
-          <a className={styles.naverButton} href={getOAuthUrl("naver", params)}>
+          </LoginOAuthLink>
+          <LoginOAuthLink className={styles.naverButton} href={getOAuthUrl("naver", params)}>
             <Image src="/login/naver.png" alt="" width={42} height={42} />
             <span>네이버로 시작하기</span>
-          </a>
+          </LoginOAuthLink>
           <Link className={styles.skipLink} href="/">
             다음에 로그인하기 &gt;
           </Link>

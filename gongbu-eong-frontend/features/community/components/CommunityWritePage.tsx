@@ -7,7 +7,6 @@ import { ChangeEvent, DragEvent, FormEvent, useEffect, useMemo, useRef, useState
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
-import { makeLoginHref } from "@/shared/navigation/login";
 import { createCommunityPost, getCommunityPost, updateCommunityPost } from "../community.api";
 import { COMMUNITY_CATEGORIES, type CommunityAttachmentDto, type CommunityCategory } from "../community.dto";
 import { AuthorProfile } from "./CommunityShared";
@@ -46,15 +45,15 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
     getCurrentUser()
       .then((response) => {
         if (!response.authenticated || !response.user) {
-          router.replace(makeLoginHref(postId ? `/community/${postId}/edit` : "/community/write"));
+          setMessage("회원정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.");
           return;
         }
         setUser(response.user);
       })
       .catch(() => {
-        router.replace(makeLoginHref(postId ? `/community/${postId}/edit` : "/community/write"));
+        setMessage("회원정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.");
       });
-  }, [postId, router]);
+  }, []);
 
   useEffect(() => {
     if (!postId) return;
@@ -85,7 +84,7 @@ export function CommunityWritePage({ postId }: { postId?: string }) {
     [attachments, category, content, title],
   );
   const hasChanges = originalForm ? !isSameFormSnapshot(originalForm, currentForm) : !postId;
-  const canSubmit = Boolean(title.trim() && content.trim()) && (!postId || hasChanges);
+  const canSubmit = Boolean(user && title.trim() && content.trim()) && (!postId || hasChanges);
 
   const selectImage = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);

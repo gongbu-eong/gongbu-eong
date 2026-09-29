@@ -7,7 +7,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, getHomeJobs, logoutCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { HomeMenuDrawer } from "@/features/home/components/HomeMain";
-import { makeLoginHref } from "@/shared/navigation/login";
 // import { TicketRewardAlert } from "./TicketRewardAlert";
 import styles from "./AppChrome.module.css";
 
@@ -381,48 +380,6 @@ export function AppFooter({
 }: {
   active?: "home" | "calendar" | "ai" | "community" | "my";
 }) {
-  const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let active = true;
-
-    getCurrentUser()
-      .then((response) => {
-        if (active) setIsAuthenticated(response.authenticated);
-      })
-      .catch(() => {
-        if (active) setIsAuthenticated(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const goProtected = async (href: string) => {
-    if (isAuthenticated === true) {
-      router.push(href);
-      return;
-    }
-
-    if (isAuthenticated === null) {
-      try {
-        const response = await getCurrentUser();
-        if (response.authenticated) {
-          setIsAuthenticated(true);
-          router.push(href);
-          return;
-        }
-      } catch {
-        // fall through to the login required alert.
-      }
-      setIsAuthenticated(false);
-    }
-
-    router.push(makeLoginHref(href));
-  };
-
   return (
     <footer className={styles.footer}>
       <Link href="/" className={active === "home" ? styles.active : undefined}>
@@ -444,14 +401,14 @@ export function AppFooter({
         <Image src="/diagnosis/result-detail/footer-community.svg" alt="" width={28} height={24} />
         <span>커뮤니티</span>
       </Link>
-      <button
-        type="button"
+      <Link
+        href="/my"
+        prefetch={false}
         className={active === "my" ? styles.active : undefined}
-        onClick={() => goProtected("/my")}
       >
         <Image src="/diagnosis/result-detail/footer-my.svg" alt="" width={28} height={25} />
         <span>MY</span>
-      </button>
+      </Link>
     </footer>
   );
 }

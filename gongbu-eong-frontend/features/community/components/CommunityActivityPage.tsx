@@ -7,7 +7,6 @@ import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
-import { makeLoginHref } from "@/shared/navigation/login";
 import { deleteCommunityComment, deleteCommunityPost, getCommunityActivity, setCommunityScrap } from "../community.api";
 import type { CommunityActivityResponseDto } from "../community.dto";
 import { AuthorProfile, DeleteConfirmDialog, EmptyState, PostItem } from "./CommunityShared";
@@ -34,16 +33,16 @@ export function CommunityActivityPage() {
     getCurrentUser()
       .then((response) => {
         if (!response.authenticated || !response.user) {
-          router.replace(makeLoginHref("/community/activity"));
+          setMessage("회원정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.");
           return;
         }
         setUser(response.user);
       })
-      .catch(() => router.replace(makeLoginHref("/community/activity")));
+      .catch(() => setMessage("회원정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요."));
     getCommunityActivity()
       .then(setActivity)
       .catch((error) => setMessage(error instanceof Error ? error.message : "내 활동을 불러오지 못했습니다."));
-  }, [router]);
+  }, []);
 
   const confirmAction = async () => {
     if (!confirmTarget) return;

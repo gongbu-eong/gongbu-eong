@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties, MouseEvent, PointerEvent } from "react";
@@ -37,7 +38,6 @@ const aiTools = [
   },
   {
     href: "/ai-tools/coaching",
-    requiresAuth: false,
     tag: "AI 코칭",
     memberTag: "AI 코칭",
     // tag: "첫 5회 무료",
@@ -49,7 +49,6 @@ const aiTools = [
   },
   {
     href: "/ai-tools/interview-coaching",
-    requiresAuth: false,
     tag: "AI 면접",
     memberTag: "AI 면접",
     title: "AI NCS 면접 코칭",
@@ -136,8 +135,7 @@ function clearWelcomeTicketRewardQuery() {
 */
 
 function getRecommendedJobsHref(user: CurrentUserDto | null | undefined) {
-  if (!user) return makeLoginHref("/jobs?view=recommended");
-  if (!user.diagnosisResultId) return "/jobs?view=recommended";
+  if (!user?.diagnosisResultId) return "/jobs?view=recommended";
 
   const params = new URLSearchParams({
     view: "recommended",
@@ -153,6 +151,7 @@ export function HomeMain({
   initialUser?: CurrentUserDto | null;
   authResolved?: boolean;
 }) {
+  const router = useRouter();
   const [user, setUser] = useState<CurrentUserDto | null>(initialUser);
   const [isLoading, setIsLoading] = useState(!initialUser && !authResolved);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -357,14 +356,10 @@ const endHotDrag = (event: PointerEvent<HTMLDivElement>) => {
         bookmarkCount: 0,
       }));
       setIsMenuOpen(false);
+      router.refresh();
     } finally {
       setIsLoggingOut(false);
     }
-  };
-
-  const alertLoginRequired = (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    window.location.href = event.currentTarget.href;
   };
 
 const ignoreClickAfterDrag = (
@@ -531,10 +526,10 @@ const ignoreClickAfterDrag = (
 
             return (
               <Link
-                href={!tool.requiresAuth || user ? tool.href : makeLoginHref(tool.href)}
+                href={tool.href}
+                prefetch={false}
                 key={tool.title}
                 className={styles.toolCard}
-                onClick={!tool.requiresAuth || user ? undefined : alertLoginRequired}
               >
                 {content}
               </Link>
@@ -754,7 +749,7 @@ export function HomeMenuDrawer({
             hrefs={[
               "/jobs",
               getRecommendedJobsHref(user),
-              user ? "/jobs?view=bookmarked" : makeLoginHref("/jobs?view=bookmarked"),
+              "/jobs?view=bookmarked",
             ]}
             badge={String(bookmarkCount)}
             onNavigate={onClose}
@@ -765,9 +760,7 @@ export function HomeMenuDrawer({
             items={["전체 채용 캘린더", "나만의 캘린더"]}
             hrefs={[
               "/calendar?scope=all",
-              user
-                ? "/calendar?scope=mine"
-                : makeLoginHref("/calendar?scope=mine"),
+              "/calendar?scope=mine",
             ]}
             onNavigate={onClose}
           />
@@ -805,18 +798,10 @@ export function HomeMenuDrawer({
               // "내 또래 인기글",
               "내 글 · 댓글",
             ]}
-            hrefs={user ? [
-              // "/community?sort=popular",
-              // "/community?sort=popular",
-              "/community/activity",
-            ] : [
-              // "/login",
-              // "/login",
-              makeLoginHref("/community/activity"),
-            ]}
+            hrefs={["/community/activity"]}
             onNavigate={onClose}
           />
-          <DrawerSection icon="my" title="마이페이지" titleHref={user ? "/my" : makeLoginHref("/my")} onNavigate={onClose} />
+          <DrawerSection icon="my" title="마이페이지" titleHref="/my" onNavigate={onClose} />
         </nav>
 
         {user ? (
@@ -914,14 +899,14 @@ function DrawerSection({
         data-has-items={items.length > 0 ? "true" : undefined}
       >
         <h3>
-          {titleHref ? <Link href={titleHref} onClick={onNavigate}>{title}</Link> : title}
+          {titleHref ? <Link href={titleHref} prefetch={false} onClick={onNavigate}>{title}</Link> : title}
           {label ? <span className={styles.drawerLabel}>{label}</span> : null}
         </h3>
         {items.length > 0 ? (
           <ul>
             {items.map((item, index) => (
               <li key={item}>
-                <Link href={hrefs[index] || "#"} onClick={onNavigate}>
+                <Link href={hrefs[index] || "#"} prefetch={false} onClick={onNavigate}>
                   {item}
                   {badge && index === items.length - 1 ? <span className={styles.drawerBadge}>{badge}</span> : null}
                 </Link>

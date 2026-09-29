@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import {
@@ -17,7 +18,6 @@ import {
   formatJobRegionLabel,
 } from "@/features/jobs/job-display";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { makeLoginHref } from "@/shared/navigation/login";
 import styles from "./CalendarMain.module.css";
 
 type CalendarScope = "all" | "mine";
@@ -100,9 +100,10 @@ export function CalendarMain({
   initialMonthKey?: string;
   initialMonthJobs?: JobPostingDto[];
 }) {
+  const router = useRouter();
   const initialMonth = parseMonthKey(initialMonthKey) || startOfMonth(new Date());
   const [user, setUser] = useState<CurrentUserDto | null>(null);
-  const [scope, setScope] = useState<CalendarScope>(initialScope);
+  const scope = initialScope;
   const [mode, setMode] = useState<CalendarMode>("list");
   const [month, setMonth] = useState(() => initialMonth);
   const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -292,10 +293,8 @@ export function CalendarMain({
   };
 
   const selectScope = (next: CalendarScope) => {
-    setScope(next);
-    setMode("list");
-    setFilters(DEFAULT_FILTERS);
-    resetToToday();
+    if (next === scope) return;
+    router.push(`/calendar?scope=${next}`, { scroll: false });
   };
 
   const selectMode = (next: CalendarMode) => {
@@ -382,10 +381,8 @@ export function CalendarMain({
               <MineYearHeader month={month} bounds={bounds} onChange={setMonth} />
               {!user ? (
                 <EmptyState
-                  title="로그인이 필요합니다."
-                  description="찜한 공고는 로그인 후 나만의 캘린더에서 확인할 수 있어요."
-                  href={makeLoginHref("/calendar?scope=mine")}
-                  action="로그인하러 가기"
+                  title="회원정보를 확인하고 있어요."
+                  description="계속 표시되면 새로고침 후 다시 시도해 주세요."
                 />
               ) : isLoading ? (
                 <p className={styles.loading}>캘린더 공고를 불러오고 있어요.</p>

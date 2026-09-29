@@ -1,7 +1,7 @@
 import { after, NextRequest } from "next/server";
 import { beginProductActivity } from "@/domains/analytics/product-activity";
 import { wakeAnalyticsFactWorker } from "@/lib/analytics-fact-worker";
-import { getSessionUser } from "@/domains/auth/session";
+import { requireSessionUser } from "@/domains/auth/session";
 import { findJobPostingById } from "@/domains/jobs/jobs.repository";
 import { createPendingResumeFile, validateResumeFile } from "@/domains/resumes/resume-file-storage";
 import {
@@ -31,8 +31,8 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   let activity: Awaited<ReturnType<typeof beginProductActivity>> | undefined;
   try {
+    const user = await requireSessionUser(request);
     const ipAddress = getRequestIp(request);
-    const user = await getSessionUser(request);
     const form = await request.formData();
     const inputType: CoachResumeArgs["inputType"] =
       form.get("inputType") === "file" ? "file" : "text";
@@ -46,7 +46,6 @@ export async function POST(request: NextRequest) {
     const file = fileEntry instanceof File ? fileEntry : null;
     const extension = file?.name.split(".").pop()?.toLowerCase() || "";
     const allowedCoachingExtensions = new Set(["hwp", "hwpx", "pdf", "docx"]);
-    if (!user && !anonymousId) return jsonWithCors(request, { ok: false, message: "익명 사용자 정보를 확인하지 못했습니다. 새로고침 후 다시 시도해 주세요." }, { status: 400 });
     if (inputType === "text" && !text) return jsonWithCors(request, { ok: false, message: "자소서를 입력해 주세요." }, { status: 400 });
     if (inputType === "text" && text.length > 10000) return jsonWithCors(request, { ok: false, message: "자소서는 10,000자까지 입력할 수 있습니다." }, { status: 400 });
     if (inputType === "file" && !file) return jsonWithCors(request, { ok: false, message: "자소서 파일을 첨부해 주세요." }, { status: 400 });
@@ -59,7 +58,7 @@ export async function POST(request: NextRequest) {
     if (file && !allowedCoachingExtensions.has(extension)) return jsonWithCors(request, { ok: false, message: "HWP, HWPX, PDF, DOCX 파일만 첨부할 수 있습니다." }, { status: 400 });
     const fileValidationMessage = file ? validateResumeFile(file) : null;
     if (fileValidationMessage) return jsonWithCors(request, { ok: false, message: fileValidationMessage }, { status: 400 });
-    const posting = jobId ? await findJobPostingById(jobId, user?.id) : null;
+    const posting = jobId ? await findJobPostingById(jobId, user.id) : null;
     if (jobId && !posting) return jsonWithCors(request, { ok: false, message: "연결할 공고를 찾지 못했습니다." }, { status: 404 });
     const manualJob: CoachingJobDto | null = !posting && manualJobTitle ? {
       id: `manual:${manualJobTitle.slice(0, 80)}`,
@@ -69,8 +68,8 @@ export async function POST(request: NextRequest) {
     } : null;
     const filePayload = file ? { name: file.name, type: file.type, buffer: Buffer.from(await file.arrayBuffer()) } : undefined;
     const coachingArgs: CoachResumeArgs = {
-      userId: user?.id || null,
-      anonymousId: user ? null : anonymousId,
+      userId: user.id,
+      anonymousId: null,
       inputType,
       inputText: inputType === "file" ? file?.name || "" : text,
       file: filePayload,
@@ -91,13 +90,13 @@ export async function POST(request: NextRequest) {
       userAgent: request.headers.get("user-agent") || undefined,
     };
     activity = await beginProductActivity({
-      request, userId: user?.id, anonymousId, screen: "resume_coaching",
+      request, userId: user.id, anonymousId, screen: "resume_coaching",
       startEvent: "coaching_start", completeEvent: "coaching_complete", failureEvent: "coaching_failed",
       properties: { input_type: inputType, has_file: Boolean(file), has_job_posting: Boolean(posting), question_count: questions.length },
     });
     after(wakeAnalyticsFactWorker);
     const preparedSource = await prepareCoachingSource(coachingArgs);
-    const savedFile = file && user ? await createPendingResumeFile(user.id, file) : null;
+    const savedFile = file ? await createPendingResumeFile(user.id, file) : null;
     // 진단권 소모 로직 비활성화: 잔액 확인, 차감, 실패 시 환불을 수행하지 않습니다.
     // const currentCreditBalance = await getCurrentCreditBalance(user.id);
     // if (currentCreditBalance < 1) {
@@ -152,7 +151,8 @@ export async function POST(request: NextRequest) {
     return jsonWithCors(request, { ok: true, ...result, sourceFile: savedFile });
   } catch (error) {
     await activity?.fail();
-    return jsonWithCors(request, { ok: false, message: error instanceof Error ? error.message : "코칭에 실패했습니다." }, { status: 500 });
+    const status = error instanceof Error && error.name === "UnauthorizedError" ? 401 : 500;
+    return jsonWithCors(request, { ok: false, message: error instanceof Error ? error.message : "코칭에 실패했습니다." }, { status });
   }
 }
 
