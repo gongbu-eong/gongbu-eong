@@ -449,3 +449,27 @@
 @media (max-width:37.4375rem){
   .frame:not(.inputFrame){max-width:none;padding-left:16px;padding-right:16px}
 }
+
+/* Figma 2638:21061 interview coaching result */
+.resultFrame{width:100%;max-width:600px!important}
+.resultFrame>h1{margin:0 0 24px!important;line-height:27px!important}
+.resultPositionTitle{margin:0 0 24px;color:#1a2233;font-size:18px;font-weight:700;line-height:24px;word-break:keep-all}
+.resultFrame .resultHero{margin:0;padding:24px 0;border:0;border-bottom:1px solid #e4e8ef}
+.resultScoreBlock{text-align:center}
+.resultFrame .resultScoreBlock span,.pdfDocument .resultScoreBlock span{display:inline-flex;align-items:center;width:auto;min-height:36px;margin:0;padding:0 16px;border-radius:666px;background:#2f7ff0;color:#fff;font-size:14px;font-weight:800;line-height:normal}
+.resultFrame .resultScoreBlock strong,.pdfDocument .resultScoreBlock strong{display:flex;align-items:baseline;justify-content:center;margin:11px 0 0;color:#1a2233;font-size:52px;font-weight:800;line-height:62px;text-align:center}
+.resultFrame .resultScoreBlock strong small,.pdfDocument .resultScoreBlock strong small{margin-left:4px;color:#5a6580;font-size:17px;font-weight:400;line-height:20px}
+.resultFrame .resultScoreBlock+p{margin-top:8px}
+.resultSummarySections{padding:24px 0;border-bottom:1px solid #e4e8ef}
+.resultSummarySection{margin:0}
+.resultSummarySection+.resultSummarySection{margin-top:24px}
+.resultSummarySection h2{margin:0 0 8px;color:#1a2233;font-size:18px;font-weight:700;line-height:21px}
+.resultSummarySection ul{display:grid;gap:16px;margin:0;padding:0;list-style:none;color:#5a6580;font-size:17px;font-weight:400;line-height:1.45;white-space:pre-line}
+.resultFrame .resultQuestionSection{margin:40px 0 0;padding:0}
+.resultFrame .resultQuestionSection>h2{margin:0;color:#1a2233;font-size:20px;font-weight:700;line-height:24px}
+.resultFrame .resultQuestionSection .questionTabsShell{margin:16px -16px 24px}
+.resultFrame .resultQuestionSection .questionTabsFixed{margin:0}
+.resultFrame .resultQuestionSection+.profileCard{margin-top:26px;border-top:0;padding-top:0}
+.pdfDocument .resultPositionTitle{margin:0 0 24px}
+.pdfDocument .resultHero{margin:0 0 24px;padding:24px 0}
+.pdfDocument .resultScoreBlock+.pdfTextChunk{margin-top:8px}

@@ -55,7 +55,7 @@ export function InterviewCoachingResultPage({
   return (
     <div className={styles.page}>
       <AppHeader />
-      <main className={styles.frame}>
+      <main className={`${styles.frame} ${styles.resultFrame}`}>
         <h1>AI NCS 면접 코칭 결과</h1>
         {error ? <p className={styles.error}>{error}</p> : null}
         {!session && !error ? <p className={styles.lead}>결과를 불러오고 있어요.</p> : null}
@@ -105,7 +105,6 @@ function ResultView({
   const selectedReview = selectedQuestion
     ? result.questionReviews.find((review) => review.questionId === selectedQuestion.id)
     : null;
-  const scoredAnswerCount = getScoredAnswerCount(result);
   const downloadResultPdf = async () => {
     if (isDownloading) return;
     const target = pdfCaptureRef.current;
@@ -159,7 +158,39 @@ function ResultView({
 
   return (
     <>
-      <section className={styles.resultSection}>
+      {!isLocked ? (
+        <>
+          <p className={styles.resultPositionTitle}>{session.companyName} · {displayPositionName}</p>
+          <section className={styles.resultHero} aria-label="AI 종합 분석">
+            <div className={styles.resultScoreBlock}>
+              <span>AI 종합 분석</span>
+              <strong>{result.score}<small>/100</small></strong>
+            </div>
+            {formatResultSummaryParagraphs(result.summary).map((paragraph, index) => (
+              <p key={`summary-${index}`}>{paragraph}</p>
+            ))}
+          </section>
+
+          <div className={styles.resultSummarySections}>
+            <section className={styles.resultSummarySection}>
+              <h2>잘한 점</h2>
+              <ul>{strengths.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+            </section>
+
+            <section className={styles.resultSummarySection}>
+              <h2>보완할 점</h2>
+              <ul>{improvements.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+            </section>
+
+            <section className={styles.resultSummarySection}>
+              <h2>추가 연습 질문</h2>
+              <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
+            </section>
+          </div>
+        </>
+      ) : null}
+
+      <section className={`${styles.resultSection} ${styles.resultQuestionSection}`}>
         <h2>문항별 답변 코칭</h2>
         <QuestionTabs
           questions={resultQuestions}
@@ -183,32 +214,7 @@ function ResultView({
 
       {!isLocked ? (
         <>
-          <section className={styles.resultHero}>
-            <h2>최종 평가</h2>
-            <span>{session.companyName} · {displayPositionName}</span>
-            <strong>{result.score}<small>/100점</small></strong>
-            <em className={styles.scoreBasis}>답변한 원 질문/꼬리질문 {scoredAnswerCount}개 점수를 100점 만점 기준으로 평균 환산</em>
-            {formatResultSummaryParagraphs(result.summary).map((paragraph, index) => (
-              <p key={`summary-${index}`}>{paragraph}</p>
-            ))}
-          </section>
-
-          <section className={styles.resultSection}>
-            <h2>잘한 점</h2>
-            <ul>{strengths.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
-          </section>
-
-          <section className={styles.resultSection}>
-            <h2>보완할 점</h2>
-            <ul>{improvements.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
-          </section>
-
-          <section className={styles.resultSection}>
-            <h2>추가 연습 질문</h2>
-            <ul>{futurePracticeQuestions.map((item) => <li key={item}>{formatReadableText(item)}</li>)}</ul>
-          </section>
-
-          <InterviewAnalysisView session={session} mode="profile" profileTitle="직무내역 분석" />
+          <InterviewAnalysisView session={session} mode="profile" profileTitle="직무 내용 분석" />
 
           <InterviewAnalysisView session={session} mode="ncs" ncsTitle="NCS 직무/관련 영역 매핑" />
 
@@ -220,7 +226,6 @@ function ResultView({
               improvements={improvements}
               futurePracticeQuestions={futurePracticeQuestions}
               answeredQuestions={resultQuestions}
-              scoredAnswerCount={scoredAnswerCount}
             />
           </div>
           {isDownloading ? <AnswerLoadingOverlay text="AI NCS 면접 코칭 결과 파일을 만들고 있어요." /> : null}
@@ -421,7 +426,6 @@ function ResultPdfDocument({
   improvements,
   futurePracticeQuestions,
   answeredQuestions,
-  scoredAnswerCount,
 }: {
   session: InterviewCoachingSession;
   result: NonNullable<InterviewCoachingSession["result"]>;
@@ -429,12 +433,24 @@ function ResultPdfDocument({
   improvements: string[];
   futurePracticeQuestions: string[];
   answeredQuestions: InterviewQuestion[];
-  scoredAnswerCount: number;
 }) {
   const displayPositionName = cleanDisplayText(session.positionName) || session.positionName;
   return (
     <div className={styles.pdfDocument}>
       <h1 data-pdf-block>AI NCS 면접 코칭 결과</h1>
+      <p className={styles.resultPositionTitle} data-pdf-block>{session.companyName} · {displayPositionName}</p>
+      <section className={styles.resultHero}>
+        <div className={styles.resultScoreBlock} data-pdf-block>
+          <span>AI 종합 분석</span>
+          <strong>{result.score}<small>/100</small></strong>
+        </div>
+        {formatResultSummaryParagraphs(result.summary).flatMap((paragraph) => splitPdfText(paragraph)).map((chunk, index) => (
+          <p className={styles.pdfTextChunk} data-pdf-block key={`summary-${index}`}>{chunk}</p>
+        ))}
+      </section>
+      <ResultPdfListSection title="잘한 점" items={strengths} />
+      <ResultPdfListSection title="보완할 점" items={improvements} />
+      <ResultPdfListSection title="추가 연습 질문" items={futurePracticeQuestions} />
       <section className={styles.resultSection}>
         <h2 data-pdf-block>문항별 답변 코칭</h2>
         {answeredQuestions.map((question) => {
@@ -459,20 +475,6 @@ function ResultPdfDocument({
           );
         })}
       </section>
-      <section className={styles.resultHero}>
-        <div data-pdf-block>
-          <h2>최종 평가</h2>
-          <span>{session.companyName} · {displayPositionName}</span>
-          <strong>{result.score}<small>/100점</small></strong>
-          <em className={styles.scoreBasis}>답변한 원 질문/꼬리질문 {scoredAnswerCount}개 점수를 100점 만점 기준으로 평균 환산</em>
-        </div>
-        {formatResultSummaryParagraphs(result.summary).flatMap((paragraph) => splitPdfText(paragraph)).map((chunk, index) => (
-          <p className={styles.pdfTextChunk} data-pdf-block key={`summary-${index}`}>{chunk}</p>
-        ))}
-      </section>
-      <ResultPdfListSection title="잘한 점" items={strengths} />
-      <ResultPdfListSection title="보완할 점" items={improvements} />
-      <ResultPdfListSection title="추가 연습 질문" items={futurePracticeQuestions} />
       <ResultPdfProfileAnalysis session={session} />
       <ResultPdfNcsAnalysis session={session} />
     </div>
@@ -834,13 +836,6 @@ function uniqueNcsAreas(values: string[]) {
 
 function hasQuestionAnswer(messages: InterviewMessage[], questionId: string) {
   return messages.some((message) => message.questionId === questionId && message.role === "answer");
-}
-
-function getScoredAnswerCount(result: NonNullable<InterviewCoachingSession["result"]>) {
-  return result.questionReviews.reduce(
-    (count, review) => count + 1 + review.followUpScores.length,
-    0,
-  );
 }
 
 function formatQuestionType(type: InterviewQuestion["type"]) {

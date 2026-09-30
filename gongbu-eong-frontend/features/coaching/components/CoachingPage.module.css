@@ -308,8 +308,7 @@
 .insightGrid p{margin:8px 0;color:#5a6580;font-size:13px;line-height:18px}
 .insightGrid em{display:inline-flex;align-items:center;height:22px;margin-top:4px;padding:0 8px;border-radius:999px;background:#e8f1ff;color:#2f7ff0;font-size:11px;font-style:normal;font-weight:800}
 .resultEvaluation{margin:0 0 24px;padding:18px 0;border-top:1px solid #e8f1ff;border-bottom:1px solid #e8f1ff}
-.resultEvaluation h2,.questionTabSection h2,.ncsEvaluationBlock h2,.coachingPointBlock h2,.structureBlock h2,.revisionHeader h2,.overallAssessment h2{margin:0 0 14px;color:#1a2233;font-size:17px;font-weight:800;line-height:1.25}
-.questionTabSection{margin:0 0 18px}
+.resultEvaluation h2,.ncsEvaluationBlock h2,.coachingPointBlock h2,.structureBlock h2,.revisionHeader h2,.overallAssessment h2{margin:0 0 14px;color:#1a2233;font-size:17px;font-weight:800;line-height:1.25}
 .questionTabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
 .questionTabs::-webkit-scrollbar{display:none}
 .questionTabs button{flex:0 0 auto;height:36px;max-width:154px;padding:0 14px;border:1px solid #e4e8ef;border-radius:999px;background:#fff;color:#5a6580;font-size:14px;font-weight:800;white-space:nowrap}
@@ -374,8 +373,6 @@
 .figmaResultScreen .evaluationItem strong b{color:#5a6580;font-size:16px;font-weight:700}
 .figmaResultScreen .evaluationTrack{height:12px;margin-top:8px;border-radius:55px;background:#e4e8ef;overflow:hidden}
 .figmaResultScreen .evaluationTrack span{height:12px;border-radius:55px;background:#2f7ff0}
-.figmaResultScreen .questionTabSection{margin:0 0 24px}
-.figmaResultScreen .questionTabSection h2{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .figmaResultScreen .questionTabs{display:flex;gap:8px;margin:0 -16px;padding:0 16px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x;cursor:grab;user-select:none;scroll-snap-type:x proximity}
 .figmaResultScreen .questionTabsDragging{cursor:grabbing}
 .figmaResultScreen .questionTabs::-webkit-scrollbar{display:none}
@@ -626,9 +623,8 @@
 .figmaResultScreen .evaluationList{gap:16px}
 .figmaResultScreen .evaluationItem strong{font-size:17px;line-height:20px}
 .figmaResultScreen .evaluationTrack{margin-top:8px}
-.figmaResultScreen .questionTabSection{position:sticky;top:48px;z-index:80;margin:0;background:#fff}
-.figmaResultScreen .questionTabSection h2{position:static;width:auto;height:auto;margin:0 0 16px;padding:0;overflow:visible;clip:auto;color:#1a2233;font-size:20px;font-weight:700;line-height:24px;white-space:normal}
-.figmaResultScreen .questionTabs{height:68px;box-sizing:border-box;gap:16px;margin:0 -16px;padding:16px;border-bottom:1px solid #e4e8ef;background:#fff;scroll-padding-inline:16px}
+.figmaResultScreen .questionTabTitle{margin:0 0 16px;color:#1a2233;font-size:20px;font-weight:700;line-height:24px}
+.figmaResultScreen .questionTabs{position:sticky;top:48px;z-index:80;height:68px;box-sizing:border-box;gap:16px;margin:0 -16px;padding:16px;border-bottom:1px solid #e4e8ef;background:#fff;scroll-padding-inline:16px}
 .figmaResultScreen .questionTabs button{height:36px;padding:0 16px;border:1px solid #9aa4b8;border-radius:555px;background:#e4e8ef;color:#1a2233;font-size:14px;font-weight:800;line-height:normal}
 .figmaResultScreen .questionTabs .questionTabActive{border-color:#1a2233;background:#1a2233;color:#fff}
 .figmaQuestionArea{margin:0 -16px;padding:24px 16px 16px}

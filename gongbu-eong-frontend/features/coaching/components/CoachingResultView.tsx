@@ -113,24 +113,22 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
       </section>
       <EvaluationBars scores={result.evaluationScores} />
 
-      <section className={styles.questionTabSection}>
-        <h2>문항별 자소서 코칭</h2>
-        <div
-          ref={questionTabsRef}
-          className={styles.questionTabs}
-          role="tablist"
-          aria-label="자소서 문항 선택"
-          onPointerDown={handleQuestionTabsPointerDown}
-          onPointerMove={handleQuestionTabsPointerMove}
-          onPointerUp={handleQuestionTabsPointerEnd}
-          onPointerCancel={handleQuestionTabsPointerEnd}
-          onClickCapture={handleQuestionTabsClickCapture}
-        >
-          {review.questions.map((question, index) => <button key={`${question.question}-${index}`} type="button" role="tab" aria-selected={selectedQuestionIndex === index} aria-controls="coaching-question-panel" aria-label={`Q${index + 1} ${question.tabTitle || makeTabTitle(question.question)}`} data-question-index={index} className={selectedQuestionIndex === index ? styles.questionTabActive : ""} onClick={() => selectQuestion(index, true)}>
-            Q{index + 1}
-          </button>)}
-        </div>
-      </section>
+      <h2 className={styles.questionTabTitle}>문항별 자소서 코칭</h2>
+      <div
+        ref={questionTabsRef}
+        className={styles.questionTabs}
+        role="tablist"
+        aria-label="자소서 문항 선택"
+        onPointerDown={handleQuestionTabsPointerDown}
+        onPointerMove={handleQuestionTabsPointerMove}
+        onPointerUp={handleQuestionTabsPointerEnd}
+        onPointerCancel={handleQuestionTabsPointerEnd}
+        onClickCapture={handleQuestionTabsClickCapture}
+      >
+        {review.questions.map((question, index) => <button key={`${question.question}-${index}`} type="button" role="tab" aria-selected={selectedQuestionIndex === index} aria-controls="coaching-question-panel" aria-label={`Q${index + 1} ${question.tabTitle || makeTabTitle(question.question)}`} data-question-index={index} className={selectedQuestionIndex === index ? styles.questionTabActive : ""} onClick={() => selectQuestion(index, true)}>
+          Q{index + 1}
+        </button>)}
+      </div>
 
       {selectedQuestion ? <>
         <section ref={questionAreaRef} id="coaching-question-panel" className={styles.figmaQuestionArea} role="tabpanel">
