@@ -544,23 +544,6 @@
   word-break: keep-all;
 }
 
-.promo_job_detail_resume_b .coachingBannerText strong {
-  display: grid;
-  gap: 0.25rem;
-  line-height: 1.15;
-}
-
-.promo_job_detail_resume_b .coachingBannerText em {
-  display: block;
-  color: #2f7ff0;
-  overflow-wrap: anywhere;
-  white-space: normal;
-}
-
-.promo_job_detail_resume_b .coachingBannerText span {
-  display: block;
-}
-
 .promo_job_detail_strength_b {
   padding: 1.6875rem 7.75rem 1.25rem 1.5rem;
 }
@@ -595,17 +578,9 @@
   object-fit: contain;
 }
 
-.resumeA,
-.resumeB {
+.resumeA {
   right: 1.625rem;
   bottom: 0.875rem;
-}
-
-.strengthA {
-  right: 0.9375rem;
-  bottom: 0;
-  width: 7.125rem;
-  height: 5.875rem;
 }
 
 .strengthB {
@@ -712,9 +687,6 @@
   }
   .coachingBannerOwl {
     right: 0.75rem;
-  }
-  .strengthA {
-    right: 0.25rem;
   }
   .strengthB {
     right: 0.75rem;

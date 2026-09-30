@@ -243,7 +243,7 @@ export function CoachingPage() {
           <strong>혹시 AI NCS 자소서 코칭이 처음이라면?</strong>
           <small>사용 방법과 준비할 내용을 한눈에 확인해 보세요.</small>
         </span>
-        <b aria-hidden="true">›</b>
+        <b aria-hidden="true" />
       </Link>
       {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <><button className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기 (선택)</button><p className={styles.helper}>공고를 연결하면 해당 직무에 맞춰 더 정확하게 코칭해요.<br />연결하지 않아도 일반 AI NCS 자소서 코칭을 받을 수 있어요.</p></>}
 

@@ -30,6 +30,7 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
   const [revisionMode, setRevisionMode] = useState<"original" | "compare">("original");
   const [originalExpanded, setOriginalExpanded] = useState(false);
   const questionTabsRef = useRef<HTMLDivElement>(null);
+  const questionAreaRef = useRef<HTMLElement>(null);
   const questionTabsDragRef = useRef({ active: false, moved: false, scrollLeft: 0, startX: 0, suppressClick: false, targetIndex: null as number | null });
   const result = item.result;
   const review = makeSubmissionReview(result, item);
@@ -37,10 +38,21 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
   const effectiveQuestionIndex = selectedQuestionIndex;
   const selectedQuestion = review.questions[effectiveQuestionIndex] || review.questions[0];
   const subtitle = item.job?.institutionName ? `${item.job.institutionName} · NCS 분석 + AI 첨삭` : "NCS 분석 + AI 첨삭";
-  const selectQuestion = (index: number) => {
+  const selectQuestion = (index: number, scrollToQuestion = false) => {
     setSelectedQuestionIndex(index);
     setRevisionMode("original");
     setOriginalExpanded(false);
+    if (scrollToQuestion) {
+      window.requestAnimationFrame(() => {
+        const questionArea = questionAreaRef.current;
+        if (!questionArea) return;
+        const stickyHeaderHeight = 48 + 108;
+        window.scrollTo({
+          top: questionArea.getBoundingClientRect().top + window.scrollY - stickyHeaderHeight,
+          behavior: "auto",
+        });
+      });
+    }
   };
   const handleQuestionTabsPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     const tabs = questionTabsRef.current;
@@ -80,7 +92,7 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
         questionTabsDragRef.current.suppressClick = false;
       }, 0);
     } else if (event.type !== "pointercancel" && drag.targetIndex !== null) {
-      selectQuestion(drag.targetIndex);
+      selectQuestion(drag.targetIndex, true);
     }
   };
   const handleQuestionTabsClickCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -90,17 +102,19 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
     event.stopPropagation();
   };
 
-  return <div className={styles.page}>
+  return <div className={`${styles.page} ${styles.resultPage}`}>
     <AppHeader />
     <main className={`${styles.frame} ${styles.figmaResultScreen}`}>
       <h1>AI NCS 자소서 코칭 결과</h1>
       <p className={styles.figmaResultSubtitle}>{subtitle}</p>
-      <ScoreSummary result={result} />
-      <InsightCards strongest={review.strongestQuestion} priority={review.priorityImprovement} />
+      <section className={styles.resultOverview} aria-label="AI 종합 분석">
+        <ScoreSummary result={result} />
+        <InsightCards strongest={review.strongestQuestion} priority={review.priorityImprovement} />
+      </section>
       <EvaluationBars scores={result.evaluationScores} />
 
       <section className={styles.questionTabSection}>
-        <h2>자소서 문항</h2>
+        <h2>문항별 자소서 코칭</h2>
         <div
           ref={questionTabsRef}
           className={styles.questionTabs}
@@ -112,14 +126,14 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
           onPointerCancel={handleQuestionTabsPointerEnd}
           onClickCapture={handleQuestionTabsClickCapture}
         >
-          {review.questions.map((question, index) => <button key={`${question.question}-${index}`} type="button" role="tab" aria-selected={selectedQuestionIndex === index} data-question-index={index} className={selectedQuestionIndex === index ? styles.questionTabActive : ""} onClick={() => selectQuestion(index)}>
-            <span>{index + 1}.</span>{question.tabTitle || makeTabTitle(question.question)}
+          {review.questions.map((question, index) => <button key={`${question.question}-${index}`} type="button" role="tab" aria-selected={selectedQuestionIndex === index} aria-controls="coaching-question-panel" aria-label={`Q${index + 1} ${question.tabTitle || makeTabTitle(question.question)}`} data-question-index={index} className={selectedQuestionIndex === index ? styles.questionTabActive : ""} onClick={() => selectQuestion(index, true)}>
+            Q{index + 1}
           </button>)}
         </div>
       </section>
 
       {selectedQuestion ? <>
-        <section className={styles.figmaQuestionArea}>
+        <section ref={questionAreaRef} id="coaching-question-panel" className={styles.figmaQuestionArea} role="tabpanel">
           <h2>{effectiveQuestionIndex + 1}. {selectedQuestion.tabTitle || makeTabTitle(selectedQuestion.question)}</h2>
           <article className={styles.figmaQuestionCard}>
             <div className={styles.figmaQuestionMark}>Q{effectiveQuestionIndex + 1}</div>
@@ -171,19 +185,19 @@ export function CoachingResultView({ item }: { item: ResultSource }) {
 }
 
 function ScoreSummary({ result }: { result: CoachingFeedback }) {
-  return <section className={styles.resultScoreSummary}>
+  return <div className={styles.resultScoreSummary}>
     <span>AI 종합 분석</span>
     <strong>{Math.round(result.score)}<small>/100</small></strong>
     <b>{makeScoreComment(result.score)}</b>
     <p>{result.summary}</p>
-  </section>;
+  </div>;
 }
 
 function InsightCards({ strongest, priority }: { strongest?: NonNullable<ReturnType<typeof makeSubmissionReview>["strongestQuestion"]>; priority?: NonNullable<ReturnType<typeof makeSubmissionReview>["priorityImprovement"]> }) {
-  return <section className={styles.insightGrid}>
+  return <div className={styles.insightGrid}>
     <article><strong>가장 강한 문항</strong><span>{strongest ? `${strongest.questionIndex}번 · ${strongest.ncsName}` : "1번 · NCS 역량"}</span></article>
     <article><strong>우선 보완</strong><span>{priority ? `${priority.questionIndex}번 · ${priority.title}` : "1번 · 경험 근거"}</span></article>
-  </section>;
+  </div>;
 }
 
 function EvaluationBars({ scores }: { scores: CoachingFeedback["evaluationScores"] }) {
@@ -202,8 +216,9 @@ function NcsEvaluation({ question, locked = false }: { question: CoachingQuestio
     {items.slice(0, locked ? 1 : 2).map((item) => {
       const sentence = splitFirstSentence(item.comment);
       return <article key={item.name}>
-        <div><strong>{item.name}</strong><span>{Math.round(item.score)}</span></div>
+        <div><strong>{item.name}</strong></div>
         {locked ? <p className={styles.lockedNcsComment}><span>{sentence.visible}</span>{sentence.blurred ? <span aria-hidden="true">{sentence.blurred}</span> : null}</p> : <p>{item.comment}</p>}
+        <span>{Math.round(item.score)}</span>
       </article>;
     })}
   </section>;

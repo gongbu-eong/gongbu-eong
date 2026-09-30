@@ -52,30 +52,6 @@ const jobDetailBannerVariants: JobDetailBannerVariant[] = [
     },
   },
   {
-    key: "job_detail_resume_b",
-    name: "자소서 배너 B",
-    kind: "resume",
-    targetPath: "/ai-tools/coaching",
-    image: {
-      src: "/jobs/detail/banner-resume-b-owl.png",
-      width: 91,
-      height: 86,
-      className: "resumeB",
-    },
-  },
-  {
-    key: "job_detail_strength_a",
-    name: "강약점 배너 A",
-    kind: "strength",
-    targetPath: "/ai-tools/diagnosis",
-    image: {
-      src: "/jobs/detail/banner-strength-a-owl.png",
-      width: 114,
-      height: 94,
-      className: "strengthA",
-    },
-  },
-  {
     key: "job_detail_strength_b",
     name: "강약점 배너 B",
     kind: "strength",
@@ -561,7 +537,6 @@ export function JobDetail({
                   <div className={styles.coachingBannerViewport}>
                     <JobDetailPromoBanner
                       banner={selectedBanner}
-                      institutionName={job.institutionName}
                       onClick={trackSelectedBannerClick}
                     />
                   </div>
@@ -626,11 +601,9 @@ export function JobDetail({
 
 function JobDetailPromoBanner({
   banner,
-  institutionName,
   onClick,
 }: {
   banner: JobDetailBannerVariant;
-  institutionName: string;
   onClick: () => void;
 }) {
   const promoClass = styles[`promo_${banner.key}`] || "";
@@ -649,26 +622,6 @@ function JobDetailPromoBanner({
               자소서 첨삭비 <b>10만원?</b> 지금은 <em>0원</em>
             </strong>
             <small>AI NCS 코칭으로 무료로 합격 문장 받기.</small>
-          </>
-        ) : null}
-        {banner.key === "job_detail_resume_b" ? (
-          <>
-            <strong>
-              <em>{institutionName}</em>
-              <span>자소서 준비 중이세요?</span>
-            </strong>
-            <small>AI NCS 코칭으로 무료로 합격 문장 받으세요!</small>
-          </>
-        ) : null}
-        {banner.key === "job_detail_strength_a" ? (
-          <>
-            <strong>
-              내 자소서 소재가 <b>안 떠오른다면?</b>
-            </strong>
-            <small>
-              강점에서 시작하면 쓸 만한 경험이<br />
-              더 쉽게 보입니다
-            </small>
           </>
         ) : null}
         {banner.key === "job_detail_strength_b" ? (
