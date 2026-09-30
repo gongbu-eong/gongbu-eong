@@ -230,7 +230,7 @@ export function CoachingPage() {
       <h1>AI NCS 자소서 코칭</h1>
       <section className={styles.intro}><strong>자소서를 AI가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
       <Link
-        href="/ai-tools/interview-coaching/guide"
+        href="/ai-tools/coaching/guide"
         className={styles.guideBanner}
         onClick={() => {
           void trackProductEvent({

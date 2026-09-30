@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode } from "react";
-import styles from "./InterviewCoachingGuidePage.module.css";
+import styles from "./CoachingGuidePage.module.css";
 
 const scores = [
   ["NCS 역량 표현", "82", 82.24],
@@ -35,7 +35,7 @@ const people = [
   ["people-2.png", "역량 표현과 구조 확인", "NCS 기준으로\n어떻게 써야 할지 모르겠어요"],
 ] as const;
 
-export function InterviewCoachingGuidePage() {
+export function CoachingGuidePage({ startHref }: { startHref: string }) {
   const router = useRouter();
 
   const closeGuide = () => {
@@ -44,7 +44,7 @@ export function InterviewCoachingGuidePage() {
       return;
     }
 
-    router.replace("/ai-tools/interview-coaching");
+    router.replace("/ai-tools");
   };
 
   return (
@@ -59,7 +59,7 @@ export function InterviewCoachingGuidePage() {
             <span>모르겠다면?</span>
           </h1>
           <p className={styles.heroCopy}>공부엉이가 문항 의도, NCS 역량, 구체성, 답변 구조를<br />보고 무엇을 먼저 고치면 좋을지 정리해드려요.</p>
-          <div className={styles.pills}><span>NCS 기준 평가</span><span>1문항부터 가능</span><span>문항별 첨삭</span><span>비회원 사용가능</span></div>
+          <div className={styles.pills}><span>NCS 기준 평가</span><span>1문항부터 가능</span><span>문항별 첨삭</span><span>로그인 후 이용</span></div>
           <Image className={styles.heroImage} src="/interview-coaching/figma/hero.png" alt="자소서 코칭을 확인하는 공부엉이" width={1473} height={1185} priority />
         </section>
 
@@ -135,7 +135,7 @@ export function InterviewCoachingGuidePage() {
         </button>
         <h2>완성본이 아니어도 괜찮아요.</h2>
         <p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.</p>
-        <Link href="/ai-tools/coaching">AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link>
+        <Link href={startHref} prefetch={false}>AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link>
       </div>
     </main>
   );

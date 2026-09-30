@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+  if (pathname === "/ai-tools/coaching/guide") {
+    return NextResponse.next();
+  }
   if (pathname === "/my/policies" || pathname.startsWith("/my/policies/")) {
     return NextResponse.next();
   }
@@ -41,12 +44,20 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  if (pathname === "/ai-tools/coaching") {
+    const guideUrl = request.nextUrl.clone();
+    guideUrl.pathname = "/ai-tools/coaching/guide";
+    const response = NextResponse.redirect(guideUrl);
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
+
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
   loginUrl.search = "";
   loginUrl.searchParams.set(
     "returnTo",
-    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    `${pathname === "/ai-tools/coaching/start" ? "/ai-tools/coaching" : pathname}${request.nextUrl.search}`,
   );
 
   const response = NextResponse.redirect(loginUrl);
