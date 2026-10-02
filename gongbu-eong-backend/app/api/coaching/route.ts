@@ -15,11 +15,8 @@ import {
 //   refundCoachingCredit,
 // } from "@/domains/credits/credits.repository";
 import { getCorsHeaders, jsonWithCors } from "@/lib/cors";
-import type { CoachingJobDto, CoachingQuestionInput } from "@/domains/coaching/coaching.dto";
 
 export const runtime = "nodejs";
-const MAX_QUESTION_COUNT = 10;
-const MAX_QUESTION_TEXT_LENGTH = 200;
 
 export async function OPTIONS(request: NextRequest) {
   return new Response(null, {
@@ -38,34 +35,22 @@ export async function POST(request: NextRequest) {
       form.get("inputType") === "file" ? "file" : "text";
     const text = String(form.get("inputText") || "").trim();
     const anonymousId = readAnonymousId(form.get("anonymousId"));
-    const jobId = String(form.get("jobPostingId") || "").trim() || null;
-    const manualJobTitle = String(form.get("manualJobTitle") || "").trim();
-    const jobDuty = String(form.get("jobDuty") || "").trim() || null;
-    const questions = parseQuestionInputs(form.get("questions"));
+    const jobId = String(form.get("jobPostingId") || "").trim();
+    const jobDuty = String(form.get("jobDuty") || "").trim();
+    if (!isUuid(jobId)) return jsonWithCors(request, { ok: false, message: "지원 공고를 연결해 주세요." }, { status: 400 });
+    if (!jobDuty) return jsonWithCors(request, { ok: false, message: "지원 직무를 입력해 주세요." }, { status: 400 });
     const fileEntry = form.get("file");
-    const file = fileEntry instanceof File ? fileEntry : null;
+    const file = inputType === "file" && fileEntry instanceof File && fileEntry.size > 0 ? fileEntry : null;
     const extension = file?.name.split(".").pop()?.toLowerCase() || "";
     const allowedCoachingExtensions = new Set(["hwp", "hwpx", "pdf", "docx"]);
     if (inputType === "text" && !text) return jsonWithCors(request, { ok: false, message: "자소서를 입력해 주세요." }, { status: 400 });
     if (inputType === "text" && text.length > 10000) return jsonWithCors(request, { ok: false, message: "자소서는 10,000자까지 입력할 수 있습니다." }, { status: 400 });
     if (inputType === "file" && !file) return jsonWithCors(request, { ok: false, message: "자소서 파일을 첨부해 주세요." }, { status: 400 });
-    if (!questions.length || questions.length > MAX_QUESTION_COUNT || questions.some((item) => !item.question || !item.characterLimit || item.characterLimit < 100 || item.characterLimit > 2000)) {
-      return jsonWithCors(request, { ok: false, message: "자소서 문항과 100자 이상 2000자 이하의 글자 수 제한을 입력해 주세요." }, { status: 400 });
-    }
-    if (questions.some((item) => item.question.length > MAX_QUESTION_TEXT_LENGTH)) {
-      return jsonWithCors(request, { ok: false, message: `자소서 문항은 ${MAX_QUESTION_TEXT_LENGTH}자까지 입력할 수 있습니다.` }, { status: 400 });
-    }
     if (file && !allowedCoachingExtensions.has(extension)) return jsonWithCors(request, { ok: false, message: "HWP, HWPX, PDF, DOCX 파일만 첨부할 수 있습니다." }, { status: 400 });
     const fileValidationMessage = file ? validateResumeFile(file) : null;
     if (fileValidationMessage) return jsonWithCors(request, { ok: false, message: fileValidationMessage }, { status: 400 });
-    const posting = jobId ? await findJobPostingById(jobId, user.id) : null;
-    if (jobId && !posting) return jsonWithCors(request, { ok: false, message: "연결할 공고를 찾지 못했습니다." }, { status: 404 });
-    const manualJob: CoachingJobDto | null = !posting && manualJobTitle ? {
-      id: `manual:${manualJobTitle.slice(0, 80)}`,
-      institutionName: "직접 입력",
-      title: manualJobTitle.slice(0, 200),
-      applicationEndAt: null,
-    } : null;
+    const posting = await findJobPostingById(jobId, user.id);
+    if (!posting) return jsonWithCors(request, { ok: false, message: "연결할 공고를 찾지 못했습니다." }, { status: 404 });
     const filePayload = file ? { name: file.name, type: file.type, buffer: Buffer.from(await file.arrayBuffer()) } : undefined;
     const coachingArgs: CoachResumeArgs = {
       userId: user.id,
@@ -73,16 +58,15 @@ export async function POST(request: NextRequest) {
       inputType,
       inputText: inputType === "file" ? file?.name || "" : text,
       file: filePayload,
-      jobPostingId: posting?.id || null,
-      job: posting ? {
+      jobPostingId: posting.id,
+      job: {
         id: posting.id,
         institutionName: posting.institution_name,
         title: posting.title,
         applicationEndAt: posting.application_end_at ? new Date(posting.application_end_at).toISOString() : null,
-      } : manualJob,
+      },
       jobDuty,
       // 강점·성향 진단 결과는 코칭 입력에서 제외합니다.
-      questions,
       resumeId: null,
       resumeAdditionalNotes: null,
       sourceFileId: null,
@@ -92,7 +76,7 @@ export async function POST(request: NextRequest) {
     activity = await beginProductActivity({
       request, userId: user.id, anonymousId, screen: "resume_coaching",
       startEvent: "coaching_start", completeEvent: "coaching_complete", failureEvent: "coaching_failed",
-      properties: { input_type: inputType, has_file: Boolean(file), has_job_posting: Boolean(posting), question_count: questions.length },
+      properties: { input_type: inputType, has_file: Boolean(file), has_job_posting: true },
     });
     after(wakeAnalyticsFactWorker);
     const preparedSource = await prepareCoachingSource(coachingArgs);
@@ -181,24 +165,4 @@ function normalizeIp(value: string) {
     return text.split(":")[0];
   }
   return text;
-}
-
-function parseQuestionInputs(value: FormDataEntryValue | null): CoachingQuestionInput[] {
-  if (typeof value !== "string" || !value.trim()) return [];
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        const record = item as Record<string, unknown>;
-        const question = typeof record.question === "string" ? record.question.trim() : "";
-        const rawLimit = Number(record.characterLimit);
-        const characterLimit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(2000, Math.round(rawLimit)) : null;
-        return question || characterLimit ? { question, characterLimit } : null;
-      })
-      .filter(Boolean) as CoachingQuestionInput[];
-  } catch {
-    return [];
-  }
 }

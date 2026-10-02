@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { trackProductEvent } from "@/features/analytics/analytics.api";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import type { CoachingFeedback, CoachingFramework, CoachingHistoryItem, CoachingQuestionReview } from "../coaching.dto";
+import type { CoachingFeedback, CoachingHistoryItem, CoachingQuestionReview } from "../coaching.dto";
 import styles from "./CoachingPage.module.css";
 
 type ResultSource = {
@@ -202,7 +202,7 @@ function EvaluationBars({ scores }: { scores: CoachingFeedback["evaluationScores
   return <section className={styles.resultEvaluation}>
     <h2>전체 평가</h2>
     <div className={styles.evaluationList}>
-      {scores.map((item) => <div key={item.label} className={styles.evaluationItem}><strong>{item.label}<b>{Math.round(item.score)}점</b></strong><div className={styles.evaluationTrack}><span style={{ width: `${Math.max(0, Math.min(100, item.score))}%` }} /></div></div>)}
+      {scores.map((item, index) => <div key={`${item.label}-${index}`} className={styles.evaluationItem}><strong>{item.label}<b>{Math.round(item.score)}점</b></strong><div className={styles.evaluationTrack}><span style={{ width: `${Math.max(0, Math.min(100, item.score))}%` }} /></div></div>)}
     </div>
   </section>;
 }
@@ -211,9 +211,9 @@ function NcsEvaluation({ question, locked = false }: { question: CoachingQuestio
   const items = question.ncsEvaluations?.length ? question.ncsEvaluations : [{ name: "NCS 역량", comment: "문항 내용을 기준으로 AI가 판단한 역량입니다.", score: 70 }];
   return <section className={styles.ncsEvaluationBlock}>
     <h2>NCS 기준 평가</h2>
-    {items.slice(0, locked ? 1 : 2).map((item) => {
+    {items.slice(0, locked ? 1 : 2).map((item, index) => {
       const sentence = splitFirstSentence(item.comment);
-      return <article key={item.name}>
+      return <article key={`${item.name}-${index}`}>
         <div><strong>{item.name}</strong></div>
         {locked ? <p className={styles.lockedNcsComment}><span>{sentence.visible}</span>{sentence.blurred ? <span aria-hidden="true">{sentence.blurred}</span> : null}</p> : <p>{item.comment}</p>}
         <span>{Math.round(item.score)}</span>
@@ -267,23 +267,21 @@ function CoachingPoints({ question }: { question: CoachingQuestionReview }) {
 }
 
 function PointList({ title, items }: { title: string; items: string[] }) {
-  return <article><strong>{title}</strong>{items.map((item) => <p key={item}>{item}</p>)}</article>;
+  return <article><strong>{title}</strong>{uniqueReviewMessages(items).map((item, index) => <p key={`${item}-${index}`}>{item}</p>)}</article>;
+}
+
+function uniqueReviewMessages(items?: string[]) {
+  return [...new Set((items || []).map((item) => item.trim()).filter(Boolean))];
 }
 
 function StructureChecks({ question }: { question: CoachingQuestionReview }) {
-  const checks = question.structureChecks?.length ? question.structureChecks : defaultStructureChecks(question.frameworks);
-  const preferredFramework = question.frameworks[0] || checks[0]?.framework || "PREP";
-  const frameworkParts = getFrameworkPartNames(preferredFramework);
-  const frameworkCheck = checks.find((item) => item.framework === preferredFramework);
-  const items = frameworkParts.map((part, index) => ({
-    framework: preferredFramework,
-    part,
-    status: index === 1 && frameworkCheck?.status === "needs_work" ? "needs_work" as const : "good" as const,
-    comment: frameworkCheck?.comment || `${part} 단계가 문항 흐름 안에서 확인됩니다.`,
-  }));
+  const checks = question.structureChecks || [];
+  const frameworkCheck = checks.find((item) => item.framework === question.frameworks[0]) || checks[0];
+  if (!frameworkCheck) return null;
+  const items = frameworkCheck.steps || [];
   return <section className={styles.structureBlock}>
-    <h2>{preferredFramework} 구조 점검</h2>
-    {items.map((item, index) => <article key={`${item.framework}-${index}`}><b>{getFrameworkLetter(item.framework, index)}</b><div><strong>{item.part}</strong><span className={item.status === "good" ? styles.structureGood : styles.structureNeeds}>{item.status === "good" ? "좋음" : "보완"}</span><p>{item.comment}</p></div></article>)}
+    <h2>{frameworkCheck.framework} 구조 점검</h2>
+    {items.length ? items.map((item, index) => <article key={`${frameworkCheck.framework}-${index}`}><b>{item.part.slice(0, 1).toUpperCase()}</b><div><strong>{item.part}</strong><span className={item.status === "good" ? styles.structureGood : styles.structureNeeds}>{item.status === "good" ? "좋음" : "보완"}</span><p>{item.comment}</p></div></article>) : <p>{frameworkCheck.comment}</p>}
   </section>;
 }
 
@@ -377,9 +375,11 @@ function makeWhitespaceSearchIndex(value: string) {
 }
 
 function MetaReview({ question }: { question: CoachingQuestionReview }) {
+  const majorRevisions = uniqueReviewMessages(question.majorRevisions).slice(0, 3);
+  const factualChecks = uniqueReviewMessages(question.factualChecks);
   return <section className={styles.metaReviewGrid}>
-    <article><h3>주요 수정 3건</h3>{(question.majorRevisions || []).slice(0, 3).map((item, index) => <div key={item}><b>{index + 1}</b><p>{item}</p></div>)}</article>
-    <article><h3>사실성 체크</h3>{(question.factualChecks || []).map((item) => <p key={item}>{item}</p>)}</article>
+    <article><h3>주요 수정{majorRevisions.length ? ` ${majorRevisions.length}건` : ""}</h3>{majorRevisions.map((item, index) => <div key={`${item}-${index}`}><b>{index + 1}</b><p>{item}</p></div>)}</article>
+    <article><h3>사실성 체크</h3>{factualChecks.map((item, index) => <p key={`${item}-${index}`}>{item}</p>)}</article>
   </section>;
 }
 
@@ -403,6 +403,7 @@ function makeSubmissionReview(result: CoachingFeedback, item: ResultSource) {
     questions: result.submissionReview.questions,
   };
   const source = item.inputType === "file" ? result.originalTextExcerpt || item.inputText || "첨부한 자소서 원문을 기준으로 분석했습니다." : item.inputText;
+  const improvementSuggestions = uniqueReviewMessages(result.improvementSuggestions);
   const question: CoachingQuestionReview = {
     question: "자소서 문항",
     tabTitle: "자소서",
@@ -410,29 +411,20 @@ function makeSubmissionReview(result: CoachingFeedback, item: ResultSource) {
     characterLimit: null,
     characterCount: Array.from((source || "").replace(/\s/g, "")).length,
     exceededBy: 0,
-    frameworks: ["PREP"],
+    frameworks: [],
     editCount: result.sentenceEdits.length,
     methodComment: "제출한 자소서 전체 흐름을 기준으로 첨삭했어요.",
     resumeEvidence: [],
     ncsEvaluations: [{ name: "의사소통능력", comment: "문장 흐름과 표현을 기준으로 확인한 역량입니다.", score: result.score }],
-    coachingPoints: { strengths: ["유지할 만한 표현이 있습니다."], improvements: result.improvementSuggestions.slice(0, 2), ncsSuggestions: ["문항 요구와 NCS 역량이 직접 연결되도록 보완하세요."] },
-    structureChecks: defaultStructureChecks(["PREP"]),
+    coachingPoints: { strengths: ["유지할 만한 표현이 있습니다."], improvements: improvementSuggestions.slice(0, 2), ncsSuggestions: ["문항 요구와 NCS 역량이 직접 연결되도록 보완하세요."] },
+    structureChecks: [],
     comparisonEdits: result.sentenceEdits.slice(0, 4).map((edit) => ({ original: edit.original, improved: edit.improved, reason: edit.reason })),
-    majorRevisions: result.improvementSuggestions.slice(0, 3),
+    majorRevisions: improvementSuggestions.slice(0, 3),
     factualChecks: ["수치, 기관명, 경험 기간이 실제 근거와 일치하는지 확인하세요."],
     highlights: [],
     edits: [],
   };
-  return { preSubmitChecks: 0, fixSuggestions: result.improvementSuggestions.length, keepCount: result.sentenceEdits.filter((item) => item.good).length, questions: [question] };
-}
-
-function defaultStructureChecks(frameworks: CoachingFramework[]) {
-  const selected = new Set(frameworks);
-  return (["STAR", "PAP", "CAR", "PREP"] as CoachingFramework[]).map((framework) => ({
-    framework,
-    status: selected.has(framework) ? "good" as const : "needs_work" as const,
-    comment: selected.has(framework) ? `${framework} 구조로 읽을 수 있는 흐름이 있습니다.` : `${framework} 구조로 보완하면 문항 의도가 더 선명해집니다.`,
-  }));
+  return { preSubmitChecks: 0, fixSuggestions: improvementSuggestions.length, keepCount: result.sentenceEdits.filter((item) => item.good).length, questions: [question] };
 }
 
 function makeTabTitle(value: string) {
@@ -448,26 +440,6 @@ function makeScoreComment(score: number) {
 function getNcsBadges(question: CoachingQuestionReview) {
   const first = question.ncsEvaluations?.[0]?.name || "NCS 역량";
   const second = question.ncsEvaluations?.[1]?.name;
-  const framework = question.frameworks[0] || "PREP";
-  return [`핵심 NCS · ${first}`, second ? `보조 · ${second}` : "", `추천 · ${framework}`].filter(Boolean);
-}
-
-function getFrameworkLetter(framework: CoachingFramework, index: number) {
-  const map: Record<CoachingFramework, string[]> = {
-    PREP: ["P", "R", "E", "P"],
-    CAR: ["C", "A", "R"],
-    PAP: ["P", "A", "P"],
-    STAR: ["S", "T", "A", "R"],
-  };
-  return map[framework][index] || framework[0];
-}
-
-function getFrameworkPartNames(framework: CoachingFramework) {
-  const map: Record<CoachingFramework, string[]> = {
-    PREP: ["Point", "Reason", "Example", "Point"],
-    CAR: ["Context", "Action", "Result"],
-    PAP: ["Purpose", "Ability", "Plan"],
-    STAR: ["Situation", "Task", "Action", "Result"],
-  };
-  return map[framework];
+  const framework = question.frameworks[0];
+  return [`핵심 NCS · ${first}`, second ? `보조 · ${second}` : "", framework ? `추천 · ${framework}` : ""].filter(Boolean);
 }

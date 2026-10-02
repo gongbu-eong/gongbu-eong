@@ -1,19 +1,17 @@
-import type { CoachingFeedback, CoachingHistoryItem, CoachingJob, CoachingQuestionInput } from "./coaching.dto";
+import type { CoachingFeedback, CoachingHistoryItem, CoachingJob } from "./coaching.dto";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
 import { trackApiRequest } from "@/features/analytics/analytics.api";
 
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
-export async function coachResume(args: { inputType: "text" | "file"; inputText: string; file?: File | null; jobPostingId?: string | null; manualJobTitle?: string | null; resumeId?: string | null; jobDuty?: string | null; questions?: CoachingQuestionInput[]; anonymousId?: string | null }) {
+export async function coachResume(args: { inputType: "text" | "file"; inputText: string; file?: File | null; jobPostingId: string; resumeId?: string | null; jobDuty: string; anonymousId?: string | null }) {
   const form = new FormData();
   form.set("inputType", args.inputType);
   form.set("inputText", args.inputText);
   form.set("anonymousId", args.anonymousId || getAnonymousId());
-  if (args.jobPostingId) form.set("jobPostingId", args.jobPostingId);
-  if (args.manualJobTitle) form.set("manualJobTitle", args.manualJobTitle);
+  form.set("jobPostingId", args.jobPostingId);
   if (args.resumeId) form.set("resumeId", args.resumeId);
   if (args.jobDuty) form.set("jobDuty", args.jobDuty);
-  if (args.questions?.length) form.set("questions", JSON.stringify(args.questions));
   if (args.file) form.set("file", args.file);
   const response = await fetch(`${backendUrl}/api/coaching`, { method: "POST", body: form, credentials: "include", cache: "no-store" });
   trackApiRequest({ path: "/api/coaching", method: "POST", status: response.status, success: response.ok });

@@ -165,11 +165,11 @@ export async function startInterviewCoaching(args: StartInterviewCoachingArgs) {
   const startedAt = Date.now();
   const traceId = args.traceId || undefined;
   const { job, companyName, positionName, dutyText } = resolveInterviewInput(args);
-  const preparedMaterial = await prepareInterviewMaterial(args);
 
   if (!args.posting || !job) {
     throw new Error("지원 공고를 연결해 주세요.");
   }
+  const preparedMaterial = await prepareInterviewMaterial(args);
 
   logInterviewStage(traceId, "service:start", {
     hasUserId: Boolean(args.userId),
@@ -335,14 +335,13 @@ export async function createInterviewCoachingDraft(args: StartInterviewCoachingA
 }
 
 async function prepareInterviewMaterial(args: StartInterviewCoachingArgs) {
-  const inputType: InterviewMaterialInputType = args.materialInputType === "file" ? "file" : "text";
-  if (inputType === "file" && args.materialFile) {
+  if (args.materialInputType === "file" && args.materialFile?.buffer.length) {
     const extractedText = await extractResumeDocumentText(
       args.materialFile.name,
       args.materialFile.buffer,
     ).catch(() => "");
     return {
-      inputType,
+      inputType: "file" as const,
       filename: args.materialFile.name,
       contentType: args.materialFile.type || "application/octet-stream",
       fileBuffer: args.materialFile.buffer,
@@ -350,12 +349,13 @@ async function prepareInterviewMaterial(args: StartInterviewCoachingArgs) {
     };
   }
 
+  const text = args.materialInputType === "file" ? "" : cleanText(args.materialText).slice(0, 12000);
   return {
-    inputType,
+    inputType: text ? "text" as const : null,
     filename: null,
     contentType: null,
     fileBuffer: null,
-    text: cleanText(args.materialText).slice(0, 12000),
+    text,
   };
 }
 
@@ -375,7 +375,7 @@ function appendInterviewMaterialContext(
       ? `\n\n[사용자 면접 자료]\n${material.text}`
     : material.filename
       ? `\n\n[사용자 면접 자료]\n첨부 파일명: ${material.filename}\n파일에서 텍스트를 추출하지 못했습니다. 연결된 공고 내용을 우선 기준으로 질문을 생성하세요.`
-      : "";
+      : "\n\n[사용자 면접 자료]\n제공하지 않았습니다. 연결된 공고와 지원 직무만으로 질문을 생성하세요. 지원자의 경험이나 성과를 임의로 가정하지 마세요.";
 
   return `${jobContext || ""}${materialText}`.trim().slice(0, 12000);
 }
@@ -591,6 +591,8 @@ async function requestStartPayload(input: InterviewStartInput) {
         text: `한국어 AI NCS 면접 코치입니다.
 지원 공고와 직무를 분석해 NCS 7개 후보 중 실제로 연관된 영역만 추출하고, 실제 면접 연습 질문을 생성하세요.
 모든 분석과 질문은 기업명, 지원 직무, 공고 내용에서 확인되는 업무/자격/우대사항을 근거로 작성하세요.
+면접 자료·자소서는 선택 사항입니다. 제공된 내용만 추가로 참고하고, 없거나 읽을 수 없으면 공고와 지원 직무만으로 질문을 생성하세요.
+제공하지 않은 지원자의 경험·성과를 단정하거나 자료 미제공을 부족한 점으로 평가하지 마세요.
 목록형 문장을 작성할 때는 한 줄에 하나씩 "1. 내용", "2. 내용" 형식으로 작성하고, 번호와 내용을 반드시 같은 줄에 붙여 쓰세요.
 "1."처럼 번호만 단독 줄에 두지 마세요. "(1)", "1)", "①" 같은 번호 표기는 사용하지 말고, 한 문장 안에 여러 번호를 붙여 나열하지 마세요.
 모바일 화면에서 사람이 부담 없이 읽을 수 있도록 각 질문의 intent는 1~2문장, ncsMappings.reason은 2~4문장 안에서 핵심 근거만 작성하세요.
@@ -648,6 +650,8 @@ async function requestStartSupplementPayload(
         text: `한국어 AI NCS 면접 코치입니다.
 앞선 AI 응답에서 NCS 매핑 또는 면접 질문 수가 부족했습니다.
 서버에서 임의 질문을 만들지 않도록, 아래 공고/직무 정보를 다시 분석해 최종 사용 가능한 JSON을 완성하세요.
+면접 자료·자소서는 선택 사항입니다. 제공된 내용만 추가로 참고하고, 없거나 읽을 수 없으면 공고와 지원 직무만으로 질문을 생성하세요.
+제공하지 않은 지원자의 경험·성과를 단정하거나 자료 미제공을 부족한 점으로 평가하지 마세요.
 목록형 문장을 작성할 때는 한 줄에 하나씩 "1. 내용", "2. 내용" 형식으로 작성하고, 번호와 내용을 반드시 같은 줄에 붙여 쓰세요.
 "1."처럼 번호만 단독 줄에 두지 마세요. "(1)", "1)", "①" 같은 번호 표기는 사용하지 말고, 한 문장 안에 여러 번호를 붙여 나열하지 마세요.
 

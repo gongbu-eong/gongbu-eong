@@ -8,7 +8,7 @@ import type {
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
 
 export async function startInterviewCoaching(args: {
-  jobPostingId?: string | null;
+  jobPostingId: string;
   jobDuty?: string | null;
   materialInputType?: "file" | "text";
   materialText?: string | null;
@@ -18,7 +18,7 @@ export async function startInterviewCoaching(args: {
 }) {
   const form = new FormData();
   form.set("anonymousId", args.anonymousId || getAnonymousId());
-  if (args.jobPostingId) form.set("jobPostingId", args.jobPostingId);
+  form.set("jobPostingId", args.jobPostingId);
   if (args.jobDuty) form.set("jobDuty", args.jobDuty);
   form.set("materialInputType", args.materialInputType || "text");
   if (args.materialText) form.set("materialText", args.materialText);

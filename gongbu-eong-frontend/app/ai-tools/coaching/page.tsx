@@ -5,7 +5,7 @@ import { canonicalUrl, SITE_NAME } from "@/shared/seo";
 export const metadata: Metadata = {
   title: "AI NCS 자소서 코칭 | 공부엉이",
   description:
-    "공기업 자소서, NCS 자기소개서, AI NCS 자소서 코칭, 자소서 문항 분석, 글자 수 기준, 지원 공고 맞춤 피드백까지 한 번에 확인하세요.",
+    "공기업 자소서, NCS 자기소개서, AI NCS 자소서 코칭, 자소서 원문 분석, 지원 공고 맞춤 피드백까지 한 번에 확인하세요.",
   alternates: {
     canonical: canonicalUrl("/ai-tools/coaching"),
   },
@@ -27,7 +27,7 @@ export default function Page() {
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
     description:
-      "공기업 자소서, NCS 자기소개서, AI NCS 자소서 코칭, 문항별 피드백, 글자 수 기준, 지원 공고 맞춤 분석을 제공하는 AI 취업 도구입니다.",
+      "공기업 자소서, NCS 자기소개서, AI NCS 자소서 코칭, 문항별 피드백, 지원 공고 맞춤 분석을 제공하는 AI 취업 도구입니다.",
   };
 
   return (

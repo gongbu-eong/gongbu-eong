@@ -2,11 +2,6 @@ export type CoachingInputType = "text" | "file";
 export type CoachingFramework = "PREP" | "CAR" | "PAP" | "STAR";
 export type CoachingReviewSeverity = "check" | "fix" | "keep";
 
-export type CoachingQuestionInput = {
-  question: string;
-  characterLimit?: number | null;
-};
-
 export type CoachingQuestionReview = {
   question: string;
   tabTitle?: string;
@@ -24,7 +19,12 @@ export type CoachingQuestionReview = {
     improvements: string[];
     ncsSuggestions: string[];
   };
-  structureChecks?: Array<{ framework: CoachingFramework; status: "good" | "needs_work"; comment: string }>;
+  structureChecks?: Array<{
+    framework: CoachingFramework;
+    status: "good" | "needs_work";
+    comment: string;
+    steps?: Array<{ part: string; status: "good" | "needs_work"; comment: string }>;
+  }>;
   comparisonEdits?: Array<{ original: string; improved: string; reason: string }>;
   majorRevisions?: string[];
   factualChecks?: string[];

@@ -14,8 +14,8 @@ const scores = [
 ] as const;
 
 const steps = [
-  ["01", "공고 선택", "공고를 선택하고 직무를\n입력하면 끝!"],
-  ["02", "자소서 문항 입력", "지원서에 있는 질문을 그대로\n붙여넣어 주세요."],
+  ["01", "공고 선택", "지원할 채용공고를 검색하고\n선택해 주세요."],
+  ["02", "지원 직무 입력", "지원할 직무를 입력하고\n공고를 연결해 주세요."],
   ["03", "내가 쓴 답변 붙여넣기", "완성본이 아니어도 괜찮아요.\n초안부터 코칭할 수 있어요."],
   ["04", "AI NCS 코칭 확인", "문항별 평가, 코칭 포인트, 수정\n우선순위를 확인하세요."],
 ] as const;
@@ -134,7 +134,7 @@ export function CoachingGuidePage({ startHref }: { startHref: string }) {
           <span aria-hidden="true">×</span>
         </button>
         <h2>완성본이 아니어도 괜찮아요.</h2>
-        <p>문항 하나와 지금 써둔 답변만 있으면<br />바로 시작할 수 있습니다.</p>
+        <p>지원 공고와 지금 써둔 자소서가 있으면<br />바로 시작할 수 있습니다.</p>
         <Link href={startHref} prefetch={false}>AI NCS 자소서 코칭 시작하기 <span aria-hidden="true">→</span></Link>
       </div>
     </main>

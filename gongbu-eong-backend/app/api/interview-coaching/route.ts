@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     });
 
     const payload = await readInterviewStartPayload(request);
-    const anonymousId = readAnonymousId(payload.anonymousId);
+    const anonymousId = readUuid(payload.anonymousId);
     console.info(`[InterviewCoaching:${requestId}] request:parsed`, {
       hasAnonymousId: Boolean(anonymousId),
       hasJobPostingId: Boolean(readString(payload.jobPostingId)),
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const jobPostingId = readString(payload.jobPostingId);
+    const jobPostingId = readUuid(payload.jobPostingId);
     if (!jobPostingId) {
       return jsonWithCors(
         request,
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       elapsedMs: Date.now() - startedAt,
     });
 
-    if (jobPostingId && !posting) {
+    if (!posting) {
       return jsonWithCors(
         request,
         { ok: false, message: "연결할 공고를 찾지 못했습니다." },
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       posting,
       jobDuty: readString(payload.jobDuty),
       materialInputType: payload.materialInputType,
-      materialText: readString(payload.materialText),
+      materialText: payload.materialText,
       materialFile: payload.materialFile
         ? {
             name: payload.materialFile.name,
@@ -160,24 +160,30 @@ async function readInterviewStartPayload(request: NextRequest) {
   if (contentType.toLowerCase().includes("multipart/form-data")) {
     const form = await request.formData();
     const materialFileEntry = form.get("materialFile");
+    const fileMode = form.get("materialInputType") === "file";
+    const materialFile = fileMode && materialFileEntry instanceof File && materialFileEntry.size > 0
+      ? materialFileEntry
+      : null;
+    const materialText = fileMode ? null : readString(form.get("materialText")) || null;
     return {
       anonymousId: form.get("anonymousId"),
       jobPostingId: form.get("jobPostingId"),
       jobDuty: form.get("jobDuty"),
-      materialInputType: form.get("materialInputType") === "file" ? "file" as const : "text" as const,
-      materialText: form.get("materialText"),
-      materialFile: materialFileEntry instanceof File ? materialFileEntry : null,
+      materialInputType: materialFile ? "file" as const : materialText ? "text" as const : null,
+      materialText,
+      materialFile,
       termsAgreed: form.get("termsAgreed") === "true",
     };
   }
 
   const body = (await request.json()) as Record<string, unknown>;
+  const materialText = body.materialInputType === "file" ? null : readString(body.materialText) || null;
   return {
     anonymousId: body.anonymousId,
     jobPostingId: body.jobPostingId,
     jobDuty: body.jobDuty,
-    materialInputType: body.materialInputType === "file" ? "file" as const : "text" as const,
-    materialText: body.materialText,
+    materialInputType: materialText ? "text" as const : null,
+    materialText,
     materialFile: null,
     termsAgreed: body.termsAgreed === true,
   };
@@ -212,7 +218,7 @@ function normalizeIp(value: string) {
   return text;
 }
 
-function readAnonymousId(value: unknown) {
+function readUuid(value: unknown) {
   const text = readString(value);
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text)
     ? text

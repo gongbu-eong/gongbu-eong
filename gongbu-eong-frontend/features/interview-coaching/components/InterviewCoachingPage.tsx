@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from "react";
+import { CoachingAlertDialog } from "@/features/coaching/components/CoachingAlertDialog";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getJobPostings } from "@/features/home/home.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
@@ -63,10 +64,10 @@ const INTERVIEW_TERMS = [
     title: "제4조 (서비스의 내용)",
     type: "bullet",
     items: [
-      "이용자가 입력한 기업명·지원 직무를 NCS 직무역량과 연계하여 AI 면접 질문 및 꼬리질문을 생성합니다.",
+      "이용자가 연결한 채용공고의 기업 정보와 지원 직무를 NCS 직무역량과 연계하여 AI 면접 질문 및 꼬리질문을 생성합니다.",
       "이용자는 생성된 질문에 답변을 작성·연습할 수 있으며, AI가 답변에 대한 피드백을 제공합니다.",
-      "이용자가 실제 채용공고를 연결한 경우, 해당 공고의 자격요건·우대사항·전형 정보를 반영하여 보다 정확한 코칭을 제공합니다.",
-      "공고를 연결한 경우, 해당 공고의 자격요건·우대사항·전형 정보와 이용자가 첨부 또는 입력한 면접 자료 or 자소서를 함께 반영하여 코칭을 제공합니다.",
+      "지원 공고 연결은 필수이며, 해당 공고의 자격요건·우대사항·전형 정보를 반영하여 코칭을 제공합니다.",
+      "면접 자료 또는 자소서는 선택 사항이며, 제공한 경우에만 추가로 반영합니다. 자료를 제공하지 않아도 연결된 공고와 지원 직무를 기준으로 질문을 생성합니다.",
     ],
   },
   {
@@ -141,6 +142,7 @@ export function InterviewCoachingPage({
   const materialFileDropRef = useRef<HTMLButtonElement | null>(null);
   const materialTextRef = useRef<HTMLTextAreaElement | null>(null);
   const termsButtonRef = useRef<HTMLButtonElement | null>(null);
+  const jobConnectRef = useRef<HTMLButtonElement | null>(null);
   const answerRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const alertFocusRef = useRef<HTMLElement | null>(null);
   const [connectedJob, setConnectedJob] = useState<ConnectedJob | null>(null);
@@ -281,15 +283,7 @@ export function InterviewCoachingPage({
     const dutyText = connectedJob?.duty || "";
 
     if (!connectedJob) {
-      showAlert("지원 공고를 연결해 주세요.");
-      return;
-    }
-    if (materialInputType === "file" && !materialFile) {
-      showAlert("면접 자료 or 자소서 파일을 첨부해 주세요.", materialFileDropRef.current);
-      return;
-    }
-    if (materialInputType === "text" && !materialText.trim()) {
-      showAlert("면접 자료 or 자소서를 입력해 주세요.", materialTextRef.current);
+      showAlert("지원 공고를 연결해 주세요.", jobConnectRef.current);
       return;
     }
     if (!termsConfirmed) {
@@ -416,19 +410,14 @@ export function InterviewCoachingPage({
               {connectedJob ? (
                 <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} />
               ) : (
-                <>
-                  <button className={styles.jobConnect} type="button" onClick={openJobPicker}>
-                    + 지원 공고 연결하기 (선택)
-                  </button>
-                  <p className={styles.helperBox}>
-                    직접 입력 시에는 실제 채용공고의 자격요건, 우대사항, 전형 정보가 반영되지 않고 입력한 기업명과 직무 내용을 기준으로 질문이 생성됩니다. 더 정확한 코칭을 원하면 지원 공고를 연결해 주세요.
-                  </p>
-                </>
+                <button ref={jobConnectRef} className={styles.jobConnect} type="button" onClick={openJobPicker}>
+                  + 지원 공고 연결하기
+                </button>
               )}
             </section>
 
             <section className={styles.interviewInputSection}>
-              <h2>면접 자료 or 자소서</h2>
+              <h2>면접 자료 or 자소서 (선택)</h2>
               <div className={styles.materialPanel}>
                 <div className={styles.materialTabs}>
                   <button
@@ -660,7 +649,7 @@ export function InterviewCoachingPage({
         />
       ) : null}
       {alertMessage ? (
-        <AlertDialog
+        <CoachingAlertDialog
           message={alertMessage}
           onClose={() => {
             setAlertMessage("");
@@ -1277,17 +1266,6 @@ function JobDutySheet({
         >
           공고 연결하기
         </button>
-      </section>
-    </div>
-  );
-}
-
-function AlertDialog({ message, onClose }: { message: string; onClose: () => void }) {
-  return (
-    <div className={styles.dialogOverlay} role="alertdialog" aria-modal="true">
-      <section className={styles.alertDialog}>
-        <h2>{message}</h2>
-        <button type="button" onClick={onClose}>확인</button>
       </section>
     </div>
   );
