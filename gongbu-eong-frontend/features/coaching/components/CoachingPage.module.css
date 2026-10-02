@@ -160,7 +160,7 @@
 .termsCheck[aria-pressed="true"] span{border-color:#2f7ff0;background:#2f7ff0}
 .newCoachingFrame .primaryButton{margin-top:16px}
 .coachingSubmitButton{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;border-radius:12px;background:#2f7ff0;color:#fff;font-size:16px;font-weight:800;line-height:1}
-.coachingSubmitButton:disabled{background:#2f7ff0;opacity:.55}
+.coachingSubmitButton:disabled{background:#9aa4b8;opacity:1}
 .coachingSubmitIcon{width:23px;height:12px;object-fit:contain;transform:rotate(45deg)}
 .coachingSheet{min-height:auto;max-height:min(82dvh,720px);padding:0 16px calc(16px + env(safe-area-inset-bottom));border-radius:16px 16px 0 0}
 .coachingSheet .sheetHandle,.termsSheet .sheetHandle{margin-top:8px}
@@ -293,7 +293,7 @@
 .newLegend span{position:relative;padding-left:18px}
 .newLegend span::before{content:"";position:absolute;left:0;top:50%;width:13px;height:13px;border-radius:3px;transform:translateY(-50%)}
 .legendCheck::before{background:#fff7e0}.legendFix::before{background:#fff3d3}.legendKeep::before{background:#1fb573}
-@media (min-width:37.5rem){.newCoachingFrame,.newResultScreen{padding-left:32px;padding-right:32px}.overlay{align-items:center}.coachingSheet,.termsSheet{border-radius:16px;max-width:600px}.termsSheet{height:min(84vh,760px);max-height:min(84vh,760px)}}
+@media (min-width:37.5rem){.newCoachingFrame{padding-left:16px;padding-right:16px}.newResultScreen{padding-left:32px;padding-right:32px}.overlay{align-items:center}.coachingSheet,.termsSheet{border-radius:16px;max-width:600px}.termsSheet{height:min(84vh,760px);max-height:min(84vh,760px)}}
 
 /* 2097 coaching result screen */
 .resultScoreSummary{margin:20px 0 18px;padding:22px 0;border-top:1px solid #e8f1ff;border-bottom:1px solid #e8f1ff;text-align:center}
@@ -484,11 +484,11 @@
 }
 
 /* Figma 2571 AI NCS resume coaching pass */
-.newCoachingFrame{max-width:37.5rem;padding:64px 16px 108px;color:#1a2233}
-.newCoachingFrame h1{margin:0 0 26px;font-size:23px;font-weight:800;line-height:normal}
-.newCoachingFrame .intro{margin:0 0 24px}
-.newCoachingFrame .intro strong{font-size:20px;font-weight:700;line-height:normal}
-.newCoachingFrame .intro p{margin:12px 0 0;color:#5a6580;font-size:16px;font-weight:400;line-height:22px}
+.newCoachingFrame{max-width:37.5rem;padding:64px 16px 108px;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.newCoachingFrame h1{margin:0 0 18px;font-size:23px;font-weight:800;line-height:1;letter-spacing:0}
+.newCoachingFrame .intro{margin:0 0 18px}
+.newCoachingFrame .intro strong{font-size:20px;font-weight:700;line-height:1}
+.newCoachingFrame .intro p{margin:8px 0 0;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;letter-spacing:0}
 .guideBanner{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;height:80px;box-sizing:border-box;margin:0 0 24px;padding:0 16px;border:0;border-radius:10px;background:#263bd1;color:#fff;text-align:left;cursor:pointer;font:inherit;text-decoration:none}
 .guideBanner span{display:grid;gap:4px;min-width:0}
 .guideBanner strong{font-size:15px;font-weight:700;line-height:18px;word-break:keep-all}
@@ -498,6 +498,7 @@
 .guideBanner b::after{content:"";position:absolute;top:14px;right:11px;width:9px;height:9px;border-top:1.5px solid #fff;border-right:1.5px solid #fff;transform:rotate(45deg)}
 .guideBanner:hover{background:#1e32c1}
 .guideBanner:focus-visible{outline:3px solid #9cc2ff;outline-offset:3px}
+.companySection h2{margin:0 0 18px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
 .newCoachingFrame .jobConnect{height:52px;border-radius:12px;font-size:16px;font-weight:800}
 .newCoachingFrame .helper{margin:16px 0 36px;color:#5a6580;font-size:16px;font-weight:400;line-height:23px}
 .questionSection{margin-top:36px}
@@ -519,24 +520,28 @@
 .connectedJobCard em{grid-column:1 / -1;grid-row:3;margin-top:10px}
 .connectedJobCard p{grid-column:1 / -1;grid-row:4;color:#5a6580;font-size:17px;font-weight:400;line-height:23px}
 .jobFitNotice{margin:10px 0 36px;color:#1fb573;font-size:15px;line-height:normal}
-.newCoachingFrame .writeSection{margin-top:36px}
-.newCoachingFrame .writeSection h2{margin-bottom:16px}
-.newCoachingFrame .writePanel{min-height:303px;padding:8px;border-radius:5px;background:#f5f7fa}
-.newCoachingFrame .writePanelFile{min-height:269px}
-.newCoachingFrame .tabs{gap:8px;margin-bottom:16px}
+.newCoachingFrame .writeSection{margin-top:24px}
+.newCoachingFrame .writeSection h2{margin-bottom:18px;line-height:1}
+.newCoachingFrame .writePanel{min-height:0;padding:8px;border-radius:5px;background:#f5f7fa;box-sizing:border-box}
+.newCoachingFrame .writePanelFile{min-height:0}
+.newCoachingFrame .tabs{gap:9px;margin-bottom:16px}
 .newCoachingFrame .tabs button{height:46px;border-radius:10px;color:#5a6580;font-size:17px;font-weight:400}
 .newCoachingFrame .tabs .tabActive{color:#2f7ff0;font-weight:400}
-.newCoachingFrame .writePanel>textarea{height:200px;padding:16px;color:#5a6580;font-size:16px;font-weight:400;line-height:22px}
+.newCoachingFrame .writePanel>textarea{height:200px;padding:16px;color:#1a2233;font-size:16px;font-weight:400;line-height:1.45}
 .newCoachingFrame .writePanel>textarea::placeholder{font-size:16px;color:#9aa4b8}
 .newCoachingFrame .counter{margin-top:8px;color:#5a6580;font-size:14px;font-weight:400}
-.newCoachingFrame .fileUploadLabel{margin:0 8px 11px;color:#1a2233;font-size:14px;font-weight:400}
-.newCoachingFrame .fileDrop strong{font-size:17px;line-height:23px}
-.newCoachingFrame .fileDrop>span:not(.fileSheetIcon){font-size:14px;line-height:normal}
+.newCoachingFrame .fileUploadArea{display:grid;gap:7px;padding:0 8px 8px}
+.newCoachingFrame .fileUploadLabel{margin:0;color:#1a2233;font-size:14px;font-weight:400;line-height:19px}
+.newCoachingFrame .fileDrop{display:flex;width:100%;height:168px;min-height:168px;box-sizing:border-box;margin:0;padding:0;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px dashed #2f7ff0;border-radius:10px;background:#e8f1ff;color:#1a2233;text-align:center}
+.newCoachingFrame .fileDrop strong{max-width:100%;margin:0;padding:0 14px;color:#1a2233;font-size:15px;font-weight:500;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.newCoachingFrame .fileDrop small{color:#9aa4b8;font-size:12px;font-weight:500;line-height:1.35}
+.newCoachingFrame .fileDropIcon{display:grid;place-items:center;width:32px;height:32px}
+.newCoachingFrame .fileDropIcon img{display:block;width:32px;height:32px;object-fit:contain}
 .termsConsentRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
 .termsConsentRow .termsCheck{flex:1;min-width:0;margin-top:0;color:#9aa4b8;font-size:15px;font-weight:500;line-height:normal}
 .termsCheck span{position:relative;width:24px;height:24px;border-color:#e4e8ef;background:#fff;color:transparent;font-size:0}
 .termsCheck[aria-pressed="true"] span{border-color:#e4e8ef;background:#fff}
-.termsCheck[aria-pressed="true"] span::after{content:"";position:absolute;left:50%;top:50%;width:16px;height:16px;border-radius:50%;background:#2f7ff0;transform:translate(-50%,-50%)}
+.termsCheck[aria-pressed="true"] span::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:50%;background:#2f7ff0;transform:translate(-50%,-50%)}
 .termsOpenButton{flex:0 0 auto;border:0;background:transparent;color:#9aa4b8;font-size:15px;font-weight:500;line-height:normal}
 .coachingPrivacyNotice{display:flex;align-items:center;min-height:52px;box-sizing:border-box;margin:16px 0 0;padding:0 22px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px;font-weight:700;line-height:normal;word-break:keep-all}
 .coachingSubmitButton{margin-top:16px}
@@ -596,7 +601,7 @@
 .figmaQuestionArea .overallAssessment{margin-top:24px;padding-top:24px}
 .figmaQuestionArea .figmaScoreNotice{box-sizing:border-box;margin-top:0;padding-top:16px;padding-bottom:16px}
 @media (min-width:37.5rem){
-  .newCoachingFrame{padding-left:32px;padding-right:32px}
+  .newCoachingFrame{padding-left:16px;padding-right:16px}
   .termsSheet{border-radius:16px;max-width:600px}
   .figmaQuestionArea .overallAssessment,.figmaQuestionArea .figmaScoreNotice,.figmaQuestionArea .resultActions{margin-left:-24px;margin-right:-24px;padding-left:24px;padding-right:24px}
 }

@@ -32,7 +32,7 @@ export function CoachingPage() {
   const jobSearchSeqRef = useRef(0);
   const [coaching, setCoaching] = useState(false);
   const [error, setError] = useState("");
-  const [inputType, setInputType] = useState<"text" | "file">("text");
+  const [inputType, setInputType] = useState<"text" | "file">("file");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
@@ -211,14 +211,17 @@ export function CoachingPage() {
         </span>
         <b aria-hidden="true" />
       </Link>
-      {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <button ref={jobConnectRef} className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기</button>}
+      <section className={styles.companySection}>
+        <h2>자소서 기업 정보</h2>
+        {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <button ref={jobConnectRef} className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기</button>}
+      </section>
 
       <section className={styles.writeSection}>
         <h2>자소서 작성</h2>
         <div className={`${styles.writePanel} ${inputType === "file" ? styles.writePanelFile : ""}`}>
           <div className={styles.tabs}>
-            <button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button>
             <button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button>
+            <button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button>
           </div>
           {inputType === "text" ? (
             <>
@@ -233,8 +236,8 @@ export function CoachingPage() {
               <span className={styles.counter}>{formatNumber(text.length)}자</span>
             </>
           ) : (
-            <>
-              <span className={styles.fileUploadLabel}>파일로 자소서 올리기</span>
+            <div className={styles.fileUploadArea}>
+              <p className={styles.fileUploadLabel}>파일로 자소서 업로드</p>
               <button
                 ref={fileDropRef}
                 type="button"
@@ -262,23 +265,24 @@ export function CoachingPage() {
                   <strong>{file.name}</strong>
                 ) : (
                   <>
-                    <Image
-                      src="/coaching/file-upload-document.png"
-                      alt=""
-                      width={57}
-                      height={62}
-                      className={styles.fileSheetIcon}
-                    />
+                    <span className={styles.fileDropIcon} aria-hidden="true">
+                      <Image
+                        src="/coaching/file-upload-document.png"
+                        alt=""
+                        width={32}
+                        height={32}
+                      />
+                    </span>
                     <strong>파일을 선택하거나 여기에 끌어다 놓으세요</strong>
-                    <span>{COACHING_FILE_GUIDE}</span>
+                    <small>{COACHING_FILE_GUIDE}</small>
                   </>
                 )}
               </button>
-            </>
+            </div>
           )}
         </div>
+        {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
       </section>
-      {inputType === "file" && file ? <button type="button" className={styles.fileRemoveButton} onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}>첨부 파일 제거 ×</button> : null}
       <div className={styles.termsConsentRow}>
         <button ref={termsButtonRef} type="button" className={styles.termsCheck} aria-pressed={termsConfirmed} onClick={() => setTermsConfirmed((value) => !value)}><span>{termsConfirmed ? "선택됨" : ""}</span>AI NCS 자소서 약관동의를 해주세요.</button>
         <button type="button" className={styles.termsOpenButton} onClick={() => setTermsOpen(true)}>보기 →</button>
