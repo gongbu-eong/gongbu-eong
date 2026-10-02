@@ -11,6 +11,7 @@ export type ActiveBannerDto = {
   name: string;
   targetUrl: string;
   imageUrl: string;
+  mobileImageUrl: string | null;
   sortOrder: number;
   startsAt: string | null;
   endsAt: string | null;

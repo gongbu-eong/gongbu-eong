@@ -36,7 +36,6 @@ export function CommunityMain({
   const [total, setTotal] = useState(initialTotal);
   const [sort, setSort] = useState<"latest" | "popular">(initialSort || "latest");
   const [currentPage, setCurrentPage] = useState(Math.max(1, initialPage || 1));
-  const [popularPeriod, setPopularPeriod] = useState<"today" | "week">("week");
   const [message, setMessage] = useState("");
   const selectedCategory = isCommunityCategory(initialCategory || "") ? initialCategory! : "전체";
   const query = initialQuery || "";
@@ -48,7 +47,7 @@ export function CommunityMain({
       q: query,
       category: selectedCategory,
       sort,
-      popularPeriod,
+      popularPeriod: "week",
       limit: PAGE_SIZE,
       offset: (currentPage - 1) * PAGE_SIZE,
     })
@@ -63,7 +62,7 @@ export function CommunityMain({
     return () => {
       active = false;
     };
-  }, [currentPage, query, popularPeriod, selectedCategory, sort]);
+  }, [currentPage, query, selectedCategory, sort]);
 
   const searchHref = useMemo(() => {
     const params = new URLSearchParams();
@@ -122,10 +121,6 @@ export function CommunityMain({
             <section className={styles.popularSection}>
               <div className={styles.sectionHeader}>
                 <h2>전체 인기글</h2>
-                <div className={styles.segment}>
-                  <button className={popularPeriod === "today" ? styles.selected : ""} onClick={() => setPopularPeriod("today")}>오늘</button>
-                  <button className={popularPeriod === "week" ? styles.selected : ""} onClick={() => setPopularPeriod("week")}>주간</button>
-                </div>
               </div>
               <div className={styles.popularList}>
                 {visiblePopular.map((post, index) => <PostItem key={post.id} post={post} rank={index + 1} />)}

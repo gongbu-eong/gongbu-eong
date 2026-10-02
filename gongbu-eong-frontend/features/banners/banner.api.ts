@@ -14,6 +14,9 @@ export async function getActiveBanners(placement: BannerPlacement) {
     items: response.items.map((banner) => ({
       ...banner,
       imageUrl: new URL(banner.imageUrl, backendUrl).toString(),
+      mobileImageUrl: banner.mobileImageUrl
+        ? new URL(banner.mobileImageUrl, backendUrl).toString()
+        : null,
     })),
   };
 }

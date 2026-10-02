@@ -12,7 +12,8 @@ export async function GET(request: NextRequest, { params }: Context) {
     return new Response("Invalid banner", { status: 400, headers: getCorsHeaders(request) });
   }
 
-  const image = await getActiveBannerImage(bannerId);
+  const variant = request.nextUrl.searchParams.get("variant") === "mobile" ? "mobile" : "desktop";
+  const image = await getActiveBannerImage(bannerId, variant);
   if (!image) {
     return new Response("Not found", { status: 404, headers: getCorsHeaders(request) });
   }

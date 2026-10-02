@@ -37,38 +37,11 @@ const JOB_FILE_DOWNLOAD_FRAME = "job-file-download-frame";
 type JobDetailBannerVariant = {
   key: string;
   name: string;
-  kind: "resume" | "strength" | "managed";
+  kind: "managed";
   targetPath: string;
-  managedImageUrl?: string;
-  image?: { src: string; width: number; height: number; className: string };
+  managedImageUrl: string;
+  managedMobileImageUrl?: string | null;
 };
-
-const jobDetailBannerVariants: JobDetailBannerVariant[] = [
-  {
-    key: "job_detail_resume_a",
-    name: "자소서 배너 A",
-    kind: "resume",
-    targetPath: "/ai-tools/coaching?jobPostingId={jobId}",
-    image: {
-      src: "/jobs/detail/banner-resume-a-owl.png",
-      width: 91,
-      height: 86,
-      className: "resumeA",
-    },
-  },
-  {
-    key: "job_detail_strength_b",
-    name: "강약점 배너 B",
-    kind: "strength",
-    targetPath: "/ai-tools/diagnosis",
-    image: {
-      src: "/jobs/detail/banner-strength-b-owl-v2.png",
-      width: 164,
-      height: 172,
-      className: "strengthB",
-    },
-  },
-];
 
 export function JobDetail({
   jobId,
@@ -107,10 +80,6 @@ export function JobDetail({
 
   useEffect(() => {
     let active = true;
-    const fallbackBanners = jobDetailBannerVariants.map((banner) => ({
-      ...banner,
-      targetPath: resolveBannerTargetUrl(banner.targetPath, { jobId }),
-    }));
     const selectBanner = (items: JobDetailBannerVariant[]) => {
       if (!active) return;
       setSelectedBanner(
@@ -120,8 +89,9 @@ export function JobDetail({
 
     void getActiveBanners("job_detail")
       .then(({ items }) => {
+        if (!active) return;
         if (!items.length) {
-          selectBanner(fallbackBanners);
+          setSelectedBanner(null);
           return;
         }
         selectBanner(items.map((banner) => ({
@@ -130,9 +100,12 @@ export function JobDetail({
           kind: "managed" as const,
           targetPath: resolveBannerTargetUrl(banner.targetUrl, { jobId }),
           managedImageUrl: banner.imageUrl,
+          managedMobileImageUrl: banner.mobileImageUrl,
         })));
       })
-      .catch(() => selectBanner(fallbackBanners));
+      .catch(() => {
+        if (active) setSelectedBanner(null);
+      });
 
     return () => {
       active = false;
@@ -633,11 +606,11 @@ function JobDetailPromoBanner({
   banner: JobDetailBannerVariant;
   onClick: () => void;
 }) {
-  const promoClass = styles[`promo_${banner.key}`] || "";
-  const imageClass = banner.image ? styles[banner.image.className] || "" : "";
-
-  if (banner.managedImageUrl) {
-    const image = (
+  const image = (
+    <picture className={styles.managedBannerPicture}>
+      {banner.managedMobileImageUrl ? (
+        <source media="(max-width: 480px)" srcSet={banner.managedMobileImageUrl} />
+      ) : null}
       <Image
         src={banner.managedImageUrl}
         alt={banner.name}
@@ -646,54 +619,14 @@ function JobDetailPromoBanner({
         className={styles.managedBannerImage}
         unoptimized
       />
-    );
-    return banner.targetPath ? (
-      <Link href={banner.targetPath} className={`${styles.coachingBanner} ${styles.managedBanner}`} onClick={onClick}>
-        {image}
-      </Link>
-    ) : (
-      <div className={`${styles.coachingBanner} ${styles.managedBanner}`}>{image}</div>
-    );
-  }
-
-  return (
-    <Link
-      href={banner.targetPath}
-      className={`${styles.coachingBanner} ${promoClass}`}
-      onClick={onClick}
-    >
-      <span className={styles.coachingBannerText}>
-        {banner.key === "job_detail_resume_a" ? (
-          <>
-            <strong>
-              자소서 첨삭비 <b>10만원?</b> 지금은 <em>0원</em>
-            </strong>
-            <small>AI NCS 코칭으로 무료로 합격 문장 받기.</small>
-          </>
-        ) : null}
-        {banner.key === "job_detail_strength_b" ? (
-          <>
-            <strong>
-              자소서 쓰기 전에, 내 <em>강점</em>부터
-            </strong>
-            <small>
-              어떤 경험을 써야 할지 모르겠다면<br />
-              내 강점에서 시작해보세요
-            </small>
-          </>
-        ) : null}
-      </span>
-      {banner.image ? (
-        <Image
-          src={banner.image.src}
-          alt=""
-          width={banner.image.width}
-          height={banner.image.height}
-          className={`${styles.coachingBannerOwl} ${imageClass}`}
-          unoptimized
-        />
-      ) : null}
+    </picture>
+  );
+  return banner.targetPath ? (
+    <Link href={banner.targetPath} className={`${styles.coachingBanner} ${styles.managedBanner}`} onClick={onClick}>
+      {image}
     </Link>
+  ) : (
+    <div className={`${styles.coachingBanner} ${styles.managedBanner}`}>{image}</div>
   );
 }
 

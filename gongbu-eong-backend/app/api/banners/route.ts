@@ -24,6 +24,9 @@ export async function GET(request: NextRequest) {
       items: banners.map((banner) => ({
         ...banner,
         imageUrl: `/api/banners/${banner.id}/image?v=${encodeURIComponent(banner.updatedAt)}`,
+        mobileImageUrl: banner.hasMobileImage
+          ? `/api/banners/${banner.id}/image?variant=mobile&v=${encodeURIComponent(banner.updatedAt)}`
+          : null,
       })),
     },
     { headers: { "Cache-Control": "public, max-age=30, stale-while-revalidate=30" } },

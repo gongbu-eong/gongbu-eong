@@ -537,53 +537,40 @@ const ignoreClickAfterDrag = (
           })}
         </div>
 
-        <div className={styles.contentBand}>
-          <SectionHeader
-            title={user ? "진단결과 추천 공고" : "강점·성향 진단결과 추천 공고"}
-            href={getRecommendedJobsHref(user)}
-          />
-          <div className={styles.listGroup}>
-            {jobs.recommendedJobs.slice(0, 5).map((job) => (
-              <Link
-                href={`/jobs/${job.id}`}
-                key={job.id}
-                className={styles.listItem}
-              >
-                <small className={styles.company}>{job.institutionName}</small>
-                <strong>{job.title}</strong>
-                <span className={styles.recommendTags}>
-                  {job.employmentType ? <small>{formatJobEmploymentLabel(job.employmentType)}</small> : null}
-                  {job.region ? <small>{formatJobRegionLabel(job.region)}</small> : null}
-                  {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
-                </span>
-                <span className={styles.recommendFooter}>
-                  <small className={styles.recommendDate}>{toEndDate(job.applicationEndAt)}</small>
-                  <span className={`${styles.recommendDday} ${isUrgentDday(job.dday) ? styles.recommendDdayUrgent : ""}`}>
-                    {job.dday}
+        {jobs.recommendedJobs.length > 0 ? (
+          <div className={styles.contentBand}>
+            <SectionHeader
+              title={user ? "진단결과 추천 공고" : "강점·성향 진단결과 추천 공고"}
+              href={getRecommendedJobsHref(user)}
+            />
+            <div className={styles.listGroup}>
+              {jobs.recommendedJobs.slice(0, 5).map((job) => (
+                <Link
+                  href={`/jobs/${job.id}`}
+                  key={job.id}
+                  className={styles.listItem}
+                >
+                  <small className={styles.company}>{job.institutionName}</small>
+                  <strong>{job.title}</strong>
+                  <span className={styles.recommendTags}>
+                    {job.employmentType ? <small>{formatJobEmploymentLabel(job.employmentType)}</small> : null}
+                    {job.region ? <small>{formatJobRegionLabel(job.region)}</small> : null}
+                    {job.careerRequirement ? <small>{job.careerRequirement}</small> : null}
                   </span>
-                </span>
-                <span className={styles.recommendStar} aria-hidden="true">
-                  <Image src="/calendar/star-outline.svg" alt="" width={25} height={25} unoptimized />
-                </span>
-              </Link>
-            ))}
-            {user && jobs.recommendedJobs.length === 0 ? (
-              <p className={styles.emptyJobs}>추천 가능한 진행 중 공고가 없습니다.</p>
-            ) : null}
-            {!user ? (
-              <div className={styles.loggedOutRecommendation}>
-                <p>
-                  진단결과 추천 공고는 로그인 후,
-                  <br />
-                  강점·성향 진단 테스트를 진행하면 나옵니다.
-                </p>
-                <Link href="/ai-tools/diagnosis">
-                  강점·성향 진단 테스트 하기 <span aria-hidden="true">→</span>
+                  <span className={styles.recommendFooter}>
+                    <small className={styles.recommendDate}>{toEndDate(job.applicationEndAt)}</small>
+                    <span className={`${styles.recommendDday} ${isUrgentDday(job.dday) ? styles.recommendDdayUrgent : ""}`}>
+                      {job.dday}
+                    </span>
+                  </span>
+                  <span className={styles.recommendStar} aria-hidden="true">
+                    <Image src="/calendar/star-outline.svg" alt="" width={25} height={25} unoptimized />
+                  </span>
                 </Link>
-              </div>
-            ) : null}
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className={styles.communityBand}>
           <SectionHeader title="커뮤니티" href="/community" />
