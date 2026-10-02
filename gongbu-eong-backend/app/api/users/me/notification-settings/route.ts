@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import { normalizePhoneNumber } from "@/domains/profile/phone-number";
 import { requireSessionUser } from "@/domains/auth/session";
 import {
   DEADLINE_NOTIFICATION_OFFSETS,
@@ -69,23 +68,15 @@ function readNotificationPayload(payload: unknown) {
   }
 
   const value = payload as Record<string, unknown>;
-  const phoneNumber = normalizePhoneNumber(value.phoneNumber);
-  const kakaoConnected = Boolean(value.kakaoConnected);
   const deadlineEnabled = Boolean(value.deadlineEnabled);
   const deadlineOffsets = readDeadlineOffsets(value.deadlineOffsets);
   const marketingAgreed = Boolean(value.marketingAgreed);
-
-  if (kakaoConnected && !phoneNumber) {
-    throw badRequest("알림 받을 전화번호를 입력해 주세요.");
-  }
 
   if (deadlineEnabled && deadlineOffsets.length === 0) {
     throw badRequest("접수 마감 임박 알림 시점을 선택해 주세요.");
   }
 
   return {
-    phoneNumber,
-    kakaoConnected,
     deadlineEnabled,
     deadlineOffsets,
     marketingAgreed,

@@ -260,7 +260,7 @@ export async function notifyCommunityComment(
   let alimtalkSent = false;
   let alimtalkSkipReason: string | null = null;
 
-  if (target.recipient_phone && target.kakao_enabled) {
+  if (target.recipient_phone) {
     const templateCode = isReply
       ? process.env.NEXT_PRIVATE_GONGBUEONG_NEW_REPLY_TEMPLATE_KEY
       : process.env.NEXT_PRIVATE_GONGBUEONG_NEW_COMMENT_TEMPLATE_KEY;
@@ -283,10 +283,8 @@ export async function notifyCommunityComment(
       alimtalkSkipReason = "alimtalk_insert_failed";
       console.error("[Notification] community alimtalk failed", error);
     }
-  } else if (!target.recipient_phone) {
-    alimtalkSkipReason = "missing_recipient_phone";
   } else {
-    alimtalkSkipReason = "kakao_disabled";
+    alimtalkSkipReason = "missing_recipient_phone";
   }
 
   return createInAppNotification({
@@ -327,7 +325,6 @@ async function findCommunityCommentNotificationTarget(
     recipient_user_id: string;
     recipient_name: string | null;
     recipient_phone: string | null;
-    kakao_enabled: boolean | null;
   }>(
     `
       SELECT
@@ -339,8 +336,7 @@ async function findCommunityCommentNotificationTarget(
         COALESCE(actor.community_nickname, actor.nickname, actor.display_name, '공부엉이') AS actor_nickname,
         recipient.id AS recipient_user_id,
         COALESCE(recipient.display_name, recipient.nickname, recipient.community_nickname, '회원') AS recipient_name,
-        recipient.phone AS recipient_phone,
-        preferences.kakao_enabled
+        recipient.phone AS recipient_phone
       FROM public.community_comments comments
       JOIN public.community_posts posts
         ON posts.id = comments.post_id
@@ -359,8 +355,6 @@ async function findCommunityCommentNotificationTarget(
           ELSE COALESCE(requested_parent.user_id, parent.user_id)
         END
        AND recipient.status = 'active'
-      LEFT JOIN public.notification_preferences preferences
-        ON preferences.user_id = recipient.id
       WHERE comments.id = $1
         AND comments.status = 'active'
       LIMIT 1

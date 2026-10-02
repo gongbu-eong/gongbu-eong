@@ -1,7 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { getCurrentUser, getHomeJobs } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
@@ -26,11 +25,8 @@ const DEADLINE_OPTIONS: {
 ];
 
 export function MyNotificationSettingsPage() {
-  const phoneInputRef = useRef<HTMLInputElement | null>(null);
   const [user, setUser] = useState<CurrentUserDto | null>(null);
   const [bookmarkCount, setBookmarkCount] = useState(0);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [kakaoConnected, setKakaoConnected] = useState(false);
   const [deadlineEnabled, setDeadlineEnabled] = useState(true);
   const [deadlineOffsets, setDeadlineOffsets] =
     useState<DeadlineNotificationOffset[]>([3]);
@@ -68,8 +64,6 @@ export function MyNotificationSettingsPage() {
 
       if (settingsResponse?.settings) {
         const settings = settingsResponse.settings;
-        setPhoneNumber(settings.phoneNumber || "");
-        setKakaoConnected(settings.kakaoConnected);
         setDeadlineEnabled(settings.deadlineEnabled);
         setDeadlineOffsets(settings.deadlineOffsets.length ? settings.deadlineOffsets : [3]);
         setMarketingAgreed(settings.marketingAgreed);
@@ -93,8 +87,6 @@ export function MyNotificationSettingsPage() {
     if (isSaving) return false;
 
     const payload: NotificationSettingsPayloadDto = {
-      phoneNumber: phoneNumber || null,
-      kakaoConnected,
       deadlineEnabled,
       deadlineOffsets,
       marketingAgreed,
@@ -105,8 +97,6 @@ export function MyNotificationSettingsPage() {
     try {
       const response = await updateMyNotificationSettings(payload);
       const settings = response.settings;
-      setPhoneNumber(settings.phoneNumber || "");
-      setKakaoConnected(settings.kakaoConnected);
       setDeadlineEnabled(settings.deadlineEnabled);
       setDeadlineOffsets(settings.deadlineOffsets.length ? settings.deadlineOffsets : [3]);
       setMarketingAgreed(settings.marketingAgreed);
@@ -122,19 +112,6 @@ export function MyNotificationSettingsPage() {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleConnectKakao = async () => {
-    if (!phoneNumber.replace(/\D/g, "")) {
-      window.alert("알림 받을 전화번호를 입력해 주세요.");
-      phoneInputRef.current?.focus();
-      return;
-    }
-
-    await saveSettings(
-      { kakaoConnected: true, phoneNumber: phoneNumber || null },
-      "카카오톡 알림이 연결되었습니다.",
-    );
   };
 
   const toggleDeadlineOffset = (value: DeadlineNotificationOffset) => {
@@ -160,43 +137,8 @@ export function MyNotificationSettingsPage() {
       <main className={styles.frame}>
         <h1 className={styles.title}>알림 설정</h1>
         <p className={styles.subtitle}>
-          중요한 전형 일정을 카카오톡으로 놓치지 않게 보내드려요.
+          중요한 전형 일정과 혜택 소식의 수신 여부를 설정할 수 있어요.
         </p>
-
-        <button
-          type="button"
-          className={styles.kakaoButton}
-          onClick={handleConnectKakao}
-          disabled={isSaving}
-        >
-          <Image src="/my/notification-kakao.png" alt="" width={42} height={42} />
-          <span>
-            {kakaoConnected
-              ? "카카오톡 알림 연결됨"
-              : "카카오톡으로 알림 연결하기"}
-          </span>
-        </button>
-
-        <section className={styles.section}>
-          <label className={styles.label} htmlFor="notification-phone">
-            알림 받을 전화번호
-          </label>
-          <input
-            ref={phoneInputRef}
-            id="notification-phone"
-            className={styles.input}
-            value={phoneNumber}
-            inputMode="tel"
-            maxLength={13}
-            placeholder="010-0000-0000"
-            onChange={(event) => setPhoneNumber(formatPhone(event.target.value))}
-          />
-          <p className={styles.helpText}>
-            카카오 알림톡은 등록한 번호(카카오 계정)로 발송돼요.
-            <br />
-            미수신 시 문자(SMS)로 대체 발송될 수 있어요.
-          </p>
-        </section>
 
         <section className={`${styles.section} ${styles.deadlineSection}`}>
           <div className={styles.sectionHeader}>
@@ -299,12 +241,4 @@ function ToggleSwitch({
       <span />
     </button>
   );
-}
-
-function formatPhone(value: string) {
-  const digits = value.replace(/\D/g, "").slice(0, 11);
-
-  if (digits.length <= 3) return digits;
-  if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
 }

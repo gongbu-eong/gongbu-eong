@@ -17,7 +17,6 @@ type RecipientRow = {
   phone: string | null;
   age_group: string | null;
   template_group: TemplateGroup | null;
-  kakao_enabled: boolean;
   marketing_agreed: boolean;
 };
 
@@ -113,7 +112,6 @@ async function findRecipients(userIds: string[]) {
           WHEN users.age_group IN ('50-59', '60-69', '70-79', '80-89', '90+') THEN '50plus'
           ELSE NULL
         END AS template_group,
-        COALESCE(preferences.kakao_enabled, false) AS kakao_enabled,
         COALESCE(marketing_consent.agreed, preferences.marketing_enabled, false) AS marketing_agreed
       FROM public.users users
       LEFT JOIN public.notification_preferences preferences
@@ -144,7 +142,6 @@ async function sendToRecipient(args: {
   if (!recipient) return { status: "skipped", reason: "member_not_found_or_inactive" };
   if (!recipient.phone?.trim()) return { status: "skipped", reason: "phone_missing" };
   if (!recipient.template_group) return { status: "skipped", reason: "age_group_unsupported" };
-  if (!recipient.kakao_enabled) return { status: "skipped", reason: "kakao_disabled" };
   if (!recipient.marketing_agreed) return { status: "skipped", reason: "marketing_not_agreed" };
 
   const template = getTemplate(recipient.template_group);

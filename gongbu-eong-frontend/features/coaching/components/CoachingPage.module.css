@@ -199,6 +199,7 @@
 .jobDutySheet header{height:24px;margin-bottom:17px;border-bottom:0}
 .jobDutySheet header h2{font-size:18px;font-weight:700;line-height:1}
 .jobDutySheet header button{width:24px;height:24px;padding:0;display:grid;place-items:center;font-size:24px;line-height:1;color:#5a6580}
+.jobDutyHeaderSpacer{display:block;width:24px;height:24px}
 .jobDutySelected{display:grid;gap:10px;margin:0 0 16px;padding:16px;border-radius:10px;background:#f5f7fa;overflow:hidden}
 .jobDutySelected span{display:block;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35}
 .jobDutySelected strong{display:block;color:#1a2233;font-size:17px;font-weight:400;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

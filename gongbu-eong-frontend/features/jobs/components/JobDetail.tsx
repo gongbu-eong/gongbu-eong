@@ -15,6 +15,10 @@ import {
   getJobPosting,
   setJobBookmark,
 } from "@/features/home/home.api";
+import {
+  getActiveBanners,
+  resolveBannerTargetUrl,
+} from "@/features/banners/banner.api";
 import { trackProductEvent } from "@/features/analytics/analytics.api";
 import type { JobPostingDetailDto } from "@/features/home/home.dto";
 import { AppHeader } from "@/features/layout/components/AppChrome";
@@ -33,8 +37,9 @@ const JOB_FILE_DOWNLOAD_FRAME = "job-file-download-frame";
 type JobDetailBannerVariant = {
   key: string;
   name: string;
-  kind: "resume" | "strength";
+  kind: "resume" | "strength" | "managed";
   targetPath: string;
+  managedImageUrl?: string;
   image?: { src: string; width: number; height: number; className: string };
 };
 
@@ -43,7 +48,7 @@ const jobDetailBannerVariants: JobDetailBannerVariant[] = [
     key: "job_detail_resume_a",
     name: "자소서 배너 A",
     kind: "resume",
-    targetPath: "/ai-tools/coaching",
+    targetPath: "/ai-tools/coaching?jobPostingId={jobId}",
     image: {
       src: "/jobs/detail/banner-resume-a-owl.png",
       width: 91,
@@ -101,15 +106,37 @@ export function JobDetail({
   useBodyScrollLock(bookmarkReadyOpen);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    let active = true;
+    const fallbackBanners = jobDetailBannerVariants.map((banner) => ({
+      ...banner,
+      targetPath: resolveBannerTargetUrl(banner.targetPath, { jobId }),
+    }));
+    const selectBanner = (items: JobDetailBannerVariant[]) => {
+      if (!active) return;
       setSelectedBanner(
-        jobDetailBannerVariants[
-          Math.floor(Math.random() * jobDetailBannerVariants.length)
-        ] || jobDetailBannerVariants[0],
+        items[Math.floor(Math.random() * items.length)] || items[0] || null,
       );
-    }, 0);
+    };
 
-    return () => window.clearTimeout(timer);
+    void getActiveBanners("job_detail")
+      .then(({ items }) => {
+        if (!items.length) {
+          selectBanner(fallbackBanners);
+          return;
+        }
+        selectBanner(items.map((banner) => ({
+          key: `site_banner_${banner.id}`,
+          name: banner.name,
+          kind: "managed" as const,
+          targetPath: resolveBannerTargetUrl(banner.targetUrl, { jobId }),
+          managedImageUrl: banner.imageUrl,
+        })));
+      })
+      .catch(() => selectBanner(fallbackBanners));
+
+    return () => {
+      active = false;
+    };
   }, [jobId]);
 
   useEffect(() => {
@@ -608,6 +635,26 @@ function JobDetailPromoBanner({
 }) {
   const promoClass = styles[`promo_${banner.key}`] || "";
   const imageClass = banner.image ? styles[banner.image.className] || "" : "";
+
+  if (banner.managedImageUrl) {
+    const image = (
+      <Image
+        src={banner.managedImageUrl}
+        alt={banner.name}
+        width={600}
+        height={114}
+        className={styles.managedBannerImage}
+        unoptimized
+      />
+    );
+    return banner.targetPath ? (
+      <Link href={banner.targetPath} className={`${styles.coachingBanner} ${styles.managedBanner}`} onClick={onClick}>
+        {image}
+      </Link>
+    ) : (
+      <div className={`${styles.coachingBanner} ${styles.managedBanner}`}>{image}</div>
+    );
+  }
 
   return (
     <Link

@@ -19,7 +19,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Page() {
+type Props = {
+  searchParams: Promise<{ jobPostingId?: string | string[] }>;
+};
+
+export default async function Page({ searchParams }: Props) {
+  const params = await searchParams;
+  const initialJobPostingId = Array.isArray(params.jobPostingId)
+    ? params.jobPostingId[0] || ""
+    : params.jobPostingId || "";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -38,7 +46,7 @@ export default function Page() {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <CoachingPage />
+      <CoachingPage initialJobPostingId={initialJobPostingId} />
     </>
   );
 }

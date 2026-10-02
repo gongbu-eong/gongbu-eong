@@ -157,6 +157,7 @@
 .jobDutySheet .sheetHandle{margin-bottom:21px}
 .jobDutySheet header{height:24px;margin-bottom:17px}
 .jobDutySheet header h2{font-size:18px;font-weight:700;line-height:1}
+.jobDutyHeaderSpacer{display:block;width:24px;height:24px}
 .jobDutySelected{display:grid;gap:10px;margin:0 0 16px;padding:16px;border-radius:10px;background:#f5f7fa}.jobDutySelected span{color:#5a6580;font-size:17px;font-weight:400}.jobDutySelected strong{color:#1a2233;font-size:17px;font-weight:400;line-height:1.35}.jobDutyLabel{display:block;margin:0 0 10px;color:#1a2233;font-size:18px;font-weight:700}.jobDutyInput{width:100%;height:46px;box-sizing:border-box;border:1px solid #e4e8ef;border-radius:5px;padding:0 16px;font:inherit;font-size:16px}.jobDutyInput::placeholder{color:#9aa4b8}.jobDutySheet>.primaryButton{height:52px;margin-top:16px;border-radius:12px;font-size:16px}
 .dialogOverlay{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;background:rgba(26,34,51,.48);padding:1rem}
 .alertDialog{width:min(20rem,100%);padding:1.5rem;border-radius:1rem;background:#fff;text-align:center;box-shadow:0 1rem 2.5rem rgba(26,34,51,.18)}

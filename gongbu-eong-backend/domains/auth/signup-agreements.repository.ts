@@ -104,7 +104,6 @@ export async function completeSignupAgreements(
           marketing_enabled,
           marketing_agreed_at,
           marketing_revoked_at,
-          kakao_enabled,
           updated_at
         )
         VALUES (
@@ -115,7 +114,6 @@ export async function completeSignupAgreements(
           $2,
           CASE WHEN $2::boolean THEN NOW() ELSE NULL END,
           CASE WHEN $2::boolean THEN NULL ELSE NOW() END,
-          FALSE,
           NOW()
         )
         ON CONFLICT (user_id)

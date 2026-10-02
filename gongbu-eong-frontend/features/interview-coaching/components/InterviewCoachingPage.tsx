@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import { CoachingAlertDialog } from "@/features/coaching/components/CoachingAlertDialog";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { getJobPostings } from "@/features/home/home.api";
+import { getJobPosting, getJobPostings } from "@/features/home/home.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { focusMobileInput, watchMobileKeyboardInset } from "@/shared/mobile-focus";
@@ -130,14 +130,17 @@ const CIRCLED_NUMBERS = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧",
 export function InterviewCoachingPage({
   initialSessionId,
   initialAnonymousId,
+  initialJobPostingId = "",
   allowCompletedView = false,
 }: {
   initialSessionId?: string;
   initialAnonymousId?: string | null;
+  initialJobPostingId?: string;
   allowCompletedView?: boolean;
 } = {}) {
   const router = useRouter();
   const jobSearchSeqRef = useRef(0);
+  const presetJobHandledRef = useRef("");
   const materialFileInputRef = useRef<HTMLInputElement | null>(null);
   const materialFileDropRef = useRef<HTMLButtonElement | null>(null);
   const materialTextRef = useRef<HTMLTextAreaElement | null>(null);
@@ -148,6 +151,7 @@ export function InterviewCoachingPage({
   const [connectedJob, setConnectedJob] = useState<ConnectedJob | null>(null);
   const [jobPickerOpen, setJobPickerOpen] = useState(false);
   const [dutySheetJob, setDutySheetJob] = useState<InterviewCoachingJob | null>(null);
+  const [dutySheetFromBanner, setDutySheetFromBanner] = useState(false);
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [jobs, setJobs] = useState<InterviewCoachingJob[]>([]);
@@ -262,6 +266,36 @@ export function InterviewCoachingPage({
     focusField(target);
     setAlertMessage(message);
   };
+
+  useEffect(() => {
+    if (initialSessionId) return;
+    const jobPostingId = initialJobPostingId.trim();
+    if (!/^[0-9a-f-]{36}$/i.test(jobPostingId)) return;
+    if (presetJobHandledRef.current === jobPostingId) return;
+    presetJobHandledRef.current = jobPostingId;
+    let active = true;
+
+    void getJobPosting(jobPostingId)
+      .then((job) => {
+        if (!active) return;
+        setJobPickerOpen(false);
+        setDutySheetFromBanner(true);
+        setDutySheetJob({
+          id: job.id,
+          institutionName: job.institutionName,
+          title: job.title,
+          applicationEndAt: job.applicationEndAt,
+        });
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setAlertMessage(caught instanceof Error ? caught.message : "연결할 공고를 불러오지 못했습니다.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialJobPostingId, initialSessionId]);
 
   const handleMaterialFile = (nextFile: File | null) => {
     if (!nextFile) return;
@@ -625,6 +659,7 @@ export function InterviewCoachingPage({
           onSearch={() => searchJobs()}
           onPick={(item) => {
             setJobPickerOpen(false);
+            setDutySheetFromBanner(false);
             setDutySheetJob(item);
           }}
           onClose={closeJobPicker}
@@ -633,17 +668,19 @@ export function InterviewCoachingPage({
       {dutySheetJob ? (
         <JobDutySheet
           job={dutySheetJob}
-          onBack={() => {
+          onBack={dutySheetFromBanner ? undefined : () => {
             setDutySheetJob(null);
             setJobPickerOpen(true);
           }}
           onClose={() => {
             setDutySheetJob(null);
+            setDutySheetFromBanner(false);
             closeJobPicker();
           }}
           onConfirm={(duty) => {
             setConnectedJob({ ...dutySheetJob, duty });
             setDutySheetJob(null);
+            setDutySheetFromBanner(false);
             closeJobPicker();
           }}
         />
@@ -1232,7 +1269,7 @@ function JobDutySheet({
   onConfirm,
 }: {
   job: InterviewCoachingJob;
-  onBack: () => void;
+  onBack?: () => void;
   onClose: () => void;
   onConfirm: (duty: string) => void;
 }) {
@@ -1242,7 +1279,7 @@ function JobDutySheet({
       <section data-keyboard-sheet="true" className={`${styles.modal} ${styles.jobDutySheet}`}>
         <div className={styles.sheetHandle} />
         <header>
-          <button type="button" onClick={onBack} aria-label="이전">‹</button>
+          {onBack ? <button type="button" onClick={onBack} aria-label="이전">‹</button> : <span className={styles.jobDutyHeaderSpacer} aria-hidden="true" />}
           <h2>직무</h2>
           <button type="button" onClick={onClose}>×</button>
         </header>

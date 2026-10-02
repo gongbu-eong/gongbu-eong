@@ -10,9 +10,6 @@ export type DeadlineNotificationOffset =
   (typeof DEADLINE_NOTIFICATION_OFFSETS)[number];
 
 export type NotificationSettings = {
-  phoneNumber: string | null;
-  kakaoConnected: boolean;
-  kakaoConnectedAt: string | null;
   deadlineEnabled: boolean;
   deadlineOffsets: DeadlineNotificationOffset[];
   marketingAgreed: boolean;
@@ -21,8 +18,6 @@ export type NotificationSettings = {
 };
 
 export type UpdateNotificationSettingsInput = {
-  phoneNumber: string | null;
-  kakaoConnected: boolean;
   deadlineEnabled: boolean;
   deadlineOffsets: DeadlineNotificationOffset[];
   marketingAgreed: boolean;
@@ -31,9 +26,6 @@ export type UpdateNotificationSettingsInput = {
 };
 
 type NotificationSettingsRow = {
-  phone: string | null;
-  kakao_enabled: boolean | null;
-  kakao_connected_at: Date | string | null;
   application_deadline_enabled: boolean | null;
   application_deadline_days_before: number | null;
   application_deadline_days_before_list: number[] | null;
@@ -50,9 +42,6 @@ export async function findNotificationSettings(userId: string) {
   const result = await db.query<NotificationSettingsRow>(
     `
       SELECT
-        users.phone,
-        preferences.kakao_enabled,
-        preferences.kakao_connected_at,
         preferences.application_deadline_enabled,
         preferences.application_deadline_days_before,
         preferences.application_deadline_days_before_list,
@@ -69,7 +58,7 @@ export async function findNotificationSettings(userId: string) {
         FROM public.user_consents consents
         WHERE consents.user_id = users.id
           AND consents.terms_key = $2
-        ORDER BY consents.created_at DESC, consents.id DESC
+        ORDER BY consents.updated_at DESC, consents.created_at DESC, consents.id DESC
         LIMIT 1
       ) marketing_consent ON TRUE
       WHERE users.id = $1
@@ -94,9 +83,6 @@ export async function updateNotificationSettings(
     const currentResult = await client.query<NotificationSettingsRow>(
       `
         SELECT
-          users.phone,
-          preferences.kakao_enabled,
-          preferences.kakao_connected_at,
           preferences.application_deadline_enabled,
           preferences.application_deadline_days_before,
           preferences.application_deadline_days_before_list,
@@ -113,7 +99,7 @@ export async function updateNotificationSettings(
           FROM public.user_consents consents
           WHERE consents.user_id = users.id
             AND consents.terms_key = $2
-          ORDER BY consents.created_at DESC, consents.id DESC
+          ORDER BY consents.updated_at DESC, consents.created_at DESC, consents.id DESC
           LIMIT 1
         ) marketing_consent ON TRUE
         WHERE users.id = $1
@@ -142,17 +128,6 @@ export async function updateNotificationSettings(
 
     await client.query(
       `
-        UPDATE public.users
-        SET phone = $2,
-            updated_at = NOW()
-        WHERE id = $1
-          AND status = 'active'
-      `,
-      [userId, input.phoneNumber],
-    );
-
-    await client.query(
-      `
         INSERT INTO public.notification_preferences (
           user_id,
           application_deadline_enabled,
@@ -161,16 +136,12 @@ export async function updateNotificationSettings(
           marketing_enabled,
           marketing_agreed_at,
           marketing_revoked_at,
-          kakao_enabled,
-          kakao_connected_at,
           updated_at
         )
         VALUES (
           $1, $2, $3, $4::integer[], $5,
           $6::timestamptz,
           CASE WHEN $5::boolean THEN NULL ELSE $7::timestamptz END,
-          $8,
-          CASE WHEN $8::boolean THEN NOW() ELSE NULL END,
           NOW()
         )
         ON CONFLICT (user_id)
@@ -188,11 +159,6 @@ export async function updateNotificationSettings(
             WHEN EXCLUDED.marketing_enabled THEN NULL
             ELSE COALESCE($7::timestamptz, public.notification_preferences.marketing_revoked_at)
           END,
-          kakao_enabled = EXCLUDED.kakao_enabled,
-          kakao_connected_at = COALESCE(
-            public.notification_preferences.kakao_connected_at,
-            CASE WHEN $8::boolean THEN NOW() ELSE NULL END
-          ),
           updated_at = NOW()
       `,
       [
@@ -203,7 +169,6 @@ export async function updateNotificationSettings(
         input.marketingAgreed,
         nextMarketingAgreedAt,
         nextMarketingRevokedAt,
-        input.kakaoConnected,
       ],
     );
 
@@ -269,10 +234,9 @@ async function ensureNotificationPreferences(userId: string) {
         application_deadline_days_before,
         application_deadline_days_before_list,
         marketing_enabled,
-        kakao_enabled,
         updated_at
       )
-      VALUES ($1, true, 3, ARRAY[3]::integer[], false, false, NOW())
+      VALUES ($1, true, 3, ARRAY[3]::integer[], false, NOW())
       ON CONFLICT (user_id) DO NOTHING
     `,
     [userId],
@@ -298,9 +262,6 @@ function toNotificationSettings(
   );
 
   return {
-    phoneNumber: row.phone,
-    kakaoConnected: Boolean(row.kakao_enabled),
-    kakaoConnectedAt: toIso(row.kakao_connected_at),
     deadlineEnabled: row.application_deadline_enabled ?? true,
     deadlineOffsets: deadlineOffsets.length ? deadlineOffsets : [3],
     marketingAgreed,

@@ -35,7 +35,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function InterviewCoachingRoutePage() {
+type Props = {
+  searchParams: Promise<{ jobPostingId?: string | string[] }>;
+};
+
+export default async function InterviewCoachingRoutePage({ searchParams }: Props) {
+  const params = await searchParams;
+  const initialJobPostingId = Array.isArray(params.jobPostingId)
+    ? params.jobPostingId[0] || ""
+    : params.jobPostingId || "";
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -59,7 +67,7 @@ export default function InterviewCoachingRoutePage() {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <InterviewCoachingPage />
+      <InterviewCoachingPage initialJobPostingId={initialJobPostingId} />
     </>
   );
 }

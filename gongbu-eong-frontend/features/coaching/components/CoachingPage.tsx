@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { trackProductEvent } from "@/features/analytics/analytics.api";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
-import { getJobPostings } from "@/features/home/home.api";
+import { getJobPosting, getJobPostings } from "@/features/home/home.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
 import { useBodyScrollLock } from "@/shared/hooks/useBodyScrollLock";
 import { focusMobileInput, watchMobileKeyboardInset } from "@/shared/mobile-focus";
@@ -21,7 +21,11 @@ const COACHING_FILE_ACCEPT =
   ".hwp,.hwpx,.pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx";
 const COACHING_FILE_GUIDE = "HWP · HWPX · PDF · DOCX (최대 10MB)";
 
-export function CoachingPage() {
+export function CoachingPage({
+  initialJobPostingId = "",
+}: {
+  initialJobPostingId?: string;
+} = {}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const fileDropRef = useRef<HTMLButtonElement | null>(null);
@@ -30,6 +34,7 @@ export function CoachingPage() {
   const jobConnectRef = useRef<HTMLButtonElement | null>(null);
   const alertFocusRef = useRef<HTMLElement | null>(null);
   const jobSearchSeqRef = useRef(0);
+  const presetJobHandledRef = useRef("");
   const [coaching, setCoaching] = useState(false);
   const [error, setError] = useState("");
   const [inputType, setInputType] = useState<"text" | "file">("file");
@@ -40,6 +45,7 @@ export function CoachingPage() {
   const [termsConfirmed, setTermsConfirmed] = useState(false);
   const [jobPickerOpen, setJobPickerOpen] = useState(false);
   const [dutySheetJob, setDutySheetJob] = useState<CoachingJob | null>(null);
+  const [dutySheetFromBanner, setDutySheetFromBanner] = useState(false);
   const [connectedJob, setConnectedJob] = useState<ConnectedJob | null>(null);
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
@@ -129,6 +135,35 @@ export function CoachingPage() {
     focusField(target);
     setAlertMessage(message);
   };
+
+  useEffect(() => {
+    const jobPostingId = initialJobPostingId.trim();
+    if (!/^[0-9a-f-]{36}$/i.test(jobPostingId)) return;
+    if (presetJobHandledRef.current === jobPostingId) return;
+    presetJobHandledRef.current = jobPostingId;
+    let active = true;
+
+    void getJobPosting(jobPostingId)
+      .then((job) => {
+        if (!active) return;
+        setJobPickerOpen(false);
+        setDutySheetFromBanner(true);
+        setDutySheetJob({
+          id: job.id,
+          institutionName: job.institutionName,
+          title: job.title,
+          applicationEndAt: job.applicationEndAt,
+        });
+      })
+      .catch((caught) => {
+        if (!active) return;
+        setAlertMessage(caught instanceof Error ? caught.message : "연결할 공고를 불러오지 못했습니다.");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [initialJobPostingId]);
 
   const validateBeforeSubmit = () => {
     if (!connectedJob || connectedJob.isManual || !connectedJob.duty.trim()) {
@@ -293,8 +328,8 @@ export function CoachingPage() {
     </main>
     <AppFooter active="ai" />
     {termsOpen ? <TermsSheet onConfirm={() => { setTermsConfirmed(true); setTermsOpen(false); }} onClose={() => setTermsOpen(false)} /> : null}
-    {jobPickerOpen ? <JobPicker query={query} submittedQuery={submittedQuery} setQuery={setQuery} jobs={jobs} searching={searching} hasSearched={hasSearchedJobs} onSearch={() => searchJobs()} onPick={(item) => { setJobPickerOpen(false); setDutySheetJob(item); }} onClose={closeJobPicker} /> : null}
-    {dutySheetJob ? <JobDutySheet job={dutySheetJob} onBack={() => { setDutySheetJob(null); setJobPickerOpen(true); }} onClose={() => { setDutySheetJob(null); closeJobPicker(); }} onConfirm={(duty) => { setConnectedJob({ ...dutySheetJob, duty }); setDutySheetJob(null); closeJobPicker(); }} /> : null}
+    {jobPickerOpen ? <JobPicker query={query} submittedQuery={submittedQuery} setQuery={setQuery} jobs={jobs} searching={searching} hasSearched={hasSearchedJobs} onSearch={() => searchJobs()} onPick={(item) => { setJobPickerOpen(false); setDutySheetFromBanner(false); setDutySheetJob(item); }} onClose={closeJobPicker} /> : null}
+    {dutySheetJob ? <JobDutySheet job={dutySheetJob} onBack={dutySheetFromBanner ? undefined : () => { setDutySheetJob(null); setJobPickerOpen(true); }} onClose={() => { setDutySheetJob(null); setDutySheetFromBanner(false); closeJobPicker(); }} onConfirm={(duty) => { setConnectedJob({ ...dutySheetJob, duty }); setDutySheetJob(null); setDutySheetFromBanner(false); closeJobPicker(); }} /> : null}
     {/* {confirmOpen ? <CoachingConfirmDialog onCancel={() => setConfirmOpen(false)} onConfirm={runCoaching} /> : null} */}
     {alertMessage ? <CoachingAlertDialog message={alertMessage} onClose={() => { setAlertMessage(""); window.setTimeout(() => focusField(alertFocusRef.current), 0); }} /> : null}
   </div>;
@@ -334,9 +369,9 @@ function JobPicker({
   return <div className={styles.overlay}><section data-keyboard-sheet="true" className={`${styles.modal} ${styles.coachingSheet} ${styles.jobPickerSheet}`}><div className={styles.sheetHandle} /><header><h2>연결할 공고 선택</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.search}><input value={query} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") onSearch(); }} placeholder="기업명이나, 공고명을 입력하세요." /><button type="button" onClick={onSearch}>검색</button></div>{hasSearched && !searching ? <p className={styles.jobResultTitle}>검색결과</p> : null}<div className={styles.jobResults}>{searching ? <p>공고를 찾는 중...</p> : jobs.length ? jobs.map((item) => <button type="button" key={item.id} onClick={() => onPick(item)}><span>{item.institutionName}</span><strong>{item.title}</strong><small>~ {item.applicationEndAt ? new Date(item.applicationEndAt).toLocaleDateString("ko-KR") : "상시채용"}</small></button>) : hasSearched ? <div className={styles.noJobResult}><strong><span>{`'${searchLabel}'`}</span>에 대한 검색결과가 없습니다.</strong><ul><li>단어의 철자가 정확한지 확인해 주세요. 검색어를 줄이거나, 더 일반적인 검색어로 검색해 보세요.</li><li>설정한 검색 조건이 있다면 일부 해제 하거나 변경해 보세요.</li></ul></div> : <p className={styles.searchGuide}>검색해주세요.</p>}</div></section></div>;
 }
 
-function JobDutySheet({ job, onBack, onClose, onConfirm }: { job: CoachingJob; onBack: () => void; onClose: () => void; onConfirm: (duty: string) => void }) {
+function JobDutySheet({ job, onBack, onClose, onConfirm }: { job: CoachingJob; onBack?: () => void; onClose: () => void; onConfirm: (duty: string) => void }) {
   const [duty, setDuty] = useState("");
-  return <div className={styles.overlay}><section data-keyboard-sheet="true" className={`${styles.modal} ${styles.coachingSheet} ${styles.jobDutySheet}`}><div className={styles.sheetHandle} /><header><button type="button" onClick={onBack} aria-label="이전">‹</button><h2>직무</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.jobDutySelected}><span>{job.isManual ? "직접 입력한 공고" : job.institutionName}</span><strong>{formatConnectedJobTitle(job)}</strong></div><label className={styles.jobDutyLabel}>지원 직무</label><input className={styles.jobDutyInput} value={duty} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => setDuty(event.target.value)} placeholder="예 : 사무행정, 전기, 토목" /><button className={styles.primaryButton} type="button" disabled={!duty.trim()} onClick={() => onConfirm(duty.trim())}>공고 연결하기</button></section></div>;
+  return <div className={styles.overlay}><section data-keyboard-sheet="true" className={`${styles.modal} ${styles.coachingSheet} ${styles.jobDutySheet}`}><div className={styles.sheetHandle} /><header>{onBack ? <button type="button" onClick={onBack} aria-label="이전">‹</button> : <span className={styles.jobDutyHeaderSpacer} aria-hidden="true" />}<h2>직무</h2><button type="button" onClick={onClose}>×</button></header><div className={styles.jobDutySelected}><span>{job.isManual ? "직접 입력한 공고" : job.institutionName}</span><strong>{formatConnectedJobTitle(job)}</strong></div><label className={styles.jobDutyLabel}>지원 직무</label><input className={styles.jobDutyInput} value={duty} onFocus={(event) => focusSheetField(event.currentTarget)} onChange={(event) => setDuty(event.target.value)} placeholder="예 : 사무행정, 전기, 토목" /><button className={styles.primaryButton} type="button" disabled={!duty.trim()} onClick={() => onConfirm(duty.trim())}>공고 연결하기</button></section></div>;
 }
 
 /*

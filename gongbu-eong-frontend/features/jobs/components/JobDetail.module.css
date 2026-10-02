@@ -530,6 +530,18 @@
   pointer-events: auto;
 }
 
+.managedBanner {
+  padding: 0;
+  background: #ffffff;
+}
+
+.managedBannerImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .coachingBannerText {
   display: grid;
   min-width: 0;
