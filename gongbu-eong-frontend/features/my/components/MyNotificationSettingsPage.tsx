@@ -145,7 +145,7 @@ export function MyNotificationSettingsPage() {
             <div>
               <h2 className={styles.sectionTitle}>접수 마감 임박 알림</h2>
               <p className={styles.sectionDescription}>
-                찜한 공고 마감 전에 미리 알려드려요.
+                마감 알림을 설정한 공고의 접수 마감 전에 알려드려요.
                 <br />
                 며칠 전에 알릴까요? (중복 선택 가능)
               </p>

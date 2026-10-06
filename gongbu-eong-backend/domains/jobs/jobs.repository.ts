@@ -873,20 +873,52 @@ export async function countUserJobBookmarks(userId: string) {
 }
 
 export async function createJobBookmark(userId: string, jobPostingId: string) {
-  const result = await query<{ id: string }>(
+  const result = await query<{ user_id: string }>(
     `
-      INSERT INTO public.user_job_bookmarks (
-        user_id,
-        job_posting_id,
-        entry_source
+      WITH saved_bookmark AS (
+        INSERT INTO public.user_job_bookmarks (
+          user_id,
+          job_posting_id,
+          entry_source
+        )
+        SELECT $1, postings.id, 'main_home'::public.entry_source
+        FROM public.job_postings postings
+        WHERE postings.id = $2
+          AND postings.is_active = TRUE
+        ON CONFLICT (user_id, job_posting_id) DO UPDATE
+        SET entry_source = EXCLUDED.entry_source
+        RETURNING id
       )
-      SELECT $1, postings.id, 'main_home'::public.entry_source
-      FROM public.job_postings postings
-      WHERE postings.id = $2
-        AND postings.is_active = TRUE
-      ON CONFLICT (user_id, job_posting_id) DO UPDATE
-      SET entry_source = EXCLUDED.entry_source
-      RETURNING id
+      INSERT INTO public.notification_preferences (
+        user_id,
+        application_deadline_enabled,
+        application_deadline_days_before,
+        application_deadline_days_before_list,
+        updated_at
+      )
+      SELECT
+        $1,
+        TRUE,
+        3,
+        ARRAY[3]::integer[],
+        NOW()
+      FROM saved_bookmark
+      ON CONFLICT (user_id) DO UPDATE
+      SET
+        application_deadline_enabled = TRUE,
+        application_deadline_days_before = 3,
+        application_deadline_days_before_list = ARRAY(
+          SELECT DISTINCT selected_day
+          FROM unnest(
+            COALESCE(
+              public.notification_preferences.application_deadline_days_before_list,
+              ARRAY[]::integer[]
+            ) || ARRAY[3]::integer[]
+          ) AS selected_day
+          ORDER BY selected_day DESC
+        ),
+        updated_at = NOW()
+      RETURNING user_id
     `,
     [userId, jobPostingId],
   );

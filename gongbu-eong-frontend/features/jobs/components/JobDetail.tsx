@@ -190,7 +190,7 @@ export function JobDetail({
         setBookmarkPending(false);
         setMessage(error instanceof Error
           ? error.message
-          : "찜하기를 완료하지 못했습니다. 다시 시도해 주세요.");
+          : "마감 알림 설정을 완료하지 못했습니다. 다시 시도해 주세요.");
       }
     });
     return () => {
@@ -282,7 +282,7 @@ export function JobDetail({
       return true;
     } catch (error) {
       setMessage(
-        error instanceof Error ? error.message : "찜 상태를 바꾸지 못했습니다.",
+        error instanceof Error ? error.message : "마감 알림 설정을 변경하지 못했습니다.",
       );
       return false;
     } finally {
@@ -302,7 +302,7 @@ export function JobDetail({
     if (!authenticated) {
       const returnTo = rememberJobBookmark(job.id);
       if (!returnTo) {
-        setMessage("브라우저에서 로그인 전 찜 요청을 보관할 수 없습니다. 로그인 후 다시 찜해 주세요.");
+        setMessage("브라우저에 마감 알림 요청을 보관할 수 없습니다. 로그인 후 다시 시도해 주세요.");
       }
       router.push(makeLoginHref(returnTo || `/jobs/${job.id}`));
       return;
@@ -551,13 +551,13 @@ export function JobDetail({
               <button
                 type="button"
                 className={`${styles.actionStar} ${job.isBookmarked ? styles.bookmarked : ""}`}
-                aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
+                aria-label={job.isBookmarked ? "마감 알림 해제" : "마감 알림 받기"}
                 aria-pressed={job.isBookmarked}
                 disabled={bookmarkPending}
                 onClick={toggleBookmark}
               >
                 <StarIcon filled={job.isBookmarked} />
-                <span>공고 찜하고 준비하기</span>
+                <span>{job.isBookmarked ? "마감 알림 해제" : "마감 알림 받기"}</span>
               </button>
               {job.isClosed || (!job.applyUrl && !emailAddress) ? (
                 <button type="button" className={styles.disabledApply} disabled>
@@ -656,7 +656,7 @@ function BookmarkReadyDialog({
           priority
           unoptimized
         />
-        <h2 id="bookmark-ready-title">공고를 찜했어요!</h2>
+        <h2 id="bookmark-ready-title">마감 알림을 설정할까요?</h2>
         <p>
           이 공고에 지원할 예정이라면,
           <br />
@@ -678,7 +678,7 @@ function BookmarkReadyDialog({
           disabled={pending}
           onClick={onClose}
         >
-          찜하고 닫기
+          닫기
         </button>
       </section>
     </div>

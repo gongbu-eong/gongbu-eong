@@ -36,7 +36,7 @@ export async function generateMetadata({
       : view === "recommended"
         ? "진단결과 추천공고 | 공부엉이"
         : view === "bookmarked"
-          ? "찜한공고 | 공부엉이"
+          ? "마감 알림 공고 | 공부엉이"
           : "채용공고 | 공부엉이";
   const description =
     "공기업 채용공고, 공공기관 채용, 접수 기간, 마감 임박 공고, 근무지, 고용형태, 채용인원, 지원 자격을 공부엉이에서 확인하세요.";

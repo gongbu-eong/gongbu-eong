@@ -312,7 +312,7 @@ export function CalendarMain({
   const toggleBookmark = async (job: JobPostingDto) => {
     if (bookmarkPendingId) return;
     if (!user) {
-      window.alert("찜한 공고를 저장하려면 로그인이 필요합니다.");
+      window.alert("마감 알림을 받으려면 로그인이 필요합니다.");
       return;
     }
 
@@ -342,7 +342,7 @@ export function CalendarMain({
         ),
       );
     } catch {
-      window.alert("찜 상태를 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      window.alert("마감 알림 설정을 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setBookmarkPendingId(null);
     }
@@ -389,11 +389,11 @@ export function CalendarMain({
               ) : (
                 <JobList
                   events={bookmarkedJobEvents}
-                  emptyLabel="아직 찜한 공고가 없어요."
-                  emptyDescription="채용 공고에서 별표를 눌러 나만의 캘린더에 담아보세요."
+                  emptyLabel="아직 마감 알림을 설정한 공고가 없어요."
+                  emptyDescription="관심 있는 채용 공고에서 별표를 눌러 마감 알림을 받아보세요."
                   emptyVariant="bookmark"
                   emptyHref="/jobs"
-                  emptyAction="공고 찜하러 가기"
+                  emptyAction="공고 보러 가기"
                   onToggleBookmark={toggleBookmark}
                   pendingBookmarkId={bookmarkPendingId}
                   showEventBadge={false}
@@ -805,7 +805,7 @@ function CalendarJobCard({
       <button
         type="button"
         className={styles.starIcon}
-        aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
+        aria-label={job.isBookmarked ? "마감 알림 해제" : "마감 알림 받기"}
         disabled={isBookmarkPending}
         onClick={(clickEvent) => {
           clickEvent.preventDefault();

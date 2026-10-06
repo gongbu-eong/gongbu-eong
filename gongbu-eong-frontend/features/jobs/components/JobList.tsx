@@ -384,7 +384,7 @@ export function JobList({
     view === "recommended"
       ? "진단결과 추천공고"
       : view === "bookmarked"
-        ? "찜한공고"
+        ? "마감 알림 공고"
         : "채용공고";
 
   const openFilterSheet = () => {
@@ -433,7 +433,7 @@ export function JobList({
 
   const toggleBookmark = async (job: JobPostingDto) => {
     if (!authenticated) {
-      setMessage("찜한 공고를 저장하려면 로그인이 필요합니다.");
+      setMessage("마감 알림을 받으려면 로그인이 필요합니다.");
       return;
     }
     if (pendingJobId) return;
@@ -447,7 +447,7 @@ export function JobList({
           : items.map((item) => item.id === job.id ? { ...item, isBookmarked: next } : item),
       );
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "찜 상태를 바꾸지 못했습니다.");
+      setMessage(error instanceof Error ? error.message : "마감 알림 설정을 변경하지 못했습니다.");
     } finally {
       setPendingJobId(null);
     }
@@ -555,7 +555,7 @@ export function JobList({
                   <button
                     type="button"
                     className={`${styles.star} ${job.isBookmarked ? styles.starActive : ""}`}
-                    aria-label={job.isBookmarked ? "찜 해제" : "찜하기"}
+                    aria-label={job.isBookmarked ? "마감 알림 해제" : "마감 알림 받기"}
                     disabled={pendingJobId === job.id}
                     onClick={() => void toggleBookmark(job)}
                   >
@@ -825,12 +825,12 @@ function EmptyState({ view, query }: { view: JobListView; query: string }) {
       <div className={`${styles.empty} ${styles.visualEmpty}`}>
         <Image src="/jobs/bookmark-empty-owl.png" alt="" width={141} height={150} />
         <p>
-          아직 찜한 공고가 없어요.
+          아직 마감 알림을 설정한 공고가 없어요.
           <br />
-          채용 공고에서 별표를 눌러 찜 하세요.
+          관심 있는 채용 공고에서 별표를 눌러 마감 알림을 받아보세요.
         </p>
         <Link href="/jobs" className={styles.emptyCta}>
-          공고 찜하러 가기
+          공고 보러 가기
         </Link>
       </div>
     );

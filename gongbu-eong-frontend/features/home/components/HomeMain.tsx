@@ -732,7 +732,7 @@ export function HomeMenuDrawer({
           <DrawerSection
             icon="megaphone"
             title="채용 공고"
-            items={["채용 공고", "진단결과 추천 공고", "찜한 공고"]}
+            items={["채용 공고", "진단결과 추천 공고", "마감 알림 공고"]}
             hrefs={[
               "/jobs",
               getRecommendedJobsHref(user),

@@ -115,10 +115,10 @@ export function MyPage() {
 
         <section className={styles.stats} aria-label="활동 요약">
           <div className={styles.stat}>
-            <Link href="/jobs?view=bookmarked" className={styles.statCountLink} aria-label={`찜한 공고 ${bookmarkCount}개 보기`}>
+            <Link href="/jobs?view=bookmarked" className={styles.statCountLink} aria-label={`마감 알림 공고 ${bookmarkCount}개 보기`}>
               {bookmarkCount}
             </Link>
-            <span>찜한 공고</span>
+            <span>마감 알림 공고</span>
           </div>
           <div className={styles.stat}>
             <Link href="/my/coaching" className={styles.statCountLink} aria-label={`자소서 코칭 기록 ${coverLetterCoachingCount}개 보기`}>
@@ -149,7 +149,7 @@ export function MyPage() {
             iconSrc="/my/activity-bookmark.png"
             iconWidth={30}
             iconHeight={30}
-            title="찜한 공고"
+            title="마감 알림 공고"
             count={bookmarkCount}
           />
           <MyMenuItem

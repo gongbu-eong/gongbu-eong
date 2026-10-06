@@ -42,7 +42,7 @@ export async function POST(
       request,
       {
         message:
-          error instanceof Error ? error.message : "공고를 찜하지 못했습니다.",
+          error instanceof Error ? error.message : "마감 알림을 설정하지 못했습니다.",
       },
       { status: 404, headers: { "Cache-Control": "no-store" } },
     );
