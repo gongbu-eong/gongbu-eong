@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trackProductEvent } from "@/features/analytics/analytics.api";
 import { getActiveBanners } from "../banner.api";
 import type { ActiveBannerDto, BannerPlacement } from "../banner.dto";
@@ -15,10 +15,8 @@ type CoachingBannerPlacement = Extract<
 
 export function CoachingBannerSlot({
   placement,
-  fallback = null,
 }: {
   placement: CoachingBannerPlacement;
-  fallback?: ReactNode;
 }) {
   const [banner, setBanner] = useState<ActiveBannerDto | null>(null);
   const impressionIdRef = useRef("");
@@ -54,7 +52,9 @@ export function CoachingBannerSlot({
     });
   }, [banner, placement]);
 
-  if (!banner) return fallback;
+  if (!banner) {
+    return <div className={`${styles.banner} ${styles.emptyBanner}`} aria-hidden="true" />;
+  }
 
   const image = (
     <picture className={styles.picture}>

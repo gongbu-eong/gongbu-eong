@@ -1,5 +1,6 @@
 .banner {
   display: block;
+  box-sizing: border-box;
   width: 100%;
   aspect-ratio: 361 / 80;
   margin: 0 0 24px;
@@ -8,6 +9,11 @@
   background: #f5f7fa;
   color: inherit;
   text-decoration: none;
+}
+
+.emptyBanner {
+  border: 1px solid #e4e8ef;
+  background: #ffffff;
 }
 
 .picture,
