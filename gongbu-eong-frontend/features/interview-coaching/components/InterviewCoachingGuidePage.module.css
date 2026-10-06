@@ -1,0 +1,122 @@
+.page{min-height:100vh;padding-bottom:192px;background:#f5f7fa;color:#1a2233;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.guide{width:min(600px,100%);margin:0 auto;background:#fff;overflow:hidden}
+.hero,.challengeSection,.resolveSection,.connectSection,.analysisSection,.questionSection,.feedbackSection,.stepsSection,.peopleSection,.noticeSection,.closingSection{position:relative;box-sizing:border-box;width:100%;padding:40px 16px}
+.hero{height:792px;padding-top:56px;overflow:hidden;border-radius:0 0 30px 30px;background:#1a2233;color:#fff;text-align:center}
+.heroBadge,.sectionBadge,.noticeSection>span,.closingSection>span{display:inline-flex;align-items:center;justify-content:center;min-height:32px;padding:0 18px;border-radius:999px;background:#55fe03;color:#1a2233;font-size:14px;font-weight:700}
+.hero h1,.guideTitle h2,.challengeSection h2,.resolveSection h2,.noticeSection h2,.closingSection h2{margin:16px 0 0;font-family:"Hakgyoansim Allimjang",Pretendard,sans-serif;font-size:42px;font-weight:700;line-height:54px;letter-spacing:0}
+.hero h1 strong,.hero h1 mark{display:block}
+.hero h1 strong{font-size:88px;line-height:108px}
+.hero h1 mark{background:transparent;color:#55fe03;font-size:38px;line-height:48px}
+.hero>p,.sectionLead,.noticeSection>p,.closingSection>p{margin:16px 0 0;font-size:16px;font-weight:600;line-height:1.45}
+.hero>p{color:rgba(255,255,255,.8)}
+.heroTags{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:26px}
+.heroTags span{height:36px;box-sizing:border-box;padding:8px 16px;border:1px solid #fff;border-radius:999px;font-size:16px;font-weight:600}
+.heroImage{position:absolute;right:-14px;bottom:-2px;width:421px;height:302px;object-fit:cover}
+.challengeSection{padding-top:56px;padding-bottom:40px;background:#e8f1ff;text-align:center}
+.sectionBadge{background:#2f7ff0;color:#fff;font-size:16px}
+.challengeSection h2{margin-top:24px}
+.challengeSection h2 mark,.guideTitle h2 mark,.noticeSection h2 mark,.closingSection h2 mark{background:transparent;color:#2f7ff0}
+.challengeList{display:grid;gap:16px;margin-top:24px;text-align:left}
+.challengeList article{min-height:114px;box-sizing:border-box;padding:24px;border:1px solid #2f7ff0;border-radius:10px;background:#fff;box-shadow:4px 4px 0 #1c5fc4}
+.challengeList h3,.challengeList p{margin:0}
+.challengeList h3{font-size:18px}
+.challengeList p{margin-top:7px;color:#5a6580;font-size:17px;line-height:1.4}
+.resolveSection{height:720px;padding-top:56px;overflow:hidden;background:#1a2233;color:#fff;text-align:center}
+.resolveSection h2{margin:0;font-size:32px;line-height:40px}
+.resolveSection>strong{position:relative;z-index:2;display:block;color:#55fe03;font-family:"Hakgyoansim Allimjang",Pretendard,sans-serif;font-size:120px;line-height:1.1}
+.resolveSection img{position:absolute;bottom:-22px;left:0;width:100%;height:391px;object-fit:cover}
+.connectSection{padding-top:40px;padding-bottom:40px;background:#fff}
+.guideTitle{text-align:center}
+.guideTitle>span{display:grid;width:56px;height:56px;margin:0 auto;place-items:center;border-radius:50%;background:#2f7ff0;color:#fff;font-family:"Hakgyoansim Allimjang",Pretendard,sans-serif;font-size:24px;font-weight:700}
+.guideTitle h2{margin-top:16px}
+.guideTitleInverted>span{background:#fff941;color:#1a2233}
+.connectRows{margin-top:32px;border-top:2px solid #1a2233}
+.connectRows article{display:flex;min-height:120px;align-items:center;gap:16px;border-bottom:1px dashed #1a2233}
+.connectRows i{display:grid;flex:0 0 48px;width:48px;height:48px;place-items:center;border-radius:50%;background:#e8f1ff;color:#2f7ff0;font-size:24px;font-style:normal;font-weight:800}
+.connectRows h3,.connectRows p{margin:0}
+.connectRows h3{font-family:"Hakgyoansim Allimjang",Pretendard,sans-serif;font-size:20px}
+.connectRows p{margin-top:8px;color:#5a6580;font-size:17px;line-height:1.35}
+.inputPreview{margin-top:38px}
+.inputPreview>h3{font-family:"Hakgyoansim Allimjang",Pretendard,sans-serif;font-size:18px}
+.previewSurface{padding:24px 16px;border:1px solid #e4e8ef;border-radius:15px;background:#fff}
+.previewSurface>strong{display:block;margin-bottom:16px;font-size:18px}
+.previewSurface>button{width:100%;height:52px;margin-bottom:32px;border:1px dashed #2f7ff0;border-radius:12px;background:#fff;color:#2f7ff0;font-size:16px;font-weight:800}
+.previewTabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.previewTabs span{display:grid;height:46px;place-items:center;border-radius:10px;color:#5a6580}
+.previewTabs span:first-child{border:1px solid #2f7ff0;background:#fff;color:#2f7ff0}
+.previewDrop{display:grid;min-height:168px;place-items:center;align-content:center;gap:8px;border:1px dashed #2f7ff0;border-radius:10px;background:#e8f1ff;text-align:center}
+.previewDrop b{font-size:14px}
+.previewDrop span{font-size:15px}
+.previewDrop small{color:#9aa4b8}
+.analysisSection{padding-top:40px;padding-bottom:40px;background:#2f7ff0;color:#fff}
+.analysisSection .guideTitle h2 mark{color:#ffeb57}
+.sectionLead{text-align:center}
+.analysisCards{display:grid;gap:16px;margin-top:24px}
+.analysisCards article{padding:24px;border-radius:10px;background:#fff;color:#1a2233}
+.analysisCards h3{margin:0;font-size:18px}
+.analysisCards ul{display:grid;gap:10px;margin:12px 0 0;padding-left:20px;color:#5a6580;font-size:17px;line-height:1.35}
+.analysisCards li::marker{color:#2f7ff0}
+.questionSection{padding-top:40px;padding-bottom:40px;background:#e8f1ff}
+.questionSection .sectionLead{color:#5a6580}
+.mainQuestion,.followQuestion{margin-top:16px;padding:24px 16px;border-radius:10px;background:#fff}
+.mainQuestion{margin-top:24px}
+.mainQuestion strong{color:#2f7ff0}
+.followQuestion strong{color:#1fb573}
+.mainQuestion p,.followQuestion p{margin:16px 0 0;color:#5a6580;font-size:17px;line-height:1.45}
+.feedbackSection{padding-top:40px;padding-bottom:40px;background:#282b32;color:#fff}
+.feedbackSection .guideTitle h2 mark{color:#55fe03}
+.feedbackScores{display:grid;gap:22px;margin-top:24px}
+.feedbackScores article strong{font-size:16px}
+.feedbackScores article>i{display:block;height:10px;margin-top:8px;border-radius:55px;background:#fff}
+.feedbackScores article>i b{display:block;height:100%;border-radius:55px;background:#55fe03}
+.feedbackScores p{margin:8px 0 0;font-size:13px}
+.feedbackPreviewTitle{margin:40px 0 12px;font-family:"Hakgyoansim Allimjang",Pretendard,sans-serif;font-size:18px}
+.feedbackCards{display:grid;gap:12px}
+.feedbackCards article{padding:16px;border-radius:10px;background:#fff;color:#1a2233}
+.feedbackCards span{display:inline-flex;padding:6px 16px;border:1px solid #5a6580;border-radius:999px;font-size:14px;font-weight:700}
+.feedbackCards p{margin:10px 0 0;color:#5a6580;font-size:17px;line-height:1.4}
+.stepsSection{background:#fff}
+.stepList{display:grid;gap:16px;margin-top:32px}
+.stepList article{display:flex;min-height:114px;align-items:center;gap:16px;padding:24px 16px;border:1px solid #e4e8ef;border-radius:10px}
+.stepList b{display:grid;flex:0 0 56px;width:56px;height:56px;place-items:center;border-radius:5px;background:#e8f1ff;color:#2f7ff0;font-size:18px}
+.stepList h3,.stepList p{margin:0}
+.stepList h3{font-size:18px}
+.stepList p{margin-top:7px;color:#5a6580;font-size:17px;line-height:1.35}
+.peopleSection{background:#2f7ff0;color:#fff}
+.peopleList{display:grid;gap:16px;margin-top:24px}
+.peopleList article{display:flex;height:148px;align-items:center;gap:20px;padding:16px;border-radius:10px;background:#fff;color:#1a2233}
+.personImage{display:grid;flex:0 0 100px;width:100px;height:100px;place-items:center;border-radius:50%;background:#e8f1ff;overflow:hidden}
+.personImage img{width:100%;height:100%;object-fit:contain}
+.peopleList h3,.peopleList p{margin:0}
+.peopleList h3{font-size:18px;line-height:1.35}
+.peopleList p{margin-top:8px;color:#5a6580;font-size:17px;line-height:1.35}
+.noticeSection{text-align:center;background:#fff}
+.noticeSection>span{background:#2f7ff0;color:#fff;font-size:18px}
+.noticeSection h2 mark{display:inline;background:transparent}
+.noticeSection>p{color:#9aa4b8}
+.noticeSection>div{display:grid;gap:16px;margin-top:24px;text-align:left}
+.noticeSection article{padding:24px 16px;border:1px solid #e4e8ef;border-radius:10px;background:#f5f7fa}
+.noticeSection h3,.noticeSection article p{margin:0}
+.noticeSection h3{font-size:18px}
+.noticeSection article p{margin-top:16px;color:#5a6580;font-size:17px;line-height:1.4}
+.closingSection{height:627px;overflow:hidden;background:#0c255c;color:#fff;text-align:center}
+.closingSection>span{background:rgba(255,255,255,.2);color:#fff;font-size:18px}
+.closingSection h2 mark{color:#fff941}
+.closingSection>p{color:rgba(255,255,255,.8)}
+.closingSection img{position:absolute;bottom:-20px;left:50%;width:273px;height:255px;transform:translateX(-50%);object-fit:cover}
+.finalCta{position:fixed;bottom:0;left:50%;z-index:30;width:min(600px,100%);height:192px;box-sizing:border-box;transform:translateX(-50%);border-radius:10px 10px 0 0;background:#fff;padding:24px 16px 16px;color:#0c255c;text-align:center;box-shadow:0 -8px 20px rgba(12,37,92,.12)}
+.finalCta>button{position:absolute;top:12px;right:12px;display:grid;width:32px;height:32px;place-items:center;border:1px solid #e4e8ef;border-radius:50%;background:#fff;color:#0c255c;font-size:24px}
+.finalCta h2,.finalCta p{margin:0}
+.finalCta h2{font-family:"Hakgyoansim Allimjang",Pretendard,sans-serif;font-size:24px}
+.finalCta p{margin-top:8px;opacity:.8;font-size:16px;line-height:1.25}
+.finalCta a{display:flex;height:52px;margin-top:16px;align-items:center;justify-content:center;border-radius:12px;background:#2f7ff0;color:#fff;font-size:16px;font-weight:800;text-decoration:none}
+@font-face{font-family:"Hakgyoansim Allimjang";font-style:normal;font-weight:700;font-display:swap;src:url("https://cdn.jsdelivr.net/gh/fonts-archive/HakgyoansimAllimjang/HakgyoansimAllimjang-B.woff2") format("woff2")}
+@media(max-width:600px){.page{background:#fff}
+.hero h1 strong{font-size:72px}
+.hero h1 mark{font-size:36px}
+.heroImage{right:-14px}
+.guideTitle h2,.challengeSection h2,.noticeSection h2,.closingSection h2{font-size:38px;line-height:50px}
+.peopleList article{gap:14px}
+.peopleList h3{font-size:17px}
+.peopleList p{font-size:15px}
+}

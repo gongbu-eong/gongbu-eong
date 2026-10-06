@@ -64,8 +64,8 @@ export function CoachingBannerSlot({
       <Image
         src={banner.imageUrl}
         alt={banner.name}
-        width={1083}
-        height={240}
+        width={1800}
+        height={342}
         sizes="(max-width: 599px) calc(100vw - 32px), 568px"
         className={styles.image}
         unoptimized

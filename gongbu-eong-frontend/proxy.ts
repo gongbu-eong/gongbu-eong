@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
-  if (pathname === "/ai-tools/coaching/guide") {
+  if (
+    pathname === "/ai-tools/coaching/guide" ||
+    pathname === "/ai-tools/interview-coaching/guide"
+  ) {
     return NextResponse.next();
   }
   if (pathname === "/my/policies" || pathname.startsWith("/my/policies/")) {
@@ -52,12 +55,24 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
+  if (pathname === "/ai-tools/interview-coaching") {
+    const guideUrl = request.nextUrl.clone();
+    guideUrl.pathname = "/ai-tools/interview-coaching/guide";
+    const response = NextResponse.redirect(guideUrl);
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
+  }
+
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";
   loginUrl.search = "";
   loginUrl.searchParams.set(
     "returnTo",
-    `${pathname === "/ai-tools/coaching/start" ? "/ai-tools/coaching" : pathname}${request.nextUrl.search}`,
+    `${pathname === "/ai-tools/coaching/start"
+      ? "/ai-tools/coaching"
+      : pathname === "/ai-tools/interview-coaching/start"
+        ? "/ai-tools/interview-coaching"
+        : pathname}${request.nextUrl.search}`,
   );
 
   const response = NextResponse.redirect(loginUrl);
