@@ -1,0 +1,27 @@
+.banner {
+  display: block;
+  width: 100%;
+  aspect-ratio: 361 / 80;
+  margin: 0 0 24px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f5f7fa;
+  color: inherit;
+  text-decoration: none;
+}
+
+.picture,
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.image {
+  object-fit: cover;
+}
+
+.banner:focus-visible {
+  outline: 3px solid #9cc2ff;
+  outline-offset: 3px;
+}

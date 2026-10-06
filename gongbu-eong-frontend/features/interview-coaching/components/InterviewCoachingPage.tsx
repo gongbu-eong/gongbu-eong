@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import { CoachingAlertDialog } from "@/features/coaching/components/CoachingAlertDialog";
+import { CoachingBannerSlot } from "@/features/banners/components/CoachingBannerSlot";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getJobPosting, getJobPostings } from "@/features/home/home.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
@@ -439,6 +440,7 @@ export function InterviewCoachingPage({
 
         {busy === "load" ? null : !session ? (
           <>
+            <CoachingBannerSlot placement="interview_coaching" />
             <section className={styles.interviewInputSection}>
               <h2>면접 기업 정보</h2>
               {connectedJob ? (

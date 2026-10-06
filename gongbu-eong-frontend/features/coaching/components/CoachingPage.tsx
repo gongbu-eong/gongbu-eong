@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { trackProductEvent } from "@/features/analytics/analytics.api";
+import { CoachingBannerSlot } from "@/features/banners/components/CoachingBannerSlot";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { getJobPosting, getJobPostings } from "@/features/home/home.api";
 import { getAnonymousId } from "@/shared/session/anonymous-id";
@@ -230,22 +231,27 @@ export function CoachingPage({
     <main className={`${styles.frame} ${styles.newCoachingFrame}`}>
       <h1>AI NCS 자소서 코칭</h1>
       <section className={styles.intro}><strong>자소서를 AI가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
-      <Link
-        href="/ai-tools/coaching/guide"
-        className={styles.guideBanner}
-        onClick={() => {
-          void trackProductEvent({
-            eventType: "resume_coaching_guide_click",
-            properties: { placement: "resume_coaching_job_connect" },
-          });
-        }}
-      >
-        <span>
-          <strong>혹시 AI NCS 자소서 코칭이 처음이라면?</strong>
-          <small>사용 방법과 준비할 내용을 한눈에 확인해 보세요.</small>
-        </span>
-        <b aria-hidden="true" />
-      </Link>
+      <CoachingBannerSlot
+        placement="resume_coaching"
+        fallback={(
+          <Link
+            href="/ai-tools/coaching/guide"
+            className={styles.guideBanner}
+            onClick={() => {
+              void trackProductEvent({
+                eventType: "resume_coaching_guide_click",
+                properties: { placement: "resume_coaching_job_connect" },
+              });
+            }}
+          >
+            <span>
+              <strong>혹시 AI NCS 자소서 코칭이 처음이라면?</strong>
+              <small>사용 방법과 준비할 내용을 한눈에 확인해 보세요.</small>
+            </span>
+            <b aria-hidden="true" />
+          </Link>
+        )}
+      />
       <section className={styles.companySection}>
         <h2>자소서 기업 정보</h2>
         {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <button ref={jobConnectRef} className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기</button>}
