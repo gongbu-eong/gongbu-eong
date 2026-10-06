@@ -109,8 +109,8 @@ export async function completeSignupAgreements(
         VALUES (
           $1,
           TRUE,
-          3,
-          ARRAY[3]::integer[],
+          1,
+          ARRAY[1]::integer[],
           $2,
           CASE WHEN $2::boolean THEN NOW() ELSE NULL END,
           CASE WHEN $2::boolean THEN NULL ELSE NOW() END,

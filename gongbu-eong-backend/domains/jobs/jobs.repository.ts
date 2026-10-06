@@ -899,22 +899,23 @@ export async function createJobBookmark(userId: string, jobPostingId: string) {
       SELECT
         $1,
         TRUE,
-        3,
-        ARRAY[3]::integer[],
+        1,
+        ARRAY[1]::integer[],
         NOW()
       FROM saved_bookmark
       ON CONFLICT (user_id) DO UPDATE
       SET
         application_deadline_enabled = TRUE,
-        application_deadline_days_before = 3,
+        application_deadline_days_before = 1,
         application_deadline_days_before_list = ARRAY(
           SELECT DISTINCT selected_day
           FROM unnest(
             COALESCE(
               public.notification_preferences.application_deadline_days_before_list,
               ARRAY[]::integer[]
-            ) || ARRAY[3]::integer[]
+            ) || ARRAY[1]::integer[]
           ) AS selected_day
+          WHERE selected_day IN (3, 1, 0)
           ORDER BY selected_day DESC
         ),
         updated_at = NOW()

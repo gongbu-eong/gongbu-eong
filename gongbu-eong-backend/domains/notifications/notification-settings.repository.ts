@@ -4,7 +4,7 @@ import {
   SIGNUP_CONSENT_KEYS,
 } from "@/domains/auth/signup-consents";
 
-export const DEADLINE_NOTIFICATION_OFFSETS = [7, 3, 0] as const;
+export const DEADLINE_NOTIFICATION_OFFSETS = [3, 1, 0] as const;
 
 export type DeadlineNotificationOffset =
   (typeof DEADLINE_NOTIFICATION_OFFSETS)[number];
@@ -117,9 +117,9 @@ export async function updateNotificationSettings(
     const current = toNotificationSettings(currentResult.rows[0]);
     const deadlineOffsets = input.deadlineOffsets.length
       ? input.deadlineOffsets
-      : ([3] as DeadlineNotificationOffset[]);
-    const primaryDaysBefore = deadlineOffsets.includes(3)
-      ? 3
+      : ([1] as DeadlineNotificationOffset[]);
+    const primaryDaysBefore = deadlineOffsets.includes(1)
+      ? 1
       : deadlineOffsets[0];
     const nextMarketingAgreedAt =
       input.marketingAgreed && !current.marketingAgreed ? new Date() : null;
@@ -236,7 +236,7 @@ async function ensureNotificationPreferences(userId: string) {
         marketing_enabled,
         updated_at
       )
-      VALUES ($1, true, 3, ARRAY[3]::integer[], false, NOW())
+      VALUES ($1, true, 1, ARRAY[1]::integer[], false, NOW())
       ON CONFLICT (user_id) DO NOTHING
     `,
     [userId],
@@ -249,7 +249,7 @@ function toNotificationSettings(
   const offsetValues =
     row.application_deadline_days_before_list?.length
       ? row.application_deadline_days_before_list
-      : [row.application_deadline_days_before ?? 3];
+      : [row.application_deadline_days_before ?? 1];
   const deadlineOffsets = offsetValues
     .filter((value): value is DeadlineNotificationOffset =>
       DEADLINE_NOTIFICATION_OFFSETS.includes(
@@ -263,7 +263,7 @@ function toNotificationSettings(
 
   return {
     deadlineEnabled: row.application_deadline_enabled ?? true,
-    deadlineOffsets: deadlineOffsets.length ? deadlineOffsets : [3],
+    deadlineOffsets: deadlineOffsets.length ? deadlineOffsets : [1],
     marketingAgreed,
     marketingAgreedAt: marketingAgreed
       ? toIso(row.marketing_consent_updated_at ?? row.marketing_agreed_at)

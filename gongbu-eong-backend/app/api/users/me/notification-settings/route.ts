@@ -84,7 +84,7 @@ function readNotificationPayload(payload: unknown) {
 }
 
 function readDeadlineOffsets(value: unknown) {
-  if (!Array.isArray(value)) return [3] as DeadlineNotificationOffset[];
+  if (!Array.isArray(value)) return [1] as DeadlineNotificationOffset[];
 
   const offsets = value
     .map((item) => Number(item))

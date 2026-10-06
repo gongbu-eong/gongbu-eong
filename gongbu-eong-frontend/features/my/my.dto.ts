@@ -169,7 +169,7 @@ export type UserProfileResponseDto = {
   profile: UserProfileDto;
 };
 
-export type DeadlineNotificationOffset = 7 | 3 | 0;
+export type DeadlineNotificationOffset = 3 | 1 | 0;
 
 export type NotificationSettingsDto = {
   deadlineEnabled: boolean;

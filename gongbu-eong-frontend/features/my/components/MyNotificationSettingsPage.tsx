@@ -19,9 +19,9 @@ const DEADLINE_OPTIONS: {
   label: string;
   value: DeadlineNotificationOffset;
 }[] = [
-  { label: "7일 전", value: 7 },
   { label: "3일 전", value: 3 },
-  { label: "당일", value: 0 },
+  { label: "1일 전", value: 1 },
+  { label: "마감 당일", value: 0 },
 ];
 
 export function MyNotificationSettingsPage() {
@@ -29,7 +29,7 @@ export function MyNotificationSettingsPage() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [deadlineEnabled, setDeadlineEnabled] = useState(true);
   const [deadlineOffsets, setDeadlineOffsets] =
-    useState<DeadlineNotificationOffset[]>([3]);
+    useState<DeadlineNotificationOffset[]>([1]);
   const [marketingAgreed, setMarketingAgreed] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -65,7 +65,7 @@ export function MyNotificationSettingsPage() {
       if (settingsResponse?.settings) {
         const settings = settingsResponse.settings;
         setDeadlineEnabled(settings.deadlineEnabled);
-        setDeadlineOffsets(settings.deadlineOffsets.length ? settings.deadlineOffsets : [3]);
+        setDeadlineOffsets(settings.deadlineOffsets.length ? settings.deadlineOffsets : [1]);
         setMarketingAgreed(settings.marketingAgreed);
       }
 
@@ -98,7 +98,7 @@ export function MyNotificationSettingsPage() {
       const response = await updateMyNotificationSettings(payload);
       const settings = response.settings;
       setDeadlineEnabled(settings.deadlineEnabled);
-      setDeadlineOffsets(settings.deadlineOffsets.length ? settings.deadlineOffsets : [3]);
+      setDeadlineOffsets(settings.deadlineOffsets.length ? settings.deadlineOffsets : [1]);
       setMarketingAgreed(settings.marketingAgreed);
       window.alert(successMessage);
       return true;
@@ -147,7 +147,7 @@ export function MyNotificationSettingsPage() {
               <p className={styles.sectionDescription}>
                 마감 알림을 설정한 공고의 접수 마감 전에 알려드려요.
                 <br />
-                며칠 전에 알릴까요? (중복 선택 가능)
+                언제 알림을 받을까요? (중복 선택 가능)
               </p>
             </div>
             <ToggleSwitch
