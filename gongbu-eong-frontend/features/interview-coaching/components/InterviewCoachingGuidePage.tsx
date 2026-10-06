@@ -2,9 +2,17 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { type ReactNode } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import styles from "./InterviewCoachingGuidePage.module.css";
+
+const DESIGN_WIDTH = 393;
+const DESIGN_HEIGHT = 9338;
 
 const challenges = [
   ["“이 직무에서 뭘 물어볼까?”", "기업마다 직무가 다른데 인터넷 예상 질문만 반복하고 있을 때"],
@@ -14,7 +22,7 @@ const challenges = [
 
 const steps = [
   ["01", "지원 공고 연결", "공고를 연결하고 지원 직무를 입력합니다."],
-  ["02", "면접 자료 입력 (선택)", "자소서·경험자료가 있다면 파일로 첨부하거나 텍스트로 입력합니다."],
+  ["02", "면접 자료 입력", "자소서·경험자료가 있다면 파일로 첨부하거나 텍스트로 입력합니다."],
   ["03", "AI 질문에 답변", "직무 기반 질문과 이어지는 꼬리질문에 실제 면접처럼 답합니다."],
   ["04", "코칭 결과 확인", "문항별 피드백과 NCS 직무 역량 분석을 확인합니다."],
 ] as const;
@@ -27,19 +35,34 @@ const people = [
 ] as const;
 
 export function InterviewCoachingGuidePage({ startHref }: { startHref: string }) {
-  const router = useRouter();
-  const closeGuide = () => {
-    if (window.history.length > 1) {
-      router.back();
-      return;
-    }
-    router.replace("/ai-tools");
-  };
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useLayoutEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+
+    const updateScale = () => setScale(frame.clientWidth / DESIGN_WIDTH);
+    updateScale();
+
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(frame);
+    return () => observer.disconnect();
+  }, []);
+
+  const frameStyle = { height: DESIGN_HEIGHT * scale } satisfies CSSProperties;
+  const canvasStyle = { transform: `scale(${scale})` } satisfies CSSProperties;
+  const ctaFrameStyle = {
+    width: DESIGN_WIDTH * scale,
+    height: 192 * scale,
+  } satisfies CSSProperties;
 
   return (
     <main className={styles.page}>
-      <div className={styles.guide}>
+      <div ref={frameRef} className={styles.canvasFrame} style={frameStyle}>
+        <div className={styles.guide} style={canvasStyle}>
         <section className={styles.hero}>
+          <Image className={styles.heroSwoosh} src="/interview-coaching/guide/hero-swoosh.svg" alt="" width={139} height={118} />
           <span className={styles.heroBadge}>NCS 직무 기반 AI 면접 연습</span>
           <h1><strong>면접질문</strong><mark>혼자 예상하지 마세요.</mark></h1>
           <p>지원 공고와 직무를 바탕으로 AI가 질문을 만들고,<br />답변 뒤에는 꼬리질문까지 이어서 연습합니다.</p>
@@ -49,6 +72,7 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
 
         <section className={styles.challengeSection}>
           <span className={styles.sectionBadge}>면접 준비, 이런 순간이 어렵죠</span>
+          <Image className={styles.challengeArrow} src="/interview-coaching/guide/challenge-arrow.svg" alt="" width={21} height={18} />
           <h2>예상 질문은 만들었는데<br /><mark>실전처럼 준비가<br />안 된다면?</mark></h2>
           <div className={styles.challengeList}>{challenges.map(([title, copy]) => <article key={title}><h3>{title}</h3><p>{copy}</p></article>)}</div>
         </section>
@@ -63,7 +87,7 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
           <GuideTitle number="1">공고를 연결하면<br />질문부터 달라집니다</GuideTitle>
           <div className={styles.connectRows}>
             <InfoRow title="면접 기업 정보">면접을 보는 공고를 검색해서 연결 후<br />지원 직무를 입력합니다.</InfoRow>
-            <InfoRow title="면접 자료 or 자소서 (선택)">면접에 필요한 자료나 자소서가 있다면<br />등록하여 시작합니다.</InfoRow>
+            <InfoRow title="면접 자료 or 자소서">면접에 필요한 자료나 자소서가 있다면<br />등록하여 시작합니다.</InfoRow>
           </div>
           <div className={styles.inputPreview}>
             <h3>실제 면접 공부엉이 페이지 화면</h3>
@@ -88,7 +112,7 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
         <section className={styles.questionSection}>
           <GuideTitle number="3">질문 하나에<br />꼬리질문 <mark>3개!</mark></GuideTitle>
           <p className={styles.sectionLead}>첫 질문에 답하면, 같은 답변을 더 깊게 확인하는<br />꼬리질문으로 실제 면접 흐름을 연습합니다.</p>
-          <article className={styles.mainQuestion}><strong>질문 1 · 심화 · 경험면접</strong><p>전기 설비에 이상이 발생했는데 처음에는 원인을 잘 알 수 없었던 상황이 있었나요? 어떤 기준으로 원인을 좁혀 최종 해결에 이르렀는지 설명해 주세요.</p></article>
+          <article className={styles.mainQuestion}><strong>질문 1 · 심화 · 경험면접</strong><p>전기 설비에 이상이 발생했는데, 처음에는 원인을 잘 알 수 없었던 상황이 있었나요? 당시 어떤 순서와 기준으로 문제를 정의하고, 가능한 원인들을 좁혀 가며 최종 해결에 이르렀는지 과정을 단계별로 설명해 주세요.</p></article>
           <article className={styles.followQuestion}><strong>면접관 꼬리질문 1/3</strong><p>“그 판단 기준을 선택한 이유는 무엇이었나요?”</p></article>
           <article className={styles.followQuestion}><strong>면접관 꼬리질문 2/3</strong><p>“다시 같은 상황이 온다면 어떤 부분을 다르게 하시겠습니까?”</p></article>
         </section>
@@ -98,7 +122,11 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
           <p className={styles.sectionLead}>문항별 답변과 꼬리질문을 기준으로<br />잘한 점과 보완할 점을 구체적으로 확인합니다.</p>
           <div className={styles.feedbackScores}><Score label="문항별 피드백" width="82%">질문의 의도에 맞게 답했는지, 설명이 구체적인지 확인합니다.</Score><Score label="꼬리질문 코칭" width="73%">추가 질문에서 답변이 흔들린 지점과 보완 방향을 확인합니다.</Score><Score label="NCS 직무 역량 분석" width="91%">직무 이해, 의사소통, 문제해결 항목을 함께 살펴봅니다.</Score></div>
           <h3 className={styles.feedbackPreviewTitle}>실제 면접 공부엉이 페이지 화면</h3>
-          <div className={styles.feedbackCards}><FeedbackCard label="평가 요약">질문 의도를 반영했는지, 실제 경험과 설명 과정이 충분히 제시됐는지 확인합니다.</FeedbackCard><FeedbackCard label="보완점">답변에 빠진 정보와 더 구체적으로 설명해야 할 순서를 정리해 드립니다.</FeedbackCard><FeedbackCard label="질문 의도">떠올리기 어려운 경우 활용할 수 있는 경험의 범위와 답변 방향을 안내합니다.</FeedbackCard></div>
+          <div className={styles.feedbackCards}>
+            <FeedbackCard label="평가 요약">질문 의도를 전혀 반영하지 못한 단답으로, 실제 전기 설비 이상 사례와 5단계 설명이 전혀 제시되지 않았습니다.</FeedbackCard>
+            <FeedbackCard label="보완점">방금 답변은 질문에 전혀 답이 되지 않습니다. 실제 전기 설비 이상 사례 하나를 정해서, 아래 구조에 맞춰 다시 말씀해 주세요.<br />1) 언제, 어디서, 어떤 설비에서 어떤 이상 증상이 있었는지 (예: 특정 층 조명 일부 소등, 분전반 트립 등)<br /><br />2) 처음에 무엇을 의심했지만 왜 확신할 수 없었는지 (정보 부족, 증상 모호 등)</FeedbackCard>
+            <FeedbackCard label="질문 의도">지금 단계에서는 ‘아무 사례도 없는 상태’에서 떠올리려다 보니 막힌 것 같습니다. 우선 전기 설비 교육·실습이나 인턴, 아르바이트, 학교 실험 등에서 겪었던 아주 사소한 이상이라도 하나를 먼저 정해 주세요.</FeedbackCard>
+          </div>
         </section>
 
         <section className={styles.stepsSection}>
@@ -107,7 +135,7 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
         </section>
 
         <section className={styles.peopleSection}>
-          <GuideTitle number="6" inverted>이런 분에게<br />특히 필요합니다!</GuideTitle>
+          <GuideTitle number="5" inverted>이런 분에게<br />특히 필요합니다!</GuideTitle>
           <div className={styles.peopleList}>{people.map(([image, title, copy]) => <article key={title}><div className={styles.personImage}><Image src={`/interview-coaching/guide/${image}`} alt="" width={333} height={333} /></div><div><h3>{title}</h3><p>{copy}</p></div></article>)}</div>
         </section>
 
@@ -120,23 +148,33 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
           <span>AI NCS 면접 코칭</span><h2>면접 전날 처음 보는<br />질문보다 <mark>오늘<br />한 번 더 답해보세요</mark></h2><p>지원 직무에 맞는 질문부터 꼬리질문,<br />답변 코칭까지 한 번에 연습해보세요.</p>
           <Image src="/interview-coaching/guide/closing.webp" alt="책을 읽으며 면접을 준비하는 공부엉이" width={819} height={765} />
         </section>
+        </div>
       </div>
 
-      <div className={styles.finalCta}>
-        <button type="button" aria-label="가이드 닫고 이전 화면으로 돌아가기" onClick={closeGuide}>×</button>
-        <h2>연습은 많을수록 좋아요.</h2><p>지원 직무에 맞는 질문부터 꼬리질문,<br />답변 코칭까지 한 번에 연습해보세요.</p>
-        <Link href={startHref} prefetch={false}>AI NCS 면접 코칭 시작하기 <span aria-hidden="true">→</span></Link>
+      <div className={styles.finalCtaFrame} style={ctaFrameStyle}>
+        <div className={styles.finalCta} style={canvasStyle}>
+          <h2>연습은 많을수록 좋아요.</h2><p>지원 직무에 맞는 질문부터 꼬리질문,<br />답변 코칭까지 한 번에 연습해보세요.</p>
+          <Link href={startHref} prefetch={false}>AI NCS 면접 코칭 시작하기 <span aria-hidden="true">→</span></Link>
+        </div>
       </div>
     </main>
   );
 }
 
 function GuideTitle({ number, inverted = false, children }: { number: string; inverted?: boolean; children: ReactNode }) {
-  return <div className={`${styles.guideTitle} ${inverted ? styles.guideTitleInverted : ""}`}><span>{number}</span><h2>{children}</h2></div>;
+  const iconByNumber: Record<string, string> = {
+    "1": "step-1.svg",
+    "2": "step-3.svg",
+    "3": "step-4.svg",
+    "4": "step-5.svg",
+    "5": "step-4.svg",
+  };
+  const icon = number === "5" && inverted ? "step-6.svg" : iconByNumber[number];
+  return <div className={`${styles.guideTitle} ${inverted ? styles.guideTitleInverted : ""}`}><span><Image src={`/interview-coaching/guide/${icon ?? "step-6.svg"}`} alt="" width={56} height={56} /><b>{number}</b></span><h2>{children}</h2></div>;
 }
 
 function InfoRow({ title, children }: { title: string; children: ReactNode }) {
-  return <article><i aria-hidden="true">✓</i><div><h3>{title}</h3><p>{children}</p></div></article>;
+  return <article><Image src="/interview-coaching/guide/check.svg" alt="" width={48} height={48} /><div><h3>{title}</h3><p>{children}</p></div></article>;
 }
 
 function BulletCard({ title, items }: { title: string; items: readonly string[] }) {
