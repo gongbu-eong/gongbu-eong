@@ -8,16 +8,15 @@ import { getActiveBanners } from "../banner.api";
 import type { ActiveBannerDto, BannerPlacement } from "../banner.dto";
 import styles from "./CoachingBannerSlot.module.css";
 
-type CoachingBannerPlacement = Extract<
-  BannerPlacement,
-  "resume_coaching" | "interview_coaching"
->;
+type ManagedBannerSlotProps = {
+  placement: BannerPlacement;
+  showEmpty?: boolean;
+};
 
-export function CoachingBannerSlot({
+export function ManagedBannerSlot({
   placement,
-}: {
-  placement: CoachingBannerPlacement;
-}) {
+  showEmpty = false,
+}: ManagedBannerSlotProps) {
   const [banner, setBanner] = useState<ActiveBannerDto | null>(null);
   const impressionIdRef = useRef("");
 
@@ -43,14 +42,18 @@ export function CoachingBannerSlot({
     void trackProductEvent({
       eventType: "banner_impression",
       properties: {
+        banner_id: banner.id,
         banner_key: `site_banner_${banner.id}`,
         banner_name: banner.name,
         banner_kind: "managed",
+        placement,
         banner_placement: placement,
         target_path: banner.targetUrl,
       },
     });
   }, [banner, placement]);
+
+  if (!banner && !showEmpty) return null;
 
   if (!banner) {
     return <div className={`${styles.banner} ${styles.emptyBanner}`} aria-hidden="true" />;
@@ -76,9 +79,11 @@ export function CoachingBannerSlot({
     void trackProductEvent({
       eventType: "banner_click",
       properties: {
+        banner_id: banner.id,
         banner_key: `site_banner_${banner.id}`,
         banner_name: banner.name,
         banner_kind: "managed",
+        placement,
         banner_placement: placement,
         target_path: banner.targetUrl,
       },
@@ -102,4 +107,12 @@ export function CoachingBannerSlot({
       {image}
     </Link>
   );
+}
+
+export function CoachingBannerSlot({
+  placement,
+}: {
+  placement: Extract<BannerPlacement, "resume_coaching" | "interview_coaching">;
+}) {
+  return <ManagedBannerSlot placement={placement} showEmpty />;
 }

@@ -9,6 +9,7 @@ import type { CSSProperties, MouseEvent, PointerEvent } from "react";
 import { AppFooter } from "@/features/layout/components/AppChrome";
 // import { AppFooter, AppTicketStatus } from "@/features/layout/components/AppChrome";
 import { BusinessInfo } from "@/features/layout/components/BusinessInfo";
+import { ManagedBannerSlot } from "@/features/banners/components/CoachingBannerSlot";
 // import { TicketRewardAlert } from "@/features/layout/components/TicketRewardAlert";
 import { getCommunityPosts } from "@/features/community/community.api";
 import type { CommunityPostSummaryDto } from "@/features/community/community.dto";
@@ -416,6 +417,10 @@ const ignoreClickAfterDrag = (
           <span>{user ? "공고명, 기업명을 검색하세요." : "공공·기관 검색"}</span>
           <Image src="/home/home-search.svg" alt="" width={25} height={25} unoptimized />
         </Link>
+
+        <div className={styles.managedBannerSlot}>
+          <ManagedBannerSlot placement="home_main" />
+        </div>
 
         {hasDiagnosisResult ? (
           <Link

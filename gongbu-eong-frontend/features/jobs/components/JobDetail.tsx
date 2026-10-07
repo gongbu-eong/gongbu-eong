@@ -35,6 +35,7 @@ import styles from "./JobDetail.module.css";
 const JOB_FILE_DOWNLOAD_FRAME = "job-file-download-frame";
 
 type JobDetailBannerVariant = {
+  bannerId: string;
   key: string;
   name: string;
   kind: "managed";
@@ -95,6 +96,7 @@ export function JobDetail({
           return;
         }
         selectBanner(items.map((banner) => ({
+          bannerId: banner.id,
           key: `site_banner_${banner.id}`,
           name: banner.name,
           kind: "managed" as const,
@@ -218,6 +220,7 @@ export function JobDetail({
     trackProductEvent({
       eventType: "banner_impression",
       properties: {
+        banner_id: selectedBanner.bannerId,
         banner_key: selectedBanner.key,
         banner_name: selectedBanner.name,
         placement: "job_detail_bottom",
@@ -235,6 +238,7 @@ export function JobDetail({
     trackProductEvent({
       eventType: "banner_click",
       properties: {
+        banner_id: selectedBanner.bannerId,
         banner_key: selectedBanner.key,
         banner_name: selectedBanner.name,
         banner_kind: selectedBanner.kind,

@@ -36,7 +36,7 @@ export function CoachingPage({
   const presetJobHandledRef = useRef("");
   const [coaching, setCoaching] = useState(false);
   const [error, setError] = useState("");
-  const [inputType, setInputType] = useState<"text" | "file">("file");
+  const [inputType, setInputType] = useState<"text" | "file">("text");
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
@@ -231,7 +231,6 @@ export function CoachingPage({
       <section className={styles.intro}><strong>자소서를 AI가 코칭해드려요</strong><p>총평 · 문항별 피드백 · 개선 예시까지 한 번에 확인하세요.</p></section>
       <CoachingBannerSlot placement="resume_coaching" />
       <section className={styles.companySection}>
-        <h2>자소서 기업 정보</h2>
         {connectedJob ? <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} /> : <button ref={jobConnectRef} className={styles.jobConnect} type="button" onClick={openJobPicker}>+ 지원 공고 연결하기</button>}
       </section>
 
@@ -239,8 +238,8 @@ export function CoachingPage({
         <h2>자소서 작성</h2>
         <div className={`${styles.writePanel} ${inputType === "file" ? styles.writePanelFile : ""}`}>
           <div className={styles.tabs}>
-            <button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button>
             <button className={inputType === "text" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("text")}>직접 입력하기</button>
+            <button className={inputType === "file" ? styles.tabActive : ""} type="button" onClick={() => changeInputType("file")}>파일 첨부</button>
           </div>
           {inputType === "text" ? (
             <>

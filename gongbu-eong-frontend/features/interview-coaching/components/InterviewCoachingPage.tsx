@@ -441,8 +441,7 @@ export function InterviewCoachingPage({
         {busy === "load" ? null : !session ? (
           <>
             <CoachingBannerSlot placement="interview_coaching" />
-            <section className={styles.interviewInputSection}>
-              <h2>면접 기업 정보</h2>
+            <section className={`${styles.interviewInputSection} ${styles.companySection}`}>
               {connectedJob ? (
                 <ConnectedJobCard job={connectedJob} onRemove={() => setConnectedJob(null)} />
               ) : (

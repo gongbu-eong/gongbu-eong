@@ -176,13 +176,14 @@
 
 
 /* Figma 2529 AI NCS interview coaching refresh */
-.inputFrame{width:100%;max-width:37.5rem;padding:64px 16px 108px;font-family:Pretendard,"Noto Sans KR",sans-serif}
-.inputFrame h1{margin:0 0 18px;color:#1a2233;font-size:23px;font-weight:800;line-height:1;letter-spacing:0}
-.inputFrame .lead{margin:0 0 18px;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;letter-spacing:0}
+.inputFrame{box-sizing:border-box;width:100%;max-width:600px;padding:64px 16px 120px;font-family:Pretendard,"Noto Sans KR",sans-serif}
+.inputFrame h1{margin:0 0 24px;color:#1a2233;font-size:23px;font-weight:800;line-height:1;letter-spacing:0}
+.inputFrame .lead{margin:0 0 16px;color:#5a6580;font-size:17px;font-weight:400;line-height:1.35;letter-spacing:0}
 .inputFrame .lead::before{content:"Ai가 모의면접을 만들고 코칭해드려요";display:block;margin-bottom:8px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
-.interviewInputSection{margin-top:24px}
+.interviewInputSection{margin-top:40px}
+.companySection{margin-top:0}
 .interviewInputSection h2{margin:0 0 18px;color:#1a2233;font-size:20px;font-weight:700;line-height:1}
-.inputFrame .jobConnect{height:52px;border:1px dashed #2f7ff0;border-radius:12px;background:#fff;color:#2f7ff0;font-size:16px;font-weight:800;line-height:1}
+.inputFrame .companySection>.jobConnect{height:52px;border:1px solid #2f7ff0;border-radius:12px;background:#2f7ff0;color:#fff;font-size:16px;font-weight:800;line-height:1}
 .helperBox{box-sizing:border-box;min-height:100px;margin:16px 0 0;padding:16px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px;font-weight:400;line-height:1.35;word-break:keep-all}
 .materialPanel{box-sizing:border-box;padding:8px;border-radius:5px;background:#f5f7fa}
 .materialTabs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
@@ -209,7 +210,7 @@
 .termsCheck[aria-pressed="true"] span::after{content:"";position:absolute;left:50%;top:50%;width:12px;height:12px;border-radius:50%;background:#2f7ff0;transform:translate(-50%,-50%)}
 .termsViewButton{flex:0 0 auto;border:0;background:transparent;padding:0;color:#9aa4b8;font-size:15px;font-weight:500;line-height:1}
 .materialPrivacyNotice{box-sizing:border-box;margin:16px 0 0;padding:18px 22px;border-radius:5px;background:#f5f7fa;color:#9aa4b8;font-size:14px!important;font-weight:700!important;line-height:1!important}
-.inputFrame>.primaryButton{height:52px;margin-top:16px;border-radius:12px;font-size:16px;font-weight:800}
+.inputFrame>.primaryButton{height:52px;margin-top:24px;border-radius:12px;font-size:16px;font-weight:800}
 .inputFrame>.primaryButton:disabled{background:#9aa4b8}
 .termsSheet{display:flex;flex-direction:column;height:min(84vh,760px);max-height:min(84vh,760px);min-height:auto;padding:0 16px 16px;border-radius:15px 15px 0 0}
 .termsSheet .sheetHandle{margin-top:8px}

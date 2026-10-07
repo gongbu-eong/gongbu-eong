@@ -134,6 +134,14 @@
   color: #2f7ff0;
 }
 
+.managedBannerSlot {
+  margin: 16px 16px 0;
+}
+
+.managedBannerSlot:empty {
+  display: none;
+}
+
 .resultBanner {
   position: relative;
   height: 192px;

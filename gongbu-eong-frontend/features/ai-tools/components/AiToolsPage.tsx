@@ -7,6 +7,7 @@ import { getCurrentUser } from "@/features/home/home.api";
 import type { CurrentUserDto } from "@/features/home/home.dto";
 import { AppFooter, AppHeader } from "@/features/layout/components/AppChrome";
 import { ComingSoonAlert } from "@/features/layout/components/ComingSoonAlert";
+import { ManagedBannerSlot } from "@/features/banners/components/CoachingBannerSlot";
 import { makeLoginHref } from "@/shared/navigation/login";
 import styles from "./AiToolsPage.module.css";
 
@@ -98,6 +99,8 @@ export function AiToolsPage() {
             <h1>AI 도구</h1>
             <p>취업 준비의 모든 과정을 AI가 함께 도와드려요.</p>
           </header>
+
+          <ManagedBannerSlot placement="ai_tools_main" />
 
           {isLoggedIn ? (
             <Link
