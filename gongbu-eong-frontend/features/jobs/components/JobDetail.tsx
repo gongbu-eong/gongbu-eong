@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent,
   type ReactNode,
 } from "react";
 import {
@@ -19,7 +20,10 @@ import {
   getActiveBanners,
   resolveBannerTargetUrl,
 } from "@/features/banners/banner.api";
-import { trackProductEvent } from "@/features/analytics/analytics.api";
+import {
+  trackProductEvent,
+  trackProductEventBeforeNavigation,
+} from "@/features/analytics/analytics.api";
 import type { JobPostingDetailDto } from "@/features/home/home.dto";
 import { AppHeader } from "@/features/layout/components/AppChrome";
 import { makeLoginHref } from "@/shared/navigation/login";
@@ -235,7 +239,7 @@ export function JobDetail({
   const trackSelectedBannerClick = () => {
     if (!job || !selectedBanner) return;
 
-    trackProductEvent({
+    return trackProductEventBeforeNavigation({
       eventType: "banner_click",
       properties: {
         banner_id: selectedBanner.bannerId,
@@ -249,6 +253,31 @@ export function JobDetail({
         job_title: job.title,
       },
     });
+  };
+
+  const openSelectedBanner = async (event: MouseEvent<HTMLAnchorElement>) => {
+    if (!selectedBanner) return;
+
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      void trackSelectedBannerClick();
+      return;
+    }
+
+    event.preventDefault();
+    await trackSelectedBannerClick();
+
+    if (/^https?:\/\//i.test(selectedBanner.targetPath)) {
+      window.location.assign(selectedBanner.targetPath);
+      return;
+    }
+
+    router.push(selectedBanner.targetPath);
   };
 
   const trackJobButtonClick = (
@@ -541,7 +570,7 @@ export function JobDetail({
                   <div className={styles.coachingBannerViewport}>
                     <JobDetailPromoBanner
                       banner={selectedBanner}
-                      onClick={trackSelectedBannerClick}
+                      onClick={openSelectedBanner}
                     />
                   </div>
                 </div>
@@ -608,7 +637,7 @@ function JobDetailPromoBanner({
   onClick,
 }: {
   banner: JobDetailBannerVariant;
-  onClick: () => void;
+  onClick: (event: MouseEvent<HTMLAnchorElement>) => void;
 }) {
   const image = (
     <picture className={styles.managedBannerPicture}>

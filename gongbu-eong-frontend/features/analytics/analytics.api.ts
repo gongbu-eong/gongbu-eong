@@ -77,8 +77,30 @@ type ProductEvent = {
 };
 
 export function trackProductEvent(args: ProductEvent): Promise<void> {
-  // Storage and browser APIs may throw before fetch; never interrupt the action.
-  return Promise.resolve().then(() => sendProductEvent(args)).catch(() => undefined);
+  // Start the request synchronously. Deferring this to a microtask can lose
+  // click events when a client-side navigation unmounts the current page.
+  try {
+    return sendProductEvent(args).catch(() => undefined);
+  } catch {
+    // Analytics persistence must never interrupt the user action.
+    return Promise.resolve();
+  }
+}
+
+export async function trackProductEventBeforeNavigation(
+  args: ProductEvent,
+  timeoutMs = 1_200,
+): Promise<void> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  await Promise.race([
+    trackProductEvent(args),
+    new Promise<void>((resolve) => {
+      timeoutId = setTimeout(resolve, timeoutMs);
+    }),
+  ]);
+
+  if (timeoutId) clearTimeout(timeoutId);
 }
 
 function sendProductEvent(args: ProductEvent): Promise<void> {

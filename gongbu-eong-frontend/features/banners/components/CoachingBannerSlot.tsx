@@ -2,8 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { trackProductEvent } from "@/features/analytics/analytics.api";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import {
+  trackProductEvent,
+  trackProductEventBeforeNavigation,
+} from "@/features/analytics/analytics.api";
 import { getActiveBanners } from "../banner.api";
 import type { ActiveBannerDto, BannerPlacement } from "../banner.dto";
 import styles from "./CoachingBannerSlot.module.css";
@@ -17,6 +21,7 @@ export function ManagedBannerSlot({
   placement,
   showEmpty = false,
 }: ManagedBannerSlotProps) {
+  const router = useRouter();
   const [banner, setBanner] = useState<ActiveBannerDto | null>(null);
   const impressionIdRef = useRef("");
 
@@ -75,8 +80,8 @@ export function ManagedBannerSlot({
       />
     </picture>
   );
-  const onClick = () => {
-    void trackProductEvent({
+  const trackClick = () =>
+    trackProductEventBeforeNavigation({
       eventType: "banner_click",
       properties: {
         banner_id: banner.id,
@@ -88,6 +93,28 @@ export function ManagedBannerSlot({
         target_path: banner.targetUrl,
       },
     });
+
+  const onClick = async (event: MouseEvent<HTMLAnchorElement>) => {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      void trackClick();
+      return;
+    }
+
+    event.preventDefault();
+    await trackClick();
+
+    if (/^https?:\/\//i.test(banner.targetUrl)) {
+      window.location.assign(banner.targetUrl);
+      return;
+    }
+
+    router.push(banner.targetUrl);
   };
 
   if (!banner.targetUrl) {

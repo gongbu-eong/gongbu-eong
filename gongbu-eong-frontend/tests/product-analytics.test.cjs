@@ -78,6 +78,42 @@ test('blocked storage or a rejected analytics request never rejects a user actio
   }
 });
 
+test('navigation tracking starts immediately and waits for the event request', async () => {
+  let requestStarted = false;
+  let finishRequest;
+  const api = load('features/analytics/analytics.api.ts', {
+    '@/shared/session/anonymous-id': { getAnonymousId: () => 'anonymous-browser' },
+  }, {
+    window: {
+      location: { pathname: '/jobs/job-id', search: '', origin: 'https://test.invalid' },
+      sessionStorage: { getItem: () => 'session' },
+      localStorage: { getItem: () => null },
+    },
+    document: { title: 'Job', referrer: '' },
+    setTimeout,
+    clearTimeout,
+    fetch: () => {
+      requestStarted = true;
+      return new Promise((resolve) => { finishRequest = resolve; });
+    },
+  });
+
+  const tracking = api.trackProductEventBeforeNavigation({
+    eventType: 'banner_click',
+    properties: { banner_key: 'site_banner_test' },
+  });
+  assert.equal(requestStarted, true, 'the request must start before navigation can unmount the page');
+
+  let trackingFinished = false;
+  tracking.then(() => { trackingFinished = true; });
+  await Promise.resolve();
+  assert.equal(trackingFinished, false, 'navigation must wait while the request is still pending');
+
+  finishRequest({ ok: true });
+  await tracking;
+  assert.equal(trackingFinished, true);
+});
+
 function toolHarness() {
   let cursor = 0;
   const slots = [];
