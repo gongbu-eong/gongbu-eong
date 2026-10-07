@@ -52,11 +52,6 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
 
   const frameStyle = { height: DESIGN_HEIGHT * scale } satisfies CSSProperties;
   const canvasStyle = { transform: `scale(${scale})` } satisfies CSSProperties;
-  const ctaFrameStyle = {
-    width: DESIGN_WIDTH * scale,
-    height: 192 * scale,
-  } satisfies CSSProperties;
-
   return (
     <main className={styles.page}>
       <div ref={frameRef} className={styles.canvasFrame} style={frameStyle}>
@@ -151,8 +146,8 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
         </div>
       </div>
 
-      <div className={styles.finalCtaFrame} style={ctaFrameStyle}>
-        <div className={styles.finalCta} style={canvasStyle}>
+      <div className={styles.finalCtaFrame}>
+        <div className={styles.finalCta}>
           <h2>연습은 많을수록 좋아요.</h2><p>지원 직무에 맞는 질문부터 꼬리질문,<br />답변 코칭까지 한 번에 연습해보세요.</p>
           <Link href={startHref} prefetch={false}>AI NCS 면접 코칭 시작하기 <span aria-hidden="true">→</span></Link>
         </div>
