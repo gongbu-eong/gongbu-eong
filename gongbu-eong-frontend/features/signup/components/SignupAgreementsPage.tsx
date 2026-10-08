@@ -28,7 +28,7 @@ export function SignupAgreementsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [checked, setChecked] = useState<Record<AgreementKey, boolean>>({
-    age: true,
+    age: false,
     terms: false,
     privacy: false,
     marketing: false,
@@ -39,6 +39,9 @@ export function SignupAgreementsPage() {
   const [userLoadFailed, setUserLoadFailed] = useState(false);
   const requiredAgreed = checked.age && checked.terms && checked.privacy;
   const allAgreed = requiredAgreed && checked.marketing;
+  const hasAnyAgreement = Object.values(checked).some(Boolean);
+  const canSubmit = requiredAgreed && userLoaded && !isSubmitting;
+  const primaryActionAvailable = !hasAnyAgreement || canSubmit;
 
   const nextPath = useMemo(() => {
     const rawNext = searchParams.get("next");
@@ -128,6 +131,15 @@ export function SignupAgreementsPage() {
     }
   };
 
+  const handlePrimaryAction = () => {
+    if (!hasAnyAgreement) {
+      toggleAll();
+      return;
+    }
+
+    void handleSubmit();
+  };
+
   return (
     <main className={styles.page}>
       <section className={styles.frame} aria-labelledby="signup-agreement-title">
@@ -198,11 +210,15 @@ export function SignupAgreementsPage() {
 
         <button
           type="button"
-          className={`${styles.submitButton} ${requiredAgreed ? styles.submitButtonActive : ""}`}
-          disabled={!requiredAgreed || isSubmitting || !userLoaded}
-          onClick={() => void handleSubmit()}
+          className={`${styles.submitButton} ${primaryActionAvailable ? styles.submitButtonActive : ""}`}
+          disabled={!primaryActionAvailable}
+          onClick={handlePrimaryAction}
         >
-          {isSubmitting ? "저장 중..." : "동의하고 시작하기"}
+          {isSubmitting
+            ? "저장 중..."
+            : hasAnyAgreement
+              ? "동의하고 계속하기"
+              : "전체 선택하기"}
         </button>
 
         <p className={styles.requiredGuide} role={userLoadFailed ? "alert" : undefined}>
