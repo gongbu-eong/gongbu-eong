@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+  if (pathname.startsWith("/my/avatars/")) {
+    return NextResponse.next();
+  }
   if (
     pathname === "/ai-tools/coaching/guide" ||
     pathname === "/ai-tools/interview-coaching/guide"
