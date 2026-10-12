@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   type CSSProperties,
   type ReactNode,
@@ -12,7 +13,7 @@ import {
 import styles from "./InterviewCoachingGuidePage.module.css";
 
 const DESIGN_WIDTH = 393;
-const DESIGN_HEIGHT = 9338;
+const DESIGN_HEIGHT = 9162;
 
 const challenges = [
   ["“이 직무에서 뭘 물어볼까?”", ["기업마다 직무가 다른데 인터넷 예상 질문만", "반복하고 있을 때"]],
@@ -35,6 +36,7 @@ const people = [
 ] as const;
 
 export function InterviewCoachingGuidePage({ startHref }: { startHref: string }) {
+  const router = useRouter();
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -52,6 +54,16 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
 
   const frameStyle = { height: DESIGN_HEIGHT * scale } satisfies CSSProperties;
   const canvasStyle = { transform: `scale(${scale})` } satisfies CSSProperties;
+
+  const closeGuide = () => {
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.replace("/ai-tools");
+  };
+
   return (
     <main className={styles.page}>
       <div ref={frameRef} className={styles.canvasFrame} style={frameStyle}>
@@ -94,7 +106,7 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
               <div className={styles.previewMaterialSurface} aria-hidden="true" />
               <div className={styles.previewTabs}><span>파일 첨부</span><span>직접 입력하기</span></div>
               <b className={styles.previewUploadLabel}>파일로 면접 자료 업로드</b>
-              <div className={styles.previewDrop}><b aria-hidden="true">📄</b><span>파일을 선택하거나 여기에 끌어다 놓으세요</span><small>HWP · HWPX · PDF · DOCX · JPG · PNG (최대 10MB)</small></div>
+              <div className={styles.previewDrop}><Image className={styles.previewDropIcon} src="/coaching/file-upload-document.png" alt="" width={32} height={32} /><span>파일을 선택하거나 여기에 끌어다 놓으세요</span><small>HWP · HWPX · PDF · DOCX · JPG · PNG (최대 10MB)</small></div>
             </div>
           </div>
         </section>
@@ -111,7 +123,7 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
         <section className={styles.questionSection}>
           <GuideTitle number="3">질문 하나에<br />꼬리질문 <mark>3개!</mark></GuideTitle>
           <p className={styles.sectionLead}>첫 질문에 답하면, 같은 답변을 더 깊게 확인하는<br />꼬리질문으로 실제 면접 흐름을 연습합니다.</p>
-          <article className={styles.mainQuestion}><strong>질문 1 · 심화 · 경험면접</strong><p>전기 설비에 이상이 발생했는데, 처음에는 원인을<br />잘 알 수 없었던 상황이 있었나요? 당시 어떤<br />순서와 기준으로 문제를 정의하고, 가능한 원인들을<br />좁혀 가며 최종 해결에 이르렀는지 과정을 단계<br />별로 설명해 주세요.</p></article>
+          <article className={styles.mainQuestion}><strong>질문 1 · 심화 · 경험면접</strong><p><span>전기 설비에 이상이 발생했는데, 처음에는 원인을</span><span>잘 알 수 없었던 상황이 있었나요? 당시 어떤</span><span>순서와 기준으로 문제를 정의하고, 가능한 원인들을 좁혀 가며 최종 해결에 이르렀는지 과정을 단계별로 설명해 주세요.</span></p></article>
           <article className={styles.followQuestion}><strong>면접관 꼬리질문 1/3</strong><p>“그 판단 기준을 선택한 이유는 무엇이었나요?”</p></article>
           <article className={styles.followQuestion}><strong>면접관 꼬리질문 2/3</strong><p>“다시 같은 상황이 온다면 어떤 부분을 다르게 하시겠습니까?”</p></article>
         </section>
@@ -148,13 +160,14 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
           <Image src="/interview-coaching/guide/closing-figma.png" alt="마이크 앞에서 면접을 연습하는 공부엉이" width={819} height={765} unoptimized />
         </section>
 
-        <footer className={styles.finalCtaFrame}>
-          <div className={styles.finalCta}>
-          <h2>연습은 많을수록 좋아요.</h2><p>지원 직무에 맞는 질문부터 꼬리질문,<br />답변 코칭까지 한 번에 연습해보세요.</p>
-          <Link href={startHref} prefetch={false}>AI NCS 면접 코칭 시작하기 <span aria-hidden="true">→</span></Link>
-          </div>
-        </footer>
         </div>
+      </div>
+      <div className={styles.finalCta}>
+        <button className={styles.finalCtaClose} type="button" aria-label="가이드 닫고 이전 화면으로 돌아가기" onClick={closeGuide}>
+          <span aria-hidden="true">×</span>
+        </button>
+        <h2>연습은 많을수록 좋아요.</h2><p>지원 직무에 맞는 질문부터 꼬리질문,<br />답변 코칭까지 한 번에 연습해보세요.</p>
+        <Link href={startHref} prefetch={false}>AI NCS 면접 코칭 시작하기 <span aria-hidden="true">→</span></Link>
       </div>
     </main>
   );
