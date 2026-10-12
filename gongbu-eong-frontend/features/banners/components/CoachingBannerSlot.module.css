@@ -36,4 +36,16 @@
   .banner {
     aspect-ratio: 361 / 80;
   }
+
+  .mobileFullWidth {
+    width: 100vw;
+    max-width: none;
+    margin-right: calc(50% - 50vw);
+    margin-left: calc(50% - 50vw);
+    border-radius: 0;
+  }
+
+  .mobileFullWidth .image {
+    object-fit: cover;
+  }
 }

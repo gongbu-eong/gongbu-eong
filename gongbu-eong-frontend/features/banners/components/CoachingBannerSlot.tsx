@@ -15,11 +15,13 @@ import styles from "./CoachingBannerSlot.module.css";
 type ManagedBannerSlotProps = {
   placement: BannerPlacement;
   showEmpty?: boolean;
+  mobileFullWidth?: boolean;
 };
 
 export function ManagedBannerSlot({
   placement,
   showEmpty = false,
+  mobileFullWidth = false,
 }: ManagedBannerSlotProps) {
   const router = useRouter();
   const [banner, setBanner] = useState<ActiveBannerDto | null>(null);
@@ -60,8 +62,12 @@ export function ManagedBannerSlot({
 
   if (!banner && !showEmpty) return null;
 
+  const bannerClassName = `${styles.banner}${
+    mobileFullWidth ? ` ${styles.mobileFullWidth}` : ""
+  }`;
+
   if (!banner) {
-    return <div className={`${styles.banner} ${styles.emptyBanner}`} aria-hidden="true" />;
+    return <div className={`${bannerClassName} ${styles.emptyBanner}`} aria-hidden="true" />;
   }
 
   const image = (
@@ -118,19 +124,19 @@ export function ManagedBannerSlot({
   };
 
   if (!banner.targetUrl) {
-    return <div className={styles.banner}>{image}</div>;
+    return <div className={bannerClassName}>{image}</div>;
   }
 
   if (/^https?:\/\//i.test(banner.targetUrl)) {
     return (
-      <a className={styles.banner} href={banner.targetUrl} onClick={onClick}>
+      <a className={bannerClassName} href={banner.targetUrl} onClick={onClick}>
         {image}
       </a>
     );
   }
 
   return (
-    <Link className={styles.banner} href={banner.targetUrl} onClick={onClick}>
+    <Link className={bannerClassName} href={banner.targetUrl} onClick={onClick}>
       {image}
     </Link>
   );
@@ -141,5 +147,5 @@ export function CoachingBannerSlot({
 }: {
   placement: Extract<BannerPlacement, "resume_coaching" | "interview_coaching">;
 }) {
-  return <ManagedBannerSlot placement={placement} showEmpty />;
+  return <ManagedBannerSlot placement={placement} showEmpty mobileFullWidth />;
 }
