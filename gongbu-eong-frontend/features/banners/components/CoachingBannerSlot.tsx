@@ -15,13 +15,13 @@ import styles from "./CoachingBannerSlot.module.css";
 type ManagedBannerSlotProps = {
   placement: BannerPlacement;
   showEmpty?: boolean;
-  mobileFullWidth?: boolean;
+  mobileImageFill?: boolean;
 };
 
 export function ManagedBannerSlot({
   placement,
   showEmpty = false,
-  mobileFullWidth = false,
+  mobileImageFill = false,
 }: ManagedBannerSlotProps) {
   const router = useRouter();
   const [banner, setBanner] = useState<ActiveBannerDto | null>(null);
@@ -63,7 +63,7 @@ export function ManagedBannerSlot({
   if (!banner && !showEmpty) return null;
 
   const bannerClassName = `${styles.banner}${
-    mobileFullWidth ? ` ${styles.mobileFullWidth}` : ""
+    mobileImageFill ? ` ${styles.mobileImageFill}` : ""
   }`;
 
   if (!banner) {
@@ -147,5 +147,5 @@ export function CoachingBannerSlot({
 }: {
   placement: Extract<BannerPlacement, "resume_coaching" | "interview_coaching">;
 }) {
-  return <ManagedBannerSlot placement={placement} showEmpty mobileFullWidth />;
+  return <ManagedBannerSlot placement={placement} showEmpty mobileImageFill />;
 }
