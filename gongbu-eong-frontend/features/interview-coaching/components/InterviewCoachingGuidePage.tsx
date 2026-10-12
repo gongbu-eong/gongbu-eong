@@ -15,9 +15,9 @@ const DESIGN_WIDTH = 393;
 const DESIGN_HEIGHT = 9338;
 
 const challenges = [
-  ["“이 직무에서 뭘 물어볼까?”", "기업마다 직무가 다른데 인터넷 예상 질문만 반복하고 있을 때"],
-  ["첫 답변 다음이 막막할 때", "준비한 답변은 말했지만, 꼬리질문이 들어오면 흐름이 끊길 때"],
-  ["내 답변이 괜찮은지 확인 받고 싶을 때", "말은 했지만 직무 관점에서 무엇이 부족한지 확인하기 어려울 때"],
+  ["“이 직무에서 뭘 물어볼까?”", ["기업마다 직무가 다른데 인터넷 예상 질문만", "반복하고 있을 때"]],
+  ["첫 답변 다음이 막막할 때", ["준비한 답변은 말했지만, 꼬리질문이 들어오면", "흐름이 끊길 때"]],
+  ["내 답변이 괜찮은지 확인 받고 싶을 때", ["말은 했지만 직무 관점에서 무엇이 부족한지", "확인하기 어려울 때"]],
 ] as const;
 
 const steps = [
@@ -57,19 +57,21 @@ export function InterviewCoachingGuidePage({ startHref }: { startHref: string })
       <div ref={frameRef} className={styles.canvasFrame} style={frameStyle}>
         <div className={styles.guide} style={canvasStyle}>
         <section className={styles.hero}>
-          <Image className={styles.heroSwoosh} src="/interview-coaching/guide/hero-swoosh.svg" alt="" width={139} height={118} />
+          <div className={styles.heroSwoosh} aria-hidden="true">
+            <Image src="/interview-coaching/guide/hero-swoosh.svg" alt="" width={139} height={118} />
+          </div>
           <span className={styles.heroBadge}>NCS 직무 기반 AI 면접 연습</span>
-          <h1><strong>면접질문</strong><mark>혼자 예상하지 마세요.</mark></h1>
+          <h1><strong><span>면접질문</span></strong><mark>혼자 예상하지 마세요.</mark></h1>
           <p>지원 공고와 직무를 바탕으로 AI가 질문을 만들고,<br />답변 뒤에는 꼬리질문까지 이어서 연습합니다.</p>
           <div className={styles.heroTags}><span>공고 연결</span><span>NCS 직무 분석</span><span>AI 면접 질문</span><span>꼬리질문</span><span>문항별 코칭</span></div>
-          <Image className={styles.heroImage} src="/interview-coaching/guide/hero.webp" alt="면접 질문을 분석하는 공부엉이" width={951} height={682} priority />
+          <Image className={styles.heroImage} src="/interview-coaching/guide/hero-figma.png" alt="면접 질문을 분석하는 공부엉이" width={951} height={682} priority unoptimized />
         </section>
 
         <section className={styles.challengeSection}>
           <span className={styles.sectionBadge}>면접 준비, 이런 순간이 어렵죠</span>
           <Image className={styles.challengeArrow} src="/interview-coaching/guide/challenge-arrow.svg" alt="" width={21} height={18} />
           <h2>예상 질문은 만들었는데<br /><mark>실전처럼 준비가<br />안 된다면?</mark></h2>
-          <div className={styles.challengeList}>{challenges.map(([title, copy]) => <article key={title}><h3>{title}</h3><p>{copy}</p></article>)}</div>
+          <div className={styles.challengeList}>{challenges.map(([title, copy]) => <article key={title}><h3>{title}</h3><p>{copy[0]}<br />{copy[1]}</p></article>)}</div>
         </section>
 
         <section className={styles.resolveSection}>
