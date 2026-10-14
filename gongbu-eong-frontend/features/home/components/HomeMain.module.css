@@ -960,6 +960,23 @@
   font-weight: 700;
 }
 
+.drawerProfileLink {
+  display: inline-block;
+  margin-top: 7px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  line-height: 1.25;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.drawerProfileLink:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
 .drawerLoginLink {
   display: inline-flex;
   align-items: center;

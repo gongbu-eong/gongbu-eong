@@ -662,7 +662,7 @@ export function HomeMenuDrawer({
 }) {
   const portalRoot = typeof document === "undefined" ? null : document.body;
   const profileNickname = user?.communityNickname || "프로필 닉네임 설정";
-  const profileStatusMessage = user?.profileStatusMessage || "프로필을 수정 할 수 있습니다.";
+  const profileStatusMessage = user?.profileStatusMessage;
   const profileAvatarSrc = toProfileAvatarSrc(user?.profileAvatarKey);
   const profileBackgroundColor = user?.profileBackgroundColor || "#f5f7fa";
 
@@ -720,7 +720,13 @@ export function HomeMenuDrawer({
           <div>
             <strong>{user ? profileNickname : "로그인을 해주세요."}</strong>
             {user ? (
-              <p>{profileStatusMessage}</p>
+              profileStatusMessage ? (
+                <p>{profileStatusMessage}</p>
+              ) : (
+                <Link href="/my/profile" className={styles.drawerProfileLink} onClick={onClose}>
+                  프로필을 수정할 수 있습니다. →
+                </Link>
+              )
             ) : (
               <Link href={makeLoginHref()} className={styles.drawerLoginLink} onClick={onClose}>
                 로그인 하기 →
