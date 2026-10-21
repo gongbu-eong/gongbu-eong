@@ -31,7 +31,7 @@ export function SignupAgreementsPage() {
     age: false,
     terms: false,
     privacy: false,
-    marketing: false,
+    marketing: true,
   });
   const [openDocument, setOpenDocument] = useState<PolicyDocumentKey | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,9 +39,9 @@ export function SignupAgreementsPage() {
   const [userLoadFailed, setUserLoadFailed] = useState(false);
   const requiredAgreed = checked.age && checked.terms && checked.privacy;
   const allAgreed = requiredAgreed && checked.marketing;
-  const hasAnyAgreement = Object.values(checked).some(Boolean);
+  const hasAnyRequiredAgreement = checked.age || checked.terms || checked.privacy;
   const canSubmit = requiredAgreed && userLoaded && !isSubmitting;
-  const primaryActionAvailable = !hasAnyAgreement || canSubmit;
+  const primaryActionAvailable = !hasAnyRequiredAgreement || canSubmit;
 
   const nextPath = useMemo(() => {
     const rawNext = searchParams.get("next");
@@ -132,8 +132,13 @@ export function SignupAgreementsPage() {
   };
 
   const handlePrimaryAction = () => {
-    if (!hasAnyAgreement) {
-      toggleAll();
+    if (!hasAnyRequiredAgreement) {
+      setChecked((current) => ({
+        ...current,
+        age: true,
+        terms: true,
+        privacy: true,
+      }));
       return;
     }
 
@@ -216,7 +221,7 @@ export function SignupAgreementsPage() {
         >
           {isSubmitting
             ? "저장 중..."
-            : hasAnyAgreement
+            : hasAnyRequiredAgreement
               ? "동의하고 계속하기"
               : "전체 선택하기"}
         </button>
