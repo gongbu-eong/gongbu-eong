@@ -15,7 +15,8 @@ export async function claimAnonymousAnalyticsData(
     query(
       `
         UPDATE public.access_logs
-        SET user_id = $1
+        SET user_id = $1,
+            identity_linked_at = COALESCE(identity_linked_at, NOW())
         WHERE user_id IS NULL
           AND anonymous_id = $2::uuid
       `,
@@ -24,7 +25,8 @@ export async function claimAnonymousAnalyticsData(
     query(
       `
         UPDATE public.product_events
-        SET user_id = $1
+        SET user_id = $1,
+            identity_linked_at = COALESCE(identity_linked_at, NOW())
         WHERE user_id IS NULL
           AND anonymous_id = $2::uuid
       `,
@@ -33,7 +35,8 @@ export async function claimAnonymousAnalyticsData(
     query(
       `
         UPDATE public.attribution_events
-        SET user_id = $1
+        SET user_id = $1,
+            identity_linked_at = COALESCE(identity_linked_at, NOW())
         WHERE user_id IS NULL
           AND anonymous_id = $2::uuid
       `,
